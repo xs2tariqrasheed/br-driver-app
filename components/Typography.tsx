@@ -8,6 +8,9 @@
  * - Supports theme-aware color (light/dark)
  * - Default font family: San Francisco (system font, 'System')
  * - All TextProps and accessibility props are supported
+ *
+ * Required props: type, size, weight (no default values; must be provided)
+ * Fallback: If a type/size combination is missing, FALLBACK_FONT_SIZE from constants/typography.ts is used.
  */
 import {
   FALLBACK_FONT_SIZE,
@@ -38,9 +41,9 @@ export interface TypographyProps extends TextProps {
 }
 
 export const Typography: React.FC<TypographyProps> = ({
-  type,
-  size,
-  weight,
+  type = "body",
+  size = "Medium",
+  weight = "Regular",
   children,
   style,
   lightColor,
