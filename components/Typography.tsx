@@ -6,7 +6,7 @@
  * <Typography variant="bodyMediumRegular" lightColor="#333">Body</Typography>
  *
  * - Supports theme-aware color (light/dark)
- * - Default font family: 'SpaceMono'
+ * - Default font family: San Francisco (system font, 'System')
  * - All TextProps and accessibility props are supported
  */
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -106,16 +106,17 @@ const variantConfig = {
   labelSmall: { fontSize: 11 },
 };
 
-// Generate all variants programmatically
-const variantStyles: Record<TypographyVariant, TextStyle> = {} as any;
+// Always use San Francisco system font
+const systemFont = "System";
 
+const variantStyles: Record<TypographyVariant, TextStyle> = {} as any;
 for (const [group, { fontSize }] of Object.entries(variantConfig)) {
   for (const [weightName, fontWeight] of Object.entries(fontWeightMap)) {
     const key = `${group}${weightName}` as TypographyVariant;
     variantStyles[key] = {
       fontSize,
       fontWeight,
-      fontFamily: "SpaceMono",
+      fontFamily: systemFont,
     };
   }
 }
@@ -129,7 +130,6 @@ export const Typography: React.FC<TypographyProps> = ({
   ...props
 }) => {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, "text");
-
   return (
     <Text style={[{ color }, variantStyles[variant], style]} {...props}>
       {children}
