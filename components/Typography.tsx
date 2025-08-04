@@ -18,10 +18,10 @@ import {
   TYPOGRAPHY_SIZES,
   TYPOGRAPHY_TYPES,
   TYPOGRAPHY_WEIGHTS,
-} from "@/constants/Typography";
+} from "@/constants/typography";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import React from "react";
-import { Text, TextProps, TextStyle } from "react-native";
+import { StyleSheet, Text, TextProps, TextStyle } from "react-native";
 
 export type TypographyType = (typeof TYPOGRAPHY_TYPES)[number];
 export type TypographySize = (typeof TYPOGRAPHY_SIZES)[number];
@@ -56,12 +56,8 @@ export const Typography: React.FC<TypographyProps> = ({
   return (
     <Text
       style={[
-        { color },
-        {
-          fontFamily: SYSTEM_FONT,
-          fontWeight: FONT_WEIGHTS[weight],
-          fontSize,
-        },
+        styles.baseText,
+        { color, fontSize, fontWeight: FONT_WEIGHTS[weight] },
         style,
       ]}
       {...props}
@@ -70,3 +66,9 @@ export const Typography: React.FC<TypographyProps> = ({
     </Text>
   );
 };
+
+const styles = StyleSheet.create({
+  baseText: {
+    fontFamily: SYSTEM_FONT,
+  },
+});
