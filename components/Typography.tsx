@@ -12,17 +12,19 @@
  * Required props: type, size, weight (no default values; must be provided)
  * Fallback: If a type/size combination is missing, FALLBACK_FONT_SIZE from constants/typography.ts is used.
  */
+import { TEXT_COLOR_DEFAULT } from "@/constants/colors";
 import {
+  DEFAULT_TYPOGRAPHY_SIZE,
+  DEFAULT_TYPOGRAPHY_TYPE,
+  DEFAULT_TYPOGRAPHY_WEIGHT,
   FALLBACK_FONT_SIZE,
   FONT_SIZES,
   FONT_WEIGHTS,
   SYSTEM_FONT,
-  THEME_COLOR_KEY,
   TYPOGRAPHY_SIZES,
   TYPOGRAPHY_TYPES,
   TYPOGRAPHY_WEIGHTS,
 } from "@/constants/typography";
-import { useThemeColor } from "@/hooks/useThemeColor";
 import React from "react";
 import { StyleSheet, Text, TextProps, TextStyle } from "react-native";
 
@@ -37,30 +39,24 @@ export interface TypographyProps extends TextProps {
   children: React.ReactNode;
   style?: TextStyle;
   lightColor?: string;
-  darkColor?: string;
 }
 
 export const Typography: React.FC<TypographyProps> = ({
-  type = "body",
-  size = "Medium",
-  weight = "Regular",
+  type = DEFAULT_TYPOGRAPHY_TYPE,
+  size = DEFAULT_TYPOGRAPHY_SIZE,
+  weight = DEFAULT_TYPOGRAPHY_WEIGHT,
   children,
   style,
-  lightColor,
-  darkColor,
   ...props
 }) => {
   // Fallback logic for missing sizes in a type
   const fontSize = FONT_SIZES[type]?.[size] ?? FALLBACK_FONT_SIZE;
-  const color = useThemeColor(
-    { light: lightColor, dark: darkColor },
-    THEME_COLOR_KEY
-  );
+
   return (
     <Text
       style={[
         styles.baseText,
-        { color, fontSize, fontWeight: FONT_WEIGHTS[weight] },
+        { fontSize, fontWeight: FONT_WEIGHTS[weight] },
         style,
       ]}
       {...props}
@@ -73,5 +69,6 @@ export const Typography: React.FC<TypographyProps> = ({
 const styles = StyleSheet.create({
   baseText: {
     fontFamily: SYSTEM_FONT,
+    color: TEXT_COLOR_DEFAULT,
   },
 });

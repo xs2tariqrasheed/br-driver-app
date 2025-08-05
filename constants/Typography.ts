@@ -1,5 +1,11 @@
 // Typography constants for font family, weights, sizes, and allowed values
 import { TextStyle } from "react-native";
+import { TYPOGRAPHY_SIZES } from "./global";
+export {
+  TYPOGRAPHY_SIZES,
+  TYPOGRAPHY_TYPES,
+  TYPOGRAPHY_WEIGHTS,
+} from "./global";
 
 export const SYSTEM_FONT = "System";
 
@@ -10,55 +16,23 @@ export const FONT_WEIGHTS = {
   Regular: "400" as TextStyle["fontWeight"],
 } as const;
 
+// Helper function to create size mappings efficiently
+const createSizeMapping = (sizes: readonly [number, number, number, number]) =>
+  Object.fromEntries(
+    TYPOGRAPHY_SIZES.map((size, index) => [size, sizes[index]])
+  ) as Record<(typeof TYPOGRAPHY_SIZES)[number], number>;
+
 export const FONT_SIZES = {
-  title: {
-    XLarge: 40,
-    Large: 32,
-    Medium: 28,
-    Small: 24, // fallback if needed
-  },
-  heading: {
-    XLarge: 28, // fallback if needed
-    Large: 24,
-    Medium: 20,
-    Small: 18,
-  },
-  subHeading: {
-    XLarge: 20, // fallback if needed
-    Large: 18,
-    Medium: 16,
-    Small: 14,
-  },
-  body: {
-    XLarge: 18, // fallback if needed
-    Large: 17,
-    Medium: 16,
-    Small: 14,
-  },
-  label: {
-    XLarge: 15, // fallback if needed
-    Large: 13,
-    Medium: 12,
-    Small: 11,
-  },
-};
+  title: createSizeMapping([40, 32, 28, 24]),
+  heading: createSizeMapping([28, 24, 20, 18]),
+  subHeading: createSizeMapping([20, 18, 16, 14]),
+  body: createSizeMapping([18, 17, 16, 14]),
+  label: createSizeMapping([15, 13, 12, 11]),
+} as const;
 
-export const TYPOGRAPHY_TYPES = [
-  "title",
-  "heading",
-  "subHeading",
-  "body",
-  "label",
-] as const;
-
-export const TYPOGRAPHY_SIZES = ["XLarge", "Large", "Medium", "Small"] as const;
-
-export const TYPOGRAPHY_WEIGHTS = [
-  "Bold",
-  "Semibold",
-  "Medium",
-  "Regular",
-] as const;
+export const DEFAULT_TYPOGRAPHY_TYPE = "body";
+export const DEFAULT_TYPOGRAPHY_SIZE = "Medium";
+export const DEFAULT_TYPOGRAPHY_WEIGHT = "Regular";
 
 export const FALLBACK_FONT_SIZE = 16;
 export const THEME_COLOR_KEY = "text";
