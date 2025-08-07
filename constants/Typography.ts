@@ -1,38 +1,72 @@
-// Typography constants for font family, weights, sizes, and allowed values
-import { TextStyle } from "react-native";
-import { TYPOGRAPHY_SIZES } from "./global";
-export {
-  TYPOGRAPHY_SIZES,
-  TYPOGRAPHY_TYPES,
-  TYPOGRAPHY_WEIGHTS,
-} from "./global";
-
-export const SYSTEM_FONT = "System";
-
-export const FONT_WEIGHTS = {
-  Bold: "bold" as TextStyle["fontWeight"],
-  Semibold: "600" as TextStyle["fontWeight"],
-  Medium: "500" as TextStyle["fontWeight"],
-  Regular: "400" as TextStyle["fontWeight"],
+// SF Pro Display font families (registered in app/_layout.tsx)
+export const SF_PRO_FONTS = {
+  Regular: "SF-Pro-Display-Regular",
+  Medium: "SF-Pro-Display-Medium",
+  Semibold: "SF-Pro-Display-Semibold",
+  Bold: "SF-Pro-Display-Bold",
+  Black: "SF-Pro-Display-Black",
 } as const;
 
-// Helper function to create size mappings efficiently
-const createSizeMapping = (sizes: readonly [number, number, number, number]) =>
-  Object.fromEntries(
-    TYPOGRAPHY_SIZES.map((size, index) => [size, sizes[index]])
-  ) as Record<(typeof TYPOGRAPHY_SIZES)[number], number>;
-
-export const FONT_SIZES = {
-  title: createSizeMapping([40, 32, 28, 24]),
-  heading: createSizeMapping([28, 24, 20, 18]),
-  subHeading: createSizeMapping([20, 18, 16, 14]),
-  body: createSizeMapping([18, 17, 16, 14]),
-  label: createSizeMapping([15, 13, 12, 11]),
-} as const;
-
-export const DEFAULT_TYPOGRAPHY_TYPE = "body";
-export const DEFAULT_TYPOGRAPHY_SIZE = "Medium";
-export const DEFAULT_TYPOGRAPHY_WEIGHT = "Regular";
+export const DEFAULT_TYPOGRAPHY_TYPE = "bodyRegular";
+export const DEFAULT_TYPOGRAPHY_WEIGHT = "Medium";
 
 export const FALLBACK_FONT_SIZE = 16;
 export const THEME_COLOR_KEY = "text";
+
+const STYLE_VARIANTS = [
+  { name: "black", fontFamily: SF_PRO_FONTS.Black },
+  { name: "bold", fontFamily: SF_PRO_FONTS.Bold },
+  { name: "semibold", fontFamily: SF_PRO_FONTS.Semibold },
+  { name: "medium", fontFamily: SF_PRO_FONTS.Medium },
+  { name: "regular", fontFamily: SF_PRO_FONTS.Regular },
+];
+
+const SIZE_VARIANTS = [
+  { name: "titleExtraLarge", size: 24 },
+  { name: "titleLarge", size: 22 },
+  { name: "titleMedium", size: 21 },
+  { name: "headingLarge", size: 19 },
+  { name: "headingSmall", size: 18 },
+  { name: "subHeadingLarge", size: 17 },
+  { name: "bodyLarge", size: 16 },
+  { name: "bodyMedium", size: 14 },
+  { name: "bodySmall", size: 12 },
+  { name: "labelLarge", size: 12 },
+  { name: "labelMedium", size: 11 },
+  { name: "labelSmall", size: 10 },
+];
+
+export const TYPOGRAPHY_VARIANTS = Object.fromEntries(
+  SIZE_VARIANTS.flatMap((size) =>
+    STYLE_VARIANTS.map((style) => [
+      `${size.name}${style.name.charAt(0).toUpperCase() + style.name.slice(1)}`,
+      {
+        fontSize: size.size,
+        fontFamily: style.fontFamily,
+        lineHeight: 100,
+        letterSpacing: 0,
+      },
+    ])
+  )
+);
+
+export type TYPOGRAPHY_TYPE =
+  | "titleExtraLarge"
+  | "titleLarge"
+  | "titleMedium"
+  | "headingLarge"
+  | "headingSmall"
+  | "subHeadingLarge"
+  | "bodyLarge"
+  | "bodyMedium"
+  | "bodySmall"
+  | "labelLarge"
+  | "labelMedium"
+  | "labelSmall";
+
+export type TYPOGRAPHY_WEIGHT =
+  | "Black"
+  | "Bold"
+  | "Semibold"
+  | "Medium"
+  | "Regular";
