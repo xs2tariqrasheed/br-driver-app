@@ -10,9 +10,6 @@ export const SF_PRO_FONTS = {
 export const DEFAULT_TYPOGRAPHY_TYPE = "bodyRegular";
 export const DEFAULT_TYPOGRAPHY_WEIGHT = "Medium";
 
-export const FALLBACK_FONT_SIZE = 16;
-export const THEME_COLOR_KEY = "text";
-
 const STYLE_VARIANTS = [
   { name: "black", fontFamily: SF_PRO_FONTS.Black },
   { name: "bold", fontFamily: SF_PRO_FONTS.Bold },

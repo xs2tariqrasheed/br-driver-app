@@ -37,12 +37,10 @@ export const Typography: React.FC<TypographyProps> = ({
   ...props
 }) => {
   return (
-    <Text style={[styles.typography[`${type}${weight}`], style]} {...props}>
+    <Text style={[styles[`${type}${weight}`], style]} {...props}>
       {children}
     </Text>
   );
 };
 
-const styles = StyleSheet.create({
-  typography: TYPOGRAPHY_VARIANTS,
-});
+const styles = StyleSheet.create(TYPOGRAPHY_VARIANTS);
