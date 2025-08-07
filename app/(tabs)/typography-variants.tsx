@@ -1,8 +1,8 @@
 import React from "react";
 import { ScrollView, View } from "react-native";
 
-import { Typography } from "../../components/Typography";
-import { TYPOGRAPHY_VARIANTS } from "../../constants/typography";
+import { Typography } from "../../components/typography/index";
+import { TYPOGRAPHY_VARIANTS } from "../../components/typography/typography.constant";
 
 const variantKeys = Object.keys(TYPOGRAPHY_VARIANTS);
 
