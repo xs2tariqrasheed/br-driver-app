@@ -17,6 +17,7 @@
  *
  * Fallback: If a type/weight combination is missing, FALLBACK_FONT_SIZE from constants/typography.ts is used.
  */
+import { textColors } from "@/constants/colors";
 import * as changeCase from "change-case";
 import React from "react";
 import { StyleSheet, Text, TextProps, TextStyle } from "react-native";
@@ -27,8 +28,7 @@ import {
   TYPOGRAPHY_TYPE,
   TYPOGRAPHY_VARIANTS,
   TYPOGRAPHY_WEIGHT,
-} from "./typography.constant";
-import { textColors } from "@/constants/colors";
+} from "./constants";
 
 export interface TypographyProps extends TextProps {
   type: TYPOGRAPHY_TYPE;
