@@ -62,8 +62,20 @@ export type TYPOGRAPHY_TYPE =
   | "labelSmall";
 
 export type TYPOGRAPHY_WEIGHT =
-  | "Black"
-  | "Bold"
-  | "Semibold"
-  | "Medium"
-  | "Regular";
+  | "black"
+  | "bold"
+  | "semibold"
+  | "medium"
+  | "regular";
+
+export type TYPOGRAPHY_COLOR_VARIANT =
+  | "success"
+  | "danger"
+  | "disabled"
+  | "warning"
+  | "secondary"
+  | "underline"
+  | "delete"
+  | "strong"
+  | "italic"
+  | "mark";

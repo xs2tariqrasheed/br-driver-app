@@ -13,8 +13,9 @@ export default function TypographyVariantsScreen() {
         <View key={key} style={{ marginBottom: 16 }}>
           <Typography
             // Required props, but actual style comes from the mapping
-            type={"body" as any}
-            weight={"Regular" as any}
+            type="bodyLarge"
+            weight="regular"
+            variant="success"
             style={TYPOGRAPHY_VARIANTS[key]}
           >
             {key}
