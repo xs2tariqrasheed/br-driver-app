@@ -4,7 +4,7 @@
 
 const tintColor = "#0a7ea4";
 
-export const Colors = {
+export const colors = {
   text: "#11181C",
   background: "#fff",
   tint: tintColor,
@@ -74,5 +74,6 @@ export const textColors = {
   grey700: "#5A5A5A",
   grey800: "#414141",
   grey900: "#2A2A2A",
-  black900: "#000000",
+  black: "#000000",
+  white: "#FFFFFF",
 };
