@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { StyleSheet } from "react-native";
 
-import Button from "@/components/Button";
+import Button, { IconButton } from "@/components/Button";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 
@@ -70,6 +70,54 @@ export default function HomeScreen() {
       >
         Danger With Left Icon
       </Button>
+      <IconButton
+        size={4}
+        rounded={true}
+        disabled={false}
+        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+      />
+      <IconButton
+        size={4}
+        rounded={false}
+        disabled={false}
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      />
+      <IconButton
+        size={3}
+        rounded={true}
+        disabled={false}
+        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+      />
+      <IconButton
+        size={3}
+        rounded={false}
+        disabled={false}
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      />
+      <IconButton
+        size={2}
+        rounded={true}
+        disabled={false}
+        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+      />
+      <IconButton
+        size={2}
+        rounded={false}
+        disabled={false}
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      />
+      <IconButton
+        size={1}
+        rounded={true}
+        disabled={false}
+        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+      />
+      <IconButton
+        size={1}
+        rounded={false}
+        disabled={false}
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      />
     </ParallaxScrollView>
   );
 }

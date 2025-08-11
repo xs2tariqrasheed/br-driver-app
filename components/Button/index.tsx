@@ -166,27 +166,40 @@ const Button = (props: ButtonProps) => {
   }: {
     children: React.ReactNode;
   }) => (
-    <View style={styles.contentRow}>
-      {iconLeft ? (
-        <View style={styles.iconLeft}>{renderStyledIcon(icon)}</View>
-      ) : null}
+    <View style={ButtonStyles.contentRow}>
+      {(() => {
+        const hasLabel = React.Children.count(contentChildren) > 0;
+        return (
+          <>
+            {iconLeft ? (
+              <View style={hasLabel ? ButtonStyles.iconLeft : undefined}>
+                {renderStyledIcon(icon)}
+              </View>
+            ) : null}
 
-      <View style={styles.childrenWrap}>
-        {renderStyledChildren(contentChildren)}
-      </View>
+            {hasLabel ? (
+              <View style={ButtonStyles.childrenWrap}>
+                {renderStyledChildren(contentChildren)}
+              </View>
+            ) : null}
 
-      {iconRight ? (
-        <View style={styles.iconRight}>{renderStyledIcon(icon)}</View>
-      ) : null}
+            {iconRight ? (
+              <View style={hasLabel ? ButtonStyles.iconRight : undefined}>
+                {renderStyledIcon(icon)}
+              </View>
+            ) : null}
 
-      {loading ? (
-        <View style={styles.loaderWrap}>
-          <ActivityIndicator
-            size="small"
-            color={variantStyles.foregroundColor}
-          />
-        </View>
-      ) : null}
+            {loading ? (
+              <View style={ButtonStyles.loaderWrap}>
+                <ActivityIndicator
+                  size="small"
+                  color={variantStyles.foregroundColor}
+                />
+              </View>
+            ) : null}
+          </>
+        );
+      })()}
     </View>
   );
 
@@ -196,7 +209,7 @@ const Button = (props: ButtonProps) => {
       accessibilityState={{ disabled: isInteractionBlocked }}
       disabled={isInteractionBlocked}
       style={({ pressed }) => [
-        styles.base,
+        ButtonStyles.base,
         { borderRadius },
         !variantStyles.useGradient && {
           backgroundColor: variantStyles.backgroundColor,
@@ -209,7 +222,7 @@ const Button = (props: ButtonProps) => {
           borderWidth: variantStyles.borderWidth,
         },
         widthStyle,
-        pressed && !isInteractionBlocked && styles.pressed,
+        pressed && !isInteractionBlocked && ButtonStyles.pressed,
         style,
       ]}
       {...pressableProps}
@@ -220,7 +233,7 @@ const Button = (props: ButtonProps) => {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
-            styles.gradientContainer,
+            ButtonStyles.gradientContainer,
             { borderRadius, minHeight: 46 }, // Ensure minimum height matches button
           ]}
         >
@@ -233,7 +246,160 @@ const Button = (props: ButtonProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+export type IconButtonSize = 1 | 2 | 3 | 4;
+
+export type IconButtonProps = {
+  /** 1, 2, 3 or 4 */
+  size: IconButtonSize;
+  /** true → fully rounded per spec, false → square with small radius */
+  rounded: boolean;
+  /** Disable interaction and apply disabled visuals */
+  disabled?: boolean;
+  /** Icon element to render (required, icon-only button) */
+  icon: React.ReactNode;
+  /** Optional style override for the outer container (merged last) */
+  style?: StyleProp<ViewStyle>;
+} & Omit<PressableProps, "disabled" | "style" | "children">;
+
+export const IconButton: React.FC<IconButtonProps> = ({
+  size = 3 as IconButtonSize,
+  rounded = true,
+  disabled = false,
+  icon,
+  style,
+  ...pressableProps
+}) => {
+  // Map size + rounded to concrete style values
+  const getLayout = (
+    sizeValue: IconButtonSize,
+    isRounded: boolean
+  ): {
+    width: number;
+    height: number;
+    borderRadius: number;
+    paddingStyle: ViewStyle;
+  } => {
+    if (isRounded) {
+      switch (sizeValue) {
+        case 1:
+          return {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            paddingStyle: { padding: 11 },
+          };
+        case 2:
+          return {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            paddingStyle: { padding: 12 },
+          };
+        case 3:
+          return {
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            paddingStyle: { padding: 12 },
+          };
+        case 4:
+          return {
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            paddingStyle: { padding: 14 },
+          };
+      }
+    } else {
+      switch (sizeValue) {
+        case 1:
+          return {
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            paddingStyle: {
+              paddingTop: 20,
+              paddingRight: 122,
+              paddingBottom: 20,
+              paddingLeft: 122,
+            },
+          };
+        case 2:
+          return {
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            paddingStyle: {
+              paddingTop: 20,
+              paddingRight: 122,
+              paddingBottom: 20,
+              paddingLeft: 122,
+            },
+          };
+        case 3:
+          return {
+            width: 48,
+            height: 48,
+            borderRadius: 12,
+            paddingStyle: {
+              paddingTop: 20,
+              paddingRight: 122,
+              paddingBottom: 20,
+              paddingLeft: 122,
+            },
+          };
+        case 4:
+          return {
+            width: 52,
+            height: 52,
+            borderRadius: 12,
+            paddingStyle: {
+              paddingTop: 20,
+              paddingRight: 122,
+              paddingBottom: 20,
+              paddingLeft: 122,
+            },
+          };
+      }
+    }
+  };
+
+  const layout = getLayout(size, rounded) ?? {
+    width: 48,
+    height: 48,
+    borderRadius: rounded ? 24 : 12,
+    paddingStyle: rounded ? { padding: 12 } : {},
+  };
+
+  const { width, height, borderRadius, paddingStyle } = layout;
+
+  return (
+    <Button
+      // Use outlined variant so we can precisely control sizing (no gradient container minHeight)
+      variant="outlined"
+      block={false}
+      disabled={disabled}
+      icon={icon}
+      iconPosition="right"
+      // Force exact dimensions and radius as per spec
+      style={[
+        IconButtonStyles.base,
+        {
+          width,
+          height,
+          minHeight: height,
+          borderRadius,
+        },
+        style,
+      ]}
+      accessibilityRole="button"
+      children={null}
+      {...pressableProps}
+    />
+  );
+};
+
+const ButtonStyles = StyleSheet.create({
   base: {
     height: 46,
     minHeight: 46,
@@ -268,6 +434,14 @@ const styles = StyleSheet.create({
   },
   loaderWrap: {
     marginLeft: 8,
+  },
+});
+
+const IconButtonStyles = StyleSheet.create({
+  base: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderColor: "grey",
   },
 });
 
