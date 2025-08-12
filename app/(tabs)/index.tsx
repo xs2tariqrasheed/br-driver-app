@@ -98,7 +98,7 @@ export default function HomeScreen() {
         size={2}
         rounded={true}
         disabled={false}
-        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+        icon={<IconSymbol name="xmark" size={20} color="white" />}
       />
       <IconButton
         size={2}
