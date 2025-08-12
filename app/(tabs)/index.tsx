@@ -2,7 +2,7 @@ import { Image } from "expo-image";
 import { useState } from "react";
 import { StyleSheet } from "react-native";
 
-import Button, { IconButton } from "@/components/Button";
+import Button, { IconButton, SwipeableButton } from "@/components/Button";
 import Input from "@/components/Form/Input";
 import Toggle from "@/components/Form/Toggle";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
@@ -153,6 +153,21 @@ export default function HomeScreen() {
         size={{ width: 100, height: 30 }}
       />
       <Toggle value={isOn} setValue={setIsOn} disabled={true} />
+      <SwipeableButton
+        title="Swipe with auto reset"
+        onComplete={() => console.log("Arrived")}
+        autoReset={true}
+      />
+      <SwipeableButton
+        title="Swipe with disabled"
+        onComplete={() => console.log("Completed")}
+        autoReset={true}
+        disabled={true}
+      />
+      <SwipeableButton
+        title="Swipe to mark as completed"
+        onComplete={() => console.log("Arrived")}
+      />
     </ParallaxScrollView>
   );
 }

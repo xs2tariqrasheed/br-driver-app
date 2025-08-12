@@ -23,6 +23,7 @@ export const textColors = {
   teal600: "#14CDBD",
   teal700: "#09B8A9",
   teal800: "#03A093",
+  teal850: "#23837B",
   teal900: "#00877C",
   green0: "#F5FFF5",
   green100: "#98F998",
