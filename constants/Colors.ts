@@ -67,6 +67,8 @@ export const textColors = {
   grey0: "#F7F7F7",
   grey100: "#E8E8E8",
   grey200: "#D0D0D0",
+  // iOS-style neutral used by switches when inactive
+  grey250: "#C7C7CC",
   grey300: "#B8B8B8",
   grey400: "#A0A0A0",
   grey500: "#898989",

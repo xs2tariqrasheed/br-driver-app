@@ -1,11 +1,14 @@
 import { Image } from "expo-image";
+import { useState } from "react";
 import { StyleSheet } from "react-native";
 
 import Button, { IconButton } from "@/components/Button";
+import Toggle from "@/components/Form/Toggle";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 
 export default function HomeScreen() {
+  const [isOn, setIsOn] = useState(false);
   return (
     <ParallaxScrollView
       headerBackgroundColor="#A1CEDC"
@@ -118,6 +121,13 @@ export default function HomeScreen() {
         disabled={false}
         icon={<IconSymbol name="chevron.right" size={20} color="white" />}
       />
+      <Toggle value={isOn} setValue={setIsOn} />
+      <Toggle
+        value={isOn}
+        setValue={setIsOn}
+        size={{ width: 100, height: 30 }}
+      />
+      <Toggle value={isOn} setValue={setIsOn} disabled={true} />
     </ParallaxScrollView>
   );
 }
