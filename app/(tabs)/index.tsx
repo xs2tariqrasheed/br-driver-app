@@ -3,12 +3,15 @@ import { useState } from "react";
 import { StyleSheet } from "react-native";
 
 import Button, { IconButton } from "@/components/Button";
+import Input from "@/components/Form/Input";
 import Toggle from "@/components/Form/Toggle";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 
 export default function HomeScreen() {
   const [isOn, setIsOn] = useState(false);
+  const [companyId, setCompanyId] = useState("");
+  const [loginId, setLoginId] = useState("");
   return (
     <ParallaxScrollView
       headerBackgroundColor="#A1CEDC"
@@ -19,6 +22,28 @@ export default function HomeScreen() {
         />
       }
     >
+      <Input
+        label="Company ID"
+        placeholder="Enter your company ID"
+        value={companyId}
+        onChangeText={setCompanyId}
+        style={{ marginBottom: 16 }}
+      />
+      <Input
+        label="Login ID"
+        placeholder="Enter your login ID"
+        value={loginId}
+        onChangeText={setLoginId}
+        style={{ marginBottom: 24 }}
+      />
+      <Input
+        label="Disabled"
+        placeholder="Disabled"
+        value={loginId}
+        onChangeText={setLoginId}
+        disabled
+        style={{ marginBottom: 24 }}
+      />
       <Button variant="primary">Primary Full</Button>
       <Button variant="primary" block="half">
         Primary Half
