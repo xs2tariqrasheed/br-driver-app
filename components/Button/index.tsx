@@ -118,32 +118,24 @@ const Button = (props: ButtonProps) => {
   const iconLeft = icon && iconPosition === "left";
   const iconRight = icon && iconPosition === "right";
 
+  const textStyle = StyleSheet.create({
+    text: {
+      color: variantStyles.foregroundColor,
+      fontFamily: SF_PRO_FONTS.Bold,
+    },
+  });
+
   // Helper function to wrap text content with proper styling
   const renderStyledChildren = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === "string") {
-      return (
-        <Text
-          style={{
-            color: variantStyles.foregroundColor,
-            fontFamily: SF_PRO_FONTS.Bold,
-          }}
-        >
-          {children}
-        </Text>
-      );
+      return <Text style={textStyle.text}>{children}</Text>;
     }
 
     // If children is already a Text element, clone it and apply text color and font
     if (React.isValidElement(children) && children.type === Text) {
       const textElement = children as React.ReactElement<any>;
       return React.cloneElement(textElement, {
-        style: [
-          {
-            color: variantStyles.foregroundColor,
-            fontFamily: SF_PRO_FONTS.Bold,
-          },
-          textElement.props.style,
-        ],
+        style: [textStyle.text, textElement.props.style],
       });
     }
 

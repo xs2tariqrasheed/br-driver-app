@@ -50,7 +50,11 @@ const Typography: React.FC<TypographyProps> = ({
 
   return (
     <Text
-      style={[styles[`${type}${weight}`], styles[variant], style]}
+      style={[
+        styles[`${type}${weight}` as keyof typeof styles],
+        styles[variant],
+        style,
+      ]}
       {...props}
     >
       {children}
