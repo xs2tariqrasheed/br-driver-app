@@ -5,13 +5,13 @@ import { Platform } from "react-native";
 import { HapticTab } from "@/components/HapticTab";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
-import { Colors } from "@/constants/colors";
+import { colors } from "@/constants/colors";
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.tint,
+        tabBarActiveTintColor: colors.tint,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
@@ -39,15 +39,6 @@ export default function TabLayout() {
           title: "Explore",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="paperplane.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="typography-variants"
-        options={{
-          title: "Typography",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="textformat" color={color} />
           ),
         }}
       />
