@@ -1,20 +1,24 @@
+/**
+ * @fileoverview Accordion Component - A collapsible panel component with animation support
+ *
+ * This file contains a fully-featured accordion component that supports:
+ * - Multiple expandable panels
+ * - Controlled and uncontrolled modes
+ * - Smooth animations with Material Design ripple effects
+ * - TypeScript support with comprehensive type definitions
+ * - Flexible API accepting single or multiple active keys
+ *
+ */
+
 import Typography from "@/components/Typography";
 import React, {
   ReactNode,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  ViewStyle,
-} from "react-native";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   ANDROID_RIPPLE_COLOR,
   BACKGROUND_COLOR,
@@ -41,272 +45,278 @@ import {
   SEPARATOR_WIDTH_PERCENT,
 } from "./constants";
 
+/**
+ * Represents a single accordion panel item
+ * @interface AccordionItem
+ */
 export type AccordionItem = {
+  /** Unique identifier for the accordion panel */
   key: string;
+  /** The header content displayed for this panel */
   label: ReactNode;
+  /** The collapsible content that shows when panel is expanded */
   children: ReactNode;
+  /** Optional icon displayed next to the label in the header */
   icon?: ReactNode;
-  disabled?: boolean;
-  extra?: ReactNode;
-  collapsible?: "disabled" | "header" | "icon";
 };
 
+/**
+ * Props for the Accordion component
+ * @interface AccordionProps
+ * @example
+ * ```tsx
+ * // Single panel control
+ * <Accordion
+ *   items={items}
+ *   activeKey="panel1"
+ *   onChange={(key) => console.log('Active:', key)}
+ * />
+ *
+ * // Multiple panels control
+ * <Accordion
+ *   items={items}
+ *   activeKey={["panel1", "panel2"]}
+ *   onChange={(keys) => console.log('Active panels:', keys)}
+ * />
+ * ```
+ */
 export type AccordionProps = {
-  // Collapse-like API
-  items?: AccordionItem[];
+  /** Array of accordion panel items to render */
+  items: AccordionItem[];
+  /**
+   * Controlled active panel key(s). Can be single string or array of strings.
+   * When provided, component operates in controlled mode.
+   */
   activeKey?: string | string[];
+  /**
+   * Default active panel key(s) for uncontrolled mode.
+   * Only used when activeKey is not provided.
+   */
   defaultActiveKey?: string | string[];
-  accordion?: boolean;
+  /**
+   * Callback fired when panel state changes.
+   * Receives the current active key(s) as parameter.
+   */
   onChange?: (key: string | string[]) => void;
-  destroyInactivePanel?: boolean;
-  expandIconPosition?: "left" | "right";
-  collapsible?: "disabled" | "header" | "icon";
-  disabled?: boolean;
-
-  // Backwards-compatible single-panel props
-  icon?: ReactNode;
-  title?: string;
-  children?: ReactNode;
 };
 
+/**
+ * Normalizes input keys to always return an array of strings.
+ * This utility function enables flexible API design by accepting both
+ * single strings and arrays of strings for the same properties.
+ *
+ * @param keys - Single key, array of keys, or null/undefined
+ * @returns Array of strings (empty array if input is null/undefined)
+ *
+ * @example
+ * ```typescript
+ * normalizeToArray('panel1')           // ['panel1']
+ * normalizeToArray(['panel1', 'panel2']) // ['panel1', 'panel2']
+ * normalizeToArray(undefined)          // []
+ * normalizeToArray(null)               // []
+ * ```
+ */
 const normalizeToArray = (keys?: string | string[]): string[] => {
   if (keys == null) return [];
   return Array.isArray(keys) ? keys : [keys];
 };
 
+/**
+ * Props for the internal Panel component
+ * @interface PanelProps
+ */
 type PanelProps = {
+  /** The accordion item data to render */
   item: AccordionItem;
+  /** Whether this panel is currently expanded */
   isActive: boolean;
+  /** Callback to toggle the panel's expanded state */
   onToggle: () => void;
-  destroyInactivePanel: boolean;
-  expandIconPosition: "left" | "right";
-  defaultCollapsible?: "disabled" | "header" | "icon";
-  groupDisabled?: boolean;
 };
 
-const Panel: React.FC<PanelProps> = ({
-  item,
-  isActive,
-  onToggle,
-  destroyInactivePanel,
-  expandIconPosition,
-  defaultCollapsible,
-  groupDisabled,
-}) => {
-  const disabled = groupDisabled || item.disabled;
-  const effectiveCollapsible = item.collapsible ?? defaultCollapsible;
-
+/**
+ * Individual accordion panel component that handles expand/collapse functionality.
+ * Features animated chevron rotation and conditional content rendering.
+ *
+ * @param item - The accordion item data to render
+ * @param isActive - Whether this panel is currently expanded
+ * @param onToggle - Callback to toggle the panel's expanded state
+ */
+const Panel: React.FC<PanelProps> = ({ item, isActive, onToggle }) => {
+  // Animation value for chevron rotation (0 = collapsed, 1 = expanded)
   const rotationAnim = useRef(new Animated.Value(isActive ? 1 : 0)).current;
 
+  // Animate chevron rotation when panel state changes
   useEffect(() => {
     Animated.timing(rotationAnim, {
       toValue: isActive ? 1 : 0,
       duration: ROTATION_DURATION_MS,
-      useNativeDriver: true,
+      useNativeDriver: true, // Better performance for transform animations
     }).start();
   }, [isActive, rotationAnim]);
 
-  const chevronStyle = useMemo<Pick<ViewStyle, "transform">>(
-    () => ({
-      transform: [
-        {
-          rotate: rotationAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [ROTATE_DEG_INACTIVE, ROTATE_DEG_ACTIVE],
-          }),
-        },
-      ],
-    }),
-    [rotationAnim]
-  );
-
-  const [hasRenderedOnce, setHasRenderedOnce] = useState<boolean>(isActive);
-  useEffect(() => {
-    if (isActive && !hasRenderedOnce) setHasRenderedOnce(true);
-  }, [isActive, hasRenderedOnce]);
-
-  const canToggleFromHeader =
-    !disabled &&
-    effectiveCollapsible !== "disabled" &&
-    effectiveCollapsible !== "icon";
-  const canToggleFromIcon =
-    !disabled &&
-    effectiveCollapsible !== "disabled" &&
-    effectiveCollapsible !== "header";
-
-  const renderChevron = () => {
-    return (
-      <Animated.View style={[styles.chevronContainer, chevronStyle]}>
-        <Text style={styles.chevronText}>{CHEVRON_CHAR}</Text>
-      </Animated.View>
-    );
-  };
-
-  const HeaderLeft = (
-    <View style={styles.leftGroup}>
-      {item.icon ? <View style={styles.iconContainer}>{item.icon}</View> : null}
-      <Typography type="bodyLarge" weight="medium" style={styles.headerTitle}>
-        {item.label}
-      </Typography>
-    </View>
-  );
-
-  const ChevronPressable = (
-    <Pressable
-      onPress={canToggleFromIcon ? onToggle : undefined}
-      android_ripple={
-        canToggleFromIcon ? { color: ANDROID_RIPPLE_COLOR } : undefined
-      }
-    >
-      {renderChevron()}
-    </Pressable>
-  );
-
   return (
     <View style={styles.container}>
+      {/* Header section with label, optional icon, and animated chevron */}
       <Pressable
-        onPress={canToggleFromHeader ? onToggle : undefined}
+        onPress={onToggle}
         style={styles.header}
-        android_ripple={
-          canToggleFromHeader ? { color: ANDROID_RIPPLE_COLOR } : undefined
-        }
+        android_ripple={{ color: ANDROID_RIPPLE_COLOR }} // Material Design ripple on Android
       >
-        {expandIconPosition === "left" ? (
-          <View style={styles.rowCenter}>
-            {ChevronPressable}
-            {HeaderLeft}
-          </View>
-        ) : (
-          HeaderLeft
-        )}
+        {/* Left side: Icon (optional) + Label */}
+        <View style={styles.leftGroup}>
+          {item.icon ? (
+            <View style={styles.iconContainer}>{item.icon}</View>
+          ) : null}
+          <Typography
+            type="bodyLarge"
+            weight="medium"
+            style={styles.headerTitle}
+          >
+            {item.label}
+          </Typography>
+        </View>
+
+        {/* Right side: Animated chevron */}
         <View style={styles.rightGroup}>
-          {item.extra}
-          {expandIconPosition === "right" ? ChevronPressable : null}
+          <Animated.View
+            style={{
+              ...styles.chevronContainer,
+              transform: [
+                {
+                  // Rotate chevron based on panel state (0deg → 90deg)
+                  rotate: rotationAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [ROTATE_DEG_INACTIVE, ROTATE_DEG_ACTIVE],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Text style={styles.chevronText}>{CHEVRON_CHAR}</Text>
+          </Animated.View>
         </View>
       </Pressable>
 
+      {/* Separator line (only shown when expanded) */}
       {isActive ? <View style={styles.separator} /> : null}
 
-      {destroyInactivePanel ? (
-        isActive ? (
-          <View style={styles.content}>{item.children}</View>
-        ) : null
-      ) : hasRenderedOnce ? (
-        <View style={[styles.content, !isActive ? styles.hidden : null]}>
-          {item.children}
-        </View>
-      ) : null}
+      {/* Panel content (hidden when collapsed) */}
+      <View style={[styles.content, !isActive ? styles.hidden : null]}>
+        {item.children}
+      </View>
     </View>
   );
 };
 
 /**
- * Accordion (Collapse-like)
- * - Supports multiple panels via `items`
- * - Controlled/uncontrolled via `activeKey` / `defaultActiveKey`
- * - `accordion` mode to allow only one open
- * - `onChange` callback with open keys
- * - `destroyInactivePanel` to unmount closed content
- * - `expandIcon` and `expandIconPosition`
- * - Per-item `disabled`, `extra`, and `collapsible`
+ * Accordion component with support for multiple expandable panels.
  *
- * Styles remain identical to the original single-panel component.
+ * Features:
+ * - Multiple panel support with flexible single/multi-select API
+ * - Controlled and uncontrolled modes
+ * - Smooth animations with Material Design ripple effects (Android)
+ * - TypeScript support with comprehensive type definitions
+ * - Customizable styling through constants
+ *
+ * @component
+ * @example
+ * ```tsx
+ * // Basic usage
+ * const items = [
+ *   {
+ *     key: 'panel1',
+ *     label: 'Panel 1',
+ *     children: <Text>Content for panel 1</Text>
+ *   },
+ *   {
+ *     key: 'panel2',
+ *     label: 'Panel 2',
+ *     children: <Text>Content for panel 2</Text>,
+ *     icon: <Icon name="star" />
+ *   }
+ * ];
+ *
+ * // Uncontrolled mode
+ * <Accordion items={items} defaultActiveKey="panel1" />
+ *
+ * // Controlled mode
+ * <Accordion
+ *   items={items}
+ *   activeKey={activeKeys}
+ *   onChange={setActiveKeys}
+ * />
+ *
+ * // Multiple panels open
+ * <Accordion
+ *   items={items}
+ *   defaultActiveKey={["panel1", "panel2"]}
+ * />
+ * ```
  */
 const Accordion: React.FC<AccordionProps> = (props) => {
-  const {
-    items,
-    activeKey,
-    defaultActiveKey,
-    accordion,
-    onChange,
-    destroyInactivePanel = false,
-    expandIconPosition = "right",
-    collapsible,
-    disabled,
-    // backward-compat
-    icon,
-    title,
-    children,
-  } = props;
+  const { items, activeKey, defaultActiveKey, onChange } = props;
 
-  const derivedItems: AccordionItem[] = useMemo(() => {
-    if (items && items.length > 0) return items;
-    // Backwards-compatible single panel
-    return [
-      {
-        key: "0",
-        label: title ?? "",
-        children: children as ReactNode,
-        icon,
-      },
-    ];
-  }, [items, icon, title, children]);
-
+  // Determine if component is in controlled mode (activeKey prop provided)
   const isControlled = activeKey !== undefined;
-  const initialKeys = useMemo(() => {
-    const normalized = normalizeToArray(defaultActiveKey);
-    return accordion ? normalized.slice(0, 1) : normalized;
-  }, [defaultActiveKey, accordion]);
 
-  const [internalActiveKeys, setInternalActiveKeys] =
-    useState<string[]>(initialKeys);
+  // Internal state for uncontrolled mode - tracks which panels are open
+  const [internalActiveKeys, setInternalActiveKeys] = useState<string[]>(() =>
+    normalizeToArray(defaultActiveKey)
+  );
 
+  // Sync internal state with defaultActiveKey changes in uncontrolled mode
   useEffect(() => {
-    // If defaultActiveKey changes and the component is uncontrolled, update initial
+    // If defaultActiveKey changes and the component is uncontrolled, update internal state
+    // This allows the default to be updated after initial render
     if (!isControlled) {
-      const normalized = normalizeToArray(defaultActiveKey);
-      setInternalActiveKeys(accordion ? normalized.slice(0, 1) : normalized);
+      setInternalActiveKeys(normalizeToArray(defaultActiveKey));
     }
+    // Note: isControlled is intentionally omitted from deps as it shouldn't change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultActiveKey]);
 
+  // Get the current active keys based on controlled vs uncontrolled mode
   const currentActiveKeys = isControlled
-    ? accordion
-      ? normalizeToArray(activeKey).slice(0, 1)
-      : normalizeToArray(activeKey)
-    : internalActiveKeys;
+    ? normalizeToArray(activeKey) // Use provided activeKey in controlled mode
+    : internalActiveKeys; // Use internal state in uncontrolled mode
 
+  // Handle panel toggle with support for both controlled and uncontrolled modes
   const handleToggle = useCallback(
     (key: string) => {
+      // Check if the panel is currently open
       const isOpen = currentActiveKeys.includes(key);
-      let nextKeys: string[];
-      if (accordion) {
-        nextKeys = isOpen ? [] : [key];
-      } else {
-        nextKeys = isOpen
-          ? currentActiveKeys.filter((k) => k !== key)
-          : [...currentActiveKeys, key];
-      }
 
+      // Calculate new active keys (toggle the panel)
+      const nextKeys = isOpen
+        ? currentActiveKeys.filter((k) => k !== key) // Remove key if open
+        : [...currentActiveKeys, key]; // Add key if closed
+
+      // Update internal state only in uncontrolled mode
       if (!isControlled) {
         setInternalActiveKeys(nextKeys);
       }
 
+      // Always call onChange callback if provided (for both modes)
       if (onChange) {
-        if (accordion) {
-          onChange(nextKeys.length ? nextKeys[0] : []);
-        } else {
-          onChange(nextKeys);
-        }
+        onChange(nextKeys);
       }
     },
-    [accordion, currentActiveKeys, isControlled, onChange]
+    [currentActiveKeys, isControlled, onChange]
   );
 
+  // Render all accordion panels
   return (
     <View>
-      {derivedItems.map((item) => {
+      {items.map((item) => {
+        // Check if this specific panel should be active/expanded
         const isActive = currentActiveKeys.includes(item.key);
         return (
           <Panel
             key={item.key}
             item={item}
-            isActive={!!isActive}
+            isActive={isActive}
             onToggle={() => handleToggle(item.key)}
-            destroyInactivePanel={!!destroyInactivePanel}
-            expandIconPosition={expandIconPosition}
-            defaultCollapsible={collapsible}
-            groupDisabled={disabled}
           />
         );
       })}
@@ -341,12 +351,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  titleText: {
-    fontSize: 16,
-    color: undefined,
-    fontWeight: "600",
-    flexShrink: 1,
-  },
   chevronContainer: {
     width: CHEVRON_SIZE,
     height: CHEVRON_SIZE,
@@ -376,10 +380,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: CONTENT_PADDING_HORIZONTAL,
     paddingBottom: CONTENT_PADDING_BOTTOM,
     gap: CONTENT_GAP,
-  },
-  rowCenter: {
-    flexDirection: "row",
-    alignItems: "center",
   },
   rightGroup: {
     flexDirection: "row",
