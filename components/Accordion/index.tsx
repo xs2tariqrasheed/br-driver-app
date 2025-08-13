@@ -59,7 +59,6 @@ export type AccordionProps = {
   accordion?: boolean;
   onChange?: (key: string | string[]) => void;
   destroyInactivePanel?: boolean;
-  expandIcon?: (props: { isActive: boolean }) => ReactNode;
   expandIconPosition?: "left" | "right";
   collapsible?: "disabled" | "header" | "icon";
   disabled?: boolean;
@@ -80,7 +79,6 @@ type PanelProps = {
   isActive: boolean;
   onToggle: () => void;
   destroyInactivePanel: boolean;
-  expandIcon?: (props: { isActive: boolean }) => ReactNode;
   expandIconPosition: "left" | "right";
   defaultCollapsible?: "disabled" | "header" | "icon";
   groupDisabled?: boolean;
@@ -91,7 +89,6 @@ const Panel: React.FC<PanelProps> = ({
   isActive,
   onToggle,
   destroyInactivePanel,
-  expandIcon,
   expandIconPosition,
   defaultCollapsible,
   groupDisabled,
@@ -138,9 +135,6 @@ const Panel: React.FC<PanelProps> = ({
     effectiveCollapsible !== "header";
 
   const renderChevron = () => {
-    if (expandIcon) {
-      return expandIcon({ isActive });
-    }
     return (
       <Animated.View style={[styles.chevronContainer, chevronStyle]}>
         <Text style={styles.chevronText}>{CHEVRON_CHAR}</Text>
@@ -226,7 +220,6 @@ const Accordion: React.FC<AccordionProps> = (props) => {
     accordion,
     onChange,
     destroyInactivePanel = false,
-    expandIcon,
     expandIconPosition = "right",
     collapsible,
     disabled,
@@ -311,7 +304,6 @@ const Accordion: React.FC<AccordionProps> = (props) => {
             isActive={!!isActive}
             onToggle={() => handleToggle(item.key)}
             destroyInactivePanel={!!destroyInactivePanel}
-            expandIcon={expandIcon}
             expandIconPosition={expandIconPosition}
             defaultCollapsible={collapsible}
             groupDisabled={disabled}

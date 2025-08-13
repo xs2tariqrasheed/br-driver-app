@@ -1,11 +1,9 @@
 import { Image } from "expo-image";
+import React from "react";
 import { StyleSheet } from "react-native";
 
-import Accordion from "@/components/Accordion";
+import AccordionExamples from "@/components/Accordion/examples";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
-import { ThemedText } from "@/components/ThemedText";
-import { IconSymbol } from "@/components/ui/IconSymbol";
-import { colors } from "@/constants/colors";
 
 export default function HomeScreen() {
   return (
@@ -18,53 +16,7 @@ export default function HomeScreen() {
         />
       }
     >
-      <Accordion
-        items={[
-          {
-            key: "1",
-            label: "This is panel header 1",
-            icon: (
-              <IconSymbol
-                name="chevron.right"
-                size={18}
-                weight="medium"
-                color={colors.icon}
-              />
-            ),
-            children: (
-              <>
-                <ThemedText>Panel 1 content line A</ThemedText>
-                <ThemedText>Panel 1 content line B</ThemedText>
-                <ThemedText>Panel 1 content line C</ThemedText>
-              </>
-            ),
-          },
-          {
-            key: "2",
-            label: "This is panel header 2",
-            children: (
-              <>
-                <ThemedText>Panel 2 content line A</ThemedText>
-                <ThemedText>Panel 2 content line B</ThemedText>
-              </>
-            ),
-          },
-          {
-            key: "3",
-            label: "This is panel header 3 (disabled)",
-            disabled: true,
-            children: (
-              <>
-                <ThemedText>Panel 3 content (disabled)</ThemedText>
-              </>
-            ),
-          },
-        ]}
-        defaultActiveKey={["1"]}
-        onChange={(keyOrKeys) => {
-          //console.log("Accordion changed:", keyOrKeys);
-        }}
-      />
+      <AccordionExamples />
     </ParallaxScrollView>
   );
 }
