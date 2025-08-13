@@ -36,59 +36,6 @@ export function SwipeableButton({
     }
   }, [onComplete, autoReset, completionThreshold]);
 
-  const styles = StyleSheet.create({
-    disabledRail: {
-      backgroundColor: textColors.white,
-      borderColor: textColors.white,
-      opacity: 0.5,
-    },
-    disabledTitle: {
-      color: textColors.black,
-      fontSize: 16,
-      fontWeight: 500,
-      textAlign: "center",
-      marginLeft: 20,
-      opacity: 0.5,
-    },
-    disabledContainer: {
-      backgroundColor: textColors.grey250,
-      borderWidth: 1,
-      borderColor: textColors.grey250,
-      opacity: 0.5,
-    },
-    activeContainer: {
-      backgroundColor: textColors.teal900,
-      borderWidth: 1,
-      borderColor: textColors.teal900,
-    },
-    activeRail: {
-      backgroundColor: textColors.black,
-      borderColor: textColors.black,
-    },
-    gradientRail: {
-      position: "absolute",
-      top: 5,
-      left: 5,
-      right: 5,
-      bottom: 5,
-      borderRadius: 100,
-    },
-    activeTitle: {
-      color: textColors.white,
-      fontSize: 16,
-      fontWeight: 600,
-      textAlign: "center",
-      marginLeft: 20,
-    },
-    disabledThumbIcon: {
-      opacity: 0.5,
-    },
-    activeThumbIcon: {
-      opacity: 1,
-      borderWidth: 0,
-    },
-  });
-
   return (
     <View style={{ position: "relative" }}>
       {!disabled && (
@@ -120,8 +67,6 @@ export function SwipeableButton({
         thumbIconStyles={
           disabled ? styles.disabledThumbIcon : styles.activeThumbIcon
         }
-        // railFillBackgroundColor={disabled ? textColors.grey250 : textColors.teal900}
-        // railFillBorderColor={disabled ? textColors.grey250 : textColors.teal900}
         title={title}
         thumbIconComponent={() => (
           <Image
@@ -134,3 +79,56 @@ export function SwipeableButton({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  disabledRail: {
+    backgroundColor: textColors.white,
+    borderColor: textColors.white,
+    opacity: 0.5,
+  },
+  disabledTitle: {
+    color: textColors.black,
+    fontSize: 16,
+    fontWeight: 500,
+    textAlign: "center",
+    marginLeft: 20,
+    opacity: 0.5,
+  },
+  disabledContainer: {
+    backgroundColor: textColors.grey250,
+    borderWidth: 1,
+    borderColor: textColors.grey250,
+    opacity: 0.5,
+  },
+  activeContainer: {
+    backgroundColor: textColors.teal900,
+    borderWidth: 1,
+    borderColor: textColors.teal900,
+  },
+  activeRail: {
+    backgroundColor: textColors.black,
+    borderColor: textColors.black,
+  },
+  gradientRail: {
+    position: "absolute",
+    top: 5,
+    left: 5,
+    right: 5,
+    bottom: 5,
+    borderRadius: 100,
+  },
+  activeTitle: {
+    color: textColors.white,
+    fontSize: 16,
+    fontWeight: 600,
+    textAlign: "center",
+    marginLeft: 20,
+  },
+  disabledThumbIcon: {
+    opacity: 0.5,
+  },
+  activeThumbIcon: {
+    opacity: 1,
+    borderWidth: 0,
+  },
+});
