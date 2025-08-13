@@ -6,7 +6,7 @@
  * - Controlled and uncontrolled modes
  * - Smooth animations with Material Design ripple effects
  * - TypeScript support with comprehensive type definitions
- * - Flexible API accepting single or multiple active keys
+ * - Array-based API for managing multiple active keys
  *
  */
 
@@ -65,17 +65,10 @@ export type AccordionItem = {
  * @interface AccordionProps
  * @example
  * ```tsx
- * // Single panel control
- * <Accordion
- *   items={items}
- *   activeKey="panel1"
- *   onChange={(key) => console.log('Active:', key)}
- * />
- *
  * // Multiple panels control
  * <Accordion
  *   items={items}
- *   activeKey={["panel1", "panel2"]}
+ *   activeKeys={["panel1", "panel2"]}
  *   onChange={(keys) => console.log('Active panels:', keys)}
  * />
  * ```
@@ -84,41 +77,20 @@ export type AccordionProps = {
   /** Array of accordion panel items to render */
   items: AccordionItem[];
   /**
-   * Controlled active panel key(s). Can be single string or array of strings.
+   * Controlled active panel keys. Array of strings.
    * When provided, component operates in controlled mode.
    */
-  activeKey?: string | string[];
+  activeKeys?: string[];
   /**
-   * Default active panel key(s) for uncontrolled mode.
-   * Only used when activeKey is not provided.
+   * Default active panel keys for uncontrolled mode.
+   * Only used when activeKeys is not provided.
    */
-  defaultActiveKey?: string | string[];
+  defaultActiveKeys?: string[];
   /**
    * Callback fired when panel state changes.
-   * Receives the current active key(s) as parameter.
+   * Receives the current active keys as parameter.
    */
-  onChange?: (key: string | string[]) => void;
-};
-
-/**
- * Normalizes input keys to always return an array of strings.
- * This utility function enables flexible API design by accepting both
- * single strings and arrays of strings for the same properties.
- *
- * @param keys - Single key, array of keys, or null/undefined
- * @returns Array of strings (empty array if input is null/undefined)
- *
- * @example
- * ```typescript
- * normalizeToArray('panel1')           // ['panel1']
- * normalizeToArray(['panel1', 'panel2']) // ['panel1', 'panel2']
- * normalizeToArray(undefined)          // []
- * normalizeToArray(null)               // []
- * ```
- */
-const normalizeToArray = (keys?: string | string[]): string[] => {
-  if (keys == null) return [];
-  return Array.isArray(keys) ? keys : [keys];
+  onChange?: (keys: string[]) => void;
 };
 
 /**
@@ -213,7 +185,7 @@ const Panel: React.FC<PanelProps> = ({ item, isActive, onToggle }) => {
  * Accordion component with support for multiple expandable panels.
  *
  * Features:
- * - Multiple panel support with flexible single/multi-select API
+ * - Multiple panel support with array-based API
  * - Controlled and uncontrolled modes
  * - Smooth animations with Material Design ripple effects (Android)
  * - TypeScript support with comprehensive type definitions
@@ -238,47 +210,47 @@ const Panel: React.FC<PanelProps> = ({ item, isActive, onToggle }) => {
  * ];
  *
  * // Uncontrolled mode
- * <Accordion items={items} defaultActiveKey="panel1" />
+ * <Accordion items={items} defaultActiveKeys={["panel1"]} />
  *
  * // Controlled mode
  * <Accordion
  *   items={items}
- *   activeKey={activeKeys}
+ *   activeKeys={activeKeys}
  *   onChange={setActiveKeys}
  * />
  *
  * // Multiple panels open
  * <Accordion
  *   items={items}
- *   defaultActiveKey={["panel1", "panel2"]}
+ *   defaultActiveKeys={["panel1", "panel2"]}
  * />
  * ```
  */
 const Accordion: React.FC<AccordionProps> = (props) => {
-  const { items, activeKey, defaultActiveKey, onChange } = props;
+  const { items, activeKeys, defaultActiveKeys, onChange } = props;
 
-  // Determine if component is in controlled mode (activeKey prop provided)
-  const isControlled = activeKey !== undefined;
+  // Determine if component is in controlled mode (activeKeys prop provided)
+  const isControlled = activeKeys !== undefined;
 
   // Internal state for uncontrolled mode - tracks which panels are open
-  const [internalActiveKeys, setInternalActiveKeys] = useState<string[]>(() =>
-    normalizeToArray(defaultActiveKey)
+  const [internalActiveKeys, setInternalActiveKeys] = useState<string[]>(
+    () => defaultActiveKeys ?? []
   );
 
-  // Sync internal state with defaultActiveKey changes in uncontrolled mode
+  // Sync internal state with defaultActiveKeys changes in uncontrolled mode
   useEffect(() => {
-    // If defaultActiveKey changes and the component is uncontrolled, update internal state
+    // If defaultActiveKeys changes and the component is uncontrolled, update internal state
     // This allows the default to be updated after initial render
     if (!isControlled) {
-      setInternalActiveKeys(normalizeToArray(defaultActiveKey));
+      setInternalActiveKeys(defaultActiveKeys ?? []);
     }
     // Note: isControlled is intentionally omitted from deps as it shouldn't change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultActiveKey]);
+  }, [defaultActiveKeys]);
 
   // Get the current active keys based on controlled vs uncontrolled mode
   const currentActiveKeys = isControlled
-    ? normalizeToArray(activeKey) // Use provided activeKey in controlled mode
+    ? activeKeys ?? [] // Use provided activeKeys in controlled mode
     : internalActiveKeys; // Use internal state in uncontrolled mode
 
   // Handle panel toggle with support for both controlled and uncontrolled modes

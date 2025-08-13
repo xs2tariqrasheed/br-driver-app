@@ -53,7 +53,7 @@ const AccordionExamples: React.FC = () => {
             ),
           },
         ]}
-        defaultActiveKey={["1"]}
+        defaultActiveKeys={["1"]}
       />
 
       <ThemedText type="subtitle">Controlled (multiple)</ThemedText>
@@ -99,10 +99,8 @@ const AccordionExamples: React.FC = () => {
             children: <ThemedText>C content</ThemedText>,
           },
         ]}
-        activeKey={controlledMultiKeys}
-        onChange={(k) => {
-          if (Array.isArray(k)) setControlledMultiKeys(k);
-        }}
+        activeKeys={controlledMultiKeys}
+        onChange={setControlledMultiKeys}
       />
     </>
   );
