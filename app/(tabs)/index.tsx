@@ -1,11 +1,19 @@
 import { Image } from "expo-image";
 import React from "react";
+import { useState } from "react";
 import { StyleSheet } from "react-native";
 
-import AccordionExamples from "@/components/Accordion/examples";
+import Button, { IconButton, SwipeableButton } from "@/components/Button";
+import Input from "@/components/Form/Input";
+import Toggle from "@/components/Form/Toggle";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import AccordionExamples from "@/components/Accordion/examples";
 
 export default function HomeScreen() {
+  const [isOn, setIsOn] = useState(false);
+  const [companyId, setCompanyId] = useState("");
+  const [loginId, setLoginId] = useState("");
   return (
     <ParallaxScrollView
       headerBackgroundColor="#A1CEDC"
@@ -17,6 +25,152 @@ export default function HomeScreen() {
       }
     >
       <AccordionExamples />
+      <Input
+        label="Company ID"
+        placeholder="Enter your company ID"
+        value={companyId}
+        onChangeText={setCompanyId}
+        style={{ marginBottom: 16 }}
+      />
+      <Input
+        label="Login ID"
+        placeholder="Enter your login ID"
+        value={loginId}
+        onChangeText={setLoginId}
+        style={{ marginBottom: 24 }}
+      />
+      <Input
+        label="Disabled"
+        placeholder="Disabled"
+        value={loginId}
+        onChangeText={setLoginId}
+        disabled
+        style={{ marginBottom: 24 }}
+      />
+      <Button variant="primary">Primary Full</Button>
+      <Button variant="primary" block="half">
+        Primary Half
+      </Button>
+      <Button variant="outlined">Outlined Full</Button>
+      <Button variant="outlined" block="half">
+        Outlined Half
+      </Button>
+      <Button variant="danger">Danger Full</Button>
+      <Button variant="danger" block="half">
+        Danger Half
+      </Button>
+      <Button loading>Loading...</Button>
+      <Button loading block="half">
+        Loading Half
+      </Button>
+      <Button disabled>Disabled Full</Button>
+      <Button disabled block="half">
+        Disabled Half
+      </Button>
+      <Button variant="primary" rounded="full">
+        Primary Rounded Full
+      </Button>
+      <Button variant="primary" block="half" rounded="full">
+        Primary Rounded Half
+      </Button>
+      <Button variant="outlined" rounded="full">
+        Outlined Rounded Full
+      </Button>
+      <Button variant="outlined" block="half" rounded="half">
+        Outlined Rounded Half
+      </Button>
+      <Button
+        variant="primary"
+        rounded="full"
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      >
+        Primary With Icon
+      </Button>
+      <Button
+        variant="outlined"
+        rounded="full"
+        icon={<IconSymbol name="chevron.right" size={20} color="black" />}
+      >
+        Outlined With Icon
+      </Button>
+      <Button
+        variant="danger"
+        rounded="full"
+        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+        iconPosition="left"
+      >
+        Danger With Left Icon
+      </Button>
+      <IconButton
+        size={4}
+        rounded={true}
+        disabled={false}
+        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+      />
+      <IconButton
+        size={4}
+        rounded={false}
+        disabled={false}
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      />
+      <IconButton
+        size={3}
+        rounded={true}
+        disabled={false}
+        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+      />
+      <IconButton
+        size={3}
+        rounded={false}
+        disabled={false}
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      />
+      <IconButton
+        size={2}
+        rounded={true}
+        disabled={false}
+        icon={<IconSymbol name="xmark" size={20} color="white" />}
+      />
+      <IconButton
+        size={2}
+        rounded={false}
+        disabled={false}
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      />
+      <IconButton
+        size={1}
+        rounded={true}
+        disabled={false}
+        icon={<IconSymbol name="chevron.left" size={20} color="white" />}
+      />
+      <IconButton
+        size={1}
+        rounded={false}
+        disabled={false}
+        icon={<IconSymbol name="chevron.right" size={20} color="white" />}
+      />
+      <Toggle value={isOn} setValue={setIsOn} />
+      <Toggle
+        value={isOn}
+        setValue={setIsOn}
+        size={{ width: 100, height: 30 }}
+      />
+      <Toggle value={isOn} setValue={setIsOn} disabled={true} />
+      <SwipeableButton
+        title="Swipe with auto reset"
+        onComplete={() => console.log("Arrived")}
+        autoReset={true}
+      />
+      <SwipeableButton
+        title="Swipe with disabled"
+        onComplete={() => console.log("Completed")}
+        autoReset={true}
+        disabled={true}
+      />
+      <SwipeableButton
+        title="Swipe to mark as completed"
+        onComplete={() => console.log("Arrived")}
+      />
     </ParallaxScrollView>
   );
 }
