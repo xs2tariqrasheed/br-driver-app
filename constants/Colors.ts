@@ -35,6 +35,8 @@ export const textColors = {
   green700: "#1BB81B",
   green800: "#13A013",
   green900: "#0E870E",
+  // Specific green used for password requirement checks
+  greenCheck: "#008000",
   blue0: "#F5F6FF",
   blue100: "#C0C9FD",
   blue200: "#8D9EF9",
@@ -65,6 +67,8 @@ export const textColors = {
   yellow700: "#B87509",
   yellow800: "#A06403",
   yellow900: "#875300",
+  // Brand/specific yellows
+  yellowGoogle: "#FBBC05",
   grey0: "#F7F7F7",
   grey100: "#E8E8E8",
   grey200: "#D0D0D0",

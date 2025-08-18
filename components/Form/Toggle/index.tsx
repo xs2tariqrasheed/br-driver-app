@@ -1,3 +1,4 @@
+import Typography from "@/components/Typography";
 import { SF_PRO_FONTS } from "@/components/Typography/constants";
 import { textColors } from "@/constants/colors";
 import React, { useEffect, useMemo, useRef } from "react";
@@ -7,9 +8,9 @@ import {
   Pressable,
   StyleProp,
   StyleSheet,
-  Text,
   View,
   ViewStyle,
+  type TextStyle,
 } from "react-native";
 
 type SetValueFn<T> =
@@ -148,17 +149,21 @@ const Toggle: React.FC<ToggleProps> = (props) => {
             disabled={disabled}
             style={styles.labeledCell}
           >
-            <Text
-              style={[
-                styles.labeledText,
-                selectedIndex === 0
-                  ? styles.labeledTextActive
-                  : styles.labeledTextInactive,
-              ]}
+            <Typography
+              type="bodyMedium"
+              weight="regular"
+              style={
+                StyleSheet.flatten([
+                  styles.labeledText,
+                  selectedIndex === 0
+                    ? styles.labeledTextActive
+                    : styles.labeledTextInactive,
+                ]) as TextStyle
+              }
               numberOfLines={1}
             >
               {labels[0]}
-            </Text>
+            </Typography>
           </Pressable>
 
           <Pressable
@@ -168,17 +173,21 @@ const Toggle: React.FC<ToggleProps> = (props) => {
             disabled={disabled}
             style={styles.labeledCell}
           >
-            <Text
-              style={[
-                styles.labeledText,
-                selectedIndex === 1
-                  ? styles.labeledTextActive
-                  : styles.labeledTextInactive,
-              ]}
+            <Typography
+              type="bodyMedium"
+              weight="regular"
+              style={
+                StyleSheet.flatten([
+                  styles.labeledText,
+                  selectedIndex === 1
+                    ? styles.labeledTextActive
+                    : styles.labeledTextInactive,
+                ]) as TextStyle
+              }
               numberOfLines={1}
             >
               {labels[1]}
-            </Text>
+            </Typography>
           </Pressable>
         </View>
       </View>

@@ -1,3 +1,4 @@
+import Typography from "@/components/Typography";
 import { SF_PRO_FONTS } from "@/components/Typography/constants";
 import { textColors } from "@/constants/colors";
 import React, {
@@ -10,7 +11,6 @@ import React, {
 import {
   Image,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -158,7 +158,11 @@ function InnerInput(
 
   const renderNode = (node?: React.ReactNode) => {
     if (typeof node === "string") {
-      return <Text style={styles.iconText}>{node}</Text>;
+      return (
+        <Typography type="bodyLarge" weight="medium" style={styles.iconText}>
+          {node}
+        </Typography>
+      );
     }
     return node ?? null;
   };
@@ -252,7 +256,18 @@ function InnerInput(
 
         <View style={styles.inputWrap}>
           {label && isActive ? (
-            <Text style={[styles.floatingLabel, labelStyle]}>{label}</Text>
+            <Typography
+              type="labelLarge"
+              weight="medium"
+              style={
+                StyleSheet.flatten([
+                  styles.floatingLabel,
+                  labelStyle,
+                ]) as TextStyle
+              }
+            >
+              {label}
+            </Typography>
           ) : null}
           <TextInput
             ref={textInputRef}
@@ -288,17 +303,18 @@ function InnerInput(
       </View>
 
       {hasError && errorMessage ? (
-        <Text
+        <Typography
+          type="labelLarge"
+          weight="regular"
           style={{
             color: textColors.red500,
             marginLeft: 20,
             marginTop: -8,
             fontSize: 12,
-            fontFamily: SF_PRO_FONTS.Regular,
           }}
         >
           {errorMessage}
-        </Text>
+        </Typography>
       ) : null}
     </>
   );
