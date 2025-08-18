@@ -1,3 +1,4 @@
+import { SF_PRO_FONTS } from "@/components/Typography/constants";
 import { textColors } from "@/constants/colors";
 import React, { useEffect, useMemo, useRef } from "react";
 import {
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
   },
   labeledText: {
     color: textColors.white,
-    fontSize: 18,
+    fontFamily: SF_PRO_FONTS.Regular,
   },
   labeledTextActive: {
     fontWeight: "700",
