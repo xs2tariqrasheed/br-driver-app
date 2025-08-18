@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
 import React, { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { StyleSheet } from "react-native";
 
 import AccordionExamples from "@/components/Accordion/examples";
@@ -15,6 +16,35 @@ export default function HomeScreen() {
   const [loginId, setLoginId] = useState("");
   const [status, setStatus] = useState("Offline");
 
+  type DemoFormValues = {
+    firstName: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    age: string;
+  };
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    trigger,
+  } = useForm<DemoFormValues>({
+    defaultValues: {
+      firstName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      age: "",
+    },
+    mode: "onChange",
+  });
+
+  const onSubmit = (data: DemoFormValues) => {
+    console.log("Form submitted", data);
+  };
+
   return (
     <ParallaxScrollView
       headerBackgroundColor="#A1CEDC"
@@ -26,6 +56,126 @@ export default function HomeScreen() {
       }
     >
       <AccordionExamples />
+
+      {/* React Hook Form + Input examples */}
+      <Controller
+        control={control}
+        name="firstName"
+        rules={{ required: "This is required." }}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <Input
+            label="First name"
+            placeholder="Enter first name"
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+            name="firstName"
+            errors={errors}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="email"
+        rules={{
+          required: "Email is required.",
+          pattern: {
+            value: /\S+@\S+\.\S+/, // simple email check
+            message: "Enter a valid email.",
+          },
+        }}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <Input
+            label="Email"
+            placeholder="your@email.com"
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+            inputType="email"
+            name="email"
+            errors={errors}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="password"
+        rules={{
+          required: "Password is required.",
+          minLength: { value: 8, message: "Minimum 8 characters." },
+        }}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <Input
+            label="Password"
+            placeholder="Enter password"
+            value={value}
+            onChangeText={(t) => {
+              onChange(t);
+              // ensure confirmPassword revalidates when password changes
+              trigger("confirmPassword");
+            }}
+            onBlur={onBlur}
+            inputType="password"
+            name="password"
+            errors={errors}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="confirmPassword"
+        rules={{
+          required: "Please confirm your password.",
+          validate: (val) =>
+            val === watch("password") || "Passwords don’t match",
+        }}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <Input
+            label="Confirm Password"
+            placeholder="Re-enter password"
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+            inputType="password"
+            rightIcon="info"
+            name="confirmPassword"
+            errors={errors}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="age"
+        rules={{
+          required: "Age is required.",
+          validate: (v) => {
+            const n = Number(v);
+            if (Number.isNaN(n)) return "Enter a number";
+            if (n < 18) return "Must be at least 18";
+            return true;
+          },
+        }}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <Input
+            label="Age"
+            placeholder="18"
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+            inputType="number"
+            name="age"
+            errors={errors}
+          />
+        )}
+      />
+
+      <Button style={{ marginBottom: 24 }} onPress={handleSubmit(onSubmit)}>
+        Submit Demo Form
+      </Button>
       <Input
         label="Company ID"
         placeholder="Enter your company ID"
@@ -48,6 +198,25 @@ export default function HomeScreen() {
         disabled
         style={{ marginBottom: 24 }}
       />
+      <Input
+        label="New Password"
+        inputType="password"
+        placeholder="New Password"
+        rightIcon="info"
+        onRightIconClick={() => {
+          /* show tooltip */
+        }}
+      />
+      <Input
+        label="New Password with info icon"
+        inputType="password"
+        placeholder="New Password with info icon"
+        rightIcon="info"
+        onRightIconClick={() => {
+          /* show tooltip */
+        }}
+      />
+
       <Button variant="primary">Primary Full</Button>
       <Button variant="primary" block="half">
         Primary Half
