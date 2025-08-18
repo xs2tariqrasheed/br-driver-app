@@ -30,7 +30,7 @@ import {
   TYPOGRAPHY_WEIGHT,
 } from "./constants";
 
-export interface TypographyProps extends TextProps {
+interface TypographyProps extends TextProps {
   type: TYPOGRAPHY_TYPE;
   weight: TYPOGRAPHY_WEIGHT;
   variant: TYPOGRAPHY_COLOR_VARIANT;
@@ -38,7 +38,7 @@ export interface TypographyProps extends TextProps {
   style?: TextStyle;
 }
 
-export const Typography: React.FC<TypographyProps> = ({
+const Typography: React.FC<TypographyProps> = ({
   type = DEFAULT_TYPOGRAPHY_TYPE,
   weight = DEFAULT_TYPOGRAPHY_WEIGHT,
   variant,
@@ -50,7 +50,11 @@ export const Typography: React.FC<TypographyProps> = ({
 
   return (
     <Text
-      style={[styles[`${type}${weight}`], styles[variant], style]}
+      style={[
+        styles[`${type}${weight}` as keyof typeof styles],
+        styles[variant],
+        style,
+      ]}
       {...props}
     >
       {children}
@@ -71,3 +75,5 @@ const styles = StyleSheet.create({
   italic: { fontStyle: "italic" },
   mark: { backgroundColor: "yellow" },
 });
+
+export default Typography;

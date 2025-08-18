@@ -4,7 +4,7 @@
 
 const tintColor = "#0a7ea4";
 
-export const Colors = {
+export const colors = {
   text: "#11181C",
   background: "#fff",
   tint: tintColor,
@@ -23,6 +23,7 @@ export const textColors = {
   teal600: "#14CDBD",
   teal700: "#09B8A9",
   teal800: "#03A093",
+  teal850: "#23837B",
   teal900: "#00877C",
   green0: "#F5FFF5",
   green100: "#98F998",
@@ -67,6 +68,8 @@ export const textColors = {
   grey0: "#F7F7F7",
   grey100: "#E8E8E8",
   grey200: "#D0D0D0",
+  // iOS-style neutral used by switches when inactive
+  grey250: "#C7C7CC",
   grey300: "#B8B8B8",
   grey400: "#A0A0A0",
   grey500: "#898989",
@@ -74,5 +77,6 @@ export const textColors = {
   grey700: "#5A5A5A",
   grey800: "#414141",
   grey900: "#2A2A2A",
-  black900: "#000000",
+  black: "#000000",
+  white: "#FFFFFF",
 };
