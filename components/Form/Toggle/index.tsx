@@ -6,33 +6,45 @@ import {
   Pressable,
   StyleProp,
   StyleSheet,
+  Text,
+  View,
   ViewStyle,
 } from "react-native";
 
-export type ToggleSetValueFn =
-  | ((value: boolean) => void)
-  | ((name: string, value: boolean, options?: unknown) => void);
+type SetValueFn<T> =
+  | ((value: T) => void)
+  | ((name: string, value: T, options?: unknown) => void);
 
-export type ToggleProps = {
+type CommonProps = {
   /** Disable interaction and apply disabled visuals */
   disabled?: boolean;
   /** Optional field name for react-hook-form's setValue(name, value) signature */
   name?: string;
-  /** Controlled value (required) */
-  value: boolean;
-  /**
-   * Required setter. Accepts either:
-   * - setValue(next: boolean)
-   * - setValue(name: string, next: boolean)
-   */
-  setValue: ToggleSetValueFn;
-  /** Callback fired after value changes via user interaction */
-  onChange?: (next: boolean) => void;
   /** Optional style override for outer wrapper */
   style?: StyleProp<ViewStyle>;
-  /** Size override (width x height). Defaults to 56 x 32. */
+  /** Size override (width x height). Defaults vary by variant. */
   size?: { width: number; height: number };
 };
+
+type SwitchProps = {
+  variant?: "switch";
+  value: boolean;
+  setValue: SetValueFn<boolean>;
+  onChange?: (next: boolean) => void;
+};
+
+type LabeledProps = {
+  variant: "labeled";
+  /** Left/right labels. The selected label is returned as the value. */
+  labels: [string, string];
+  /** The currently selected label value. Must be one of labels[0] or labels[1]. */
+  value: string;
+  setValue: SetValueFn<string>;
+  /** onChange returns the currently selected string value */
+  onChange?: (next: string) => void;
+};
+
+export type ToggleProps = CommonProps & (SwitchProps | LabeledProps);
 
 const INACTIVE_BG = textColors.grey250 ?? "#C7C7CC"; // per spec
 const ACTIVE_BG = textColors.black; // per spec
@@ -40,21 +52,155 @@ const KNOB_COLOR = textColors.white; // per spec
 
 const ANIMATION_DURATION_MS = 180;
 
-const Toggle: React.FC<ToggleProps> = ({
-  disabled = false,
-  name,
-  value,
-  setValue,
-  onChange,
-  style,
-  size,
-}) => {
+const Toggle: React.FC<ToggleProps> = (props) => {
+  // Labeled string variant
+  if (props.variant === "labeled") {
+    const {
+      disabled = false,
+      name,
+      labels,
+      value,
+      setValue,
+      onChange,
+      style,
+      size,
+    } = props as CommonProps & LabeledProps;
+
+    const dimensions = useMemo(() => {
+      const width = size?.width ?? 150;
+      const height = size?.height ?? 36;
+      const borderRadius = height / 2;
+      const halfWidth = width / 2;
+      return { width, height, borderRadius, halfWidth };
+    }, [size]);
+
+    const selectedIndex = value === labels[0] ? 0 : 1;
+    const animated = useRef(new Animated.Value(selectedIndex)).current;
+
+    useEffect(() => {
+      Animated.timing(animated, {
+        toValue: selectedIndex,
+        duration: ANIMATION_DURATION_MS,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }).start();
+    }, [selectedIndex, animated]);
+
+    const translateX = animated.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, dimensions.halfWidth],
+    });
+
+    const commit = (nextValue: string) => {
+      if (disabled) return;
+      const fn = setValue as any;
+      if (typeof fn === "function") {
+        if (name && fn.length >= 2) {
+          fn(name, nextValue);
+        } else {
+          fn(nextValue);
+        }
+      }
+      onChange?.(nextValue);
+    };
+
+    return (
+      <View
+        accessibilityRole="tablist"
+        style={[
+          styles.base,
+          {
+            width: dimensions.width,
+            height: dimensions.height,
+            borderRadius: dimensions.borderRadius,
+          },
+          style,
+        ]}
+      >
+        <View
+          style={[
+            styles.track,
+            {
+              backgroundColor: INACTIVE_BG,
+              borderRadius: dimensions.borderRadius,
+            },
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.labeledPill,
+            {
+              width: dimensions.halfWidth,
+              height: dimensions.height,
+              borderRadius: dimensions.borderRadius,
+              transform: [{ translateX }],
+            },
+          ]}
+        />
+
+        <View style={styles.labeledRow}>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: selectedIndex === 0, disabled }}
+            onPress={() => commit(labels[0])}
+            disabled={disabled}
+            style={styles.labeledCell}
+          >
+            <Text
+              style={[
+                styles.labeledText,
+                selectedIndex === 0
+                  ? styles.labeledTextActive
+                  : styles.labeledTextInactive,
+              ]}
+              numberOfLines={1}
+            >
+              {labels[0]}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: selectedIndex === 1, disabled }}
+            onPress={() => commit(labels[1])}
+            disabled={disabled}
+            style={styles.labeledCell}
+          >
+            <Text
+              style={[
+                styles.labeledText,
+                selectedIndex === 1
+                  ? styles.labeledTextActive
+                  : styles.labeledTextInactive,
+              ]}
+              numberOfLines={1}
+            >
+              {labels[1]}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  // Default boolean switch variant
+  const {
+    disabled = false,
+    name,
+    value,
+    setValue,
+    onChange,
+    style,
+    size,
+  } = props as CommonProps & SwitchProps;
+
   const dimensions = useMemo(() => {
     const width = size?.width ?? 56;
     const height = size?.height ?? 32;
-    const padding = 2; // visual padding around knob
+    const padding = 2;
     const knobDiameter = height - padding * 2;
-    const travelDistance = width - knobDiameter - padding * 2; // distance knob travels left→right
+    const travelDistance = width - knobDiameter - padding * 2;
     const borderRadius = height / 2;
     return {
       width,
@@ -73,7 +219,7 @@ const Toggle: React.FC<ToggleProps> = ({
       toValue: value ? 1 : 0,
       duration: ANIMATION_DURATION_MS,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: false, // color interpolation requires non-native driver
+      useNativeDriver: false,
     }).start();
   }, [value, animated]);
 
@@ -93,8 +239,6 @@ const Toggle: React.FC<ToggleProps> = ({
   const handlePress = () => {
     if (disabled) return;
     const next = !value;
-
-    // Support both setValue(value) and setValue(name, value)
     const fn = setValue as any;
     if (typeof fn === "function") {
       if (name && fn.length >= 2) {
@@ -103,7 +247,6 @@ const Toggle: React.FC<ToggleProps> = ({
         fn(next);
       }
     }
-
     onChange?.(next);
   };
 
@@ -167,6 +310,32 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
     elevation: 1,
+  },
+  labeledPill: {
+    position: "absolute",
+    left: 0,
+    backgroundColor: ACTIVE_BG,
+  },
+  labeledRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  labeledCell: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  labeledText: {
+    color: textColors.white,
+    fontSize: 18,
+  },
+  labeledTextActive: {
+    fontWeight: "700",
+  },
+  labeledTextInactive: {
+    fontWeight: "400",
   },
 });
 

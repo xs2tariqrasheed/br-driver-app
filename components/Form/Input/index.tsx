@@ -1,4 +1,4 @@
-import { SF_PRO_FONTS } from "@/components/typography/constants";
+import { SF_PRO_FONTS } from "@/components/Typography/constants";
 import { textColors } from "@/constants/colors";
 import React, { forwardRef, useMemo, useState } from "react";
 import {
