@@ -131,10 +131,9 @@ function InnerInput(
     }, obj);
   };
 
-  const fieldError = useMemo(
-    () => getErrorByPath(errors, name),
-    [errors, name]
-  );
+  // Do not memoize against `errors` because RHF uses a Proxy that can keep the same
+  // reference while inner values change. Recompute each render to reflect latest state.
+  const fieldError = getErrorByPath(errors, name);
   const hasError = Boolean(fieldError);
   const errorMessage =
     (fieldError &&
