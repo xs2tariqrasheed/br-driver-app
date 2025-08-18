@@ -30,10 +30,10 @@ import {
   TYPOGRAPHY_WEIGHT,
 } from "./constants";
 
-interface TypographyProps extends TextProps {
-  type: TYPOGRAPHY_TYPE;
-  weight: TYPOGRAPHY_WEIGHT;
-  variant: TYPOGRAPHY_COLOR_VARIANT;
+export interface TypographyProps extends TextProps {
+  type?: TYPOGRAPHY_TYPE;
+  weight?: TYPOGRAPHY_WEIGHT;
+  variant?: TYPOGRAPHY_COLOR_VARIANT;
   children: React.ReactNode;
   style?: TextStyle;
 }

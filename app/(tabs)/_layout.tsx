@@ -42,24 +42,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="typography-variants"
-        options={{
-          title: "Typography",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="textformat" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="buttons"
-        options={{
-          title: "Buttons",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="rectangle.fill" color={color} />
-          ),
-        }}
-      />
     </Tabs>
   );
 }

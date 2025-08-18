@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import React from "react";
 import { useState } from "react";
 import { StyleSheet } from "react-native";
 
@@ -7,6 +8,7 @@ import Input from "@/components/Form/Input";
 import Toggle from "@/components/Form/Toggle";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import AccordionExamples from "@/components/Accordion/examples";
 
 export default function HomeScreen() {
   const [isOn, setIsOn] = useState(false);
@@ -22,6 +24,7 @@ export default function HomeScreen() {
         />
       }
     >
+      <AccordionExamples />
       <Input
         label="Company ID"
         placeholder="Enter your company ID"
