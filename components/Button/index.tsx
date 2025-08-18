@@ -440,3 +440,4 @@ const IconButtonStyles = StyleSheet.create({
 });
 
 export default Button;
+export { SwipeableButton } from "./SwipeButton";
