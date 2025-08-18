@@ -1,19 +1,20 @@
 import { Image } from "expo-image";
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { StyleSheet } from "react-native";
 
+import AccordionExamples from "@/components/Accordion/examples";
 import Button, { IconButton, SwipeableButton } from "@/components/Button";
 import Input from "@/components/Form/Input";
 import Toggle from "@/components/Form/Toggle";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
-import AccordionExamples from "@/components/Accordion/examples";
 
 export default function HomeScreen() {
   const [isOn, setIsOn] = useState(false);
   const [companyId, setCompanyId] = useState("");
   const [loginId, setLoginId] = useState("");
+  const [status, setStatus] = useState("Offline");
+
   return (
     <ParallaxScrollView
       headerBackgroundColor="#A1CEDC"
@@ -156,6 +157,25 @@ export default function HomeScreen() {
         size={{ width: 100, height: 30 }}
       />
       <Toggle value={isOn} setValue={setIsOn} disabled={true} />
+
+      {/* labeled string toggle */}
+      <Toggle
+        variant="labeled"
+        labels={["Offline", "Online"]}
+        value={status} // "Offline" | "Online"
+        setValue={setStatus} // receives "Offline" or "Online"
+        onChange={(val) => console.log(val)}
+        size={{ width: 240, height: 48 }} // optional
+      />
+      {/* labeled string toggle */}
+      <Toggle
+        variant="labeled"
+        labels={["Offline", "Online"]}
+        value={status} // "Offline" | "Online"
+        setValue={setStatus} // receives "Offline" or "Online"
+        onChange={(val) => console.log(val)}
+      />
+
       <SwipeableButton
         title="Swipe with auto reset"
         onComplete={() => console.log("Arrived")}

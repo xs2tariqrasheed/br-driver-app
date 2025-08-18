@@ -1,4 +1,4 @@
-import { SF_PRO_FONTS } from "@/components/typography/constants";
+import { SF_PRO_FONTS } from "@/components/Typography/constants";
 import { textColors } from "@/constants/colors";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
