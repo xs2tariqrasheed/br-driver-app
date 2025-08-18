@@ -1,12 +1,15 @@
 import { Image } from "expo-image";
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import AccordionExamples from "@/components/Accordion/examples";
 import Button, { IconButton, SwipeableButton } from "@/components/Button";
 import Input from "@/components/Form/Input";
+import PasswordRequirements from "@/components/Form/Password/Requirements";
+import PasswordStrength from "@/components/Form/Password/Strength";
 import Toggle from "@/components/Form/Toggle";
+import Logo from "@/components/Logo";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 
@@ -55,6 +58,18 @@ export default function HomeScreen() {
         />
       }
     >
+      <View
+        style={{
+          flexDirection: "row",
+          gap: 16,
+          marginBottom: 24,
+          alignItems: "center",
+        }}
+      >
+        <Logo />
+        <Logo size="Medium" />
+        <Logo size="Small" />
+      </View>
       <AccordionExamples />
 
       {/* React Hook Form + Input examples */}
@@ -123,6 +138,11 @@ export default function HomeScreen() {
           />
         )}
       />
+
+      {/* Password Requirements Demo (driven by current password field) */}
+      <View style={{ marginTop: 8, marginBottom: 16 }}>
+        <PasswordRequirements password={watch("password")} />
+      </View>
 
       <Controller
         control={control}
@@ -360,6 +380,21 @@ export default function HomeScreen() {
         title="Swipe to mark as completed"
         onComplete={() => console.log("Arrived")}
       />
+      {/* Password strength examples */}
+      <View style={{ gap: 12, marginTop: 16, marginBottom: 24 }}>
+        {/* Weak: fails length */}
+        <PasswordStrength password="Test#1" />
+        {/* Moderate: length ok + 3 classes (no special) */}
+        <PasswordStrength password="Abcdef12" />
+        {/* Strong: length ok + 4 classes */}
+        <PasswordStrength password="Abcdef12!" />
+      </View>
+      {/* Password Requirements static examples */}
+      <View style={{ gap: 12, marginBottom: 24 }}>
+        <PasswordRequirements password="" />
+        <PasswordRequirements password="Abcdef12" />
+        <PasswordRequirements password="Abcdef12!" />
+      </View>
     </ParallaxScrollView>
   );
 }

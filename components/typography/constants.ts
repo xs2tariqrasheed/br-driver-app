@@ -40,7 +40,9 @@ export const TYPOGRAPHY_VARIANTS = Object.fromEntries(
       {
         fontSize: size.size,
         fontFamily: style.fontFamily,
-        lineHeight: 100,
+        // Use proportional line-height to avoid excessive vertical spacing
+        // Roughly 1.25x of font size gives comfortable readability across sizes
+        lineHeight: Math.round(size.size * 1.25),
         letterSpacing: 0,
       },
     ])
