@@ -1,4 +1,4 @@
-import { SF_PRO_FONTS } from "@/components/Typography/constants";
+import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type PressableProps,
   type StyleProp,
@@ -121,25 +120,26 @@ const Button = (props: ButtonProps) => {
   const textStyle = StyleSheet.create({
     text: {
       color: variantStyles.foregroundColor,
-      fontFamily: SF_PRO_FONTS.Bold,
     },
   });
 
   // Helper function to wrap text content with proper styling
   const renderStyledChildren = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === "string") {
-      return <Text style={textStyle.text}>{children}</Text>;
+      return (
+        <Typography type="bodyMedium" weight="bold" style={textStyle.text}>
+          {children}
+        </Typography>
+      );
     }
 
-    // If children is already a Text element, clone it and apply text color and font
-    if (React.isValidElement(children) && children.type === Text) {
+    if (React.isValidElement(children) && children.type === Typography) {
       const textElement = children as React.ReactElement<any>;
       return React.cloneElement(textElement, {
         style: [textStyle.text, textElement.props.style],
       });
     }
 
-    // For other React nodes, return as-is
     return children;
   };
 

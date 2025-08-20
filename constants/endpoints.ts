@@ -13,6 +13,8 @@ export const AUTH_ENDPOINTS = {
   verifyOtp: "https://jsonplaceholder.typicode.com/posts",
   /** Dummy endpoint to reset password */
   resetPassword: "https://jsonplaceholder.typicode.com/posts",
+  /** Dummy endpoint to update/change password */
+  updatePassword: "https://jsonplaceholder.typicode.com/posts",
 } as const;
 
 export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;

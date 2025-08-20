@@ -18,7 +18,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 import {
   ANDROID_RIPPLE_COLOR,
   BACKGROUND_COLOR,
@@ -165,7 +165,13 @@ const Panel: React.FC<PanelProps> = ({ item, isActive, onToggle }) => {
               ],
             }}
           >
-            <Text style={styles.chevronText}>{CHEVRON_CHAR}</Text>
+            <Typography
+              type="labelLarge"
+              weight="semibold"
+              style={styles.chevronText}
+            >
+              {CHEVRON_CHAR}
+            </Typography>
           </Animated.View>
         </View>
       </Pressable>
