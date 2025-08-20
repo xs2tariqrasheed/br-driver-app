@@ -342,10 +342,12 @@ const styles = StyleSheet.create({
     fontFamily: SF_PRO_FONTS.Regular,
   },
   labeledTextActive: {
-    fontWeight: "700",
+    fontWeight: "800",
+    fontSize: 12,
   },
   labeledTextInactive: {
     fontWeight: "400",
+    fontSize: 12,
   },
 });
 

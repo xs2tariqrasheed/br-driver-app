@@ -17,6 +17,10 @@ export type HeaderProps = {
   hideBackIcon?: boolean;
   /** Callback when back icon is pressed */
   onBackPress?: () => void;
+  /** Optional custom content to render on the left side (e.g., icon button) */
+  leftAccessory?: React.ReactNode;
+  /** Optional custom content to render on the right side (e.g., switch/toggle) */
+  rightAccessory?: React.ReactNode;
 };
 
 const ICON_TOUCH_SIZE = 44;
@@ -25,6 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
   title,
   hideBackIcon = false,
   onBackPress,
+  leftAccessory,
+  rightAccessory,
 }) => {
   const screenHeight = Dimensions.get("window").height;
   const verticalPadding = Math.max(12, Math.round(screenHeight * 0.05));
@@ -39,9 +45,11 @@ export const Header: React.FC<HeaderProps> = ({
         },
       ]}
     >
-      {/* Back icon on the left side */}
-      <View style={styles.sideSpacer}>
-        {!hideBackIcon ? (
+      {/* Left side (back icon by default, or custom accessory) */}
+      <View style={styles.sectionLeft}>
+        {leftAccessory ? (
+          leftAccessory
+        ) : !hideBackIcon ? (
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel="Go back"
@@ -64,8 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
         </Typography>
       </View>
 
-      {/* Right spacer to keep title centered */}
-      <View style={styles.sideSpacer} />
+      {/* Right side (optional accessory to keep title centered) */}
+      <View style={styles.sectionRight}>{rightAccessory ?? null}</View>
     </View>
   );
 };
@@ -78,10 +86,17 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingBottom: 12,
   },
-  sideSpacer: {
-    width: ICON_TOUCH_SIZE,
-    alignItems: "center",
+  sectionLeft: {
+    flex: 1,
+    alignItems: "flex-start",
     justifyContent: "center",
+    maxWidth: "20%",
+  },
+  sectionRight: {
+    flex: 1,
+    alignItems: "flex-end",
+    justifyContent: "center",
+    maxWidth: "20%",
   },
   iconButton: {
     width: ICON_TOUCH_SIZE,

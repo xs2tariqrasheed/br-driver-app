@@ -12,6 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.saadforeaims.brdriverapp",
       "infoPlist": {
+        "NSFaceIDUsageDescription": "We use Face ID to help you sign in securely.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

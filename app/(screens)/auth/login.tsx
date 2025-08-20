@@ -26,12 +26,7 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
-import {
-  BIOMETRIC_DISABLED_MESSAGE,
-  BIOMETRIC_DISABLED_TITLE,
-  BiometricMethod,
-  URLS,
-} from "@/constants/global";
+import { BiometricMethod, URLS } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
@@ -205,6 +200,40 @@ export default function LoginScreen() {
   // Messages centralized in constants/global.ts
 
   /**
+   * Human-friendly labels and messages for unsupported or not-enabled biometrics
+   */
+  const getMethodDisplayName = (method: BiometricMethod): string => {
+    if (method === "fingerprint") return "Fingerprint";
+    if (method === "faceId") return "Face ID";
+    return "Face Recognition";
+  };
+
+  const getUnsupportedCopy = (method: BiometricMethod) => {
+    const title = `${getMethodDisplayName(method)} Not Supported`;
+    let description = "This biometric option is not available on this device.";
+    if (method !== "fingerprint") {
+      if (Platform.OS === "android") {
+        description =
+          "Your device's Face Unlock is not exposed to apps by the system. You can still sign in using fingerprint or your password.";
+      } else {
+        description = "This device does not support Face ID.";
+      }
+    }
+    return { title, description };
+  };
+
+  const getNotEnabledCopy = (method: BiometricMethod) => {
+    const isFace = method !== "fingerprint";
+    const title = isFace
+      ? "Face recognition not set up"
+      : "Fingerprint not set up";
+    const description = isFace
+      ? "Please enroll your face in device settings and try again."
+      : "Please enroll your fingerprint in device settings and try again.";
+    return { title, description };
+  };
+
+  /**
    * Checks device biometric availability and prompts authentication.
    * Falls back to info sheet if unsupported or not enrolled.
    */
@@ -215,10 +244,8 @@ export default function LoginScreen() {
         const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
         if (!hasHardware || !isEnrolled) {
-          openBiometricSheet(
-            BIOMETRIC_DISABLED_TITLE,
-            BIOMETRIC_DISABLED_MESSAGE
-          );
+          const { title, description } = getNotEnabledCopy(method);
+          openBiometricSheet(title, description);
           return;
         }
 
@@ -233,10 +260,8 @@ export default function LoginScreen() {
           successSheetRef.current?.present();
         }
       } catch (err) {
-        openBiometricSheet(
-          BIOMETRIC_DISABLED_TITLE,
-          BIOMETRIC_DISABLED_MESSAGE
-        );
+        const { title, description } = getNotEnabledCopy(method);
+        openBiometricSheet(title, description);
       }
     },
     [openBiometricSheet]
@@ -421,23 +446,26 @@ export default function LoginScreen() {
               },
             ].map((option) => {
               const supported = isMethodSupported(option.method);
-              const cardStyle = supported
-                ? styles.authCard
-                : [styles.authCard, styles.authCardDisabled];
-              const iconStyle = supported
-                ? styles.authIcon
-                : [styles.authIcon, styles.authIconDisabled];
-              const textStyle = supported
-                ? styles.authText
-                : { ...styles.authText, ...styles.authTextDisabled };
+              const cardStyle = styles.authCard;
+              const iconStyle = styles.authIcon;
+              const textStyle = styles.authText;
 
               return (
                 <TouchableOpacity
                   style={cardStyle}
                   activeOpacity={0.8}
                   key={option.title}
-                  onPress={() => checkAndPromptBiometrics(option.method)}
-                  disabled={submitting || !supported}
+                  onPress={() => {
+                    if (supported) {
+                      void checkAndPromptBiometrics(option.method);
+                    } else {
+                      const { title, description } = getUnsupportedCopy(
+                        option.method
+                      );
+                      openBiometricSheet(title, description);
+                    }
+                  }}
+                  disabled={submitting}
                 >
                   <Image source={option.icon} style={iconStyle} />
                   <Typography

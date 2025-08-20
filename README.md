@@ -11,6 +11,7 @@ A React Native mobile application built with Expo for driver operations and job 
 - **Reusable data hooks**: `useFetch`, `usePost`, `useDelete`, `useGetById` with loading/error/data state management
 - **Typed routes**: File-based routing with typed routes enabled
 - **Polished UI/UX**: Custom typography system, SF Pro fonts, buttons, accordion, bottom sheet provider, haptics, and blur tab bar on iOS
+- **Skeleton loading**: Shimmer-based `SkeletonLoader` component for content placeholders
 
 ### Setup
 
@@ -55,18 +56,22 @@ br-driver-app/
 │   │   ├── index.tsx          # Home tab
 │   │   ├── active-job.tsx     # Active Job tab
 │   │   └── more.tsx           # More tab
-│   └── (screens)/auth/        # Auth flow screens (login, OTP, password)
+│   └── (screens)/             # Non-tab screens
+│       ├── auth/              # Auth flow screens (login, OTP, password)
+│       └── notifications.tsx  # Notifications screen
 ├── components/                # Reusable UI components
 │   ├── Toast/                 # Global toast host and API
 │   ├── Typography/            # Typography system and presets
 │   ├── Button/                # Buttons and swipe button
 │   ├── Accordion/             # Accordion UI
+│   ├── Loader/                # Spinner and skeleton loader
 │   └── ui/                    # Tab bar background, icons, etc.
 ├── config/
 │   └── apiConfig.ts           # Axios client with interceptors
 ├── constants/                 # Colors, endpoints, globals
 ├── context/
-│   └── AuthContext.tsx        # Auth state + persistence (AsyncStorage)
+│   ├── AuthContext.tsx        # Auth state + persistence (AsyncStorage)
+│   └── DriverContext.tsx      # Driver state (online/offline) + persistence
 ├── hooks/                     # Data-fetching hooks (GET/POST/DELETE/GET-by-ID)
 ├── utils/                     # Helpers (logger, storage utils)
 ├── assets/                    # Fonts and images
@@ -110,6 +115,32 @@ const { data, loading, error, execute } = useFetch<any>("/example");
 // Later in an effect or handler
 await execute({ page: 1 });
 ```
+
+#### DriverContext
+
+- Mirrors the AuthContext pattern and exposes `[driver, setDriver]`
+- Persists the driver's status to AsyncStorage using `DRIVER_STORAGE_KEY`
+- UI labels come from `DRIVER_STATUS` constants
+
+Usage:
+
+```typescript
+import { useDriver } from "@/context/DriverContext";
+import { DRIVER_STATUS } from "@/constants/global";
+
+const [driver, setDriver] = useDriver();
+
+// Read
+const isOnline = !!driver?.online;
+
+// Update
+await setDriver({ ...(driver ?? {}), online: true });
+
+// Labels for UI (do not hardcode strings)
+const labels = [DRIVER_STATUS.OFFLINE, DRIVER_STATUS.ONLINE] as const;
+```
+
+See `docs/driver-context.md` for more details.
 
 Example (POST):
 

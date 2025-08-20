@@ -1,5 +1,6 @@
 import { ToastHost } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
+import { DriverProvider } from "@/context/DriverContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
@@ -36,20 +37,26 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <BottomSheetModalProvider>
           <AuthProvider>
-            <Stack initialRouteName="(screens)/auth">
-              <Stack.Screen
-                name="(screens)/auth"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="(screens)/more"
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-            <ToastHost />
+            <DriverProvider>
+              <Stack initialRouteName="(screens)/auth">
+                <Stack.Screen
+                  name="(screens)/auth"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="(screens)/more"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" />
+                <Stack.Screen
+                  name="notifications"
+                  options={{ title: "Notifications" }}
+                />
+              </Stack>
+              <StatusBar style="auto" />
+              <ToastHost />
+            </DriverProvider>
           </AuthProvider>
         </BottomSheetModalProvider>
       </GestureHandlerRootView>

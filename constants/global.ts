@@ -2,6 +2,17 @@
 export const TOKEN_KEY = "@token";
 // Global auth object storage key
 export const AUTH_STORAGE_KEY = "@auth";
+// Driver status storage key
+export const DRIVER_STORAGE_KEY = "@driver";
+
+// Driver status display labels (used in UI)
+export const DRIVER_STATUS = {
+  ONLINE: "Online",
+  OFFLINE: "Offline",
+} as const;
+
+export type DriverStatusLabel =
+  (typeof DRIVER_STATUS)[keyof typeof DRIVER_STATUS];
 
 // URLs
 export const URLS = {
@@ -22,3 +33,8 @@ export const BIOMETRIC_DISABLED_MESSAGE =
 
 // Supported biometric authentication methods used in UI and checks
 export type BiometricMethod = "fingerprint" | "faceId" | "faceRecognition";
+
+// Skeleton loader defaults used across the app
+export const SKELETON_DEFAULT_HEIGHT = 200;
+export const SKELETON_DEFAULT_RADIUS = 10;
+export const SKELETON_DEFAULT_DURATION_MS = 1200;
