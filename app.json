@@ -46,8 +46,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "21f548a1-2bb1-465b-a9b7-f16ba542ddbc"
+        "projectId": "fe6aec50-b8f5-4ea3-a9e5-6151b4c06c75"
       }
-    }
+    },
+    "owner": "mujahidforeaims"
   }
 }
