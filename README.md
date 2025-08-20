@@ -1,8 +1,26 @@
-# Welcome to your Expo app 👋
+## BR Driver App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native mobile application built with Expo for driver operations and job management.
 
-## Get started
+### Features
+
+- **Authentication flow**: Login, forgot user ID, forgot password, OTP verification, reset/update password
+- **Tabbed navigation**: Home, Active Job, and More using Expo Router with custom, haptic tab items
+- **Global notifications**: Toast-style notifications with variants (success, warning, error) and auto-hide
+- **Robust API layer**: Axios client with request/response interceptors, auth header injection, and consistent error handling
+- **Reusable data hooks**: `useFetch`, `usePost`, `useDelete`, `useGetById` with loading/error/data state management
+- **Typed routes**: File-based routing with typed routes enabled
+- **Polished UI/UX**: Custom typography system, SF Pro fonts, buttons, accordion, bottom sheet provider, haptics, and blur tab bar on iOS
+
+### Setup
+
+#### Prerequisites
+
+- Node.js v18+
+- Expo CLI
+- iOS Simulator (Xcode) and/or Android Emulator (Android Studio)
+
+#### Installation
 
 1. Install dependencies
 
@@ -10,41 +28,183 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Configure environment (optional but recommended)
+
+   The API client reads `EXPO_PUBLIC_BASE_URL` for the backend base URL.
+
+   ```bash
+   EXPO_PUBLIC_BASE_URL=https://api.example.com npx expo start
+   ```
+
+3. Start the development server
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+You can open the app in a development build, Android emulator, iOS simulator, or Expo Go. This project uses file-based routing via Expo Router.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Project Structure
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+```
+br-driver-app/
+├── app/                       # Expo Router entry and screens
+│   ├── _layout.tsx            # Root providers (Auth, BottomSheet, Toast) and navigation
+│   ├── (tabs)/                # Tab navigator
+│   │   ├── _layout.tsx        # Tabs: Home, Active Job, More
+│   │   ├── index.tsx          # Home tab
+│   │   ├── active-job.tsx     # Active Job tab
+│   │   └── more.tsx           # More tab
+│   └── (screens)/auth/        # Auth flow screens (login, OTP, password)
+├── components/                # Reusable UI components
+│   ├── Toast/                 # Global toast host and API
+│   ├── Typography/            # Typography system and presets
+│   ├── Button/                # Buttons and swipe button
+│   ├── Accordion/             # Accordion UI
+│   └── ui/                    # Tab bar background, icons, etc.
+├── config/
+│   └── apiConfig.ts           # Axios client with interceptors
+├── constants/                 # Colors, endpoints, globals
+├── context/
+│   └── AuthContext.tsx        # Auth state + persistence (AsyncStorage)
+├── hooks/                     # Data-fetching hooks (GET/POST/DELETE/GET-by-ID)
+├── utils/                     # Helpers (logger, storage utils)
+├── assets/                    # Fonts and images
+└── scripts/                   # Project scripts
+```
 
-## Get a fresh project
+### Key Modules
 
-When you're ready, run:
+#### AuthContext
+
+- Hydrates auth state from AsyncStorage and exposes `[auth, setAuth]`
+- Simple API for setting/clearing persisted auth
+- Used globally in `app/_layout.tsx`
+
+Usage:
+
+```typescript
+import { useAuth } from "@/context/AuthContext";
+
+const [auth, setAuth] = useAuth();
+
+// Set token (persisted)
+await setAuth({ token: "jwt-token" });
+
+// Clear token (removes persistence)
+await setAuth(null);
+```
+
+#### API Client and Hooks
+
+- Centralized axios instance with interceptors in `config/apiConfig.ts`
+- Hooks: `useFetch`, `usePost`, `useDelete`, `useGetById` for consistent stateful requests
+
+Example (GET):
+
+```typescript
+import { useFetch } from "@/hooks/useFetch";
+
+const { data, loading, error, execute } = useFetch<any>("/example");
+
+// Later in an effect or handler
+await execute({ page: 1 });
+```
+
+Example (POST):
+
+```typescript
+import { usePost } from "@/hooks/usePost";
+
+const { data, loading, error, execute } = usePost<any, { email: string }>(
+  "/login"
+);
+await execute({ email: "john@doe.com" });
+```
+
+#### Toast Notifications
+
+- Custom toast host and `showToast` API with variants: `success`, `warning`, `error`
+- Auto-hide with safe-area aware top offset
+
+Usage:
+
+```typescript
+import { showToast } from "@/components/Toast";
+
+showToast("Profile updated", { variant: "success", position: "top" });
+```
+
+### Component Demos
+
+- All UI components come with runnable demos in `components/Examples.tsx`.
+- To preview all components quickly, temporarily render the Examples screen in the Home tab:
+
+```typescript
+// app/(tabs)/index.tsx
+import Examples from "@/components/Examples";
+
+export default function HomeScreen() {
+  return <Examples />;
+}
+```
+
+Remove or revert this change when you're done exploring the components.
+
+Or enable a dedicated Examples tab without editing screens by starting Expo with an env flag:
+
+```bash
+EXPO_PUBLIC_SHOW_EXAMPLES=true npx expo start
+```
+
+This will add an `Examples` tab automatically.
+
+### Development
+
+#### Running
+
+```bash
+npm start          # Start Expo dev server
+npm run android    # Open on Android
+npm run ios        # Open on iOS
+npm run web        # Open on web
+```
+
+#### Linting
+
+```bash
+npm run lint
+```
+
+#### Resetting the starter example (optional)
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Configuration Notes
 
-## Learn more
+- Fonts are loaded in `app/_layout.tsx` (SF Pro Display family)
+- Typed routes are enabled via Expo Router experiments
+- API base URL can be configured via `EXPO_PUBLIC_BASE_URL`
+- Temporary/dummy auth endpoints live in `constants/endpoints.ts`
 
-To learn more about developing your project with Expo, look at the following resources:
+### Dependencies (excerpt)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Core**: React 19.0.0, React Native 0.79.5, Expo ~53.0.20
+- **Navigation**: Expo Router ~5.1.4, React Navigation, Gesture Handler, Reanimated, Screens, Safe Area Context
+- **Networking**: axios, @react-native-async-storage/async-storage
+- **UI/UX**: @gorhom/bottom-sheet, expo-blur, expo-haptics, expo-linear-gradient, @expo/vector-icons
+- **Forms**: react-hook-form
 
-## Join the community
+### Contributing
 
-Join our community of developers creating universal apps.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### License
+
+This project is proprietary and confidential.

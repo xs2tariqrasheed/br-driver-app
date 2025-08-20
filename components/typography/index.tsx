@@ -20,7 +20,13 @@
 import { textColors } from "@/constants/colors";
 import * as changeCase from "change-case";
 import React from "react";
-import { StyleSheet, Text, TextProps, TextStyle } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TextProps,
+  TextStyle,
+  type StyleProp,
+} from "react-native";
 import {
   DEFAULT_TYPOGRAPHY_TYPE,
   DEFAULT_TYPOGRAPHY_WEIGHT,
@@ -35,7 +41,7 @@ export interface TypographyProps extends TextProps {
   weight?: TYPOGRAPHY_WEIGHT;
   variant?: TYPOGRAPHY_COLOR_VARIANT;
   children: React.ReactNode;
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
 }
 
 const Typography: React.FC<TypographyProps> = ({

@@ -1,6 +1,7 @@
+import Typography from "@/components/Typography";
 import React, { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import AccordionExamples from "@/components/Accordion/examples";
 import Button, { IconButton, SwipeableButton } from "@/components/Button";
@@ -189,29 +190,41 @@ export default function Examples() {
       >
         <View style={{ alignItems: "center" }}>
           <Loader size="small" />
-          <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+          <Typography
+            type="labelLarge"
+            weight="regular"
+            style={{ color: "#6b7280", marginTop: 6 }}
+          >
             Small
-          </Text>
+          </Typography>
         </View>
         <View style={{ alignItems: "center" }}>
           <Loader size="medium" />
-          <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+          <Typography
+            type="labelLarge"
+            weight="regular"
+            style={{ color: "#6b7280", marginTop: 6 }}
+          >
             Medium
-          </Text>
+          </Typography>
         </View>
         <View style={{ alignItems: "center" }}>
           <Loader size="large" />
-          <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+          <Typography
+            type="labelLarge"
+            weight="regular"
+            style={{ color: "#6b7280", marginTop: 6 }}
+          >
             Large
-          </Text>
+          </Typography>
         </View>
       </View>
       {/* Accordion examples (moved from HomeScreen) */}
       <AccordionExamples />
 
-      <Text style={[styles.textBase, styles.heading]}>
+      <Typography type="headingSmall" weight="semibold" style={styles.textBase}>
         Hooks Demo (JSONPlaceholder Todos)
-      </Text>
+      </Typography>
 
       {/* Create Todo */}
       <View style={styles.row}>
@@ -258,12 +271,22 @@ export default function Examples() {
 
       {todoById ? (
         <View style={styles.card}>
-          <Text style={[styles.textBase, styles.cardTitle]}>Selected Todo</Text>
-          <Text style={styles.textBase}>ID: {todoById.id}</Text>
-          <Text style={styles.textBase}>Title: {todoById.title}</Text>
-          <Text style={styles.textBase}>
+          <Typography
+            type="bodyLarge"
+            weight="semibold"
+            style={styles.textBase}
+          >
+            Selected Todo
+          </Typography>
+          <Typography type="bodyLarge" weight="regular" style={styles.textBase}>
+            ID: {todoById.id}
+          </Typography>
+          <Typography type="bodyLarge" weight="regular" style={styles.textBase}>
+            Title: {todoById.title}
+          </Typography>
+          <Typography type="bodyLarge" weight="regular" style={styles.textBase}>
             Status: {todoById.completed ? "Completed" : "Pending"}
-          </Text>
+          </Typography>
         </View>
       ) : null}
 
@@ -281,22 +304,32 @@ export default function Examples() {
 
       <View style={{ gap: 8 }}>
         {displayedTodos.length === 0 && !loadingTodos ? (
-          <Text style={{ textAlign: "center", color: "#666" }}>
+          <Typography
+            type="bodyMedium"
+            weight="regular"
+            style={{ textAlign: "center", color: "#666" }}
+          >
             No todos loaded.
-          </Text>
+          </Typography>
         ) : null}
         {displayedTodos.map((item) => (
           <View key={item.id} style={styles.todoItem}>
             <View style={{ flex: 1 }}>
-              <Text
+              <Typography
+                type="bodyLarge"
+                weight="medium"
                 style={[styles.textBase, styles.todoTitle]}
                 onPress={() => getTodoById(item.id)}
               >
                 #{item.id} - {item.title}
-              </Text>
-              <Text style={[styles.textBase, styles.todoMeta]}>
+              </Typography>
+              <Typography
+                type="bodyMedium"
+                weight="regular"
+                style={[styles.textBase, styles.todoMeta]}
+              >
                 {item.completed ? "Completed" : "Pending"}
-              </Text>
+              </Typography>
             </View>
             <Button
               variant="danger"

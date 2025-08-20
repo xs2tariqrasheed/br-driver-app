@@ -41,7 +41,7 @@ import {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import * as LocalAuthentication from "expo-local-authentication";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
 type LoginFormValues = {
   companyId: string;
@@ -77,6 +77,7 @@ export default function LoginScreen() {
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<LoginFormValues>({
     defaultValues: { companyId: "", loginId: "", password: "" },
@@ -168,6 +169,13 @@ export default function LoginScreen() {
   const closeForgotSheet = useCallback(() => {
     forgotSheetRef.current?.dismiss();
   }, []);
+
+  // Reset form whenever this screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      reset({ companyId: "", loginId: "", password: "" });
+    }, [reset])
+  );
 
   /**
    * Opens the biometric info bottom sheet with a title and description.
