@@ -1,11 +1,16 @@
 import { Image } from "expo-image";
 import React from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import Button from "@/components/Button";
 import Examples from "@/components/Examples";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "expo-router";
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const [, setAuth] = useAuth();
   return (
     <ParallaxScrollView
       headerBackgroundColor="#A1CEDC"
@@ -17,6 +22,18 @@ export default function HomeScreen() {
       }
     >
       <Examples />
+      <View style={styles.logoutContainer}>
+        <Button
+          variant="primary"
+          rounded="half"
+          onPress={async () => {
+            await setAuth(null);
+            router.replace("/(screens)/auth/login");
+          }}
+        >
+          Logout
+        </Button>
+      </View>
     </ParallaxScrollView>
   );
 }
@@ -37,5 +54,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     position: "absolute",
+  },
+  logoutContainer: {
+    padding: 16,
   },
 });
