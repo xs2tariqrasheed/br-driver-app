@@ -1,6 +1,7 @@
 import { ToastHost } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { DriverProvider } from "@/context/DriverContext";
+import { SettingsProvider } from "@/context/SettingsContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
@@ -38,24 +39,29 @@ export default function RootLayout() {
         <BottomSheetModalProvider>
           <AuthProvider>
             <DriverProvider>
-              <Stack initialRouteName="(screens)/auth">
-                <Stack.Screen
-                  name="(screens)/auth"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="(screens)/more"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" />
-                <Stack.Screen
-                  name="notifications"
-                  options={{ title: "Notifications" }}
-                />
-              </Stack>
-              <StatusBar style="auto" />
-              <ToastHost />
+              <SettingsProvider>
+                <Stack initialRouteName="(screens)/auth">
+                  <Stack.Screen
+                    name="(screens)/auth"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="(screens)/more"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen name="+not-found" />
+                  <Stack.Screen
+                    name="notifications"
+                    options={{ title: "Notifications" }}
+                  />
+                </Stack>
+                <StatusBar style="auto" />
+                <ToastHost />
+              </SettingsProvider>
             </DriverProvider>
           </AuthProvider>
         </BottomSheetModalProvider>

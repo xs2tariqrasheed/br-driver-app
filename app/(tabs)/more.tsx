@@ -5,6 +5,9 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { CONTACT_BASE, URLS } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
+import { useDriver } from "@/context/DriverContext";
+import { DEFAULT_SETTINGS, useSettings } from "@/context/SettingsContext";
+import { clearStorage } from "@/utils/helpers";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -82,6 +85,8 @@ const ITEMS: MoreItem[] = [
 export default function MoreScreen() {
   const router = useRouter();
   const [, setAuth] = useAuth();
+  const [, setDriver] = useDriver();
+  const [, setSettings] = useSettings();
   const logoutSheetRef = useRef<BottomSheetModal>(null);
   const logoutSnapPoints = useMemo(() => ["28%"], []);
   const deleteProfileSheetRef = useRef<BottomSheetModal>(null);
@@ -154,10 +159,6 @@ export default function MoreScreen() {
     <SafeAreaView style={styles.container}>
       <Header title="More" hideBackIcon />
       <View style={styles.content}>
-        <View style={styles.logoRow}>
-          <Logo size="Large" />
-        </View>
-
         <FlatList
           data={data}
           renderItem={renderItem}
@@ -166,6 +167,11 @@ export default function MoreScreen() {
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.column}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <View style={styles.logoRow}>
+              <Logo size="Large" />
+            </View>
+          }
         />
       </View>
       <BottomSheetModal
@@ -215,7 +221,13 @@ export default function MoreScreen() {
                 rounded="half"
                 block="half"
                 onPress={async () => {
+                  // Reset all persisted keys and in-memory contexts
+                  try {
+                    await clearStorage();
+                  } catch {}
                   await setAuth(null);
+                  await setDriver(null);
+                  await setSettings(DEFAULT_SETTINGS);
                   logoutSheetRef.current?.dismiss();
                   router.replace("/(screens)/auth/login");
                 }}
