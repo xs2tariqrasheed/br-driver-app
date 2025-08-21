@@ -433,8 +433,8 @@ const IconButtonStyles = StyleSheet.create({
   base: {
     paddingHorizontal: 0,
     paddingVertical: 0,
-    borderColor: "white",
-    boxShadow: `0px 1px 2px 1px ${textColors.grey300}`,
+    borderColor: textColors.grey100,
+    boxShadow: `0px 1px 2px 1px ${textColors.grey100}`,
     borderWidth: 1,
   },
 });

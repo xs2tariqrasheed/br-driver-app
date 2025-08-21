@@ -106,10 +106,12 @@ export default function LoginScreen() {
       const response = {
         token: "1234567890",
         user: { id: "1234567890", name: "John Doe" },
-      }; //await submitLogin(data);
+        message: "Logged in successfully",
+      };
+      // const response = await submitLogin(data);
       // Expect response to include token and optionally user info
       await setAuth(response as any);
-      showToast("Logged in successfully", {
+      showToast(response?.message || "Logged in successfully", {
         variant: "success",
         position: "top",
       });

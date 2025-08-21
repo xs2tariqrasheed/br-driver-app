@@ -53,8 +53,9 @@ export default function ForgotUserIdScreen() {
    */
   const onSubmit = async (data: ForgotUserIdFormValues) => {
     try {
-      await requestOtp(data);
-      showToast("OTP sent successfully", {
+      const response = await requestOtp(data);
+
+      showToast(response?.message || "OTP sent successfully", {
         variant: "success",
         position: "top",
       });

@@ -18,12 +18,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Image, Pressable, StyleSheet, View } from "react-native";
 import {
   ANDROID_RIPPLE_COLOR,
   BACKGROUND_COLOR,
   BORDER_COLOR,
-  CHEVRON_CHAR,
   CHEVRON_COLOR,
   CHEVRON_FONT_SIZE,
   CHEVRON_LINE_HEIGHT,
@@ -42,7 +41,6 @@ import {
   ROTATION_DURATION_MS,
   SEPARATOR_HEIGHT,
   SEPARATOR_MARGIN_VERTICAL,
-  SEPARATOR_WIDTH_PERCENT,
 } from "./constants";
 
 /**
@@ -165,13 +163,10 @@ const Panel: React.FC<PanelProps> = ({ item, isActive, onToggle }) => {
               ],
             }}
           >
-            <Typography
-              type="labelLarge"
-              weight="semibold"
-              style={styles.chevronText}
-            >
-              {CHEVRON_CHAR}
-            </Typography>
+            <Image
+              source={require("../../assets/images/black-right-arrow-icon.png")}
+              style={styles.chevronImage}
+            />
           </Animated.View>
         </View>
       </Pressable>
@@ -348,11 +343,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   separator: {
-    width: SEPARATOR_WIDTH_PERCENT,
     height: SEPARATOR_HEIGHT,
     backgroundColor: BORDER_COLOR,
-    alignSelf: "center",
     marginVertical: SEPARATOR_MARGIN_VERTICAL,
+    marginHorizontal: 10,
   },
   content: {
     paddingHorizontal: CONTENT_PADDING_HORIZONTAL,
@@ -366,6 +360,10 @@ const styles = StyleSheet.create({
   },
   hidden: {
     display: "none",
+  },
+  chevronImage: {
+    width: 16,
+    height: 32,
   },
 });
 

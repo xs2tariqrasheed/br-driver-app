@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { colors } from "@/constants/colors";
+import { Image } from "expo-image";
 import React, { useState } from "react";
 import Accordion from ".";
 
@@ -20,11 +21,9 @@ const AccordionExamples: React.FC = () => {
             key: "1",
             label: "Panel 1",
             icon: (
-              <IconSymbol
-                name="chevron.right"
-                size={18}
-                weight="medium"
-                color={colors.icon}
+              <Image
+                source={require("../../assets/images/app-settings-icon.png")}
+                style={{ width: 24, height: 24 }}
               />
             ),
             children: (

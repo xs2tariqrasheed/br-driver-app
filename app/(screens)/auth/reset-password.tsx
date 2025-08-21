@@ -63,11 +63,11 @@ export default function ResetPasswordScreen() {
 
   const onSubmit = async () => {
     try {
-      await resetPassword({
+      const response = await resetPassword({
         password: passwordValue,
         confirmPassword: confirmValue,
       });
-      showToast("Password reset successfully", {
+      showToast(response?.message || "Password reset successfully", {
         variant: "success",
         position: "top",
       });
