@@ -71,7 +71,8 @@ br-driver-app/
 ├── constants/                 # Colors, endpoints, globals
 ├── context/
 │   ├── AuthContext.tsx        # Auth state + persistence (AsyncStorage)
-│   └── DriverContext.tsx      # Driver state (online/offline) + persistence
+│   ├── DriverContext.tsx      # Driver state (online/offline) + persistence
+│   └── SettingsContext.tsx    # App preferences (Login, Ride, Notifications) + persistence
 ├── hooks/                     # Data-fetching hooks (GET/POST/DELETE/GET-by-ID)
 ├── utils/                     # Helpers (logger, storage utils)
 ├── assets/                    # Fonts and images
@@ -141,6 +142,43 @@ const labels = [DRIVER_STATUS.OFFLINE, DRIVER_STATUS.ONLINE] as const;
 ```
 
 See `docs/driver-context.md` for more details.
+
+#### SettingsContext
+
+- Centralized app preferences persisted to AsyncStorage under `@settings`
+- Categories: `loginSettings`, `ridePreferences.homePage`, `notifications`
+- Used in App Settings screen to toggle features and on Login to enable/disable biometrics
+
+Usage:
+
+```typescript
+import { useSettings } from "@/context/SettingsContext";
+
+const [settings, setSettings] = useSettings();
+
+// Update a login toggle
+await setSettings({
+  ...settings,
+  loginSettings: { ...settings.loginSettings, enableFingerprint: false },
+});
+
+// Update a ride preference (nested)
+await setSettings({
+  ...settings,
+  ridePreferences: {
+    ...settings.ridePreferences,
+    homePage: { ...settings.ridePreferences.homePage, liveJobs: true },
+  },
+});
+
+// Update notifications
+await setSettings({
+  ...settings,
+  notifications: { ...settings.notifications, muteAll: true },
+});
+```
+
+See `docs/settings-context.md` for full details.
 
 Example (POST):
 

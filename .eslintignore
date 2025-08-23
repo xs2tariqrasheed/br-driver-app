@@ -1,0 +1,53 @@
+# Build outputs
+dist/
+web-build/
+
+# Expo/EAS/Metro caches
+.expo/
+.expo-shared/
+.eas/
+.metro-cache/
+.cache/
+.tmp/
+tmp/
+temp/
+
+# Native Android/iOS build and tooling
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+ios/build/
+ios/DerivedData/
+ios/Pods/
+
+# Node & package managers
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Editor/IDE
+.vscode/
+.idea/
+.history/
+
+# Typescript build info
+*.tsbuildinfo
+
+# Generated/type helper
+expo-env.d.ts
+
+# Binary assets (optional to speed lint)
+assets/**/*.png
+assets/**/*.jpg
+assets/**/*.jpeg
+assets/**/*.webp
+assets/**/*.gif
+assets/**/*.svg
+

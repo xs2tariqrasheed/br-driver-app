@@ -1,40 +1,84 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Gradle
+.gradle/
+**/build/
+**/build-cache/
+**/buildSrc/
+**/gradle/
+**/gradle-wrapper.jar
+**/gradle-wrapper.properties
+**/gradlew
+**/gradlew.bat
+**/settings.gradle
+**/gradle.properties
 
-# dependencies
-node_modules/
+# Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+# Android
+android/.cxx/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/*.iml
 
-# Native
-.kotlin/
-*.orig.*
+# Keystores
 *.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+*.keystore
+keystore.properties
 
-# Metro
-.metro-health-check*
+# Kotlin
+.kotlinc/
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Misc
+*.log
+*.lock
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.orig
+*.orig.*
 
-# macOS
+# MacOS
 .DS_Store
-*.pem
 
-# local env files
-.env*.local
+# Windows
+Thumbs.db
+
+# Local environment files
 .env
+.env.*
+!.env.example
+.env*.local
 
-# typescript
-*.tsbuildinfo
+# App binary artifacts
+*.apk
+*.aab
+*.ipa
+*.app
+*.xcarchive
+*.zip
 
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.orig
+*.orig.*
+.history/
+
+# Test coverage & reports
+coverage/
+.nyc_output/
+
+# Project-specific
 app-example
+google-services.json
+GoogleService-Info.plist
+node_modules

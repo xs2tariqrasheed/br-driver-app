@@ -28,6 +28,7 @@ import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import { BiometricMethod, URLS } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
+import { useSettings } from "@/context/SettingsContext";
 import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
 import {
@@ -69,6 +70,7 @@ type LoginFormValues = {
 export default function LoginScreen() {
   const router = useRouter();
   const [auth, setAuth] = useAuth();
+  const [settings] = useSettings();
   const {
     control,
     handleSubmit,
@@ -106,10 +108,12 @@ export default function LoginScreen() {
       const response = {
         token: "1234567890",
         user: { id: "1234567890", name: "John Doe" },
-      }; //await submitLogin(data);
+        message: "Logged in successfully",
+      };
+      // const response = await submitLogin(data);
       // Expect response to include token and optionally user info
       await setAuth(response as any);
-      showToast("Logged in successfully", {
+      showToast(response?.message || "Logged in successfully", {
         variant: "success",
         position: "top",
       });
@@ -446,9 +450,31 @@ export default function LoginScreen() {
               },
             ].map((option) => {
               const supported = isMethodSupported(option.method);
-              const cardStyle = styles.authCard;
-              const iconStyle = styles.authIcon;
-              const textStyle = styles.authText;
+              const allowed =
+                option.method === "fingerprint"
+                  ? settings.loginSettings.enableFingerprint
+                  : option.method === "faceId"
+                  ? settings.loginSettings.enableFaceId
+                  : settings.loginSettings.enableFaceRecognition;
+              // Only apply greyed-out visuals when the user has disabled the method in settings
+              const visuallyDisabled = !allowed;
+              const cardStyle = [
+                styles.authCard,
+                visuallyDisabled ? styles.authCardDisabled : null,
+              ];
+              const iconStyle = [
+                styles.authIcon,
+                visuallyDisabled ? styles.authIconDisabled : null,
+              ];
+              const textStyle = [
+                styles.authText,
+                visuallyDisabled ? styles.authTextDisabled : null,
+              ];
+              const reasonText = !allowed
+                ? "Disabled in settings"
+                : !supported
+                ? "Not supported"
+                : "";
 
               return (
                 <TouchableOpacity
@@ -456,6 +482,7 @@ export default function LoginScreen() {
                   activeOpacity={0.8}
                   key={option.title}
                   onPress={() => {
+                    if (!allowed) return; // hard-disabled by settings
                     if (supported) {
                       void checkAndPromptBiometrics(option.method);
                     } else {
@@ -467,14 +494,23 @@ export default function LoginScreen() {
                   }}
                   disabled={submitting}
                 >
-                  <Image source={option.icon} style={iconStyle} />
+                  <Image source={option.icon} style={iconStyle as any} />
                   <Typography
                     type="labelLarge"
                     weight="semibold"
-                    style={textStyle}
+                    style={textStyle as any}
                   >
                     {option.title}
                   </Typography>
+                  {reasonText ? (
+                    <Typography
+                      type="labelMedium"
+                      weight="regular"
+                      style={styles.reasonText}
+                    >
+                      {reasonText}
+                    </Typography>
+                  ) : null}
                 </TouchableOpacity>
               );
             })}
@@ -794,6 +830,10 @@ const styles = StyleSheet.create({
   },
   authTextDisabled: {
     color: textColors.grey700,
+  },
+  reasonText: {
+    color: textColors.grey700,
+    marginTop: 4,
   },
   sheetContainer: {
     paddingHorizontal: 16,

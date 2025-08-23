@@ -11,7 +11,6 @@ import {
   View,
 } from "react-native";
 
-import Button from "@/components/Button";
 import Header from "@/components/Header";
 import Logo from "@/components/Logo";
 import { showToast } from "@/components/Toast";
@@ -19,7 +18,10 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import { OTP_LENGTH, OTP_RESEND_SECONDS } from "@/constants/global";
+import { useAuth } from "@/context/AuthContext";
+import { useDriver } from "@/context/DriverContext";
 import { usePost } from "@/hooks/usePost";
+import { clearStorage } from "@/utils/helpers";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 // OTP length is centralized in constants/global.ts
@@ -33,6 +35,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 export default function VerifyOtpScreen() {
   const router = useRouter();
   const { context } = useLocalSearchParams<{ context?: string }>();
+  const [, setAuth] = useAuth();
+  const [, setDriver] = useDriver();
   const [otp, setOtp] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [verified, setVerified] = useState<boolean>(false);
@@ -44,7 +48,7 @@ export default function VerifyOtpScreen() {
 
   const { execute: verifyOtp, loading: verifying } = usePost<
     any,
-    { otp: string }
+    { code: string }
   >(AUTH_ENDPOINTS.verifyOtp);
   const { execute: resendOtp, loading: resending } = usePost<any, {}>(
     AUTH_ENDPOINTS.requestOtp
@@ -61,6 +65,24 @@ export default function VerifyOtpScreen() {
     }, 1000);
     return () => clearInterval(timer);
   }, [secondsLeft]);
+
+  // On mount for delete-profile context: trigger OTP send and show success message
+  useEffect(() => {
+    if (context === "delete-profile") {
+      (async () => {
+        try {
+          await resendOtp({});
+          showToast("OTP has sent successfully", {
+            variant: "success",
+            position: "top",
+          });
+        } catch {
+          // ignore; resend handler will surface errors when used manually
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context]);
 
   // Blinking caret animation - restart when active box changes or focus toggles
   /** Controls the blinking caret animation while focused and enabled. */
@@ -122,8 +144,11 @@ export default function VerifyOtpScreen() {
   const handleVerify = async () => {
     if (otp.length !== OTP_LENGTH) return;
     try {
-      await verifyOtp({ otp });
-      showToast("OTP verified", { variant: "success", position: "top" });
+      const response = await verifyOtp({ code: otp });
+      showToast(response?.message || "OTP verified", {
+        variant: "success",
+        position: "top",
+      });
       setVerified(true);
       // Success style briefly then navigate
       setTimeout(() => {
@@ -133,6 +158,20 @@ export default function VerifyOtpScreen() {
             { variant: "success", position: "top" }
           );
           router.replace("/(screens)/auth/login");
+        } else if (context === "delete-profile") {
+          (async () => {
+            try {
+              await clearStorage();
+              await setAuth(null);
+              await setDriver(null);
+              showToast("Profile Deleted successfully.", {
+                variant: "success",
+                position: "top",
+              });
+            } finally {
+              router.replace("/(screens)/auth/login");
+            }
+          })();
         } else {
           router.replace("/(screens)/auth/reset-password");
         }
@@ -148,8 +187,11 @@ export default function VerifyOtpScreen() {
   /** Requests a new OTP and resets the countdown/input. */
   const handleResend = async () => {
     try {
-      await resendOtp({});
-      showToast("OTP resent", { variant: "success", position: "top" });
+      const response = await resendOtp({});
+      showToast(response?.message || "OTP resent", {
+        variant: "success",
+        position: "top",
+      });
       setSecondsLeft(OTP_RESEND_SECONDS);
       setOtp("");
       setError(null);
@@ -162,6 +204,7 @@ export default function VerifyOtpScreen() {
 
   /** Returns the border color for an OTP box based on state. */
   const boxBorderColor = (index: number) => {
+    if (disabled) return textColors.grey100;
     if (error) return textColors.red500;
     if (verified) return textColors.teal700;
     return textColors.black;
@@ -234,6 +277,7 @@ export default function VerifyOtpScreen() {
                       styles.otpBox,
                       { borderColor: boxBorderColor(i) },
                       disabled && styles.otpBoxDisabled,
+                      disabled && styles.otpBoxDisabledBg,
                     ]}
                   >
                     {charValue ? (
@@ -310,8 +354,8 @@ export default function VerifyOtpScreen() {
             </View>
           )}
 
-          {/* Optional explicit Verify button for accessibility */}
-          <Button
+          {/* Hidden Optional explicit Verify button for accessibility */}
+          {/* <Button
             variant="primary"
             rounded="half"
             onPress={handleVerify}
@@ -319,7 +363,7 @@ export default function VerifyOtpScreen() {
             disabled={disabled || otp.length !== OTP_LENGTH}
           >
             Verify
-          </Button>
+          </Button> */}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -368,6 +412,9 @@ const styles = StyleSheet.create({
   otpBoxDisabled: {
     opacity: 0.6,
   },
+  otpBoxDisabledBg: {
+    backgroundColor: textColors.grey100,
+  },
   hiddenInput: {
     position: "absolute",
     opacity: 0,
@@ -383,7 +430,6 @@ const styles = StyleSheet.create({
   },
   resendLink: {
     color: textColors.teal800,
-    textDecorationLine: "underline",
   },
   caret: {
     width: 2,

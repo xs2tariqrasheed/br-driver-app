@@ -17,6 +17,11 @@ export type DriverStatusLabel =
 // URLs
 export const URLS = {
   requestRegistration: "https://google.com",
+  // Temporary Expo Go client links for testing share flow
+  appStore: "https://apps.apple.com/app/expo-go/id982107779",
+  playStore: "https://play.google.com/store/apps/details?id=host.exp.exponent",
+  // Driver portal (testing)
+  driverPortal: "https://google.com",
 };
 
 // OTP / Verification
@@ -38,3 +43,42 @@ export type BiometricMethod = "fingerprint" | "faceId" | "faceRecognition";
 export const SKELETON_DEFAULT_HEIGHT = 200;
 export const SKELETON_DEFAULT_RADIUS = 10;
 export const SKELETON_DEFAULT_DURATION_MS = 1200;
+
+// Contact Base info used in More → Contact Base bottom sheet
+// Centralized so content and assets are easy to update later
+export const CONTACT_BASE = {
+  address: "3272 Gale Ave Long Island City, NY 11101",
+  // Primary dispatcher number used by the Call Dispatcher button
+  dispatcherPhone: "000-000-0000",
+  // Listed numbers
+  driverRelationsPhone: "000-000-0000",
+  businessOfficePhone: "000-000-0000",
+} as const;
+
+// App Settings screen configuration
+export const APP_SETTINGS_ITEMS = [
+  { key: "login", label: "Login Settings" },
+  { key: "ride-preferences", label: "Ride Preferences" },
+  { key: "availability", label: "Availability & Scheduling" },
+  { key: "safety", label: "Safety Settings" },
+  { key: "notifications", label: "Notifications" },
+  { key: "app-info", label: "App Info" },
+] as const;
+
+// Application version shown in App Info section
+export const APP_VERSION = "1.0.0" as const;
+
+// Driver Settings (Featured Driver & Auto-bid) – central constants
+export const FEATURED_DRIVER_PRICE_MIN = 0;
+export const FEATURED_DRIVER_PRICE_MAX = 10;
+export const ETA_BUFFER_MINUTES_MIN = 0;
+export const ETA_BUFFER_MINUTES_MAX = 10;
+
+// Auto-bid selectable price strategies. Keep labels user-facing for display.
+export const AUTO_BID_PRICE_OPTIONS = [
+  "Customer price +10%",
+  "Customer price +5%",
+  "Customer price",
+  "Customer price -5%",
+  "Customer price -10%",
+] as const;

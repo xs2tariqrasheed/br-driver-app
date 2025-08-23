@@ -52,8 +52,9 @@ export default function ForgotPasswordScreen() {
    */
   const onSubmit = async (data: ForgotFormValues) => {
     try {
-      await requestOtp(data);
-      showToast("OTP sent successfully", {
+      const response = await requestOtp(data);
+
+      showToast(response?.message || "OTP sent successfully", {
         variant: "success",
         position: "top",
       });

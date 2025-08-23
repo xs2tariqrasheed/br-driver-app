@@ -48,7 +48,7 @@ export interface ApiError {
  */
 const createApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://localhost:3001/api",
+    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://localhost:3000",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",

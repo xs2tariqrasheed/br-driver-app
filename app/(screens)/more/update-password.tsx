@@ -67,12 +67,12 @@ export default function UpdatePasswordScreen() {
 
   const onSubmit = async () => {
     try {
-      await updatePassword({
+      const response = await updatePassword({
         oldPassword: oldPasswordValue,
         password: passwordValue,
         confirmPassword: confirmValue,
       });
-      showToast("Password updated successfully", {
+      showToast(response?.message || "Password updated successfully", {
         variant: "success",
         position: "top",
       });

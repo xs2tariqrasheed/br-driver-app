@@ -7,13 +7,15 @@
     "icon": "./assets/images/icon.png",
     "scheme": "brdriverapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.saadforeaims.brdriverapp",
       "infoPlist": {
         "NSFaceIDUsageDescription": "We use Face ID to help you sign in securely.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Your location is needed to find and navigate to jobs nearby.",
+        "NSUserTrackingUsageDescription": "We use notifications to alert you for incoming jobs and updates."
       }
     },
     "android": {
@@ -22,7 +24,12 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.saadforeaims.brdriverapp"
+      "package": "com.saadforeaims.brdriverapp",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -38,6 +45,13 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/black-bell-icon.png",
+          "color": "#007A7A"
         }
       ]
     ],
