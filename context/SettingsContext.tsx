@@ -28,6 +28,13 @@ export type HomePagePreferences = {
 
 export type RidePreferences = {
   homePage: HomePagePreferences;
+  // New: ride types preferences (all default to false)
+  rideTypes: {
+    economy: boolean;
+    sedan: boolean;
+    suv: boolean;
+    luxury: boolean;
+  };
 };
 
 export type NotificationsSettings = {
@@ -40,6 +47,11 @@ export type SettingsObject = {
   // Extendable categories
   ridePreferences: RidePreferences;
   notifications: NotificationsSettings;
+  // Driver monetization & bidding settings
+  featuredDriverPriceUSD?: number; // $0 - $10
+  etaBufferMinutes?: number; // 0 - 10 minutes
+  autoBidEnabled?: boolean;
+  autoBidStrategy?: string | null; // From AUTO_BID_PRICE_OPTIONS
   [key: string]: unknown;
 };
 
@@ -67,11 +79,21 @@ export const DEFAULT_SETTINGS: SettingsObject = {
       pets: false,
       package: false,
     },
+    rideTypes: {
+      economy: false,
+      sedan: false,
+      suv: false,
+      luxury: false,
+    },
   },
   notifications: {
     muteJobOffers: false,
     muteAll: false,
   },
+  featuredDriverPriceUSD: 0,
+  etaBufferMinutes: 0,
+  autoBidEnabled: false,
+  autoBidStrategy: null,
 };
 
 const initialState: SettingsState = { settings: null, isHydrated: false };
@@ -121,6 +143,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               ...DEFAULT_SETTINGS.ridePreferences.homePage,
               ...((parsed?.ridePreferences as RidePreferences | undefined)
                 ?.homePage ?? {}),
+            },
+            rideTypes: {
+              ...DEFAULT_SETTINGS.ridePreferences.rideTypes,
+              ...((parsed?.ridePreferences as RidePreferences | undefined)
+                ?.rideTypes ?? {}),
             },
           },
           notifications: {

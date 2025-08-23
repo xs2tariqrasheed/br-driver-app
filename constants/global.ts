@@ -20,6 +20,8 @@ export const URLS = {
   // Temporary Expo Go client links for testing share flow
   appStore: "https://apps.apple.com/app/expo-go/id982107779",
   playStore: "https://play.google.com/store/apps/details?id=host.exp.exponent",
+  // Driver portal (testing)
+  driverPortal: "https://google.com",
 };
 
 // OTP / Verification
@@ -65,3 +67,18 @@ export const APP_SETTINGS_ITEMS = [
 
 // Application version shown in App Info section
 export const APP_VERSION = "1.0.0" as const;
+
+// Driver Settings (Featured Driver & Auto-bid) – central constants
+export const FEATURED_DRIVER_PRICE_MIN = 0;
+export const FEATURED_DRIVER_PRICE_MAX = 10;
+export const ETA_BUFFER_MINUTES_MIN = 0;
+export const ETA_BUFFER_MINUTES_MAX = 10;
+
+// Auto-bid selectable price strategies. Keep labels user-facing for display.
+export const AUTO_BID_PRICE_OPTIONS = [
+  "Customer price +10%",
+  "Customer price +5%",
+  "Customer price",
+  "Customer price -5%",
+  "Customer price -10%",
+] as const;

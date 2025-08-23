@@ -298,6 +298,124 @@ export default function AppSettingsScreen() {
                 </View>
               ),
             },
+            {
+              key: "ride-types",
+              label: "Ride Types",
+              icon: (
+                <Image
+                  source={require("@/assets/images/app-settings-icon.png")}
+                  style={styles.icon}
+                />
+              ),
+              children: (
+                <View style={styles.group}>
+                  <View style={styles.row}>
+                    <Typography
+                      type="bodyLarge"
+                      weight="medium"
+                      style={styles.text16}
+                    >
+                      Economy
+                    </Typography>
+                    <Toggle
+                      variant="switch"
+                      value={settings.ridePreferences.rideTypes.economy}
+                      setValue={(next: boolean) =>
+                        setSettings({
+                          ...settings,
+                          ridePreferences: {
+                            ...settings.ridePreferences,
+                            rideTypes: {
+                              ...settings.ridePreferences.rideTypes,
+                              economy: next,
+                            },
+                          },
+                        })
+                      }
+                      size={styles.toggle}
+                    />
+                  </View>
+                  <View style={styles.row}>
+                    <Typography
+                      type="bodyLarge"
+                      weight="medium"
+                      style={styles.text16}
+                    >
+                      Sedan
+                    </Typography>
+                    <Toggle
+                      variant="switch"
+                      value={settings.ridePreferences.rideTypes.sedan}
+                      setValue={(next: boolean) =>
+                        setSettings({
+                          ...settings,
+                          ridePreferences: {
+                            ...settings.ridePreferences,
+                            rideTypes: {
+                              ...settings.ridePreferences.rideTypes,
+                              sedan: next,
+                            },
+                          },
+                        })
+                      }
+                      size={styles.toggle}
+                    />
+                  </View>
+                  <View style={styles.row}>
+                    <Typography
+                      type="bodyLarge"
+                      weight="medium"
+                      style={styles.text16}
+                    >
+                      SUV
+                    </Typography>
+                    <Toggle
+                      variant="switch"
+                      value={settings.ridePreferences.rideTypes.suv}
+                      setValue={(next: boolean) =>
+                        setSettings({
+                          ...settings,
+                          ridePreferences: {
+                            ...settings.ridePreferences,
+                            rideTypes: {
+                              ...settings.ridePreferences.rideTypes,
+                              suv: next,
+                            },
+                          },
+                        })
+                      }
+                      size={styles.toggle}
+                    />
+                  </View>
+                  <View style={styles.row}>
+                    <Typography
+                      type="bodyLarge"
+                      weight="medium"
+                      style={styles.text16}
+                    >
+                      Luxury
+                    </Typography>
+                    <Toggle
+                      variant="switch"
+                      value={settings.ridePreferences.rideTypes.luxury}
+                      setValue={(next: boolean) =>
+                        setSettings({
+                          ...settings,
+                          ridePreferences: {
+                            ...settings.ridePreferences,
+                            rideTypes: {
+                              ...settings.ridePreferences.rideTypes,
+                              luxury: next,
+                            },
+                          },
+                        })
+                      }
+                      size={styles.toggle}
+                    />
+                  </View>
+                </View>
+              ),
+            },
           ]}
         />
       ) : (

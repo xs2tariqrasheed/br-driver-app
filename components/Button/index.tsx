@@ -5,8 +5,10 @@ import React from "react";
 import {
   ActivityIndicator,
   Pressable,
+  Image as RNImage,
   StyleSheet,
   View,
+  type ImageSourcePropType,
   type PressableProps,
   type StyleProp,
   type ViewStyle,
@@ -145,11 +147,30 @@ const Button = (props: ButtonProps) => {
 
   // Helper function to apply proper color to icon
   const renderStyledIcon = (iconElement: React.ReactNode): React.ReactNode => {
+    // If it's already a valid React element (e.g., an SVG/Icon component),
+    // clone to inject foreground color when supported.
     if (React.isValidElement(iconElement)) {
       return React.cloneElement(iconElement as React.ReactElement<any>, {
         color: variantStyles.foregroundColor,
       });
     }
+
+    // If the icon is provided as an image source (e.g., require("..."))
+    // wrap it in an Image so React Native can render it.
+    const isImageSource =
+      typeof iconElement === "number" ||
+      (typeof iconElement === "object" &&
+        iconElement !== null &&
+        "uri" in (iconElement as any));
+    if (isImageSource) {
+      return (
+        <RNImage
+          source={iconElement as ImageSourcePropType}
+          style={{ width: 20, height: 20, resizeMode: "contain" }}
+        />
+      );
+    }
+
     return iconElement;
   };
 
