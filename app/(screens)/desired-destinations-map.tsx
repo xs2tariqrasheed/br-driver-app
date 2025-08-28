@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import CustomMap from "@/components/MapWebView";
 import { textColors } from "@/constants/colors";
 import { COORDINATE_REGEX } from "@/constants/global";
-import { reverseGeocode } from "@/utils/helpers";
+import { logger, reverseGeocode } from "@/utils/helpers";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
@@ -20,22 +20,23 @@ export default function DesiredDestinationsMapScreen() {
   // Google Maps API key for reverse geocoding
   const GOOGLE_MAPS_API_KEY = "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8";
 
+  // Logger function
+  const log = logger();
+
   const handleLocationSelect = async (
     selectedAddress: string,
     coordinates: { latitude: number; longitude: number }
   ) => {
-    console.log("handleLocationSelect called with:", {
+    log("handleLocationSelect called with:", {
       selectedAddress,
       coordinates,
     });
-    console.log("selectedAddress", selectedAddress);
-    console.log("coordinates", coordinates);
+    log("selectedAddress", selectedAddress);
+    log("coordinates", coordinates);
 
     // Check if the selectedAddress is in coordinate format (e.g., "31.355034, 74.396754")
     if (COORDINATE_REGEX.test(selectedAddress.trim())) {
-      console.log(
-        "Detected coordinate format, performing reverse geocoding..."
-      );
+      log("Detected coordinate format, performing reverse geocoding...");
 
       try {
         // Extract latitude and longitude from the coordinate string
@@ -52,10 +53,7 @@ export default function DesiredDestinationsMapScreen() {
           longitude,
           GOOGLE_MAPS_API_KEY
         );
-        console.log(
-          "Reverse geocoding successful, resolved address:",
-          resolvedAddress
-        );
+        log("Reverse geocoding successful, resolved address:", resolvedAddress);
 
         setAddress(resolvedAddress);
         setSelectedCoordinates(coordinates);

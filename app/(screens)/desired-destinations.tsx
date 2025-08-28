@@ -6,9 +6,17 @@ import Divider from "@/components/Divider";
 import Input from "@/components/Form/Input";
 import Header from "@/components/Header";
 import Logo from "@/components/Logo";
+import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { MAX_DESIRED_LOCATIONS } from "@/constants/global";
+import { useDriver } from "@/context/DriverContext";
+import {
+  createDesiredDestination,
+  DesiredDestination,
+  getValidDestinations,
+  logger,
+} from "@/utils/helpers";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -23,9 +31,10 @@ import {
 export default function DesiredDestinationsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const [driver, setDriver] = useDriver();
 
-  // Local state for desired destinations list (stub for now)
-  const [destinations, setDestinations] = useState<string[]>([]);
+  // Local state for desired destinations list
+  const [destinations, setDestinations] = useState<DesiredDestination[]>([]);
 
   // Commission percent state (0-100)
   const [commission, setCommission] = useState<number>(0);
@@ -35,11 +44,24 @@ export default function DesiredDestinationsScreen() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState<boolean>(false);
 
+  // Logger function
+  const log = logger();
+
+  // Load destinations from driver context on mount
+  useEffect(() => {
+    if (driver?.desiredDestinations) {
+      const validDestinations = getValidDestinations(
+        driver.desiredDestinations
+      );
+      setDestinations(validDestinations);
+    }
+  }, [driver?.desiredDestinations]);
+
   // Handle incoming params from map screen
   useEffect(() => {
-    console.log("Params received:", params);
+    log("Params received:", params);
     if (params.selectedAddress) {
-      console.log("Setting input address:", params.selectedAddress);
+      log("Setting input address:", params.selectedAddress);
       setInputAddress(params.selectedAddress as string);
       setIsSheetOpen(true);
       // Clear the params to avoid reopening on subsequent renders
@@ -51,16 +73,24 @@ export default function DesiredDestinationsScreen() {
   }, [params.selectedAddress, router]);
 
   const handleAddDestination = () => {
-    console.log("handleAddDestination called");
+    log("handleAddDestination called");
     setEditingIndex(null);
     setInputAddress("");
-    console.log("Opening sheet");
+    log("Opening sheet");
     setIsSheetOpen(true);
   };
 
-  const handleSave = () => {
-    // TODO: Persist destinations and commission to context/API.
-    router.back();
+  const handleSave = async () => {
+    if (driver) {
+      await setDriver({
+        ...driver,
+        desiredDestinations: destinations,
+      });
+    }
+    showToast("Destinations saved successfully", {
+      variant: "success",
+      position: "top",
+    });
   };
 
   const isSaveDisabled = useMemo(
@@ -71,7 +101,10 @@ export default function DesiredDestinationsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="Desired Destinations" onBackPress={() => router.back()} />
+      <Header
+        title="Desired Destinations"
+        onBackPress={() => router.replace("/(tabs)")}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -128,16 +161,16 @@ export default function DesiredDestinationsScreen() {
           </View>
         ) : (
           <View style={styles.listWrap}>
-            {destinations.map((addr, idx) => (
+            {destinations.map((dest, idx) => (
               <View
-                key={`${addr}-${idx}`}
+                key={`${dest.id}-${idx}`}
                 style={{ marginTop: idx === 0 ? 0 : 8 }}
               >
                 <DesiredLocationItem
                   priority={`P${idx + 1}`}
-                  address={addr}
+                  address={dest.address}
                   onEdit={() => {
-                    setInputAddress(addr);
+                    setInputAddress(dest.address);
                     setEditingIndex(idx);
                     setIsSheetOpen(true);
                   }}
@@ -235,15 +268,23 @@ export default function DesiredDestinationsScreen() {
               onPress={() => {
                 const trimmed = inputAddress.trim();
                 if (!trimmed) return;
-                setDestinations((prev) => {
-                  if (editingIndex !== null) {
+
+                if (editingIndex !== null) {
+                  // Edit existing destination
+                  setDestinations((prev) => {
                     const copy = [...prev];
-                    copy[editingIndex] = trimmed;
+                    copy[editingIndex] = createDesiredDestination(trimmed);
                     return copy;
-                  }
-                  if (prev.length >= MAX_DESIRED_LOCATIONS) return prev;
-                  return [...prev, trimmed];
-                });
+                  });
+                } else {
+                  // Add new destination
+                  if (destinations.length >= MAX_DESIRED_LOCATIONS) return;
+                  setDestinations((prev) => [
+                    ...prev,
+                    createDesiredDestination(trimmed),
+                  ]);
+                }
+
                 setInputAddress("");
                 setEditingIndex(null);
                 setIsSheetOpen(false);

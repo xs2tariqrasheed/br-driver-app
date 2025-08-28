@@ -5,6 +5,7 @@ import {
   handleWebViewLocationMessage,
   LocationCoordinates,
   LocationSelectData,
+  logger,
   MapRegion,
   reverseGeocode,
 } from "@/utils/helpers";
@@ -83,6 +84,9 @@ export default function CustomMap({
   const [selectedLocation, setSelectedLocation] =
     useState<LocationCoordinates | null>(null);
 
+  // Logger function
+  const log = logger();
+
   // Loading state to show spinner while map initializes
   const [isLoading, setIsLoading] = useState(true);
 
@@ -140,7 +144,7 @@ export default function CustomMap({
         longitude,
         GOOGLE_MAPS_API_KEY
       );
-      console.log("address", address);
+      log("address", address);
       onLocationSelect(address, { latitude, longitude });
     } catch (error) {
       console.error("Error getting address:", error);
@@ -184,7 +188,7 @@ export default function CustomMap({
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
         onLoadEnd={() => {
-          console.log("WebView loaded");
+          log("WebView loaded");
           setIsLoading(false);
         }}
       />

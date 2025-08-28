@@ -1,7 +1,15 @@
-import { TOKEN_KEY } from "@/constants/global";
+import { DESIRED_DESTINATION_EXPIRY_MS, TOKEN_KEY } from "@/constants/global";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { Alert } from "react-native";
+
+// Types for destination management
+export type DesiredDestination = {
+  id: number;
+  created_at: string; // ISO string
+  address: string;
+  expired_at: string; // ISO string
+};
 
 type StorageValue = string;
 
@@ -514,14 +522,16 @@ export const handleWebViewLocationMessage = (
   onLocationSelect: (data: LocationSelectData) => void,
   onMapPress?: (latitude: number, longitude: number) => void
 ): void => {
+  const log = logger();
+
   try {
     const data: WebViewMessageData = JSON.parse(event.nativeEvent.data);
-    console.log("WebView message received:", data);
+    log("WebView message received:", data);
 
     if (data.type === "location_selected") {
       // If address is provided, use it directly; otherwise, fall back to coordinates
       if (data.address) {
-        console.log("Calling onLocationSelect with address:", data.address);
+        log("Calling onLocationSelect with address:", data.address);
         onLocationSelect({
           address: data.address,
           coordinates: {
@@ -530,7 +540,7 @@ export const handleWebViewLocationMessage = (
           },
         });
       } else {
-        console.log("Calling onMapPress with coordinates");
+        log("Calling onMapPress with coordinates");
         if (onMapPress) {
           onMapPress(data.latitude, data.longitude);
         }
@@ -540,3 +550,137 @@ export const handleWebViewLocationMessage = (
     console.error("Error parsing WebView message:", error);
   }
 };
+
+// =============================================================================
+// DESTINATION MANAGEMENT HELPERS
+// =============================================================================
+
+/**
+ * Creates a new desired destination object with automatic expiration time.
+ *
+ * @param {string} address - The human-readable address for the destination
+ * @returns {DesiredDestination} A new destination object with id, timestamps, and expiration
+ *
+ * @example
+ * ```typescript
+ * const destination = createDesiredDestination("123 Main St, City, State");
+ * console.log(destination);
+ * // {
+ * //   id: 1703123456789,
+ * //   created_at: "2023-12-20T10:30:56.789Z",
+ * //   address: "123 Main St, City, State",
+ * //   expired_at: "2023-12-20T16:30:56.789Z"
+ * // }
+ * ```
+ */
+export function createDesiredDestination(address: string): DesiredDestination {
+  const now = new Date();
+  const expiredAt = new Date(now.getTime() + DESIRED_DESTINATION_EXPIRY_MS);
+
+  // Generate a simple ID based on timestamp
+  const id = Date.now();
+
+  return {
+    id,
+    created_at: now.toISOString(),
+    address,
+    expired_at: expiredAt.toISOString(),
+  };
+}
+
+/**
+ * Checks if a destination has expired based on its expiration timestamp.
+ *
+ * @param {string} expiredAt - ISO timestamp string representing when the destination expires
+ * @returns {boolean} True if the destination has expired, false otherwise
+ *
+ * @example
+ * ```typescript
+ * const expired = isDestinationExpired("2023-12-20T10:30:56.789Z");
+ * console.log(expired); // true if current time is past the expiration
+ * ```
+ */
+export function isDestinationExpired(expiredAt: string): boolean {
+  return new Date() > new Date(expiredAt);
+}
+
+/**
+ * Filters a list of destinations into valid (non-expired) and expired arrays.
+ *
+ * @param {DesiredDestination[]} destinations - Array of destination objects to filter
+ * @returns {{valid: DesiredDestination[], expired: DesiredDestination[]}} Object containing valid and expired destination arrays
+ *
+ * @example
+ * ```typescript
+ * const destinations = [dest1, dest2, dest3];
+ * const { valid, expired } = filterExpiredDestinations(destinations);
+ * console.log(`Found ${valid.length} valid and ${expired.length} expired destinations`);
+ * ```
+ */
+export function filterExpiredDestinations(destinations: DesiredDestination[]): {
+  valid: DesiredDestination[];
+  expired: DesiredDestination[];
+} {
+  const valid: DesiredDestination[] = [];
+  const expired: DesiredDestination[] = [];
+
+  destinations.forEach((dest) => {
+    if (isDestinationExpired(dest.expired_at)) {
+      expired.push(dest);
+    } else {
+      valid.push(dest);
+    }
+  });
+
+  return { valid, expired };
+}
+
+/**
+ * Returns only the valid (non-expired) destinations from a list.
+ *
+ * @param {DesiredDestination[]} destinations - Array of destination objects to filter
+ * @returns {DesiredDestination[]} Array containing only non-expired destinations
+ *
+ * @example
+ * ```typescript
+ * const destinations = [dest1, dest2, dest3];
+ * const validOnly = getValidDestinations(destinations);
+ * console.log(`Found ${validOnly.length} valid destinations`);
+ * ```
+ */
+export function getValidDestinations(
+  destinations: DesiredDestination[]
+): DesiredDestination[] {
+  return destinations.filter((dest) => !isDestinationExpired(dest.expired_at));
+}
+
+/**
+ * Formats the expiration time as a human-readable string.
+ *
+ * @param {string} expiredAt - ISO timestamp string representing when the destination expires
+ * @returns {string} Human-readable expiration time (e.g., "Expires in 3h 45m", "Expired")
+ *
+ * @example
+ * ```typescript
+ * const timeString = formatExpirationTime("2023-12-20T16:30:56.789Z");
+ * console.log(timeString); // "Expires in 3h 45m" or "Expired"
+ * ```
+ */
+export function formatExpirationTime(expiredAt: string): string {
+  const now = new Date();
+  const expiry = new Date(expiredAt);
+  const diffMs = expiry.getTime() - now.getTime();
+
+  if (diffMs <= 0) {
+    return "Expired";
+  }
+
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (diffHours > 0) {
+    return `Expires in ${diffHours}h ${diffMinutes}m`;
+  } else {
+    return `Expires in ${diffMinutes}m`;
+  }
+}

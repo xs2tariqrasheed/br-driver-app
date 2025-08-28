@@ -1,5 +1,6 @@
 import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
+import DriverOffline from "@/components/DriverOffline";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
 import { SkeletonLoader } from "@/components/Loader";
@@ -13,8 +14,9 @@ import {
 } from "@/constants/global";
 import { useDriver } from "@/context/DriverContext";
 import { useSettings } from "@/context/SettingsContext";
+import { logger } from "@/utils/helpers";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Linking,
   Image as RNImage,
@@ -41,6 +43,9 @@ export default function HomeScreen() {
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
   const openRideTypes = () => setSheetOpen(true);
   const closeRideTypes = () => setSheetOpen(false);
+
+  // Logger function
+  const log = logger();
   const [economy, setEconomy] = useState<boolean>(
     settings.ridePreferences.rideTypes.economy
   );
@@ -145,112 +150,118 @@ export default function HomeScreen() {
             </View>
           }
         />
-        <View style={styles.iconBar}>
-          {/** Left group of actions */}
-          <View style={styles.iconGroup}>
-            {[
-              {
-                key: "ride-type",
-                image: require("@/assets/images/home/ride-type-icon.png"),
-                onPress: openRideTypes,
-              },
-              {
-                key: "heat-map",
-                image: require("@/assets/images/home/heat-map-icon.png"),
-                onPress: () => console.log("Heat map pressed"),
-              },
-              {
-                key: "desired-locations",
-                image: require("@/assets/images/home/desired-locations-icon.png"),
-                onPress: () =>
-                  router.push("/(screens)/desired-destinations" as any),
-              },
-              {
-                key: "settings",
-                image: require("@/assets/images/more/settings-icon.png"),
-                onPress: () => router.push("/(screens)/settings" as any),
-              },
-              {
-                key: "future-jobs",
-                image: require("@/assets/images/home/future-jobs-icon.png"),
-                onPress: () => console.log("Future Jobs pressed"),
-              },
-              {
-                key: "live-jobs",
-                image: require("@/assets/images/home/live-jobs-icon.png"),
-                onPress: () => console.log("Live Jobs pressed"),
-              },
-              {
-                key: "jump-portal",
-                image: require("@/assets/images/home/jump-portal-icon.png"),
-                onPress: () => void Linking.openURL(URLS.driverPortal),
-              },
-              {
-                key: "mute-notifications",
-                image: require("@/assets/images/home/mute-notifications-icon.png"),
-                onPress: () => console.log("Mute Notifications pressed"),
-              },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.key}
-                accessibilityRole="button"
-                onPress={item.onPress}
-                hitSlop={8}
-                style={styles.iconButton}
-                activeOpacity={0.7}
-              >
-                <RNImage
-                  source={item.image}
-                  style={styles.icon}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
+        {driver?.online && (
+          <View style={styles.iconBar}>
+            {/** Left group of actions */}
+            <View style={styles.iconGroup}>
+              {[
+                {
+                  key: "ride-type",
+                  image: require("@/assets/images/home/ride-type-icon.png"),
+                  onPress: openRideTypes,
+                },
+                {
+                  key: "heat-map",
+                  image: require("@/assets/images/home/heat-map-icon.png"),
+                  onPress: () => log("Heat map pressed"),
+                },
+                {
+                  key: "desired-locations",
+                  image: require("@/assets/images/home/desired-locations-icon.png"),
+                  onPress: () =>
+                    router.push("/(screens)/desired-destinations" as any),
+                },
+                {
+                  key: "settings",
+                  image: require("@/assets/images/more/settings-icon.png"),
+                  onPress: () => router.push("/(screens)/settings" as any),
+                },
+                {
+                  key: "future-jobs",
+                  image: require("@/assets/images/home/future-jobs-icon.png"),
+                  onPress: () => log("Future Jobs pressed"),
+                },
+                {
+                  key: "live-jobs",
+                  image: require("@/assets/images/home/live-jobs-icon.png"),
+                  onPress: () => log("Live Jobs pressed"),
+                },
+                {
+                  key: "jump-portal",
+                  image: require("@/assets/images/home/jump-portal-icon.png"),
+                  onPress: () => void Linking.openURL(URLS.driverPortal),
+                },
+                {
+                  key: "mute-notifications",
+                  image: require("@/assets/images/home/mute-notifications-icon.png"),
+                  onPress: () => log("Mute Notifications pressed"),
+                },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  accessibilityRole="button"
+                  onPress={item.onPress}
+                  hitSlop={8}
+                  style={styles.iconButton}
+                  activeOpacity={0.7}
+                >
+                  <RNImage
+                    source={item.image}
+                    style={styles.icon}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          {/** Right group: View hidden jobs + Sorting */}
-          <View style={styles.iconGroup}>
-            {[
-              {
-                key: "view-hidden-jobs",
-                image: require("@/assets/images/home/view-hidden-jobs-icon.png"),
-                onPress: () => console.log("View hidden Jobs pressed"),
-              },
-              {
-                key: "sorting",
-                image: require("@/assets/images/home/sorting-icon.png"),
-                onPress: openSortSheet,
-              },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.key}
-                accessibilityRole="button"
-                onPress={item.onPress}
-                hitSlop={8}
-                style={styles.iconButton}
-                activeOpacity={0.7}
-              >
-                <RNImage
-                  source={item.image}
-                  style={styles.icon}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            ))}
+            {/** Right group: View hidden jobs + Sorting */}
+            <View style={styles.iconGroup}>
+              {[
+                {
+                  key: "view-hidden-jobs",
+                  image: require("@/assets/images/home/view-hidden-jobs-icon.png"),
+                  onPress: () => log("View hidden Jobs pressed"),
+                },
+                {
+                  key: "sorting",
+                  image: require("@/assets/images/home/sorting-icon.png"),
+                  onPress: openSortSheet,
+                },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  accessibilityRole="button"
+                  onPress={item.onPress}
+                  hitSlop={8}
+                  style={styles.iconButton}
+                  activeOpacity={0.7}
+                >
+                  <RNImage
+                    source={item.image}
+                    style={styles.icon}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollViewContent}
-        >
-          <View style={styles.container}>
-            {Array.from({ length: 10 }).map((_, index) => (
-              <View key={index} style={styles.skeletonContainer}>
-                <SkeletonLoader />
-              </View>
-            ))}
-          </View>
-        </ScrollView>
+        )}
+        {!driver?.online ? (
+          <DriverOffline />
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollViewContent}
+          >
+            <View style={styles.container}>
+              {Array.from({ length: 10 }).map((_, index) => (
+                <View key={index} style={styles.skeletonContainer}>
+                  <SkeletonLoader />
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
         {/* Ride Types Bottom Sheet */}
         <BottomSheet
           open={sheetOpen}

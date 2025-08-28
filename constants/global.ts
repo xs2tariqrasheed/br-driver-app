@@ -90,6 +90,10 @@ export const AUTO_BID_PRICE_OPTIONS = [
 // Tweak here to change globally.
 export const MAX_DESIRED_LOCATIONS = 3;
 
+// Desired destination expiration time in milliseconds
+// Current: 6 hours - can be easily changed to 5 minutes (300000), 1 hour (3600000), etc.
+export const DESIRED_DESTINATION_EXPIRY_MS = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+
 // Coordinate format validation regex
 // Matches coordinate format like "31.355034, 74.396754" (latitude, longitude)
 export const COORDINATE_REGEX = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
