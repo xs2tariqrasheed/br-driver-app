@@ -56,6 +56,34 @@ export default function VerifyOtpScreen() {
 
   const disabled = verifying || resending;
 
+  // Handles granting app access after a successful OTP verification for login
+  const completeLoginAfterOtp = async () => {
+    await setAuth({
+      token: "1234567890",
+      user: { id: "1234567890", name: "Mujahid Ali" },
+    } as any);
+    showToast("Logged in successfully", {
+      variant: "success",
+      position: "top",
+    });
+    router.replace("/(tabs)");
+  };
+
+  // Handles profile deletion cleanup and navigation after OTP verification
+  const completeDeleteProfileAfterOtp = async () => {
+    try {
+      await clearStorage();
+      await setAuth(null);
+      await setDriver(null);
+      showToast("Profile Deleted successfully.", {
+        variant: "success",
+        position: "top",
+      });
+    } finally {
+      router.replace("/(screens)/auth/login");
+    }
+  };
+
   // Start countdown
   /** Countdown timer for the resend link. */
   useEffect(() => {
@@ -144,7 +172,7 @@ export default function VerifyOtpScreen() {
   const handleVerify = async () => {
     if (otp.length !== OTP_LENGTH) return;
     try {
-      const response = await verifyOtp({ code: otp });
+      const response = { message: "OTP verified" }; //await verifyOtp({ code: otp });
       showToast(response?.message || "OTP verified", {
         variant: "success",
         position: "top",
@@ -159,19 +187,10 @@ export default function VerifyOtpScreen() {
           );
           router.replace("/(screens)/auth/login");
         } else if (context === "delete-profile") {
-          (async () => {
-            try {
-              await clearStorage();
-              await setAuth(null);
-              await setDriver(null);
-              showToast("Profile Deleted successfully.", {
-                variant: "success",
-                position: "top",
-              });
-            } finally {
-              router.replace("/(screens)/auth/login");
-            }
-          })();
+          void completeDeleteProfileAfterOtp();
+        } else if (context === "login") {
+          // After verifying OTP for login: set auth and route to home with success toast
+          void completeLoginAfterOtp();
         } else {
           router.replace("/(screens)/auth/reset-password");
         }

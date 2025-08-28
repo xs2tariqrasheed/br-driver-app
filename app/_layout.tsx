@@ -8,6 +8,7 @@ import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Host } from "react-native-portalize";
 import "react-native-reanimated";
 
 // Keep the native splash screen visible while we load resources
@@ -36,35 +37,37 @@ export default function RootLayout() {
   return (
     <>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <BottomSheetModalProvider>
-          <AuthProvider>
-            <DriverProvider>
-              <SettingsProvider>
-                <Stack initialRouteName="(screens)/auth">
-                  <Stack.Screen
-                    name="(screens)/auth"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="(screens)/more"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen name="+not-found" />
-                  <Stack.Screen
-                    name="notifications"
-                    options={{ title: "Notifications" }}
-                  />
-                </Stack>
-                <StatusBar style="auto" />
-                <ToastHost />
-              </SettingsProvider>
-            </DriverProvider>
-          </AuthProvider>
-        </BottomSheetModalProvider>
+        <Host>
+          <BottomSheetModalProvider>
+            <AuthProvider>
+              <DriverProvider>
+                <SettingsProvider>
+                  <Stack initialRouteName="(screens)/auth">
+                    <Stack.Screen
+                      name="(screens)/auth"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="(screens)/more"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen name="+not-found" />
+                    <Stack.Screen
+                      name="notifications"
+                      options={{ title: "Notifications" }}
+                    />
+                  </Stack>
+                  <StatusBar style="auto" />
+                  <ToastHost />
+                </SettingsProvider>
+              </DriverProvider>
+            </AuthProvider>
+          </BottomSheetModalProvider>
+        </Host>
       </GestureHandlerRootView>
     </>
   );

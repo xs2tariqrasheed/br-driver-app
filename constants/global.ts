@@ -22,6 +22,8 @@ export const URLS = {
   playStore: "https://play.google.com/store/apps/details?id=host.exp.exponent",
   // Driver portal (testing)
   driverPortal: "https://google.com",
+  // Earnings portal (testing)
+  earningsPortal: "https://google.com",
 };
 
 // OTP / Verification
@@ -82,3 +84,12 @@ export const AUTO_BID_PRICE_OPTIONS = [
   "Customer price -5%",
   "Customer price -10%",
 ] as const;
+
+// Desired Destinations
+// Maximum number of desired locations a user can configure for now.
+// Tweak here to change globally.
+export const MAX_DESIRED_LOCATIONS = 3;
+
+// Coordinate format validation regex
+// Matches coordinate format like "31.355034, 74.396754" (latitude, longitude)
+export const COORDINATE_REGEX = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
