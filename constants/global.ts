@@ -22,6 +22,8 @@ export const URLS = {
   playStore: "https://play.google.com/store/apps/details?id=host.exp.exponent",
   // Driver portal (testing)
   driverPortal: "https://google.com",
+  // Earnings portal (testing)
+  earningsPortal: "https://google.com",
 };
 
 // OTP / Verification
@@ -82,3 +84,26 @@ export const AUTO_BID_PRICE_OPTIONS = [
   "Customer price -5%",
   "Customer price -10%",
 ] as const;
+
+// Desired Destinations
+// Maximum number of desired locations a user can configure for now.
+// Tweak here to change globally.
+export const MAX_DESIRED_LOCATIONS = 3;
+
+// Desired destination expiration time in milliseconds
+// Current: 6 hours - can be easily changed to 5 minutes (300000), 1 hour (3600000), etc.
+export const DESIRED_DESTINATION_EXPIRY_MS = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+
+// Coordinate format validation regex
+// Matches coordinate format like "31.355034, 74.396754" (latitude, longitude)
+export const COORDINATE_REGEX = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
+
+// Google Maps API Key - loaded from environment variable
+// Fallback to hardcoded key for development (should be removed in production)
+export const GOOGLE_MAPS_API_KEY =
+  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
+  "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8";
+
+// Heatmap configuration
+// Auto-refresh interval for heatmap data in milliseconds
+export const HEATMAP_REFRESH_INTERVAL_MS = 120000; // 2 minutes

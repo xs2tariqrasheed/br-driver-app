@@ -67,9 +67,9 @@ type SettingsAction = HydrateAction | SetAction | ClearAction;
 
 export const DEFAULT_SETTINGS: SettingsObject = {
   loginSettings: {
-    enableFaceRecognition: true,
-    enableFaceId: true,
-    enableFingerprint: true,
+    enableFaceRecognition: false,
+    enableFaceId: false,
+    enableFingerprint: false,
   },
   ridePreferences: {
     homePage: {

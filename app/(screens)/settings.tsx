@@ -1,4 +1,5 @@
-import Button, { IconButton } from "@/components/Button";
+import BottomSheet from "@/components/BottomSheet";
+import Button from "@/components/Button";
 import Counter from "@/components/Counter";
 import Divider from "@/components/Divider";
 import Toggle from "@/components/Form/Toggle";
@@ -14,13 +15,8 @@ import {
   FEATURED_DRIVER_PRICE_MIN,
 } from "@/constants/global";
 import { useSettings } from "@/context/SettingsContext";
-import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetView,
-} from "@gorhom/bottom-sheet";
 import { Stack, useRouter } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -48,11 +44,10 @@ export default function SettingsScreen() {
   );
 
   // Bottom sheet for selecting auto-bid price
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ["45%"], []);
+  const [sheetOpen, setSheetOpen] = useState<boolean>(false);
 
-  const openSheet = () => sheetRef.current?.present();
-  const closeSheet = () => sheetRef.current?.dismiss();
+  const openSheet = () => setSheetOpen(true);
+  const closeSheet = () => setSheetOpen(false);
 
   // No-op helpers removed; using reusable Counter component instead.
 
@@ -199,72 +194,40 @@ export default function SettingsScreen() {
       </View>
 
       {/* Bottom Sheet */}
-      <BottomSheetModal
-        ref={sheetRef}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.7}
-            enableTouchThrough={true}
-            pressBehavior="close"
-          />
-        )}
-        style={styles.sheetRoot}
+      <BottomSheet
+        open={sheetOpen}
+        onClose={closeSheet}
+        snapPoints={["45%"]}
+        headerTitle="Select Bid Price"
       >
-        <BottomSheetView>
-          <View style={styles.sheetContainer}>
-            <View style={styles.sheetHeader}>
-              <Typography
-                type="headingLarge"
-                weight="semibold"
-                style={styles.sheetTitle}
-              >
-                Select Bid Price
-              </Typography>
-              <IconButton
-                size={1}
-                rounded={true}
-                icon={
-                  <Image
-                    source={require("@/assets/images/black-cross.png")}
-                    style={styles.icon24}
-                  />
-                }
-                onPress={closeSheet}
-              />
-            </View>
-            <Divider />
+        <View style={styles.sheetContainer}>
+          <Divider />
 
-            {AUTO_BID_PRICE_OPTIONS.map((opt) => {
-              const selected = strategy === opt;
-              return (
-                <View key={opt}>
-                  <TouchableOpacity
-                    style={styles.sheetRow}
-                    onPress={() => {
-                      setStrategy(opt);
-                      closeSheet();
-                    }}
+          {AUTO_BID_PRICE_OPTIONS.map((opt) => {
+            const selected = strategy === opt;
+            return (
+              <View key={opt}>
+                <TouchableOpacity
+                  style={styles.sheetRow}
+                  onPress={() => {
+                    setStrategy(opt);
+                    closeSheet();
+                  }}
+                >
+                  <Typography
+                    type={selected ? "titleMedium" : "bodyLarge"}
+                    weight={selected ? "bold" : "medium"}
+                    style={styles.textBlack}
                   >
-                    <Typography
-                      type={selected ? "titleMedium" : "bodyLarge"}
-                      weight={selected ? "bold" : "medium"}
-                      style={styles.textBlack}
-                    >
-                      {opt}
-                    </Typography>
-                  </TouchableOpacity>
-                  <Divider />
-                </View>
-              );
-            })}
-          </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+                    {opt}
+                  </Typography>
+                </TouchableOpacity>
+                <Divider />
+              </View>
+            );
+          })}
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -332,8 +295,6 @@ const styles = StyleSheet.create({
   },
   sheetRoot: { borderTopLeftRadius: 30, borderTopRightRadius: 30 },
   sheetContainer: {
-    paddingVertical: 20,
-    paddingHorizontal: 16,
     backgroundColor: textColors.white,
   },
   sheetHeader: {

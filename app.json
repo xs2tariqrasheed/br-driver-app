@@ -16,6 +16,9 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Your location is needed to find and navigate to jobs nearby.",
         "NSUserTrackingUsageDescription": "We use notifications to alert you for incoming jobs and updates."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8"
       }
     },
     "android": {
@@ -29,7 +32,12 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "POST_NOTIFICATIONS"
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
@@ -52,6 +60,12 @@
         {
           "icon": "./assets/images/black-bell-icon.png",
           "color": "#007A7A"
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8"
         }
       ]
     ],

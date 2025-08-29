@@ -17,4 +17,9 @@ export const AUTH_ENDPOINTS = {
   signup: "/auth/signup",
 } as const;
 
+export const HEATMAP_ENDPOINTS = {
+  // Heatmap API endpoint (dummy for now)
+  heatmapData: "https://api.example.com/heatmap-data",
+} as const;
+
 export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;

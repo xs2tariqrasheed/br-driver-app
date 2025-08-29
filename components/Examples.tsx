@@ -1,5 +1,5 @@
 import Typography from "@/components/Typography";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { StyleSheet, View } from "react-native";
 
@@ -17,6 +17,7 @@ import { useDelete } from "@/hooks/useDelete";
 import { useFetch } from "@/hooks/useFetch";
 import { useGetById } from "@/hooks/useGetById";
 import { usePost } from "@/hooks/usePost";
+import { logger } from "@/utils/helpers";
 import Logo from "./Logo";
 
 type Todo = {
@@ -47,6 +48,9 @@ export default function Examples() {
     age: string;
   };
 
+  // Logger function
+  const log = logger();
+
   const {
     control,
     handleSubmit,
@@ -65,7 +69,7 @@ export default function Examples() {
   });
 
   const onSubmit = (data: DemoFormValues) => {
-    console.log("Form submitted", data);
+    log("Form submitted", data);
   };
 
   const {
@@ -676,7 +680,7 @@ export default function Examples() {
         labels={["Offline", "Online"]}
         value={status}
         setValue={setStatus}
-        onChange={(val) => console.log(val)}
+        onChange={(val) => log(val)}
         size={{ width: 240, height: 48 }}
       />
       {/* labeled string toggle */}
@@ -685,24 +689,24 @@ export default function Examples() {
         labels={["Offline", "Online"]}
         value={status}
         setValue={setStatus}
-        onChange={(val) => console.log(val)}
+        onChange={(val) => log(val)}
       />
 
       {/* Swipeable buttons */}
       <SwipeableButton
         title="Swipe with auto reset"
-        onComplete={() => console.log("Arrived")}
+        onComplete={() => log("Arrived")}
         autoReset={true}
       />
       <SwipeableButton
         title="Swipe with disabled"
-        onComplete={() => console.log("Completed")}
+        onComplete={() => log("Completed")}
         autoReset={true}
         disabled={true}
       />
       <SwipeableButton
         title="Swipe to mark as completed"
-        onComplete={() => console.log("Arrived")}
+        onComplete={() => log("Arrived")}
       />
 
       {/* Password strength examples */}

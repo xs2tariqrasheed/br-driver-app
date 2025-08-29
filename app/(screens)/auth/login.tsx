@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Image,
@@ -18,7 +12,8 @@ import {
   View,
 } from "react-native";
 
-import Button, { IconButton } from "@/components/Button";
+import BottomSheet from "@/components/BottomSheet";
+import Button from "@/components/Button";
 import Input from "@/components/Form/Input";
 import Header from "@/components/Header";
 import Logo from "@/components/Logo";
@@ -31,11 +26,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
-import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetView,
-} from "@gorhom/bottom-sheet";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useFocusEffect, useRouter } from "expo-router";
 
@@ -69,7 +59,7 @@ type LoginFormValues = {
  */
 export default function LoginScreen() {
   const router = useRouter();
-  const [auth, setAuth] = useAuth();
+  const [auth, setAuth] = useAuth() as any;
   const [settings] = useSettings();
   const {
     control,
@@ -105,31 +95,19 @@ export default function LoginScreen() {
     const log = logger();
     log("Login submit", data);
     try {
-      const response = {
-        token: "1234567890",
-        user: { id: "1234567890", name: "John Doe" },
-        message: "Logged in successfully",
-      };
       // const response = await submitLogin(data);
-      // Expect response to include token and optionally user info
-      await setAuth(response as any);
-      showToast(response?.message || "Logged in successfully", {
-        variant: "success",
-        position: "top",
+      // After successful login, require OTP verification before granting access
+      router.push({
+        pathname: "/(screens)/auth/verify-otp",
+        params: { context: "login" },
       });
-      router.replace("/(tabs)");
     } catch (e) {
       // Error state handled by hook; show toast as well
       const message = e instanceof Error ? e.message : "Login failed";
       showToast(message, { variant: "error", position: "top" });
     }
   };
-  // If already authenticated, redirect to home
-  useEffect(() => {
-    if (auth && auth.token) {
-      router.replace("/(tabs)");
-    }
-  }, [auth, router]);
+  // Removed auto-redirect: even if already authenticated, keep user on Login screen
 
   // Also react to hook error state changes (defensive)
   /**
@@ -142,12 +120,12 @@ export default function LoginScreen() {
   }, [submitError]);
 
   // Bottom sheet state & handlers
-  const forgotSheetRef = useRef<BottomSheetModal>(null);
-  const biometricSheetRef = useRef<BottomSheetModal>(null);
-  const successSheetRef = useRef<BottomSheetModal>(null);
+  const [forgotSheetOpen, setForgotSheetOpen] = useState<boolean>(false);
+  const [biometricSheetOpen, setBiometricSheetOpen] = useState<boolean>(false);
   const [biometricTitle, setBiometricTitle] = useState<string>("");
   const [biometricDescription, setBiometricDescription] = useState<string>("");
   const [supportedTypes, setSupportedTypes] = useState<number[]>([]);
+  const [successSheetOpen, setSuccessSheetOpen] = useState<boolean>(false);
   /**
    * Memoized snap points for the Forgot bottom sheet to prevent unnecessary recalculations.
    */
@@ -158,7 +136,7 @@ export default function LoginScreen() {
    */
   /** Opens the "Forgot" bottom sheet. */
   const openForgotSheet = useCallback(() => {
-    forgotSheetRef.current?.present();
+    setForgotSheetOpen(true);
   }, []);
   /**
    * Closes the Forgot options bottom sheet.
@@ -166,7 +144,7 @@ export default function LoginScreen() {
    */
   /** Closes the "Forgot" bottom sheet. */
   const closeForgotSheet = useCallback(() => {
-    forgotSheetRef.current?.dismiss();
+    setForgotSheetOpen(false);
   }, []);
 
   // Reset form whenever this screen gains focus
@@ -183,14 +161,14 @@ export default function LoginScreen() {
     (title: string, description: string) => {
       setBiometricTitle(title);
       setBiometricDescription(description);
-      biometricSheetRef.current?.present();
+      setBiometricSheetOpen(true);
     },
     []
   );
 
   /** Closes the biometric bottom sheet. */
   const closeBiometricSheet = useCallback(() => {
-    biometricSheetRef.current?.dismiss();
+    setBiometricSheetOpen(false);
   }, []);
 
   /** Opens OS settings and closes biometric sheet. */
@@ -261,7 +239,7 @@ export default function LoginScreen() {
           disableDeviceFallback: false,
         });
         if (result?.success) {
-          successSheetRef.current?.present();
+          setSuccessSheetOpen(true);
         }
       } catch (err) {
         const { title, description } = getNotEnabledCopy(method);
@@ -417,104 +395,105 @@ export default function LoginScreen() {
             </Button>
           </View>
 
-          {/* Or divider */}
-          <View style={styles.orRow}>
-            <View style={styles.hr} />
-            <Typography
-              type="bodyMedium"
-              weight="regular"
-              style={styles.textGrey700}
-            >
-              Or
-            </Typography>
-            <View style={styles.hr} />
-          </View>
-
-          {/* Auth options */}
-          <View style={styles.authRow}>
-            {[
-              {
-                icon: require("@/assets/images/finger-print.png"),
-                title: "Fingerprint",
-                method: "fingerprint" as BiometricMethod,
-              },
-              {
-                icon: require("@/assets/images/face-id.png"),
-                title: "Face ID",
-                method: "faceId" as BiometricMethod,
-              },
-              {
-                icon: require("@/assets/images/facial-recognition.png"),
-                title: "Face Recognition",
-                method: "faceRecognition" as BiometricMethod,
-              },
-            ].map((option) => {
-              const supported = isMethodSupported(option.method);
-              const allowed =
-                option.method === "fingerprint"
-                  ? settings.loginSettings.enableFingerprint
-                  : option.method === "faceId"
-                  ? settings.loginSettings.enableFaceId
-                  : settings.loginSettings.enableFaceRecognition;
-              // Only apply greyed-out visuals when the user has disabled the method in settings
-              const visuallyDisabled = !allowed;
-              const cardStyle = [
-                styles.authCard,
-                visuallyDisabled ? styles.authCardDisabled : null,
-              ];
-              const iconStyle = [
-                styles.authIcon,
-                visuallyDisabled ? styles.authIconDisabled : null,
-              ];
-              const textStyle = [
-                styles.authText,
-                visuallyDisabled ? styles.authTextDisabled : null,
-              ];
-              const reasonText = !allowed
-                ? "Disabled in settings"
-                : !supported
-                ? "Not supported"
-                : "";
-
-              return (
-                <TouchableOpacity
-                  style={cardStyle}
-                  activeOpacity={0.8}
-                  key={option.title}
-                  onPress={() => {
-                    if (!allowed) return; // hard-disabled by settings
-                    if (supported) {
-                      void checkAndPromptBiometrics(option.method);
-                    } else {
-                      const { title, description } = getUnsupportedCopy(
-                        option.method
-                      );
-                      openBiometricSheet(title, description);
-                    }
-                  }}
-                  disabled={submitting}
+          {/* Or divider + Auth options (only when any option is enabled) */}
+          {(settings.loginSettings.enableFingerprint ||
+            settings.loginSettings.enableFaceId ||
+            settings.loginSettings.enableFaceRecognition) && (
+            <>
+              <View style={styles.orRow}>
+                <View style={styles.hr} />
+                <Typography
+                  type="bodyMedium"
+                  weight="regular"
+                  style={styles.textGrey700}
                 >
-                  <Image source={option.icon} style={iconStyle as any} />
-                  <Typography
-                    type="labelLarge"
-                    weight="semibold"
-                    style={textStyle as any}
-                  >
-                    {option.title}
-                  </Typography>
-                  {reasonText ? (
-                    <Typography
-                      type="labelMedium"
-                      weight="regular"
-                      style={styles.reasonText}
-                    >
-                      {reasonText}
-                    </Typography>
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                  Or
+                </Typography>
+                <View style={styles.hr} />
+              </View>
+
+              <View style={styles.authRow}>
+                {[
+                  {
+                    icon: require("@/assets/images/finger-print.png"),
+                    title: "Fingerprint",
+                    method: "fingerprint" as BiometricMethod,
+                  },
+                  {
+                    icon: require("@/assets/images/face-id.png"),
+                    title: "Face ID",
+                    method: "faceId" as BiometricMethod,
+                  },
+                  {
+                    icon: require("@/assets/images/facial-recognition.png"),
+                    title: "Face Recognition",
+                    method: "faceRecognition" as BiometricMethod,
+                  },
+                ]
+                  .filter((option) => {
+                    if (option.method === "fingerprint")
+                      return settings.loginSettings.enableFingerprint;
+                    if (option.method === "faceId")
+                      return settings.loginSettings.enableFaceId;
+                    return settings.loginSettings.enableFaceRecognition;
+                  })
+                  .map((option) => {
+                    const supported = isMethodSupported(option.method);
+                    const allowed = true; // already filtered by setting
+                    const cardStyle = [
+                      styles.authCard,
+                      !supported ? styles.authCardDisabled : null,
+                    ];
+                    const iconStyle = [
+                      styles.authIcon,
+                      !supported ? styles.authIconDisabled : null,
+                    ];
+                    const textStyle = [
+                      styles.authText,
+                      !supported ? styles.authTextDisabled : null,
+                    ];
+                    const reasonText = !supported ? "Not supported" : "";
+
+                    return (
+                      <TouchableOpacity
+                        style={cardStyle}
+                        activeOpacity={0.8}
+                        key={option.title}
+                        onPress={() => {
+                          if (supported) {
+                            void checkAndPromptBiometrics(option.method);
+                          } else {
+                            const { title, description } = getUnsupportedCopy(
+                              option.method
+                            );
+                            openBiometricSheet(title, description);
+                          }
+                        }}
+                        disabled={submitting}
+                      >
+                        <Image source={option.icon} style={iconStyle as any} />
+                        <Typography
+                          type="labelLarge"
+                          weight="semibold"
+                          style={textStyle as any}
+                        >
+                          {option.title}
+                        </Typography>
+                        {reasonText ? (
+                          <Typography
+                            type="labelMedium"
+                            weight="regular"
+                            style={styles.reasonText}
+                          >
+                            {reasonText}
+                          </Typography>
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+            </>
+          )}
 
           {/* Footer */}
           <View style={styles.centeredRow}>
@@ -539,222 +518,142 @@ export default function LoginScreen() {
       </KeyboardAvoidingView>
 
       {/* Forgot Bottom Sheet */}
-      <BottomSheetModal
-        ref={forgotSheetRef}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.7}
-            enableTouchThrough={true}
-            pressBehavior="close"
-          />
-        )}
-        style={styles.bottomSheetContainer}
+      <BottomSheet
+        open={forgotSheetOpen}
+        onClose={closeForgotSheet}
+        snapPoints={[250]}
+        headerTitle="Forgot?"
       >
-        <BottomSheetView>
-          <View style={styles.sheetContainer}>
-            <View style={styles.sheetHeader}>
-              <Typography
-                type="headingLarge"
-                weight="semibold"
-                style={styles.sheetTitleText}
-              >
-                Forgot?
-              </Typography>
-              <IconButton
-                size={1}
-                rounded={true}
-                icon={
-                  <Image
-                    source={require("@/assets/images/black-cross.png")}
-                    style={styles.iconSize24}
-                  />
-                }
-                onPress={closeForgotSheet}
+        <View style={styles.sheetContainer}>
+          {[
+            {
+              label: "Forgot Password",
+              onPress: () => {
+                closeForgotSheet();
+                router.push("/(screens)/auth/forgot-password");
+              },
+            },
+            {
+              label: "Forgot User Id",
+              onPress: () => {
+                closeForgotSheet();
+                router.push("/(screens)/auth/forgot-user-id");
+              },
+            },
+          ].map((item) => (
+            <View key={item.label}>
+              <TouchableOpacity
+                key={item.label}
+                style={styles.sheetRow}
                 disabled={submitting}
-              />
-            </View>
-
-            {[
-              {
-                label: "Forgot Password",
-                onPress: () => {
-                  closeForgotSheet();
-                  router.push("/(screens)/auth/forgot-password");
-                },
-              },
-              {
-                label: "Forgot User Id",
-                onPress: () => {
-                  closeForgotSheet();
-                  router.push("/(screens)/auth/forgot-user-id");
-                },
-              },
-            ].map((item) => (
-              <View key={item.label}>
-                <TouchableOpacity
-                  key={item.label}
-                  style={styles.sheetRow}
-                  disabled={submitting}
-                  onPress={item.onPress}
+                onPress={item.onPress}
+              >
+                <Typography
+                  type="bodyLarge"
+                  weight="medium"
+                  style={styles.sheetOptionText}
                 >
-                  <Typography
-                    type="bodyLarge"
-                    weight="medium"
-                    style={styles.sheetOptionText}
-                  >
-                    {item.label}
-                  </Typography>
-                  <Image
-                    source={require("@/assets/images/black-arrow-right.png")}
-                    style={styles.iconSize16}
-                  />
-                </TouchableOpacity>
-                <View style={styles.sheetDivider} />
-              </View>
-            ))}
-          </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+                  {item.label}
+                </Typography>
+                <Image
+                  source={require("@/assets/images/black-arrow-right.png")}
+                  style={styles.iconSize16}
+                />
+              </TouchableOpacity>
+              <View style={styles.sheetDivider} />
+            </View>
+          ))}
+        </View>
+      </BottomSheet>
 
       {/* Biometric Permission Bottom Sheet */}
-      <BottomSheetModal
-        ref={biometricSheetRef}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.7}
-            enableTouchThrough={true}
-            pressBehavior="close"
-          />
-        )}
-        style={styles.bottomSheetContainer}
+      <BottomSheet
+        headerTitle={biometricTitle}
+        open={biometricSheetOpen}
+        onClose={closeBiometricSheet}
+        snapPoints={[250]}
       >
-        <BottomSheetView>
-          <View style={styles.sheetContainer}>
-            <View style={styles.sheetHeader}>
-              <Typography
-                type="headingLarge"
-                weight="semibold"
-                style={styles.biometricTitleText}
-              >
-                {biometricTitle}
-              </Typography>
-              <IconButton
-                size={1}
-                rounded={true}
-                icon={
-                  <Image
-                    source={require("@/assets/images/black-cross.png")}
-                    style={styles.iconSize24}
-                  />
-                }
-                onPress={closeBiometricSheet}
-                disabled={submitting}
-              />
-            </View>
+        <View style={styles.sheetContainer}>
+          <Typography
+            type="bodyLarge"
+            weight="regular"
+            style={styles.biometricDescriptionText}
+          >
+            {biometricDescription}
+          </Typography>
 
-            <Typography
-              type="bodyLarge"
-              weight="regular"
-              style={styles.biometricDescriptionText}
-            >
-              {biometricDescription}
-            </Typography>
-
-            <Button
-              variant="primary"
-              rounded="half"
-              onPress={handleOpenSettings}
-              disabled={submitting}
-            >
-              Open Settings
-            </Button>
-          </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+          <Button
+            variant="primary"
+            rounded="half"
+            onPress={handleOpenSettings}
+            disabled={submitting}
+          >
+            Open Settings
+          </Button>
+        </View>
+      </BottomSheet>
 
       {/* Success Bottom Sheet (non-dismissible) */}
-      <BottomSheetModal
-        ref={successSheetRef}
-        snapPoints={["60%"]}
-        enablePanDownToClose={false}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.7}
-            enableTouchThrough={false}
-            pressBehavior="none"
-          />
-        )}
-        style={styles.bottomSheetContainer}
+      <BottomSheet
+        open={successSheetOpen}
+        onClose={() => {}}
+        snapPoints={["50%"]}
+        showHeader={false}
       >
-        <BottomSheetView>
-          <View style={styles.sheetContainer}>
-            <View style={styles.successIconWrapper}>
-              <Image
-                source={require("@/assets/images/identity-confirmed.png")}
-                style={styles.successIcon}
-              />
-            </View>
-
-            <Typography
-              type="headingLarge"
-              weight="semibold"
-              style={styles.successTitle}
-            >
-              Identity Verified!
-            </Typography>
-
-            <Typography
-              type="bodyLarge"
-              weight="regular"
-              style={styles.successDescription}
-            >
-              Welcome aboard, John Smith! We're thrilled to have you as our
-              captain. Let’s hit the road and make every journey a great one!
-            </Typography>
-            <Typography
-              type="bodyLarge"
-              weight="regular"
-              style={styles.successDescription}
-            >
-              You're now part of a trusted community of drivers dedicated to
-              delivering great service. Stay safe, drive smart, and enjoy the
-              journey ahead.
-            </Typography>
-            <Typography
-              type="bodyLarge"
-              weight="regular"
-              style={styles.successDescription}
-            >
-              From short trips to long hauls, every mile you drive matters.
-              Let’s build a smooth, successful ride experience together.
-            </Typography>
-
-            <Button
-              variant="primary"
-              rounded="half"
-              onPress={() => {
-                successSheetRef.current?.dismiss();
-                router.replace("/(tabs)");
-              }}
-            >
-              Continue
-            </Button>
+        <View style={styles.sheetContainer}>
+          <View style={styles.successIconWrapper}>
+            <Image
+              source={require("@/assets/images/identity-confirmed.png")}
+              style={styles.successIcon}
+            />
           </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+
+          <Typography
+            type="headingLarge"
+            weight="semibold"
+            style={styles.successTitle}
+          >
+            Identity Verified!
+          </Typography>
+
+          <Typography
+            type="bodyLarge"
+            weight="regular"
+            style={styles.successDescription}
+          >
+            Welcome aboard, {auth?.user?.name}! We're thrilled to have you as
+            our captain. Let’s hit the road and make every journey a great one!
+          </Typography>
+          <Typography
+            type="bodyLarge"
+            weight="regular"
+            style={styles.successDescription}
+          >
+            You're now part of a trusted community of drivers dedicated to
+            delivering great service. Stay safe, drive smart, and enjoy the
+            journey ahead.
+          </Typography>
+          <Typography
+            type="bodyLarge"
+            weight="regular"
+            style={styles.successDescription}
+          >
+            From short trips to long hauls, every mile you drive matters. Let’s
+            build a smooth, successful ride experience together.
+          </Typography>
+
+          <Button
+            variant="primary"
+            rounded="half"
+            onPress={() => {
+              setSuccessSheetOpen(false);
+              router.replace("/(tabs)");
+            }}
+          >
+            Continue
+          </Button>
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -836,9 +735,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sheetContainer: {
-    paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 24,
     backgroundColor: textColors.white,
     gap: 12,
   },
@@ -846,11 +743,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+
   closeButton: {
     width: 32,
     height: 32,

@@ -1,6 +1,9 @@
 import { DRIVER_STORAGE_KEY } from "@/constants/global";
 import {
+  DesiredDestination,
+  filterExpiredDestinations,
   getStorageItem,
+  logger,
   removeStorageItem,
   setStorageItem,
 } from "@/utils/helpers";
@@ -13,9 +16,12 @@ import React, {
   useReducer,
 } from "react";
 
-// Types
+// Re-export the DesiredDestination type for backward compatibility
+export type { DesiredDestination };
+
 export type DriverObject = {
   online: boolean;
+  desiredDestinations?: DesiredDestination[];
   // Extendable for future driver data
   [key: string]: unknown;
 } | null;
@@ -73,12 +79,49 @@ const DriverContext = createContext<DriverContextValue | undefined>(undefined);
 export function DriverProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(driverReducer, initialState);
 
+  // Logger function
+  const log = logger();
+
   // Hydrate once on mount
   useEffect(() => {
     (async () => {
       try {
         const raw = await getStorageItem(DRIVER_STORAGE_KEY);
-        const parsed: DriverObject = raw ? JSON.parse(raw) : null;
+        let parsed: DriverObject = raw ? JSON.parse(raw) : null;
+
+        // Filter out expired destinations if they exist
+        if (
+          parsed?.desiredDestinations &&
+          parsed.desiredDestinations.length > 0
+        ) {
+          const { valid, expired } = filterExpiredDestinations(
+            parsed.desiredDestinations
+          );
+
+          // Log expired destinations
+          expired.forEach((dest) => {
+            log(`Desired location has been expired and removed:`, {
+              id: dest.id,
+              address: dest.address,
+              expired_at: dest.expired_at,
+              created_at: dest.created_at,
+            });
+          });
+
+          // Update parsed driver object with only valid destinations
+          if (expired.length > 0) {
+            parsed = {
+              ...parsed,
+              desiredDestinations: valid,
+            };
+
+            // Save the updated driver object back to storage
+            if (parsed) {
+              await setStorageItem(DRIVER_STORAGE_KEY, JSON.stringify(parsed));
+            }
+          }
+        }
+
         dispatch({ type: "HYDRATE_DRIVER", payload: parsed });
       } catch {
         dispatch({ type: "HYDRATE_DRIVER", payload: null });
