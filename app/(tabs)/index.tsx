@@ -30,6 +30,7 @@ import {
 export default function HomeScreen() {
   const router = useRouter();
   const [driver, setDriver] = useDriver();
+  const { notifications } = useDriver();
   const [settings, setSettings] = useSettings();
   const statusValue: DriverStatusLabel = driver?.online
     ? DRIVER_STATUS.ONLINE
@@ -81,6 +82,17 @@ export default function HomeScreen() {
   const [sortBy, setSortBy] = useState<SortKey>("distance");
   const [activeSortBy, setActiveSortBy] = useState<SortKey>("distance");
 
+  // Determine which bell icon to show based on notification status
+  const hasUnreadNotifications = notifications.some(
+    (notification) => notification.messageType === "unread"
+  );
+  const unreadCount = notifications.filter(
+    (notification) => notification.messageType === "unread"
+  ).length;
+  const bellIconSource = hasUnreadNotifications
+    ? require("@/assets/images/red-bell-icon.png")
+    : require("@/assets/images/black-bell-icon.png");
+
   const sortComparator = useMemo(() => {
     return (
       a: { etaMinutes?: number; distanceMiles?: number },
@@ -127,10 +139,21 @@ export default function HomeScreen() {
               style={styles.bellButton}
             >
               <RNImage
-                source={require("@/assets/images/red-bell-icon.png")}
+                source={bellIconSource}
                 style={styles.bellIcon}
                 resizeMode="contain"
               />
+              {hasUnreadNotifications && unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Typography
+                    type="labelSmall"
+                    weight="bold"
+                    style={styles.badgeText}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Typography>
+                </View>
+              )}
             </TouchableOpacity>
           }
           rightAccessory={
@@ -498,10 +521,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingLeft: 10,
+    position: "relative",
   },
   bellIcon: {
     width: 24,
     height: 24,
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: -2,
+    left: 18,
+    backgroundColor: textColors.red500,
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: textColors.white,
+    fontSize: 10,
+    lineHeight: 12,
   },
   toggleWrap: {
     alignItems: "center",

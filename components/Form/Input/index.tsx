@@ -67,23 +67,31 @@ const getKeyboardProps = (
       return {
         secureTextEntry: !isPasswordVisible,
         keyboardType: "default" as const,
+        returnKeyType: "done" as const,
+        blurOnSubmit: true,
       };
     case "email":
       return {
         secureTextEntry: false as const,
         keyboardType: "email-address" as const,
         autoCapitalize: "none" as const,
+        returnKeyType: "done" as const,
+        blurOnSubmit: true,
       };
     case "number":
       return {
         secureTextEntry: false as const,
         keyboardType: "number-pad" as const,
+        returnKeyType: "done" as const,
+        blurOnSubmit: true,
       };
     case "text":
     default:
       return {
         secureTextEntry: false as const,
         keyboardType: "default" as const,
+        returnKeyType: "done" as const,
+        blurOnSubmit: true,
       };
   }
 };
