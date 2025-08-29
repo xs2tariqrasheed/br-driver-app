@@ -163,7 +163,7 @@ export default function HomeScreen() {
                 {
                   key: "heat-map",
                   image: require("@/assets/images/home/heat-map-icon.png"),
-                  onPress: () => log("Heat map pressed"),
+                  onPress: () => router.push("/(screens)/heat-map" as any),
                 },
                 {
                   key: "desired-locations",

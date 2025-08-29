@@ -1,14 +1,15 @@
 import { textColors } from "@/constants/colors";
 import { GOOGLE_MAPS_API_KEY } from "@/constants/global";
 import {
-  generateMapHTML,
+  generateHeatmapHTML,
   getCurrentLocation,
   handleWebViewLocationMessage,
+  HeatmapDataPoint,
+  HeatmapOptions,
   LocationCoordinates,
   LocationSelectData,
   logger,
   MapRegion,
-  reverseGeocode,
 } from "@/utils/helpers";
 import { useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
@@ -16,57 +17,80 @@ import { WebView } from "react-native-webview";
 import Typography from "../Typography";
 
 /**
- * Props for the CustomMap component
+ * Props for the HeatMapWebView component
  */
-interface CustomMapProps {
+interface HeatMapWebViewProps {
+  /**
+   * Array of heatmap data points with coordinates, weights, and ETA information
+   */
+  heatmapData: HeatmapDataPoint[];
   /**
    * Callback function called when a location is selected on the map
    * @param address - The human-readable address of the selected location
    * @param coordinates - The latitude and longitude coordinates of the selected location
    */
-  onLocationSelect: (address: string, coordinates: LocationCoordinates) => void;
+  onLocationSelect?: (
+    address: string,
+    coordinates: LocationCoordinates
+  ) => void;
   /**
    * Optional initial region to center the map on when it loads
    * If not provided, the map will attempt to use the user's current location
    */
   initialRegion?: MapRegion;
+  /**
+   * Options for customizing the heatmap appearance
+   */
+  heatmapOptions?: HeatmapOptions;
 }
 
 /**
- * A React Native component that displays an interactive Google Maps interface within a WebView.
- * Allows users to select locations on the map and provides address geocoding functionality.
+ * A React Native component that displays an interactive Google Maps heatmap within a WebView.
+ * Shows real-time demand data with color-coded intensity and ETA overlays for high-demand areas.
  *
  * Features:
- * - Interactive Google Maps with location selection
- * - Automatic current location detection and centering
- * - Reverse geocoding to convert coordinates to human-readable addresses
+ * - Interactive Google Maps heatmap with demand visualization
+ * - ETA labels overlaid on high-demand areas
+ * - Custom car icon for current location marker
+ * - Color-coded demand levels (red=high, orange=medium, green=low)
+ * - Legend showing demand level meanings
  * - Click-to-select functionality for choosing locations
- * - Fallback handling for location permissions and geocoding failures
+ * - Zoom and pan controls for exploring different areas
+ * - Real-time data updates
  *
  * @param props - The component props
- * @param props.onLocationSelect - Callback function called when a location is selected
+ * @param props.heatmapData - Array of data points with lat/lng, weight, and ETA info
+ * @param props.onLocationSelect - Optional callback when a location is selected
  * @param props.initialRegion - Optional initial map region to display
- * @returns JSX element containing the WebView with embedded Google Maps
+ * @param props.heatmapOptions - Optional customization options for heatmap appearance
+ * @returns JSX element containing the WebView with embedded Google Maps heatmap
  *
  * @example
  * ```tsx
- * <CustomMap
+ * const heatmapData = [
+ *   { lat: 37.7749, lng: -122.4194, weight: 0.9, eta: "3 mins", demandLevel: 'high' },
+ *   { lat: 37.7849, lng: -122.4094, weight: 0.7, eta: "5 mins", demandLevel: 'medium' }
+ * ];
+ *
+ * <HeatMapWebView
+ *   heatmapData={heatmapData}
  *   onLocationSelect={(address, coordinates) => {
  *     console.log('Selected:', address, coordinates);
  *   }}
- *   initialRegion={{
- *     latitude: 37.7749,
- *     longitude: -122.4194,
- *     latitudeDelta: 0.0922,
- *     longitudeDelta: 0.0421,
+ *   heatmapOptions={{
+ *     radius: 50,
+ *     opacity: 0.7,
+ *     showETALabels: true
  *   }}
  * />
  * ```
  */
-export default function CustomMap({
+export default function HeatMapWebView({
+  heatmapData,
   onLocationSelect,
   initialRegion,
-}: CustomMapProps) {
+  heatmapOptions = {},
+}: HeatMapWebViewProps) {
   // Google Maps API key is imported from global constants
 
   // Reference to the WebView component for direct manipulation
@@ -93,10 +117,10 @@ export default function CustomMap({
   // Loading state to show spinner while map initializes
   const [isLoading, setIsLoading] = useState(true);
 
-    // Pickup icon URL - using the pickup icon for user location marker
-    const pickupIconUrl = Image.resolveAssetSource(
-      require("@/assets/images/pickup-icon.png")
-    ).uri;
+  // Pickup icon URL - using the pickup icon for user location marker
+  const pickupIconUrl = Image.resolveAssetSource(
+    require("@/assets/images/pickup-icon.png")
+  ).uri;
 
   useEffect(() => {
     if (initialRegion) {
@@ -110,9 +134,6 @@ export default function CustomMap({
   /**
    * Initializes the map location by attempting to get the user's current location.
    * Falls back to default coordinates if location access fails.
-   *
-   * This function is called when no initialRegion is provided to center the map
-   * on the user's current location for better user experience.
    */
   const initializeLocation = async () => {
     try {
@@ -142,34 +163,59 @@ export default function CustomMap({
   };
 
   /**
-   * Handles map press events by reverse geocoding the coordinates to get an address.
+   * Handles map press events by processing the location selection.
    * Updates the selected location state and calls the onLocationSelect callback.
-   *
-   * @param latitude - The latitude coordinate of the pressed location
-   * @param longitude - The longitude coordinate of the pressed location
    */
   const handleMapPress = async (latitude: number, longitude: number) => {
     // Update local state with selected coordinates
     setSelectedLocation({ latitude, longitude });
 
-    try {
-      // Convert coordinates to human-readable address using helper function
-      const address = await reverseGeocode(
-        latitude,
-        longitude,
-        GOOGLE_MAPS_API_KEY
-      );
-      log("address", address);
-      onLocationSelect(address, { latitude, longitude });
-    } catch (error) {
-      console.error("Error getting address:", error);
-      // Fallback to coordinate string if geocoding fails
+    if (onLocationSelect) {
+      // The address will be provided by the WebView's geocoding
       onLocationSelect(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, {
         latitude,
         longitude,
       });
     }
   };
+
+  /**
+   * Updates heatmap data dynamically by sending message to WebView
+   */
+  const updateHeatmapData = (newData: HeatmapDataPoint[]) => {
+    if (webViewRef.current) {
+      const script = `
+        if (typeof window.updateHeatmapData === 'function') {
+          window.updateHeatmapData(${JSON.stringify(newData)});
+        }
+      `;
+      webViewRef.current.injectJavaScript(script);
+    }
+  };
+
+  /**
+   * Toggles heatmap visibility
+   */
+  const toggleHeatmapVisibility = (visible: boolean) => {
+    if (webViewRef.current) {
+      const script = `
+        if (typeof window.toggleHeatmapVisibility === 'function') {
+          window.toggleHeatmapVisibility(${visible});
+        }
+      `;
+      webViewRef.current.injectJavaScript(script);
+    }
+  };
+
+  // Update heatmap when data changes
+  useEffect(() => {
+    if (!isLoading && heatmapData.length > 0) {
+      // Small delay to ensure WebView is ready
+      setTimeout(() => {
+        updateHeatmapData(heatmapData);
+      }, 1000);
+    }
+  }, [heatmapData, isLoading]);
 
   // Regenerate HTML when user location changes
   const [htmlKey, setHtmlKey] = useState(0);
@@ -183,7 +229,7 @@ export default function CustomMap({
     return (
       <View style={styles.loadingContainer}>
         <Typography type="bodyMedium" style={styles.loadingText}>
-          Loading map...
+          Loading heatmap...
         </Typography>
       </View>
     );
@@ -194,13 +240,29 @@ export default function CustomMap({
       <WebView
         key={htmlKey}
         ref={webViewRef}
-        source={{ html: generateMapHTML(region, GOOGLE_MAPS_API_KEY, true, pickupIconUrl, userLocation) }}
+        source={{
+          html: generateHeatmapHTML(
+            region,
+            GOOGLE_MAPS_API_KEY,
+            heatmapData,
+            {
+              radius: 50,
+              opacity: 0.7,
+              showETALabels: true,
+              ...heatmapOptions,
+            },
+            pickupIconUrl,
+            userLocation
+          ),
+        }}
         style={styles.map}
         onMessage={(event) =>
           handleWebViewLocationMessage(
             event,
             (data: LocationSelectData) => {
-              onLocationSelect(data.address, data.coordinates);
+              if (onLocationSelect) {
+                onLocationSelect(data.address, data.coordinates);
+              }
             },
             handleMapPress
           )
@@ -212,8 +274,16 @@ export default function CustomMap({
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
         onLoadEnd={() => {
-          log("WebView loaded");
+          log("HeatMap WebView loaded");
           setIsLoading(false);
+        }}
+        onError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          log("HeatMap WebView error:", nativeEvent);
+        }}
+        onHttpError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          log("HeatMap WebView HTTP error:", nativeEvent);
         }}
       />
     </View>

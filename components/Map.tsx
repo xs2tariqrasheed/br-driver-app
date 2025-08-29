@@ -1,4 +1,5 @@
 import { textColors } from "@/constants/colors";
+import { GOOGLE_MAPS_API_KEY } from "@/constants/global";
 import {
   getCurrentLocation,
   LocationCoordinates,
@@ -60,7 +61,7 @@ interface MapProps {
  */
 export default function Map({ onLocationSelect, initialRegion }: MapProps) {
   // Google Maps API key for geocoding and map display
-  const GOOGLE_MAPS_API_KEY = "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8";
+  // Google Maps API key is imported from global constants
 
   // Reference to the MapView component (currently commented out)
   // const mapRef = useRef<MapView>(null);

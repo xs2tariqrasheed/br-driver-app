@@ -3,7 +3,7 @@ import Input from "@/components/Form/Input";
 import { Header } from "@/components/Header";
 import CustomMap from "@/components/MapWebView";
 import { textColors } from "@/constants/colors";
-import { COORDINATE_REGEX } from "@/constants/global";
+import { COORDINATE_REGEX, GOOGLE_MAPS_API_KEY } from "@/constants/global";
 import { logger, reverseGeocode } from "@/utils/helpers";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
@@ -17,8 +17,7 @@ export default function DesiredDestinationsMapScreen() {
     longitude: number;
   } | null>(null);
 
-  // Google Maps API key for reverse geocoding
-  const GOOGLE_MAPS_API_KEY = "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8";
+  // Google Maps API key is imported from global constants
 
   // Logger function
   const log = logger();

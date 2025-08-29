@@ -287,7 +287,9 @@ export const reverseGeocode = async (
 export const generateMapHTML = (
   region: MapRegion,
   apiKey: string,
-  autoSelectCurrentLocation: boolean = true
+  autoSelectCurrentLocation: boolean = true,
+  pickupIconUrl: string = "",
+  userLocation: LocationCoordinates | null = null
 ): string => {
   const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
 
@@ -341,25 +343,32 @@ export const generateMapHTML = (
             ${
               autoSelectCurrentLocation
                 ? `
-            // Auto-select user's current location by default
-            if (navigator.geolocation) {
-              console.log('Getting current position...');
-              navigator.geolocation.getCurrentPosition(function(position) {
-                console.log('Current position received:', position.coords);
-                const pos = {
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude
-                };
+            // Auto-select user's current location using passed data
+            const userLocationData = ${JSON.stringify(userLocation)};
+            if (userLocationData && userLocationData.latitude && userLocationData.longitude) {
+              console.log('Using provided user location:', userLocationData);
+              const pos = {
+                lat: userLocationData.latitude,
+                lng: userLocationData.longitude
+              };
 
                 // Center map on user's location
                 map.setCenter(pos);
                 map.setZoom(15);
+
+                // Create custom pickup location icon marker
+                const pickupIcon = {
+                  url: '${pickupIconUrl}' || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTUgMTFMMTkgMTFNMTkgMTFMMTMgNUMxMyA1IDEyIDUgMTIgNUwxMiAxMUgxOUwxOSAxMVpNMTkgMTFMMTMgMTdDMTMgMTcgMTIgMTcgMTIgMTdMMTIgMTFIMTlaIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=',
+                  scaledSize: new google.maps.Size(30, 60),
+                  anchor: new google.maps.Point(20, 30)
+                };
 
                 // Add marker at user's current location
                 marker = new google.maps.Marker({
                   position: pos,
                   map: map,
                   title: 'Your Current Location',
+                  icon: pickupIcon,
                   animation: google.maps.Animation.DROP
                 });
 
@@ -403,24 +412,8 @@ export const generateMapHTML = (
                     }));
                   }
                 });
-              }, function(error) {
-                console.log('Error getting current location:', error);
-                // Fallback to default coordinates if geolocation fails
-                marker = new google.maps.Marker({
-                  position: center,
-                  map: map,
-                  title: 'Default Location',
-                  animation: google.maps.Animation.DROP
-                });
-
-                // Still try to send a message with default location
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'location_selected',
-                  latitude: center.lat,
-                  longitude: center.lng,
-                  address: center.lat.toFixed(6) + ', ' + center.lng.toFixed(6)
-                }));
-              });
+            } else {
+              console.log('No user location provided, skipping auto-selection');
             }
             `
                 : ""
@@ -435,11 +428,19 @@ export const generateMapHTML = (
                 marker.setMap(null);
               }
 
+              // Create custom pickup location icon marker
+              const pickupIcon = {
+                url: '${pickupIconUrl}' || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTUgMTFMMTkgMTFNMTkgMTFMMTMgNUMxMyA1IDEyIDUgMTIgNUwxMiAxMUgxOUwxOSAxMVpNMTkgMTFMMTMgMTdDMTMgMTcgMTIgMTcgMTIgMTdMMTIgMTFIMTlaIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=',
+                scaledSize: new google.maps.Size(40, 60),
+                anchor: new google.maps.Point(20, 30)
+              };
+
               // Add new marker
               marker = new google.maps.Marker({
                 position: position,
                 map: map,
                 title: 'Selected Location',
+                icon: pickupIcon,
                 animation: google.maps.Animation.DROP
               });
 
@@ -500,6 +501,493 @@ export const generateMapHTML = (
       </body>
     </html>
   `;
+};
+
+/**
+ * Interface for heatmap data points with ETA information
+ */
+export interface HeatmapDataPoint {
+  lat: number;
+  lng: number;
+  weight: number;
+  eta?: string;
+  demandLevel?: "high" | "medium" | "low";
+}
+
+/**
+ * Options for customizing the heatmap appearance
+ */
+export interface HeatmapOptions {
+  radius?: number;
+  opacity?: number;
+  gradient?: string[];
+  showETALabels?: boolean;
+}
+
+/**
+ * Generates HTML content for a Google Maps heatmap with ETA overlays and custom markers.
+ * This function creates a complete HTML page with Google Maps that displays:
+ * - Interactive heatmap visualization with color-coded demand intensity
+ * - ETA labels overlaid on high-demand areas
+ * - Custom car icon for current location
+ * - Click-to-select functionality
+ * - Zoom and pan controls
+ *
+ * @param region - The initial map region to display
+ * @param apiKey - Google Maps API key
+ * @param heatmapData - Array of data points with coordinates, weights, and ETA info
+ * @param options - Customization options for heatmap appearance
+ * @param carIconUrl - Base64 data URL or path to car icon for current location marker
+ * @returns Complete HTML string ready for WebView
+ *
+ * @example
+ * ```typescript
+ * const heatmapData = [
+ *   { lat: 37.7749, lng: -122.4194, weight: 0.9, eta: "3 mins", demandLevel: 'high' },
+ *   { lat: 37.7849, lng: -122.4094, weight: 0.7, eta: "5 mins", demandLevel: 'medium' }
+ * ];
+ *
+ * const html = generateHeatmapHTML(region, apiKey, heatmapData, {
+ *   radius: 50,
+ *   opacity: 0.7,
+ *   showETALabels: true
+ * });
+ * ```
+ */
+export const generateHeatmapHTML = (
+  region: MapRegion,
+  apiKey: string,
+  heatmapData: HeatmapDataPoint[] = [],
+  options: HeatmapOptions = {},
+  pickupIconUrl: string = "",
+  userLocation: LocationCoordinates | null = null
+): string => {
+  const { latitude, longitude } = region;
+  const {
+    radius = 50,
+    opacity = 0.7,
+    showETALabels = true,
+  } = options;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          }
+          #map { 
+            width: 100%; 
+            height: 100vh; 
+          }
+          
+          .eta-label {
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+          }
+          
+
+
+          .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 12px;
+            z-index: 1000;
+          }
+          
+          .legend-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+          }
+          
+          .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+          }
+          
+          .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+          }
+          
+          .legend-color.high { background: #DD2626; }
+          .legend-color.medium { background: #DD9726; }
+          .legend-color.low { background: #38DD38; }
+        </style>
+      </head>
+      <body>
+        <div class="legend">
+          <div class="legend-title">Demand Level</div>
+          <div class="legend-item">
+            <div class="legend-color high"></div>
+            <span>High Demand</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color medium"></div>
+            <span>Medium Demand</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color low"></div>
+            <span>Low Demand</span>
+          </div>
+        </div>
+        
+        <div id="map"></div>
+
+        <script>
+          let map;
+          let demandCircles = [];
+          let currentLocationMarker;
+          let etaLabels = [];
+
+          function initMap() {
+            console.log('Initializing heatmap...');
+            const center = { lat: ${latitude}, lng: ${longitude} };
+
+            map = new google.maps.Map(document.getElementById('map'), {
+              center: center,
+              zoom: 13,
+              mapTypeId: google.maps.MapTypeId.ROADMAP,
+              mapTypeControl: false,
+              streetViewControl: false,
+              fullscreenControl: false,
+              zoomControl: true,
+              gestureHandling: 'greedy',
+              styles: [
+                {
+                  featureType: 'poi',
+                  elementType: 'labels',
+                  stylers: [{ visibility: 'off' }]
+                }
+              ]
+            });
+
+            // Initialize demand circles with data
+            const heatmapData = ${JSON.stringify(heatmapData)};
+            console.log('Demand data points:', heatmapData.length);
+            
+            if (heatmapData.length > 0) {
+              // Create solid colored circles for each demand point
+              heatmapData.forEach(point => {
+                // Define colors for each demand level with low opacity
+                const demandColors = {
+                  high: 'rgba(221, 38, 38, 0.4)',    // red-500 with 0.4 opacity
+                  medium: 'rgba(221, 151, 38, 0.4)', // yellow-500 with 0.4 opacity
+                  low: 'rgba(56, 221, 56, 0.4)'      // green-500 with 0.4 opacity
+                };
+
+                const color = demandColors[point.demandLevel] || demandColors.medium;
+                
+                // Create circle for demand area
+                const demandCircle = new google.maps.Circle({
+                  strokeColor: color.replace('0.4', '0.8'), // Slightly more opaque border
+                  strokeOpacity: 0.8,
+                  strokeWeight: 2,
+                  fillColor: color,
+                  fillOpacity: 0.4,
+                  map: map,
+                  center: { lat: point.lat, lng: point.lng },
+                  radius: ${radius * 10} // Convert to meters (radius was in pixels for heatmap)
+                });
+                
+                demandCircles.push(demandCircle);
+                
+                ${
+                  showETALabels
+                    ? `
+                // Add ETA label for each demand area
+                if (point.eta) {
+                  addETALabel(point);
+                }
+                `
+                    : ""
+                }
+              });
+            }
+
+            // Add current location marker with pickup icon if user location is provided
+            const userLocationData = ${JSON.stringify(userLocation)};
+            if (userLocationData && userLocationData.latitude && userLocationData.longitude) {
+              console.log('Adding user location marker:', userLocationData);
+              
+              const pos = {
+                lat: userLocationData.latitude,
+                lng: userLocationData.longitude
+              };
+
+              // Create custom pickup location icon marker
+              const pickupIcon = {
+                url: '${pickupIconUrl}' || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTUgMTFMMTkgMTFNMTkgMTFMMTMgNUMxMyA1IDEyIDUgMTIgNUwxMiAxMUgxOUwxOSAxMVpNMTkgMTFMMTMgMTdDMTMgMTcgMTIgMTcgMTIgMTdMMTIgMTFIMTlaIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=',
+                scaledSize: new google.maps.Size(30, 60),
+                anchor: new google.maps.Point(20, 30)
+              };
+
+              currentLocationMarker = new google.maps.Marker({
+                position: pos,
+                map: map,
+                title: 'Your Current Location',
+                icon: pickupIcon,
+                zIndex: 1000
+              });
+
+              console.log('User location marker added successfully');
+            } else {
+              console.log('No user location provided, skipping location marker');
+            }
+
+            // Add click listener to map
+            map.addListener('click', function(event) {
+              const position = event.latLng;
+              
+              // Get address for clicked location and send to React Native
+              const geocoder = new google.maps.Geocoder();
+              geocoder.geocode({ location: position }, function(results, status) {
+                if (status === 'OK' && results[0]) {
+                  const address = results[0].formatted_address;
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'location_selected',
+                    latitude: position.lat(),
+                    longitude: position.lng(),
+                    address: address
+                  }));
+                } else {
+                  // Fallback to coordinates if geocoding fails
+                  const fallbackAddress = position.lat().toFixed(6) + ', ' + position.lng().toFixed(6);
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'location_selected',
+                    latitude: position.lat(),
+                    longitude: position.lng(),
+                    address: fallbackAddress
+                  }));
+                }
+              });
+            });
+          }
+
+          // Function to add ETA label overlay
+          function addETALabel(point) {
+            const position = new google.maps.LatLng(point.lat, point.lng);
+            
+            const etaOverlay = new google.maps.OverlayView();
+            
+            etaOverlay.onAdd = function() {
+              const div = document.createElement('div');
+              div.className = 'eta-label';
+              div.innerHTML = 'ETA: ' + point.eta;
+              
+              const panes = this.getPanes();
+              panes.overlayLayer.appendChild(div);
+              
+              this.div = div;
+            };
+            
+            etaOverlay.draw = function() {
+              const overlayProjection = this.getProjection();
+              const pos = overlayProjection.fromLatLngToDivPixel(position);
+              
+              if (pos) {
+                const div = this.div;
+                // Center the text exactly in the middle of the circle
+                div.style.left = pos.x + 'px';
+                div.style.top = pos.y + 'px';
+                div.style.position = 'absolute';
+                div.style.transform = 'translate(-50%, -50%)';
+              }
+            };
+            
+            etaOverlay.onRemove = function() {
+              if (this.div) {
+                this.div.parentNode.removeChild(this.div);
+                this.div = null;
+              }
+            };
+            
+            etaOverlay.setMap(map);
+            etaLabels.push(etaOverlay);
+          }
+
+          // Function to update demand circles data dynamically
+          function updateHeatmap(newData) {
+            // Clear existing demand circles
+            demandCircles.forEach(circle => circle.setMap(null));
+            demandCircles = [];
+            
+            // Clear existing ETA labels
+            etaLabels.forEach(label => label.setMap(null));
+            etaLabels = [];
+            
+            // Create new demand circles
+            newData.forEach(point => {
+              const demandColors = {
+                high: 'rgba(221, 38, 38, 0.4)',    // red-500 with 0.4 opacity
+                medium: 'rgba(221, 151, 38, 0.4)', // yellow-500 with 0.4 opacity
+                low: 'rgba(56, 221, 56, 0.4)'      // green-500 with 0.4 opacity
+              };
+
+              const color = demandColors[point.demandLevel] || demandColors.medium;
+              
+              const demandCircle = new google.maps.Circle({
+                strokeColor: color.replace('0.4', '0.8'),
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: color,
+                fillOpacity: 0.4,
+                map: map,
+                center: { lat: point.lat, lng: point.lng },
+                radius: ${radius * 10}
+              });
+              
+              demandCircles.push(demandCircle);
+              
+              ${
+                showETALabels
+                  ? `
+              // Add ETA label for each demand area
+              if (point.eta) {
+                addETALabel(point);
+              }
+              `
+                  : ""
+              }
+            });
+          }
+
+          // Function to toggle demand circles visibility
+          function toggleHeatmap(visible) {
+            demandCircles.forEach(circle => {
+              circle.setMap(visible ? map : null);
+            });
+            
+            etaLabels.forEach(label => {
+              label.setMap(visible ? map : null);
+            });
+          }
+
+          // Load Google Maps API with visualization library
+          function loadGoogleMapsAPI() {
+            const script = document.createElement('script');
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=visualization&callback=initMap';
+            script.async = true;
+            script.defer = true;
+            script.onerror = function() {
+              console.error('Failed to load Google Maps API');
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'maps_error',
+                message: 'Failed to load Google Maps API'
+              }));
+            };
+            document.head.appendChild(script);
+          }
+
+          // Initialize when page loads
+          window.addEventListener('load', loadGoogleMapsAPI);
+          
+          // Expose functions for React Native communication
+          window.updateHeatmapData = updateHeatmap;
+          window.toggleHeatmapVisibility = toggleHeatmap;
+        </script>
+      </body>
+    </html>
+  `;
+};
+
+/**
+ * Calculates the distance between two coordinates using the Haversine formula
+ * @param lat1 - Latitude of first point
+ * @param lng1 - Longitude of first point  
+ * @param lat2 - Latitude of second point
+ * @param lng2 - Longitude of second point
+ * @returns Distance in kilometers
+ */
+export const calculateDistance = (
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number => {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+/**
+ * Calculates estimated travel time from user location to a demand area
+ * @param userLocation - User's current coordinates
+ * @param demandLocation - Demand area coordinates  
+ * @param demandLevel - Level of demand (affects average speed assumption)
+ * @returns ETA string like "3 mins" or "12 mins"
+ */
+export const calculateETA = (
+  userLocation: LocationCoordinates,
+  demandLocation: { lat: number; lng: number },
+  demandLevel: "high" | "medium" | "low" = "medium"
+): string => {
+  const distance = calculateDistance(
+    userLocation.latitude,
+    userLocation.longitude,
+    demandLocation.lat,
+    demandLocation.lng
+  );
+
+  // Average speed assumptions based on demand level (traffic conditions)
+  const avgSpeed = {
+    high: 20, // km/h - heavy traffic in high demand areas
+    medium: 30, // km/h - moderate traffic
+    low: 40, // km/h - lighter traffic
+  };
+
+  const speed = avgSpeed[demandLevel];
+  const timeInHours = distance / speed;
+  const timeInMinutes = Math.round(timeInHours * 60);
+
+  // Format the time
+  if (timeInMinutes < 1) {
+    return "< 1 min";
+  } else if (timeInMinutes === 1) {
+    return "1 min";
+  } else if (timeInMinutes < 60) {
+    return `${timeInMinutes} mins`;
+  } else {
+    // Handle hours and minutes
+    const hours = Math.floor(timeInMinutes / 60);
+    const remainingMinutes = timeInMinutes % 60;
+    
+    if (remainingMinutes === 0) {
+      return hours === 1 ? "1hr" : `${hours}hrs`;
+    } else {
+      const hourText = hours === 1 ? "1hr" : `${hours}hrs`;
+      const minText = remainingMinutes === 1 ? "1 min" : `${remainingMinutes} mins`;
+      return `${hourText} ${minText}`;
+    }
+  }
 };
 
 /**

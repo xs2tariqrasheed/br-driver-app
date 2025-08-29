@@ -97,3 +97,13 @@ export const DESIRED_DESTINATION_EXPIRY_MS = 6 * 60 * 60 * 1000; // 6 hours in m
 // Coordinate format validation regex
 // Matches coordinate format like "31.355034, 74.396754" (latitude, longitude)
 export const COORDINATE_REGEX = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
+
+// Google Maps API Key - loaded from environment variable
+// Fallback to hardcoded key for development (should be removed in production)
+export const GOOGLE_MAPS_API_KEY =
+  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
+  "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8";
+
+// Heatmap configuration
+// Auto-refresh interval for heatmap data in milliseconds
+export const HEATMAP_REFRESH_INTERVAL_MS = 120000; // 2 minutes

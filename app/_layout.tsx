@@ -60,6 +60,10 @@ export default function RootLayout() {
                       name="notifications"
                       options={{ title: "Notifications" }}
                     />
+                    <Stack.Screen
+                      name="(screens)/heat-map"
+                      options={{ headerShown: false }}
+                    />
                   </Stack>
                   <StatusBar style="auto" />
                   <ToastHost />
