@@ -11,6 +11,7 @@
  */
 
 import Typography from "@/components/Typography";
+import { textColors } from "@/constants/colors";
 import React, {
   ReactNode,
   useCallback,
@@ -341,6 +342,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     includeFontPadding: false,
     flexShrink: 1,
+    color: textColors.black,
   },
   separator: {
     height: SEPARATOR_HEIGHT,

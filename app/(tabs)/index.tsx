@@ -3,25 +3,26 @@ import Button from "@/components/Button";
 import DriverOffline from "@/components/DriverOffline";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
-import { SkeletonLoader } from "@/components/Loader";
+import LiveJobOffersScreen from "@/components/LiveJobOffersScreen";
 import PermissionGate from "@/components/PermissionGate";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import {
   DRIVER_STATUS,
+  DRIVER_TYPES,
   URLS,
   type DriverStatusLabel,
 } from "@/constants/global";
+import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useSettings } from "@/context/SettingsContext";
 import { logger } from "@/utils/helpers";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Linking,
   Image as RNImage,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -29,16 +30,35 @@ import {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [auth] = useAuth();
   const [driver, setDriver] = useDriver();
   const { notifications } = useDriver();
   const [settings, setSettings] = useSettings();
   const statusValue: DriverStatusLabel = driver?.online
     ? DRIVER_STATUS.ONLINE
     : DRIVER_STATUS.OFFLINE;
-  const labels: [DriverStatusLabel, DriverStatusLabel] = useMemo(
-    () => [DRIVER_STATUS.OFFLINE, DRIVER_STATUS.ONLINE],
-    []
-  );
+  const labels: [DriverStatusLabel, DriverStatusLabel] = [
+    DRIVER_STATUS.OFFLINE,
+    DRIVER_STATUS.ONLINE,
+  ];
+
+  // Check if user is an independent operator
+  const isIndependentOperator =
+    auth?.user?.type === DRIVER_TYPES.INDEPENDENT_OPERATOR;
+
+  // View hidden jobs toggle state
+  const [showHiddenJobs, setShowHiddenJobs] = useState<boolean>(false);
+
+  // Sorting bottom sheet state
+  const [sortSheetOpen, setSortSheetOpen] = useState<boolean>(false);
+  const openSortSheet = () => {
+    setSortBy(activeSortBy);
+    setSortSheetOpen(true);
+  };
+  const closeSortSheet = () => setSortSheetOpen(false);
+  type SortKey = "time" | "distance";
+  const [sortBy, setSortBy] = useState<SortKey>("distance");
+  const [activeSortBy, setActiveSortBy] = useState<SortKey>("distance");
 
   // Ride Types bottom sheet state
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
@@ -71,44 +91,6 @@ export default function HomeScreen() {
     closeRideTypes();
   };
 
-  // Sorting bottom sheet state (local only)
-  const [sortSheetOpen, setSortSheetOpen] = useState<boolean>(false);
-  const openSortSheet = () => {
-    setSortBy(activeSortBy);
-    setSortSheetOpen(true);
-  };
-  const closeSortSheet = () => setSortSheetOpen(false);
-  type SortKey = "time" | "distance";
-  const [sortBy, setSortBy] = useState<SortKey>("distance");
-  const [activeSortBy, setActiveSortBy] = useState<SortKey>("distance");
-
-  // Determine which bell icon to show based on notification status
-  const hasUnreadNotifications = notifications.some(
-    (notification) => notification.messageType === "unread"
-  );
-  const unreadCount = notifications.filter(
-    (notification) => notification.messageType === "unread"
-  ).length;
-  const bellIconSource = hasUnreadNotifications
-    ? require("@/assets/images/red-bell-icon.png")
-    : require("@/assets/images/black-bell-icon.png");
-
-  const sortComparator = useMemo(() => {
-    return (
-      a: { etaMinutes?: number; distanceMiles?: number },
-      b: { etaMinutes?: number; distanceMiles?: number }
-    ) => {
-      if (activeSortBy === "time") {
-        const av = a.etaMinutes ?? Number.POSITIVE_INFINITY;
-        const bv = b.etaMinutes ?? Number.POSITIVE_INFINITY;
-        return av - bv;
-      }
-      const av = a.distanceMiles ?? Number.POSITIVE_INFINITY;
-      const bv = b.distanceMiles ?? Number.POSITIVE_INFINITY;
-      return av - bv;
-    };
-  }, [activeSortBy]);
-
   const handleSelectSort = (key: SortKey) => {
     setSortBy(key);
   };
@@ -124,6 +106,24 @@ export default function HomeScreen() {
     setActiveSortBy(def);
     closeSortSheet();
   };
+
+  // Handle view hidden jobs toggle
+  const handleToggleHiddenJobs = () => {
+    const newState = !showHiddenJobs;
+    setShowHiddenJobs(newState);
+    log(`[HomeScreen] Show hidden jobs toggled: ${newState ? "ON" : "OFF"}`);
+  };
+
+  // Determine which bell icon to show based on notification status
+  const hasUnreadNotifications = notifications.some(
+    (notification) => notification.messageType === "unread"
+  );
+  const unreadCount = notifications.filter(
+    (notification) => notification.messageType === "unread"
+  ).length;
+  const bellIconSource = hasUnreadNotifications
+    ? require("@/assets/images/red-bell-icon.png")
+    : require("@/assets/images/black-bell-icon.png");
 
   return (
     <PermissionGate>
@@ -199,16 +199,26 @@ export default function HomeScreen() {
                   image: require("@/assets/images/more/settings-icon.png"),
                   onPress: () => router.push("/(screens)/settings" as any),
                 },
-                {
-                  key: "future-jobs",
-                  image: require("@/assets/images/home/future-jobs-icon.png"),
-                  onPress: () => log("Future Jobs pressed"),
-                },
-                {
-                  key: "live-jobs",
-                  image: require("@/assets/images/home/live-jobs-icon.png"),
-                  onPress: () => log("Live Jobs pressed"),
-                },
+                // Hide future-jobs for independent operators
+                ...(isIndependentOperator
+                  ? []
+                  : [
+                      {
+                        key: "future-jobs",
+                        image: require("@/assets/images/home/future-jobs-icon.png"),
+                        onPress: () => log("Future Jobs pressed"),
+                      },
+                    ]),
+                // Show live-jobs only for independent operators
+                ...(isIndependentOperator
+                  ? [
+                      {
+                        key: "live-jobs",
+                        image: require("@/assets/images/home/live-jobs-icon.png"),
+                        onPress: () => log("Live Jobs pressed"),
+                      },
+                    ]
+                  : []),
                 {
                   key: "jump-portal",
                   image: require("@/assets/images/home/jump-portal-icon.png"),
@@ -242,8 +252,10 @@ export default function HomeScreen() {
               {[
                 {
                   key: "view-hidden-jobs",
-                  image: require("@/assets/images/home/view-hidden-jobs-icon.png"),
-                  onPress: () => log("View hidden Jobs pressed"),
+                  image: showHiddenJobs
+                    ? require("@/assets/images/home/view-hidden-jobs-active.png")
+                    : require("@/assets/images/home/view-hidden-jobs-icon.png"),
+                  onPress: handleToggleHiddenJobs,
                 },
                 {
                   key: "sorting",
@@ -272,18 +284,10 @@ export default function HomeScreen() {
         {!driver?.online ? (
           <DriverOffline />
         ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollViewContent}
-          >
-            <View style={styles.container}>
-              {Array.from({ length: 10 }).map((_, index) => (
-                <View key={index} style={styles.skeletonContainer}>
-                  <SkeletonLoader />
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+          <LiveJobOffersScreen
+            sortBy={activeSortBy}
+            showHiddenJobs={showHiddenJobs}
+          />
         )}
         {/* Ride Types Bottom Sheet */}
         <BottomSheet
@@ -468,9 +472,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: textColors.white,
   },
-  scrollViewContent: {
-    paddingHorizontal: 10,
-  },
   iconBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -493,28 +494,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
-  skeletonContainer: {
-    marginBottom: 16,
-  },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-  },
-  logoutContainer: {
-    padding: 16,
-  },
+
   bellButton: {
     width: 24,
     height: 24,
@@ -599,18 +579,4 @@ const styles = StyleSheet.create({
   // Sizes
   headerToggleSize: { width: 112, height: 28 },
   toggleSmall: { width: 42, height: 24 },
-  // Radio styles
-  radioCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: textColors.black,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioCircleActive: {
-    backgroundColor: textColors.black,
-  },
-  radioCheckText: { color: textColors.white },
 });

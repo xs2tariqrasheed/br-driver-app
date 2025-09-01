@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -17,7 +17,11 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
-import { OTP_LENGTH, OTP_RESEND_SECONDS } from "@/constants/global";
+import {
+  DRIVER_TYPES,
+  OTP_LENGTH,
+  OTP_RESEND_SECONDS,
+} from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { usePost } from "@/hooks/usePost";
@@ -60,7 +64,11 @@ export default function VerifyOtpScreen() {
   const completeLoginAfterOtp = async () => {
     await setAuth({
       token: "1234567890",
-      user: { id: "1234567890", name: "Mujahid Ali" },
+      user: {
+        id: "1234567890",
+        name: "Mujahid Ali",
+        type: DRIVER_TYPES.INDEPENDENT_OPERATOR,
+      },
     } as any);
     showToast("Logged in successfully", {
       variant: "success",

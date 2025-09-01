@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Image,
@@ -96,6 +96,7 @@ export default function LoginScreen() {
     log("Login submit", data);
     try {
       // const response = await submitLogin(data);
+      // log("Login response", response);
       // After successful login, require OTP verification before granting access
       router.push({
         pathname: "/(screens)/auth/verify-otp",

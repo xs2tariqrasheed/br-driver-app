@@ -82,11 +82,10 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
 
             <View style={styles.buttonContainer}>
               <Button
+                variant="danger"
                 rounded="half"
                 block="half"
-                variant="danger"
                 onPress={handleCancel}
-                style={[styles.button, styles.cancelButton]}
               >
                 Cancel
               </Button>

@@ -14,9 +14,18 @@ import React, {
 } from "react";
 
 // Types
+export type User = {
+  type?: string;
+  id?: string;
+  name?: string;
+  // Extend with other user fields as needed
+  [key: string]: unknown;
+};
+
 export type AuthObject = {
   token?: string | null;
-  // Extend with any user fields you need later (id, name, roles, etc.)
+  user?: User;
+  // Extend with any other auth fields you need later
   [key: string]: unknown;
 } | null;
 

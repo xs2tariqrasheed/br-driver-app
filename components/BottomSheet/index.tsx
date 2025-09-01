@@ -232,23 +232,26 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
         }
         onClose={onClose}
       >
-        <BottomSheetView style={styles.sheetRoot}>
-          {scrollable ? (
+        {scrollable ? (
+          <>
+            {showHeader && renderHeader(headerTitle)}
             <BottomSheetScrollView
-              nestedScrollEnabled={true}
-              style={styles.contentContainer}
+              style={styles.scrollableContent}
+              contentContainerStyle={styles.scrollableContentContainer}
+              showsVerticalScrollIndicator={false}
               {...(props as React.ComponentProps<typeof BottomSheetScrollView>)}
             >
-              {showHeader && renderHeader(headerTitle)}
               {children}
             </BottomSheetScrollView>
-          ) : (
+          </>
+        ) : (
+          <BottomSheetView style={styles.sheetRoot}>
             <View style={styles.contentContainer} {...(props as ViewProps)}>
               {showHeader && renderHeader(headerTitle)}
               {children}
             </View>
-          )}
-        </BottomSheetView>
+          </BottomSheetView>
+        )}
       </BottomSheet>
     </Portal>
   );
@@ -263,11 +266,26 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 16,
   },
-
+  scrollableContent: {
+    flex: 1,
+    backgroundColor: textColors.white,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+  scrollableContentContainer: {
+    paddingBottom: 60,
+    paddingHorizontal: 16,
+  },
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: textColors.white,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
   },
   icon24: { width: 24, height: 24, resizeMode: "contain" },
   sheetTitle: { fontSize: 21, color: textColors.black },

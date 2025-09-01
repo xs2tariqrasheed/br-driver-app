@@ -107,3 +107,59 @@ export const GOOGLE_MAPS_API_KEY =
 // Heatmap configuration
 // Auto-refresh interval for heatmap data in milliseconds
 export const HEATMAP_REFRESH_INTERVAL_MS = 120000; // 2 minutes
+
+// Ride Types
+export const RIDE_TYPES = {
+  ONE_WAY: "one-way",
+  ROUND_TRIP: "round-trip",
+  HOURLY: "hourly",
+} as const;
+
+export type RideType = (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES];
+
+// Live Job Offers
+// API refresh interval for live job offers in milliseconds
+export const LIVE_JOB_REFRESH_INTERVAL_MS = 60000; // 60 seconds
+
+// Live Job Status types (API status)
+export const LIVE_JOB_STATUS = {
+  OFFERED: "offered",
+  ACCEPTED: "accepted",
+  REJECTED: "rejected",
+  EXPIRED: "expired",
+} as const;
+
+export type LiveJobStatus =
+  (typeof LIVE_JOB_STATUS)[keyof typeof LIVE_JOB_STATUS];
+
+// Local UI Status types (for swipe/hide functionality)
+export const LOCAL_JOB_STATUS = {
+  VISIBLE: "visible",
+  SKIPPED: "skipped",
+  HIDDEN: "hidden",
+} as const;
+
+export type LocalJobStatus =
+  (typeof LOCAL_JOB_STATUS)[keyof typeof LOCAL_JOB_STATUS];
+
+// Sorting options for live jobs
+export const JOB_SORT_OPTIONS = {
+  DISTANCE: "distance",
+  TIME: "time",
+} as const;
+
+export type JobSortOption =
+  (typeof JOB_SORT_OPTIONS)[keyof typeof JOB_SORT_OPTIONS];
+
+// Driver Types for live jobs
+export const DRIVER_TYPES = {
+  INDEPENDENT_OPERATOR: "independent-operator",
+  HIRED: "hired",
+} as const;
+
+// Empty state messages
+export const EMPTY_STATE_MESSAGES = {
+  NO_JOBS_TITLE: "No Jobs Available Yet",
+  NO_JOBS_MESSAGE:
+    "There are no jobs available in your area at this time. Please keep the app open to see the ride offers. Or you can move to another area to see jobs in that area.",
+} as const;

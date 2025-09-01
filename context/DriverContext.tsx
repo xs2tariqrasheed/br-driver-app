@@ -1,4 +1,8 @@
-import { DRIVER_STORAGE_KEY } from "@/constants/global";
+import {
+  DRIVER_STORAGE_KEY,
+  LOCAL_JOB_STATUS,
+  type LocalJobStatus,
+} from "@/constants/global";
 import {
   DesiredDestination,
   filterExpiredDestinations,
@@ -28,11 +32,18 @@ export type NotificationItem = {
   isSpecial?: boolean;
 };
 
+export type HiddenLiveOffer = {
+  id: string;
+  status: LocalJobStatus;
+  timestamp: number;
+};
+
 export type DriverObject = {
   online: boolean;
   desiredDestinations?: DesiredDestination[];
   notifications?: NotificationItem[];
   readNotificationIds?: string[];
+  hiddenLiveOffers?: HiddenLiveOffer[];
   // Extendable for future driver data
   [key: string]: unknown;
 } | null;
@@ -89,6 +100,11 @@ type DriverContextValue = [
   addNotification: (notification: NotificationItem) => Promise<void>;
   addNotifications: (notifications: NotificationItem[]) => Promise<void>;
   getNotificationById: (id: string) => NotificationItem | undefined;
+  hiddenLiveOffers: HiddenLiveOffer[];
+  hideLiveOffer: (offerId: string) => Promise<void>;
+  skipLiveOffer: (offerId: string) => Promise<void>;
+  getLiveOfferStatus: (offerId: string) => HiddenLiveOffer | undefined;
+  unhideLiveOffer: (offerId: string) => Promise<void>;
 };
 
 const DriverContext = createContext<DriverContextValue | undefined>(undefined);
@@ -325,6 +341,128 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     [notifications]
   );
 
+  // Get hidden live offers
+  const hiddenLiveOffers = useMemo(() => {
+    return state.driver?.hiddenLiveOffers || [];
+  }, [state.driver?.hiddenLiveOffers]);
+
+  // Hide live offer
+  const hideLiveOffer = useCallback(
+    async (offerId: string) => {
+      if (!state.driver) return;
+
+      const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+      const existingOffer = currentHiddenOffers.find(
+        (offer) => offer.id === offerId
+      );
+
+      if (existingOffer) {
+        // Update existing offer status to hidden
+        const updatedOffers = currentHiddenOffers.map((offer) =>
+          offer.id === offerId
+            ? {
+                ...offer,
+                status: LOCAL_JOB_STATUS.HIDDEN,
+                timestamp: Date.now(),
+              }
+            : offer
+        );
+
+        const updatedDriver = {
+          ...state.driver,
+          hiddenLiveOffers: updatedOffers,
+        };
+        await setDriver(updatedDriver);
+      } else {
+        // Add new hidden offer
+        const newHiddenOffer: HiddenLiveOffer = {
+          id: offerId,
+          status: LOCAL_JOB_STATUS.HIDDEN,
+          timestamp: Date.now(),
+        };
+
+        const updatedDriver = {
+          ...state.driver,
+          hiddenLiveOffers: [...currentHiddenOffers, newHiddenOffer],
+        };
+        await setDriver(updatedDriver);
+      }
+    },
+    [state.driver, setDriver]
+  );
+
+  // Skip live offer
+  const skipLiveOffer = useCallback(
+    async (offerId: string) => {
+      if (!state.driver) return;
+
+      const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+      const existingOffer = currentHiddenOffers.find(
+        (offer) => offer.id === offerId
+      );
+
+      if (existingOffer) {
+        // Update existing offer status to skipped
+        const updatedOffers = currentHiddenOffers.map((offer) =>
+          offer.id === offerId
+            ? {
+                ...offer,
+                status: LOCAL_JOB_STATUS.SKIPPED,
+                timestamp: Date.now(),
+              }
+            : offer
+        );
+
+        const updatedDriver = {
+          ...state.driver,
+          hiddenLiveOffers: updatedOffers,
+        };
+        await setDriver(updatedDriver);
+      } else {
+        // Add new skipped offer
+        const newSkippedOffer: HiddenLiveOffer = {
+          id: offerId,
+          status: LOCAL_JOB_STATUS.SKIPPED,
+          timestamp: Date.now(),
+        };
+
+        const updatedDriver = {
+          ...state.driver,
+          hiddenLiveOffers: [...currentHiddenOffers, newSkippedOffer],
+        };
+        await setDriver(updatedDriver);
+      }
+    },
+    [state.driver, setDriver]
+  );
+
+  // Get live offer status
+  const getLiveOfferStatus = useCallback(
+    (offerId: string) => {
+      return hiddenLiveOffers.find((offer) => offer.id === offerId);
+    },
+    [hiddenLiveOffers]
+  );
+
+  // Unhide live offer (remove from hidden list)
+  const unhideLiveOffer = useCallback(
+    async (offerId: string) => {
+      if (!state.driver) return;
+
+      const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+      const updatedOffers = currentHiddenOffers.filter(
+        (offer) => offer.id !== offerId
+      );
+
+      const updatedDriver = {
+        ...state.driver,
+        hiddenLiveOffers: updatedOffers,
+      };
+      await setDriver(updatedDriver);
+    },
+    [state.driver, setDriver]
+  );
+
   const contextValue = useMemo<DriverContextValue>(() => {
     const baseArray: [DriverObject, (value: DriverObject) => Promise<void>] = [
       state.driver,
@@ -338,6 +476,11 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       addNotification,
       addNotifications,
       getNotificationById,
+      hiddenLiveOffers,
+      hideLiveOffer,
+      skipLiveOffer,
+      getLiveOfferStatus,
+      unhideLiveOffer,
     });
   }, [
     state.driver,
@@ -347,6 +490,11 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     addNotification,
     addNotifications,
     getNotificationById,
+    hiddenLiveOffers,
+    hideLiveOffer,
+    skipLiveOffer,
+    getLiveOfferStatus,
+    unhideLiveOffer,
   ]);
 
   if (!state.isHydrated) return null;

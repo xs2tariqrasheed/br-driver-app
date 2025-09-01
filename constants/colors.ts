@@ -84,3 +84,9 @@ export const textColors = {
   black: "#000000",
   white: "#FFFFFF",
 };
+
+export const tripTypeColors = {
+  oneWay: "rgba(98, 120, 242, 0.06)", // #6278F2 with 4% opacity
+  roundTrip: "rgba(9, 184, 169, 0.06)", // #09B8A9 with 4% opacity
+  hourly: "rgba(152, 0, 46, 0.06)", // #98002E with 4% opacity
+};

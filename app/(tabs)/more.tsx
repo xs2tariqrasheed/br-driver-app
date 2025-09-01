@@ -14,7 +14,7 @@ import {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
-import React, { useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
   FlatList,
   Image,
@@ -137,6 +137,12 @@ export default function MoreScreen() {
       return {
         ...item,
         onClick: () => router.push("/(screens)/more/app-settings"),
+      };
+    }
+    if (item.key === "inbox") {
+      return {
+        ...item,
+        onClick: () => router.push("/(screens)/notifications"),
       };
     }
     return item;

@@ -22,4 +22,9 @@ export const HEATMAP_ENDPOINTS = {
   heatmapData: "https://api.example.com/heatmap-data",
 } as const;
 
+export const LIVE_JOB_ENDPOINTS = {
+  /** Get live job offers */
+  getLiveJobs: "/trip-offers",
+} as const;
+
 export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;

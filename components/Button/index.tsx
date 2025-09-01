@@ -247,7 +247,7 @@ const Button = (props: ButtonProps) => {
           end={{ x: 1, y: 0 }}
           style={[
             ButtonStyles.gradientContainer,
-            { borderRadius, minHeight: 46 }, // Ensure minimum height matches button
+            { borderRadius, maxHeight: 46 }, // Ensure maximum   height matches button
           ]}
         >
           <ContentComponent>{children}</ContentComponent>
@@ -415,7 +415,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
 const ButtonStyles = StyleSheet.create({
   base: {
     height: 46,
-    minHeight: 46,
+    maxHeight: 46,
     paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
