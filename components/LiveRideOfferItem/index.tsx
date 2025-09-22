@@ -96,6 +96,8 @@ export interface LiveRideOfferItemProps {
   isScrolling?: boolean;
   /** Whether hidden jobs are currently being shown (disables swipe gestures) */
   showHiddenJobs?: boolean;
+  /** Whether the bid button should be hidden */
+  hideBidButton?: boolean;
 }
 
 /**
@@ -153,6 +155,7 @@ export default function LiveRideOfferItem({
   itemStatus = "visible",
   isScrolling = false,
   showHiddenJobs = false,
+  hideBidButton = false,
 }: LiveRideOfferItemProps) {
   const { skipLiveOffer, hideLiveOffer } = useDriver();
   const translateX = new Animated.Value(0);
@@ -384,6 +387,7 @@ export default function LiveRideOfferItem({
                   buttonTitle={buttonTitle}
                   disabled={disabled}
                   onButtonClick={onButtonClick}
+                  hideBidButton={hideBidButton}
                 />
               </View>
             </Animated.View>

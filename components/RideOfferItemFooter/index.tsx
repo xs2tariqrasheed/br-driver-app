@@ -32,6 +32,8 @@ export interface RideOfferItemFooterProps {
   onButtonClick: () => void;
   /** Custom style for the container */
   style?: ViewStyle;
+  /** Whether the bid button should be hidden */
+  hideBidButton?: boolean;
 }
 
 /**
@@ -58,6 +60,7 @@ export default function RideOfferItemFooter({
   disabled = false,
   onButtonClick,
   style,
+  hideBidButton = false,
 }: RideOfferItemFooterProps) {
   return (
     <View style={[styles.container, style]}>
@@ -106,15 +109,17 @@ export default function RideOfferItemFooter({
         </View>
 
         {/* Bid button */}
-        <Button
-          style={styles.button}
-          block="half"
-          rounded="half"
-          disabled={disabled}
-          onPress={onButtonClick}
-        >
-          {buttonTitle}
-        </Button>
+        {hideBidButton ? null : (
+          <Button
+            style={styles.button}
+            block="half"
+            rounded="half"
+            disabled={disabled}
+            onPress={onButtonClick}
+          >
+            {buttonTitle}
+          </Button>
+        )}
       </View>
     </View>
   );

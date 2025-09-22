@@ -43,6 +43,46 @@ export interface BidBottomSheetProps {
   snapPointsWhenKeyboardVisible?: (string | number)[];
 }
 
+/**
+ * INTEGRATION GUIDE:
+ * 
+ * To use BidBottomSheet with BidWaitingTimer, follow this pattern in your parent component:
+ * 
+ * 1. Import both components:
+ *    import BidBottomSheet from './components/BidBottomSheet';
+ *    import BidWaitingTimer from './components/BidWaitingTimer';
+ *    import { BID_WAITING_TIMER_DURATION_MS } from '@/constants/global';
+ * 
+ * 2. Add state for both components:
+ *    const [isBidSheetOpen, setIsBidSheetOpen] = useState(false);
+ *    const [isWaitingForCustomer, setIsWaitingForCustomer] = useState(false);
+ * 
+ * 3. Handle bid submission:
+ *    const handleBidSubmit = (data) => {
+ *      // Submit bid to API
+ *      submitBidToAPI(data);
+ *      
+ *      // Close bid sheet and show timer
+ *      setIsBidSheetOpen(false);
+ *      setIsWaitingForCustomer(true);
+ *    };
+ * 
+ * 4. Handle timer completion:
+ *    const handleTimerComplete = () => {
+ *      setIsWaitingForCustomer(false);
+ *      // Handle customer response
+ *    };
+ * 
+ * 5. Render both components:
+ *    <BidBottomSheet onSubmit={handleBidSubmit} ... />
+ *    <BidWaitingTimer 
+ *      open={isWaitingForCustomer}
+ *      progressDuration={BID_WAITING_TIMER_DURATION_MS}
+ *      onCompleteProgress={handleTimerComplete}
+ *      onCancel={() => setIsWaitingForCustomer(false)}
+ *    />
+ */
+
 const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
   bid,
   onSubmit,

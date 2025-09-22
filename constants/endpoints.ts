@@ -25,6 +25,10 @@ export const HEATMAP_ENDPOINTS = {
 export const LIVE_JOB_ENDPOINTS = {
   /** Get live job offers */
   getLiveJobs: "/trip-offers",
+  /** Submit a bid */
+  submitBid: "/bids/submit",
+  /** Cancel a bid */
+  cancelBid: "/bids/cancel",
 } as const;
 
 export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;

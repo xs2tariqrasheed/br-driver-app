@@ -90,3 +90,9 @@ export const tripTypeColors = {
   roundTrip: "rgba(9, 184, 169, 0.06)", // #09B8A9 with 4% opacity
   hourly: "rgba(152, 0, 46, 0.06)", // #98002E with 4% opacity
 };
+
+export const bidStatusColors = {
+  expired: "#F6EAC8", // Light yellow/cream background for expired bids
+  unsuccessful: "#DCE8FF", // Light blue background for unsuccessful bids
+  accepted: "#F2FFFE", // Light teal background for accepted bids
+};

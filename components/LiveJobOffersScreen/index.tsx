@@ -19,17 +19,22 @@
 import { textColors } from "@/constants/colors";
 import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import {
+  BID_STATUS,
+  BID_WAITING_TIMER_DURATION_MS,
   EMPTY_STATE_MESSAGES,
   LIVE_JOB_STATUS,
   LOCAL_JOB_STATUS,
+  type BidStatus as BidStatusType,
   type LocalJobStatus,
 } from "@/constants/global";
+import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useFetch } from "@/hooks/useFetch";
+import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
+import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   FlatList,
   Image,
   StyleSheet,
@@ -38,8 +43,12 @@ import {
   ViewStyle,
 } from "react-native";
 import BidBottomSheet from "../BidBottomSheet";
+import BidStatusSheet from "../BidStatusSheet";
+import BidWaitingTimer from "../BidWaitingTimer";
+import ConfirmationSheet from "../ConfirmationSheet";
 import LiveRideOfferItem from "../LiveRideOfferItem";
 import SkeletonLoader from "../Loader/SkeletonLoader";
+import { showToast } from "../Toast";
 import Typography from "../Typography";
 
 interface LiveJobOffersScreenProps {
@@ -57,11 +66,18 @@ export default function LiveJobOffersScreen({
   showHiddenJobs = false,
 }: LiveJobOffersScreenProps) {
   const { getLiveOfferStatus } = useDriver();
+  const [auth] = useAuth();
 
   const [showAllJobs, setShowAllJobs] = useState<boolean>(false);
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const [selectedJobForBid, setSelectedJobForBid] = useState<any>(null);
   const [isBidSheetOpen, setIsBidSheetOpen] = useState<boolean>(false);
+  const [isWaitingForCustomer, setIsWaitingForCustomer] =
+    useState<boolean>(false);
+  const [isCancelConfirmationOpen, setIsCancelConfirmationOpen] =
+    useState<boolean>(false);
+  const [isBidStatusOpen, setIsBidStatusOpen] = useState<boolean>(false);
+  const [bidStatus, setBidStatus] = useState<BidStatusType>(BID_STATUS.EXPIRED);
 
   // API hook for fetching live jobs
   const {
@@ -70,6 +86,16 @@ export default function LiveJobOffersScreen({
     error,
     execute: fetchLiveJobs,
   } = useFetch<any[]>(LIVE_JOB_ENDPOINTS.getLiveJobs);
+
+  // API hook for submitting bids
+  const { loading: isSubmittingBid, execute: submitBid } = usePost(
+    LIVE_JOB_ENDPOINTS.submitBid
+  );
+
+  // API hook for canceling bids
+  const { loading: isCancelingBid, execute: cancelBid } = usePost(
+    LIVE_JOB_ENDPOINTS.cancelBid
+  );
 
   // Filter jobs by "offered" status and apply local status filtering
   const filteredJobs = useMemo(() => {
@@ -414,8 +440,11 @@ export default function LiveJobOffersScreen({
         setSelectedJobForBid(job);
         setIsBidSheetOpen(true);
       } else {
-        // For non-bid actions, show alert (fallback)
-        Alert.alert("Job Action", `Action performed for job ${jobId}`);
+        // For non-bid actions, show toast (fallback)
+        showToast(`Action performed for job ${jobId}`, {
+          variant: "success",
+          position: "top",
+        });
       }
     },
     [sortedJobs]
@@ -423,28 +452,67 @@ export default function LiveJobOffersScreen({
 
   // Handle bid submission
   const handleBidSubmit = useCallback(
-    (bidData: {
+    async (bidData: {
       selectedBid: number;
       eta: number;
       boostAmount: number;
       isBoosted: boolean;
     }) => {
-      log(
-        `[LiveJobOffersScreen] Bid submitted for job: ${selectedJobForBid?.id}`,
-        bidData
-      );
+      if (!selectedJobForBid) {
+        log("[LiveJobOffersScreen] No selected job for bid submission");
+        return;
+      }
 
-      // Here you would typically send the bid to your API
-      // For now, we'll just close the sheet and show a success message
-      setIsBidSheetOpen(false);
-      setSelectedJobForBid(null);
+      try {
+        log(
+          `[LiveJobOffersScreen] Submitting bid for job: ${selectedJobForBid.id}`,
+          bidData
+        );
 
-      Alert.alert(
-        "Bid Submitted",
-        `Your bid of $${bidData.selectedBid} has been submitted successfully!`
-      );
+        // Prepare all bid-related data for API call
+        const bidPayload = {
+          jobId: selectedJobForBid.id,
+          driverId: auth?.user?.id || "driver-123",
+          bidAmount: bidData.selectedBid,
+          eta: bidData.eta,
+          boostAmount: bidData.boostAmount,
+          isBoosted: bidData.isBoosted,
+          // Additional job data
+          pickupAddress: selectedJobForBid.pickupAddress,
+          dropoffAddress: selectedJobForBid.dropoffAddress,
+          pickupTime: selectedJobForBid.pickupTime,
+          dropoffTime: selectedJobForBid.dropoffTime,
+          rideTime: selectedJobForBid.rideTime,
+          rideDistance: selectedJobForBid.rideDistance,
+          totalPrice: selectedJobForBid.totalPrice,
+          driverEarn: selectedJobForBid.driverEarn,
+          peopleCount: selectedJobForBid.peopleCount,
+          rideType: selectedJobForBid.rideType,
+          hasSpecialRequirements: selectedJobForBid.hasSpecialRequirements,
+          hasPackage: selectedJobForBid.hasPackage,
+          // Timestamps
+          submittedAt: new Date().toISOString(),
+        };
+
+        // Call the submit bid API
+        // await submitBid(bidPayload);
+
+        log("[LiveJobOffersScreen] Bid submitted successfully");
+
+        // Close the bid sheet
+        setIsBidSheetOpen(false);
+
+        // Show the waiting timer
+        setIsWaitingForCustomer(true);
+      } catch (error) {
+        log("[LiveJobOffersScreen] Failed to submit bid:", error);
+        showToast("Failed to submit bid. Please try again.", {
+          variant: "error",
+          position: "top",
+        });
+      }
     },
-    [selectedJobForBid]
+    [selectedJobForBid, auth?.user?.id, submitBid]
   );
 
   // Handle bid sheet close
@@ -453,19 +521,95 @@ export default function LiveJobOffersScreen({
     setSelectedJobForBid(null);
   }, []);
 
+  // Handle timer completion (customer reviewed the bid)
+  const handleTimerComplete = useCallback(() => {
+    log(
+      "[LiveJobOffersScreen] Timer completed - customer has reviewed the bid"
+    );
+    setIsWaitingForCustomer(false);
+    setSelectedJobForBid(null);
+
+    // Show expired bid status
+    setBidStatus(BID_STATUS.EXPIRED);
+    setIsBidStatusOpen(true);
+  }, []);
+
+  // Handle bid cancellation - show confirmation sheet
+  const handleCancelBid = useCallback(() => {
+    log("[LiveJobOffersScreen] Cancel bid requested - showing confirmation");
+    setIsCancelConfirmationOpen(true);
+  }, []);
+
+  // Handle confirmation of bid cancellation
+  const handleConfirmCancelBid = useCallback(async () => {
+    if (!selectedJobForBid) {
+      log("[LiveJobOffersScreen] No selected job for bid cancellation");
+      return;
+    }
+
+    try {
+      log(
+        "[LiveJobOffersScreen] Cancelling bid for job:",
+        selectedJobForBid.id
+      );
+
+      // Call the cancel bid API with bid ID and driver ID
+      // await cancelBid({
+      //   bidId: selectedJobForBid.id, // Using job ID as bid ID for now
+      //   driverId: auth?.user?.id || "driver-123", // Get driver ID from auth context
+      // });
+
+      // Close all sheets and reset state
+      setIsCancelConfirmationOpen(false);
+      setIsWaitingForCustomer(false);
+      setSelectedJobForBid(null);
+
+      log("[LiveJobOffersScreen] Bid cancelled successfully");
+
+      // Show success message
+      showToast("Your bid has been cancelled successfully.", {
+        variant: "success",
+        position: "top",
+      });
+    } catch (error) {
+      log("[LiveJobOffersScreen] Failed to cancel bid:", error);
+      showToast("Failed to cancel bid. Please try again.", {
+        variant: "error",
+        position: "top",
+      });
+    }
+  }, [selectedJobForBid, cancelBid]);
+
+  // Handle cancel confirmation sheet close
+  const handleCancelConfirmationClose = useCallback(() => {
+    setIsCancelConfirmationOpen(false);
+  }, []);
+
+  // Handle bid status sheet close
+  const handleClose = useCallback(() => {
+    setIsBidStatusOpen(false);
+    setBidStatus(BID_STATUS.EXPIRED);
+    setSelectedJobForBid(null);
+    setIsWaitingForCustomer(false);
+    router.replace("/(tabs)");
+  }, []);
+
   // Handle special requirements press
   const handleSpecialRequirements = useCallback((jobId: string) => {
     log(`[LiveJobOffersScreen] Special requirements pressed for job: ${jobId}`);
-    Alert.alert(
-      "Special Requirements",
-      "Special requirements details would be shown here"
-    );
+    showToast("Special requirements details would be shown here", {
+      variant: "warning",
+      position: "top",
+    });
   }, []);
 
   // Handle package press
   const handlePackagePress = useCallback((jobId: string) => {
     log(`[LiveJobOffersScreen] Package pressed for job: ${jobId}`);
-    Alert.alert("Package Details", "Package details would be shown here");
+    showToast("Package details would be shown here", {
+      variant: "warning",
+      position: "top",
+    });
   }, []);
 
   // Handle "View +X More" click
@@ -679,6 +823,37 @@ export default function LiveJobOffersScreen({
           initialSnapIndex={0}
         />
       )}
+
+      {/* Bid Waiting Timer */}
+      <BidWaitingTimer
+        open={isWaitingForCustomer}
+        progressDuration={BID_WAITING_TIMER_DURATION_MS}
+        onCompleteProgress={handleTimerComplete}
+        onCancel={handleCancelBid}
+        snapPoints={["40%"]}
+        showHeader={false}
+        backdrop={true}
+        swipeToClose={false}
+      />
+
+      {/* Cancel Bid Confirmation Sheet */}
+      <ConfirmationSheet
+        open={isCancelConfirmationOpen}
+        title="Cancel Your Bid?"
+        description="Are you sure you want to cancel your bid for this ride? You may miss this opportunity if the customer accepts."
+        cancelButtonText="Go Back"
+        confirmButtonText="Yes, Cancel"
+        onCancel={handleCancelConfirmationClose}
+        onConfirm={handleConfirmCancelBid}
+      />
+
+      {/* Bid Status Sheet */}
+      <BidStatusSheet
+        open={isBidStatusOpen}
+        status={bidStatus}
+        onTimerComplete={handleClose}
+        onClose={handleClose}
+      />
     </View>
   );
 }

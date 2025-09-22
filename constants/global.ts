@@ -1,3 +1,6 @@
+// Import colors for bid status
+import { bidStatusColors } from "./colors";
+
 // Token helpers bound to the app's chosen token key
 export const TOKEN_KEY = "@token";
 // Global auth object storage key
@@ -163,3 +166,46 @@ export const EMPTY_STATE_MESSAGES = {
   NO_JOBS_MESSAGE:
     "There are no jobs available in your area at this time. Please keep the app open to see the ride offers. Or you can move to another area to see jobs in that area.",
 } as const;
+
+// Bid Waiting Timer
+// Duration for the bid waiting timer in milliseconds
+// Default: 30 seconds - can be easily changed to 15 seconds (15000), 1 minute (60000), etc.
+export const BID_WAITING_TIMER_DURATION_MS = 30000; // 30 seconds
+
+// Bid Status Types
+export const BID_STATUS = {
+  EXPIRED: "expired",
+  UNSUCCESSFUL: "unsuccessful",
+  ACCEPTED: "accepted",
+} as const;
+
+export type BidStatus = (typeof BID_STATUS)[keyof typeof BID_STATUS];
+
+// Bid Status Messages
+export const BID_STATUS_MESSAGES = {
+  EXPIRED: {
+    TITLE: "Bid Expired!",
+    DESCRIPTION:
+      "The customer didn't respond in time. You can rebid if you're still interested.",
+  },
+  UNSUCCESSFUL: {
+    TITLE: "Bid Unsuccessful!",
+    DESCRIPTION:
+      "The customer chose another driver. Don't worry! more ride offers are coming your way.",
+  },
+  ACCEPTED: {
+    TITLE: "Bid Accepted!",
+    DESCRIPTION:
+      "The customer accepted your offer. Get ready to start the ride.",
+  },
+} as const;
+
+// Bid Status Background Colors - imported from colors.ts
+export const BID_STATUS_COLORS = {
+  EXPIRED: bidStatusColors.expired,
+  UNSUCCESSFUL: bidStatusColors.unsuccessful,
+  ACCEPTED: bidStatusColors.accepted,
+} as const;
+
+// Bid Status Countdown Timer Duration (in seconds)
+export const BID_STATUS_COUNTDOWN_DURATION_SECONDS = 10;

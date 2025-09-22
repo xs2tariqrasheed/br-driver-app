@@ -82,6 +82,15 @@ interface CommonBottomSheetProps {
    * Title to display in the header.
    */
   headerTitle?: string;
+  /**
+   * If true, disables the close button in the header.
+   * @default false
+   */
+  disabledClose?: boolean;
+  /**
+   * Custom background color for the sheet.
+   */
+  customBackgroundColor?: string;
 }
 
 /** Props for scrollable variant (wraps content in BottomSheetScrollView). */
@@ -128,6 +137,8 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
   open = false,
   showHeader = true,
   headerTitle,
+  disabledClose = false,
+  customBackgroundColor,
   ...props
 }) => {
   const log = logger();
@@ -186,9 +197,17 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
     onClose && onClose();
   };
 
-  const renderHeader = (title?: string) => {
+  const renderHeader = (title?: string, paddinHorizontal = false) => {
     return (
-      <View style={styles.sheetHeader}>
+      <View
+        style={[
+          styles.sheetHeader,
+          paddinHorizontal && { paddingHorizontal: 14 },
+          customBackgroundColor && {
+            backgroundColor: customBackgroundColor || textColors.white,
+          },
+        ]}
+      >
         <Typography
           type="headingLarge"
           weight="semibold"
@@ -197,19 +216,30 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
           {title || "Title"}
         </Typography>
         <IconButton
+          style={styles.iconButton}
           size={1}
           rounded
+          disabled={disabledClose}
           icon={
             <Image
               source={require("@/assets/images/black-cross.png")}
-              style={styles.icon24}
+              style={[styles.icon24, disabledClose && styles.icon24Disabled]}
             />
           }
-          onPress={close}
+          onPress={disabledClose ? undefined : close}
         />
       </View>
     );
   };
+
+  const handleComponent = () => (
+    <View
+      style={[
+        styles.handleComponent,
+        customBackgroundColor && { backgroundColor: customBackgroundColor },
+      ]}
+    />
+  );
 
   return (
     <Portal>
@@ -231,12 +261,18 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
             : undefined
         }
         onClose={onClose}
+        handleComponent={customBackgroundColor ? handleComponent : undefined}
       >
         {scrollable ? (
           <>
-            {showHeader && renderHeader(headerTitle)}
+            {showHeader && renderHeader(headerTitle, true)}
             <BottomSheetScrollView
-              style={styles.scrollableContent}
+              style={[
+                styles.scrollableContent,
+                customBackgroundColor && {
+                  backgroundColor: customBackgroundColor,
+                },
+              ]}
               contentContainerStyle={styles.scrollableContentContainer}
               showsVerticalScrollIndicator={false}
               {...(props as React.ComponentProps<typeof BottomSheetScrollView>)}
@@ -245,8 +281,23 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
             </BottomSheetScrollView>
           </>
         ) : (
-          <BottomSheetView style={styles.sheetRoot}>
-            <View style={styles.contentContainer} {...(props as ViewProps)}>
+          <BottomSheetView
+            style={[
+              styles.sheetRoot,
+              customBackgroundColor && {
+                backgroundColor: customBackgroundColor || textColors.white,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.contentContainer,
+                customBackgroundColor && {
+                  backgroundColor: customBackgroundColor || textColors.white,
+                },
+              ]}
+              {...(props as ViewProps)}
+            >
               {showHeader && renderHeader(headerTitle)}
               {children}
             </View>
@@ -262,7 +313,6 @@ CustomBottomSheet.displayName = "CustomBottomSheet";
 const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
-    backgroundColor: textColors.white,
     paddingBottom: 20,
     paddingHorizontal: 16,
   },
@@ -280,16 +330,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
-    backgroundColor: textColors.white,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
   icon24: { width: 24, height: 24, resizeMode: "contain" },
   sheetTitle: { fontSize: 21, color: textColors.black },
-  sheetRoot: { borderTopLeftRadius: 30, borderTopRightRadius: 30 },
+  sheetRoot: {
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+  icon24Disabled: {
+    opacity: 0.3,
+  },
+  iconButton: {
+    backgroundColor: textColors.white,
+  },
+  handleComponent: {
+    height: 12,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
 });
 
 export default CustomBottomSheet;

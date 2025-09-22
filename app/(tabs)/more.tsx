@@ -1,4 +1,6 @@
-import Button, { IconButton } from "@/components/Button";
+import CustomBottomSheet from "@/components/BottomSheet";
+import Button from "@/components/Button";
+import ConfirmationSheet from "@/components/ConfirmationSheet";
 import Header from "@/components/Header";
 import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
@@ -8,13 +10,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { DEFAULT_SETTINGS, useSettings } from "@/context/SettingsContext";
 import { clearStorage } from "@/utils/helpers";
-import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetView,
-} from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
-import { useMemo, useRef } from "react";
+import { useState } from "react";
 import {
   FlatList,
   Image,
@@ -87,12 +84,18 @@ export default function MoreScreen() {
   const [, setAuth] = useAuth();
   const [, setDriver] = useDriver();
   const [, setSettings] = useSettings();
-  const logoutSheetRef = useRef<BottomSheetModal>(null);
-  const logoutSnapPoints = useMemo(() => ["28%"], []);
-  const deleteProfileSheetRef = useRef<BottomSheetModal>(null);
-  const deleteProfileSnapPoints = useMemo(() => ["28%"], []);
-  const contactBaseSheetRef = useRef<BottomSheetModal>(null);
-  const contactBaseSnapPoints = useMemo(() => ["38%"], []);
+  const [logoutSheetOpen, setLogoutSheetOpen] = useState(false);
+  const [deleteProfileSheetOpen, setDeleteProfileSheetOpen] = useState(false);
+  const [contactBaseSheetOpen, setContactBaseSheetOpen] = useState(false);
+
+  const handleDataDelete = async () => {
+    try {
+      await clearStorage();
+    } catch {}
+    await setAuth(null);
+    await setDriver(null);
+    await setSettings(DEFAULT_SETTINGS);
+  };
 
   const handleShareApp = async () => {
     try {
@@ -115,16 +118,16 @@ export default function MoreScreen() {
     if (item.key === "delete-profile") {
       return {
         ...item,
-        onClick: () => deleteProfileSheetRef.current?.present(),
+        onClick: () => setDeleteProfileSheetOpen(true),
       };
     }
     if (item.key === "logout") {
-      return { ...item, onClick: () => logoutSheetRef.current?.present() };
+      return { ...item, onClick: () => setLogoutSheetOpen(true) };
     }
     if (item.key === "contact-base") {
       return {
         ...item,
-        onClick: () => contactBaseSheetRef.current?.present(),
+        onClick: () => setContactBaseSheetOpen(true),
       };
     }
     if (item.key === "share-app") {
@@ -180,233 +183,100 @@ export default function MoreScreen() {
           }
         />
       </View>
-      <BottomSheetModal
-        ref={logoutSheetRef}
-        snapPoints={logoutSnapPoints}
-        enablePanDownToClose
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.7}
-            enableTouchThrough={true}
-            pressBehavior="close"
-          />
-        )}
-        style={styles.bottomSheetContainer}
-      >
-        <BottomSheetView>
-          <View style={styles.sheetContainer}>
-            <Typography
-              type="titleMedium"
-              weight="semibold"
-              style={styles.sheetTitleText}
-            >
-              Are You Sure?
-            </Typography>
-            <Typography
-              type="bodyLarge"
-              weight="regular"
-              style={styles.sheetDescriptionText}
-            >
-              Are you sure you want to logout? This action cannot be undone.
-            </Typography>
-
-            <View style={styles.sheetButtonsRow}>
-              <Button
-                variant="outlined"
-                rounded="half"
-                block="half"
-                onPress={() => logoutSheetRef.current?.dismiss()}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                rounded="half"
-                block="half"
-                onPress={async () => {
-                  // Reset all persisted keys and in-memory contexts
-                  try {
-                    await clearStorage();
-                  } catch {}
-                  await setAuth(null);
-                  await setDriver(null);
-                  await setSettings(DEFAULT_SETTINGS);
-                  logoutSheetRef.current?.dismiss();
-                  router.replace("/(screens)/auth/login");
-                }}
-              >
-                Yes, Logout
-              </Button>
-            </View>
-          </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+      <ConfirmationSheet
+        open={logoutSheetOpen}
+        title="Are You Sure?"
+        description="Are you sure you want to logout? This action cannot be undone."
+        cancelButtonText="Cancel"
+        confirmButtonText="Yes, Logout"
+        onCancel={() => setLogoutSheetOpen(false)}
+        onConfirm={() => {
+          handleDataDelete();
+          setLogoutSheetOpen(false);
+          router.replace("/(screens)/auth/login");
+        }}
+      />
 
       {/* Delete Profile Confirmation */}
-      <BottomSheetModal
-        ref={deleteProfileSheetRef}
-        snapPoints={deleteProfileSnapPoints}
-        enablePanDownToClose
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.7}
-            enableTouchThrough={true}
-            pressBehavior="close"
-          />
-        )}
-        style={styles.bottomSheetContainer}
-      >
-        <BottomSheetView>
-          <View style={styles.sheetContainer}>
-            <Typography
-              type="titleMedium"
-              weight="semibold"
-              style={styles.sheetTitleText}
-            >
-              Are You Sure?
-            </Typography>
-            <Typography
-              type="bodyLarge"
-              weight="regular"
-              style={styles.sheetDescriptionText}
-            >
-              Are you sure you want to delete your profile? This action cannot
-              be undone.
-            </Typography>
-
-            <View style={styles.sheetButtonsRow}>
-              <Button
-                variant="outlined"
-                rounded="half"
-                block="half"
-                onPress={() => deleteProfileSheetRef.current?.dismiss()}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                rounded="half"
-                block="half"
-                onPress={() => {
-                  deleteProfileSheetRef.current?.dismiss();
-                  router.push(
-                    "/(screens)/auth/verify-otp?context=delete-profile"
-                  );
-                }}
-              >
-                Yes, Delete
-              </Button>
-            </View>
-          </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+      <ConfirmationSheet
+        open={deleteProfileSheetOpen}
+        title="Are You Sure?"
+        description="Are you sure you want to delete your profile? This action cannot be undone."
+        cancelButtonText="Cancel"
+        confirmButtonText="Yes, Delete"
+        onCancel={() => setDeleteProfileSheetOpen(false)}
+        onConfirm={() => {
+          handleDataDelete();
+          setDeleteProfileSheetOpen(false);
+          router.push("/(screens)/auth/verify-otp?context=delete-profile");
+        }}
+      />
 
       {/* Contact Base */}
-      <BottomSheetModal
-        ref={contactBaseSheetRef}
-        snapPoints={contactBaseSnapPoints}
-        enablePanDownToClose
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            appearsOnIndex={0}
-            disappearsOnIndex={-1}
-            opacity={0.7}
-            enableTouchThrough={true}
-            pressBehavior="close"
-          />
-        )}
-        style={styles.bottomSheetContainer}
+      <CustomBottomSheet
+        open={contactBaseSheetOpen}
+        snapPoints={["38%"]}
+        initialSnapIndex={0}
+        showHeader={true}
+        headerTitle="Contact Base"
+        onClose={() => setContactBaseSheetOpen(false)}
       >
-        <BottomSheetView>
-          <View style={styles.sheetContainer}>
-            <View style={styles.sheetHeaderRow}>
-              <Typography
-                type="titleMedium"
-                weight="semibold"
-                style={styles.sheetTitleText}
-              >
-                Contact Base
-              </Typography>
-              <IconButton
-                size={1}
-                rounded={true}
-                icon={
-                  <Image
-                    source={require("@/assets/images/black-cross.png")}
-                    style={styles.iconSize24}
-                  />
-                }
-                onPress={() => contactBaseSheetRef.current?.dismiss()}
-              />
-            </View>
+        <View style={styles.addressRow}>
+          <Image
+            source={require("@/assets/images/contact-base-location-icon.png")}
+            style={styles.addressIcon}
+          />
+          <Typography
+            type="bodyMedium"
+            weight="semibold"
+            style={styles.addressText}
+          >
+            {CONTACT_BASE.address}
+          </Typography>
+        </View>
 
-            <View style={styles.addressRow}>
-              <Image
-                source={require("@/assets/images/contact-base-location-icon.png")}
-                style={styles.addressIcon}
-              />
+        <View style={styles.contactList}>
+          {[
+            {
+              label: "Driver Relations",
+              phone: CONTACT_BASE.driverRelationsPhone,
+            },
+            {
+              label: "Business Office",
+              phone: CONTACT_BASE.businessOfficePhone,
+            },
+          ].map((item) => (
+            <TouchableOpacity
+              key={item.label}
+              style={styles.contactRow}
+              activeOpacity={0.7}
+              onPress={() => Linking.openURL(`tel:${item.phone}`)}
+            >
+              <Typography
+                type="subHeadingLarge"
+                weight="bold"
+                style={styles.contactLabel}
+              >
+                {item.label}
+              </Typography>
               <Typography
                 type="bodyMedium"
-                weight="semibold"
-                style={styles.addressText}
+                weight="regular"
+                style={styles.contactNumber}
               >
-                {CONTACT_BASE.address}
+                {item.phone}
               </Typography>
-            </View>
-
-            <View style={styles.contactList}>
-              {[
-                {
-                  label: "Driver Relations",
-                  phone: CONTACT_BASE.driverRelationsPhone,
-                },
-                {
-                  label: "Business Office",
-                  phone: CONTACT_BASE.businessOfficePhone,
-                },
-              ].map((item) => (
-                <TouchableOpacity
-                  key={item.label}
-                  style={styles.contactRow}
-                  activeOpacity={0.7}
-                  onPress={() => Linking.openURL(`tel:${item.phone}`)}
-                >
-                  <Typography
-                    type="subHeadingLarge"
-                    weight="bold"
-                    style={styles.contactLabel}
-                  >
-                    {item.label}
-                  </Typography>
-                  <Typography
-                    type="bodyMedium"
-                    weight="regular"
-                    style={styles.contactNumber}
-                  >
-                    {item.phone}
-                  </Typography>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Button
-              variant="primary"
-              rounded="half"
-              onPress={() =>
-                Linking.openURL(`tel:${CONTACT_BASE.dispatcherPhone}`)
-              }
-            >
-              Call Dispatcher
-            </Button>
-          </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Button
+          variant="primary"
+          rounded="half"
+          onPress={() => Linking.openURL(`tel:${CONTACT_BASE.dispatcherPhone}`)}
+        >
+          Call Dispatcher
+        </Button>
+      </CustomBottomSheet>
     </SafeAreaView>
   );
 }
@@ -454,42 +324,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: textColors.grey800,
   },
-  bottomSheetContainer: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  sheetContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 24,
-    backgroundColor: textColors.white,
-    gap: 12,
-  },
-  sheetTitleText: {
-    color: textColors.black,
-  },
-  sheetDescriptionText: {
-    color: textColors.black,
-  },
-  sheetButtonsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  sheetHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  iconSize24: {
-    width: 24,
-    height: 24,
-  },
-  sheetDivider: {
-    height: 1,
-    backgroundColor: textColors.grey100,
-    marginTop: 4,
-    marginBottom: 8,
-  },
+
   addressRow: {
     flexDirection: "row",
     alignItems: "center",
