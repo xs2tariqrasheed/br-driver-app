@@ -75,6 +75,7 @@ export default function InfoTable({
         <Typography type="headingSmall" weight="semibold" style={styles.title}>
           {title}
         </Typography>
+        <Divider height={1} color={textColors.grey100} marginTop={16} />
       </View>
 
       {/* Data Rows */}
@@ -90,7 +91,7 @@ export default function InfoTable({
             </Typography>
             <Typography
               type="headingSmall"
-              weight="semibold"
+              weight="regular"
               style={styles.value}
             >
               {item.value}
@@ -138,6 +139,9 @@ const styles = StyleSheet.create({
     backgroundColor: textColors.grey0,
     borderRadius: 12,
     padding: 10,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: textColors.grey100,
   },
   titleContainer: {
     alignItems: "center",

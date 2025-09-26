@@ -8,7 +8,8 @@
  *   - Output: State (success, loading, error) and an `execute` function to perform the DELETE
  * Description: Uses the configured axios `apiClient` (see `config/apiConfig.ts`)
  *             which includes interceptors for auth and error handling. Builds
- *             the URL as `${baseEndpoint}/${id}` by default, with optional params.
+ *             the URL as `${baseEndpoint}/${id}` when an id is provided, otherwise
+ *             uses the baseEndpoint directly. Supports optional query params.
  */
 
 import { apiClient } from "@/config/apiConfig";
@@ -34,14 +35,15 @@ export const useDelete = (baseEndpoint: string) => {
    * Execute DELETE Request Function
    *
    * Caller: Components using the `useDelete` hook
-   * Purpose: Performs the DELETE request to `${baseEndpoint}/${id}`
+   * Purpose: Performs the DELETE request to `${baseEndpoint}/${id}` if `id` is provided,
+   *          otherwise calls the `baseEndpoint` directly.
    * Input/Output:
-   *   - Input: id - string | number identifier, params - optional query parameters
+   *   - Input: id? - optional string | number identifier, params - optional query parameters
    *   - Output: Promise resolving to a boolean `success`
    */
   const execute = useCallback(
     async (
-      id: string | number,
+      id?: string | number,
       params?: Record<string, any>
     ): Promise<boolean> => {
       setState((prev) => ({
@@ -50,7 +52,8 @@ export const useDelete = (baseEndpoint: string) => {
         error: null,
         success: false,
       }));
-      const url = `${baseEndpoint}/${id}`;
+      const hasId = id !== undefined && id !== null && String(id).length > 0;
+      const url = hasId ? `${baseEndpoint}/${id}` : baseEndpoint;
 
       try {
         const response = await apiClient.delete(url, { params });

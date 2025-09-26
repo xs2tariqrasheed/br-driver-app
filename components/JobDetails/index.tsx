@@ -18,7 +18,7 @@
  */
 
 import { textColors } from "@/constants/colors";
-import { type RideType } from "@/constants/global";
+import { ACTION_ICON_SOURCE_MAP, type RideType } from "@/constants/global";
 import {
   Image,
   ScrollView,
@@ -96,6 +96,8 @@ export interface JobOffer {
   customerDetails?: InfoTableDataItem[];
   /** Action buttons configuration */
   actionButtons?: ActionButton[];
+  /** Whether to hide the action bar */
+  showActionBar?: boolean;
 }
 
 export interface JobDetailsProps {
@@ -103,6 +105,8 @@ export interface JobDetailsProps {
   jobOffer: JobOffer;
   /** Custom style for the container */
   style?: ViewStyle;
+  /** Whether to hide the action bar */
+  showActionBar?: boolean;
 }
 
 /**
@@ -159,7 +163,11 @@ export interface JobDetailsProps {
  * />
  * ```
  */
-export default function JobDetails({ jobOffer, style }: JobDetailsProps) {
+export default function JobDetails({
+  jobOffer,
+  style,
+  showActionBar,
+}: JobDetailsProps) {
   const {
     id,
     dateTime,
@@ -189,14 +197,25 @@ export default function JobDetails({ jobOffer, style }: JobDetailsProps) {
     actionButtons = [],
   } = jobOffer;
 
+  // Determine if action bar should be shown
+  const shouldShowActionBar =
+    typeof showActionBar === "boolean"
+      ? showActionBar
+      : (jobOffer as any).showActionBar ?? true;
+
   return (
     <ScrollView
       style={[styles.container, style]}
       showsVerticalScrollIndicator={false}
     >
       {/* Action Bar - Only show if actionButtons are provided */}
-      {actionButtons.length > 0 && (
-        <View style={styles.actionBar}>
+      {actionButtons.length > 0 && shouldShowActionBar && (
+        <ScrollView
+          style={styles.actionBar}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.actionBarContent}
+        >
           {actionButtons.map((button) => (
             <TouchableOpacity
               key={button.key}
@@ -206,14 +225,17 @@ export default function JobDetails({ jobOffer, style }: JobDetailsProps) {
             >
               <View style={styles.actionButtonContainer}>
                 <Image
-                  source={{ uri: `assets/images/actions/${button.icon}` }}
+                  source={
+                    ACTION_ICON_SOURCE_MAP[button.icon] ||
+                    ACTION_ICON_SOURCE_MAP["details.png"]
+                  }
                   style={styles.actionIcon}
                   resizeMode="contain"
                 />
               </View>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
 
       {/* Date and Time - Only show if dateTime is provided */}
@@ -256,7 +278,7 @@ export default function JobDetails({ jobOffer, style }: JobDetailsProps) {
             buttonTitle={buttonTitle || "Accept"}
             disabled={disabled}
             onButtonClick={onButtonClick || (() => {})}
-            hideBidButton={false}
+            hideBidButton={true}
           />
 
           {/* Divider after Live Ride Item */}
@@ -266,36 +288,32 @@ export default function JobDetails({ jobOffer, style }: JobDetailsProps) {
 
       {/* Driver Instructions - Only show if driverInstructions is provided */}
       {driverInstructions && (
-        <>
-          <View style={styles.instructionsContainer}>
-            <Typography
-              type="titleLarge"
-              weight="bold"
-              style={styles.instructionsTitle}
-            >
-              Driver Instructions
-            </Typography>
-            <Typography
-              type="bodyLarge"
-              weight="regular"
-              style={styles.instructionsText}
-            >
-              {driverInstructions}
-            </Typography>
-          </View>
-
-          {/* Divider after Driver Instructions */}
-          <Divider height={1} color={textColors.grey200} marginVertical={20} />
-        </>
+        <View style={styles.instructionsContainer}>
+          <Typography
+            type="titleLarge"
+            weight="bold"
+            style={styles.instructionsTitle}
+          >
+            Driver Instructions
+          </Typography>
+          <Typography
+            type="bodyLarge"
+            weight="regular"
+            style={styles.instructionsText}
+          >
+            {driverInstructions}
+          </Typography>
+        </View>
       )}
-
+      {/* Divider after Driver Instructions */}
+      <Divider height={1} color={textColors.grey200} marginVertical={10} />
       {/* Fare Details - Only show if fareDetails are provided */}
       {fareDetails && fareDetails.length > 0 && (
         <>
           <InfoTable title="Fare Detail" data={fareDetails} showFooter={true} />
 
           {/* Divider after Fare Details */}
-          <Divider height={1} color={textColors.grey200} marginVertical={20} />
+          <Divider height={1} color={textColors.grey200} marginBottom={20} />
         </>
       )}
 
@@ -314,23 +332,25 @@ export default function JobDetails({ jobOffer, style }: JobDetailsProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: textColors.grey0,
-    padding: 16,
+    backgroundColor: textColors.white,
+    padding: 10,
   },
   actionBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 20,
+    paddingHorizontal: 0,
+  },
+  actionBarContent: {
     paddingHorizontal: 4,
+    flexDirection: "row",
+    alignItems: "center",
   },
   actionButton: {
-    flex: 1,
     alignItems: "center",
+    marginRight: 12,
   },
   actionButtonContainer: {
-    width: 40,
-    height: 40,
+    width: 54,
+    height: 42,
     backgroundColor: textColors.white,
     borderRadius: 8,
     borderWidth: 1,
@@ -351,8 +371,8 @@ const styles = StyleSheet.create({
     height: 20,
   },
   dateTimeContainer: {
-    alignItems: "center",
-    marginBottom: 20,
+    alignItems: "flex-start",
+    marginBottom: 12,
   },
   dateTime: {
     color: textColors.black,

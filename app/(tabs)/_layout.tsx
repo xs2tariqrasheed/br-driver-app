@@ -1,6 +1,5 @@
 import Typography from "@/components/Typography";
-import { Tabs } from "expo-router";
-import React from "react";
+import { Tabs, usePathname } from "expo-router";
 import { Image, ImageProps, Platform, StyleSheet, View } from "react-native";
 
 import { HapticTab } from "@/components/HapticTab";
@@ -10,6 +9,8 @@ import { textColors } from "@/constants/colors";
 const SHOW_EXAMPLES = process.env.EXPO_PUBLIC_SHOW_EXAMPLES === "true";
 
 export default function TabLayout() {
+  const pathname = usePathname();
+  const hideTabs = pathname === "/(screens)/active-ride";
   return (
     <Tabs
       screenOptions={{
@@ -19,14 +20,17 @@ export default function TabLayout() {
         ),
         tabBarBackground: TabBarBackground,
         tabBarShowLabel: false,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: "absolute",
-            height: 76,
-          },
-          default: { height: 76, paddingTop: 20 },
-        }),
+        tabBarStyle: [
+          Platform.select({
+            ios: {
+              // Use a transparent background on iOS to show the blur effect
+              position: "absolute",
+              height: 76,
+            },
+            default: { height: 76, paddingTop: 20 },
+          }),
+          hideTabs ? { display: "none" } : null,
+        ] as any,
       }}
     >
       <Tabs.Screen

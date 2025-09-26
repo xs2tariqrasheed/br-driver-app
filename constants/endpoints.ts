@@ -31,4 +31,11 @@ export const LIVE_JOB_ENDPOINTS = {
   cancelBid: "/bids/cancel",
 } as const;
 
+export const DRIVER_ENDPOINTS = {
+  /** Mark driver as offline */
+  markOffline: "/online-drivers/location",
+  /** Post or update driver's current location while online */
+  postOnlineLocation: "/online-drivers/location",
+} as const;
+
 export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;

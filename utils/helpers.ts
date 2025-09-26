@@ -271,6 +271,84 @@ export const reverseGeocode = async (
 };
 
 /**
+ * Converts a human-readable address to geographic coordinates using Google Maps Geocoding API.
+ *
+ * @param {string} address - The address to geocode
+ * @param {string} apiKey - Google Maps API key for geocoding
+ * @returns {Promise<LocationCoordinates | null>} Promise resolving to coordinates or null if geocoding fails
+ *
+ * @example
+ * ```typescript
+ * const coords = await geocodeAddress("123 Main St, City, State", apiKey);
+ * if (coords) {
+ *   console.log('Coordinates:', coords);
+ * }
+ * ```
+ */
+export const geocodeAddress = async (
+  address: string,
+  apiKey: string
+): Promise<LocationCoordinates | null> => {
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        address
+      )}&key=${apiKey}`
+    );
+    const data = await response.json();
+
+    if (data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      return {
+        latitude: location.lat,
+        longitude: location.lng,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return null;
+  }
+};
+
+/**
+ * Gets directions between two points using Google Maps Directions API.
+ *
+ * @param {LocationCoordinates} origin - Starting coordinates
+ * @param {LocationCoordinates} destination - Destination coordinates
+ * @param {string} apiKey - Google Maps API key
+ * @returns {Promise<any>} Promise resolving to directions data or null if request fails
+ *
+ * @example
+ * ```typescript
+ * const directions = await getDirections(origin, destination, apiKey);
+ * if (directions) {
+ *   console.log('Route:', directions.routes[0]);
+ * }
+ * ```
+ */
+export const getDirections = async (
+  origin: LocationCoordinates,
+  destination: LocationCoordinates,
+  apiKey: string
+): Promise<any> => {
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`
+    );
+    const data = await response.json();
+
+    if (data.status === "OK" && data.routes && data.routes.length > 0) {
+      return data;
+    }
+    return null;
+  } catch (error) {
+    console.error("Directions API error:", error);
+    return null;
+  }
+};
+
+/**
  * Generates HTML content for Google Maps WebView with interactive location selection.
  *
  * @param {MapRegion} region - The initial map region to display
@@ -563,11 +641,7 @@ export const generateHeatmapHTML = (
   userLocation: LocationCoordinates | null = null
 ): string => {
   const { latitude, longitude } = region;
-  const {
-    radius = 50,
-    opacity = 0.7,
-    showETALabels = true,
-  } = options;
+  const { radius = 50, opacity = 0.7, showETALabels = true } = options;
 
   return `
     <!DOCTYPE html>
@@ -709,7 +783,9 @@ export const generateHeatmapHTML = (
                   fillOpacity: 0.4,
                   map: map,
                   center: { lat: point.lat, lng: point.lng },
-                  radius: ${radius * 10} // Convert to meters (radius was in pixels for heatmap)
+                  radius: ${
+                    radius * 10
+                  } // Convert to meters (radius was in pixels for heatmap)
                 });
                 
                 demandCircles.push(demandCircle);
@@ -916,7 +992,7 @@ export const generateHeatmapHTML = (
 /**
  * Calculates the distance between two coordinates using the Haversine formula
  * @param lat1 - Latitude of first point
- * @param lng1 - Longitude of first point  
+ * @param lng1 - Longitude of first point
  * @param lat2 - Latitude of second point
  * @param lng2 - Longitude of second point
  * @returns Distance in kilometers
@@ -928,20 +1004,48 @@ export const calculateDistance = (
   lng2: number
 ): number => {
   const R = 6371; // Earth's radius in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLng/2) * Math.sin(dLng/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+};
+
+/**
+ * Calculates distance in meters between two coordinates using Haversine formula
+ */
+export const calculateDistanceMeters = (
+  prev: { lat: number; lng: number } | null,
+  curr: { lat: number; lng: number } | null
+): number => {
+  if (!prev || !curr) return Number.POSITIVE_INFINITY;
+  const km = calculateDistance(prev.lat, prev.lng, curr.lat, curr.lng);
+  return Math.round(km * 1000);
+};
+
+/**
+ * Computes delta meters vs mentioned distance threshold, per spec:
+ * Math.abs(distance(prev,current) - mentioned_distance)
+ */
+export const computeDeltaMetersAgainstThreshold = (
+  prev: { lat: number; lng: number } | null,
+  curr: { lat: number; lng: number } | null,
+  mentionedDistanceMeters: number
+): number => {
+  const meters = calculateDistanceMeters(prev, curr);
+  if (!isFinite(meters)) return Number.POSITIVE_INFINITY;
+  return Math.abs(meters - mentionedDistanceMeters);
 };
 
 /**
  * Calculates estimated travel time from user location to a demand area
  * @param userLocation - User's current coordinates
- * @param demandLocation - Demand area coordinates  
+ * @param demandLocation - Demand area coordinates
  * @param demandLevel - Level of demand (affects average speed assumption)
  * @returns ETA string like "3 mins" or "12 mins"
  */
@@ -979,12 +1083,13 @@ export const calculateETA = (
     // Handle hours and minutes
     const hours = Math.floor(timeInMinutes / 60);
     const remainingMinutes = timeInMinutes % 60;
-    
+
     if (remainingMinutes === 0) {
       return hours === 1 ? "1hr" : `${hours}hrs`;
     } else {
       const hourText = hours === 1 ? "1hr" : `${hours}hrs`;
-      const minText = remainingMinutes === 1 ? "1 min" : `${remainingMinutes} mins`;
+      const minText =
+        remainingMinutes === 1 ? "1 min" : `${remainingMinutes} mins`;
       return `${hourText} ${minText}`;
     }
   }

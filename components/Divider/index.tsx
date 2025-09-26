@@ -15,6 +15,13 @@ export type DividerProps = {
   width?: DimensionValue;
   /** Vertical margin around the divider. Defaults to 8. */
   marginVertical?: number;
+
+  /** Margin top of the divider. Defaults to 0. */
+  marginTop?: number;
+
+  /** Margin bottom of the divider. Defaults to 0. */
+  marginBottom?: number;
+
   /** Line color. Defaults to textColors.grey100. */
   color?: string;
   /** Optional style override merged last. */
@@ -25,6 +32,8 @@ const Divider: React.FC<DividerProps> = ({
   height = 1,
   width = "100%",
   marginVertical = 8,
+  marginTop,
+  marginBottom,
   color = textColors.grey100,
   style,
 }) => {
@@ -32,6 +41,8 @@ const Divider: React.FC<DividerProps> = ({
     height,
     width,
     marginVertical,
+    marginTop,
+    marginBottom,
     backgroundColor: color,
   };
 

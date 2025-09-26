@@ -1,6 +1,6 @@
 import { textColors } from "@/constants/colors";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 
 import SwipeButton from "rn-swipe-button";
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   disabledTitle: {
     color: textColors.black,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 500,
     textAlign: "center",
     marginLeft: 20,
@@ -119,10 +119,10 @@ const styles = StyleSheet.create({
   },
   activeTitle: {
     color: textColors.white,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 600,
     textAlign: "center",
-    marginLeft: 20,
+    marginLeft: 42,
   },
   disabledThumbIcon: {
     opacity: 0.5,

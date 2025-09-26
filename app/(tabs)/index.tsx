@@ -5,18 +5,23 @@ import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
 import LiveJobOffersScreen from "@/components/LiveJobOffersScreen";
 import PermissionGate from "@/components/PermissionGate";
+import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import {
   DRIVER_STATUS,
   DRIVER_TYPES,
+  PREVIOUS_LOCATION_STORAGE_KEY,
   URLS,
-  type DriverStatusLabel,
+  type DriverStatusLabel
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useSettings } from "@/context/SettingsContext";
-import { logger } from "@/utils/helpers";
+import { useDelete } from "@/hooks/useDelete";
+import { logger, setStorageItem } from "@/utils/helpers";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -25,7 +30,7 @@ import {
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 export default function HomeScreen() {
@@ -34,6 +39,14 @@ export default function HomeScreen() {
   const [driver, setDriver] = useDriver();
   const { notifications } = useDriver();
   const [settings, setSettings] = useSettings();
+  // Offline API using shared delete hook (no ID required)
+  const {
+    execute: deleteOnlineLocation,
+    loading: offlineLoading,
+  } = useDelete(DRIVER_ENDPOINTS.markOffline);
+
+  // Interval is managed centrally in OnlineLocationTracker (app/_layout)
+
   const statusValue: DriverStatusLabel = driver?.online
     ? DRIVER_STATUS.ONLINE
     : DRIVER_STATUS.OFFLINE;
@@ -114,6 +127,70 @@ export default function HomeScreen() {
     log(`[HomeScreen] Show hidden jobs toggled: ${newState ? "ON" : "OFF"}`);
   };
 
+  // Handle driver status toggle with API call for offline
+  const handleDriverStatusToggle = async (next: string) => {
+    const isGoingOnline = next === DRIVER_STATUS.ONLINE;
+    const isGoingOffline = next === DRIVER_STATUS.OFFLINE;
+
+    // If going online, set state and trigger initial post + start interval
+    if (isGoingOnline) {
+      await setDriver({ ...(driver ?? {}), online: true });
+
+      try {
+        // Request permission and get current location for first post
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          showToast("Location permission is required to go Online.", {
+            variant: "error",
+          });
+          // revert to offline if permission denied
+          await setDriver({ ...(driver ?? {}), online: false });
+          return;
+        }
+
+        const first = await Location.getCurrentPositionAsync({});
+        const payload = { lat: first.coords.latitude, lng: first.coords.longitude };
+        // Initial post handled centrally by OnlineLocationTracker; we only persist prev here
+        await setStorageItem(
+          PREVIOUS_LOCATION_STORAGE_KEY,
+          JSON.stringify(payload)
+        );
+        showToast("You are now Online", { variant: "success" });
+
+        // Interval loop is managed centrally in OnlineLocationTracker
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to go online.";
+        showToast(message, { variant: "error" });
+        await setDriver({ ...(driver ?? {}), online: false });
+      }
+      return;
+    }
+
+    // If going offline, call the API first
+    if (isGoingOffline) {
+      try {
+        log("[HomeScreen] Marking driver as offline via API");
+        await deleteOnlineLocation();
+
+        await setDriver({
+          ...(driver ?? {}),
+          online: false,
+        });
+
+        showToast("You are now Offline", { variant: "success" });
+        log("[HomeScreen] Driver successfully marked as offline");
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to go offline. Please try again.";
+        showToast(message, { variant: "error" });
+        log("[HomeScreen] Error marking driver offline:", error);
+      }
+    }
+  };
+
+  // Interval/AppState are managed globally in OnlineLocationTracker
+
   // Determine which bell icon to show based on notification status
   const hasUnreadNotifications = notifications.some(
     (notification) => notification.messageType === "unread"
@@ -162,13 +239,9 @@ export default function HomeScreen() {
                 variant="labeled"
                 labels={labels}
                 value={statusValue}
-                setValue={(next: string) => {
-                  void setDriver({
-                    ...(driver ?? {}),
-                    online: next === DRIVER_STATUS.ONLINE,
-                  });
-                }}
+                setValue={handleDriverStatusToggle}
                 size={styles.headerToggleSize}
+                disabled={offlineLoading}
               />
             </View>
           }

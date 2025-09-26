@@ -3,7 +3,7 @@
  *
  * This component handles:
  * - Displaying bid status messages (Expired, Unsuccessful, Accepted)
- * - Countdown timer for expired bids (10 seconds)
+ * - Countdown timer for expired and accepted bids (10 seconds)
  * - Different background colors for each status type
  * - Proper typography using SF Pro font family
  * - Callback functions for timer completion and close actions
@@ -35,7 +35,7 @@ export interface BidStatusSheetProps {
   status: BidStatus;
   /**
    * Callback function triggered when the countdown timer completes
-   * Only called for expired status
+   * Called for expired and accepted statuses
    */
   onTimerComplete: () => void;
   /**
@@ -78,9 +78,13 @@ const BidStatusSheet: React.FC<BidStatusSheetProps> = ({
     }
   }, [open]);
 
-  // Handle countdown timer for expired status
+  // Handle countdown timer for expired and accepted status
   useEffect(() => {
-    if (!open || status !== BID_STATUS.EXPIRED) return;
+    if (
+      !open ||
+      (status !== BID_STATUS.EXPIRED && status !== BID_STATUS.ACCEPTED)
+    )
+      return;
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -97,7 +101,9 @@ const BidStatusSheet: React.FC<BidStatusSheetProps> = ({
 
   // Handle timer completion when countdown reaches 0
   useEffect(() => {
-    if (countdown === 0 && open && status === BID_STATUS.EXPIRED) {
+    if (!open || countdown !== 0) return;
+
+    if (status === BID_STATUS.EXPIRED || status === BID_STATUS.ACCEPTED) {
       onTimerComplete();
     }
   }, [countdown, open, status, onTimerComplete]);

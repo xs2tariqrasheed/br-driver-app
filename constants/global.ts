@@ -1,4 +1,5 @@
 // Import colors for bid status
+import { ImageSourcePropType } from "react-native";
 import { bidStatusColors } from "./colors";
 
 // Token helpers bound to the app's chosen token key
@@ -13,6 +14,22 @@ export const DRIVER_STATUS = {
   ONLINE: "Online",
   OFFLINE: "Offline",
 } as const;
+
+// Driver status display labels (used in UI)
+export const RIDE_TOGGLE_LABELS = {
+  MAP: "Map",
+  DETAILS: "Details",
+} as const;
+
+// Previous location storage key (used for online location posting)
+export const PREVIOUS_LOCATION_STORAGE_KEY = "@previous_location";
+// Threshold in meters before re-posting location
+export const MENTIONED_DISTANCE = 50;
+// Interval (ms) for posting driver's online location
+export const ONLINE_LOCATION_INTERVAL_MS = 5000;
+
+export type RideToggleLabel =
+  (typeof RIDE_TOGGLE_LABELS)[keyof typeof RIDE_TOGGLE_LABELS];
 
 export type DriverStatusLabel =
   (typeof DRIVER_STATUS)[keyof typeof DRIVER_STATUS];
@@ -209,3 +226,50 @@ export const BID_STATUS_COLORS = {
 
 // Bid Status Countdown Timer Duration (in seconds)
 export const BID_STATUS_COUNTDOWN_DURATION_SECONDS = 10;
+
+// Local static map for action icons (required for bundling local images)
+export const ACTION_ICON_SOURCE_MAP: Record<string, ImageSourcePropType> = {
+  "accept.png": require("../assets/images/actions/accept.png"),
+  "reject.png": require("../assets/images/actions/reject.png"),
+  "hide.png": require("../assets/images/actions/hide.png"),
+  "skip.png": require("../assets/images/actions/skip.png"),
+  "make-stop.png": require("../assets/images/actions/make-stop.png"),
+  "add-toll.png": require("../assets/images/actions/add-toll.png"),
+  "circling.png": require("../assets/images/actions/circling.png"),
+  "cancel-ride.png": require("../assets/images/actions/cancel-ride.png"),
+  "update-eta.png": require("../assets/images/actions/update-eta.png"),
+  "sos.png": require("../assets/images/actions/sos.png"),
+  "contact-customer.png": require("../assets/images/actions/contact-customer.png"),
+  "details.png": require("../assets/images/actions/details.png"),
+};
+
+// Free Wait Timer duration (in seconds). Default: 5 minutes
+export const FREE_WAIT_DURATION_SECONDS = 5 * 60;
+
+// Swipe Button States and Titles
+export const SWIPE_BUTTON_STATES = {
+  MARK_ARRIVED: "mark_arrived",
+  START_RIDE: "start_ride",
+  END_RIDE: "end_ride",
+} as const;
+
+export type SwipeButtonState =
+  (typeof SWIPE_BUTTON_STATES)[keyof typeof SWIPE_BUTTON_STATES];
+
+export const SWIPE_BUTTON_TITLES = {
+  [SWIPE_BUTTON_STATES.MARK_ARRIVED]: "Swipe to Mark as Arrived",
+  [SWIPE_BUTTON_STATES.START_RIDE]: "Swipe to Start Ride",
+  [SWIPE_BUTTON_STATES.END_RIDE]: "Swipe to End Ride",
+} as const;
+
+// Notification Types
+export const NOTIFICATION_TYPES = {
+  AUTHORIZATION: "authorization",
+  INFO: "info",
+  WARNING: "warning",
+  SUCCESS: "success",
+  ERROR: "error",
+} as const;
+
+export type NotificationType =
+  (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];

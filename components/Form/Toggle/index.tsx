@@ -1,7 +1,7 @@
 import Typography from "@/components/Typography";
 import { SF_PRO_FONTS } from "@/components/Typography/constants";
 import { textColors } from "@/constants/colors";
-import React, { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Easing,
@@ -35,18 +35,19 @@ type SwitchProps = {
   onChange?: (next: boolean) => void;
 };
 
-type LabeledProps = {
+type LabeledProps<T extends string = string> = {
   variant: "labeled";
   /** Left/right labels. The selected label is returned as the value. */
-  labels: [string, string];
+  labels: [T, T];
   /** The currently selected label value. Must be one of labels[0] or labels[1]. */
-  value: string;
-  setValue: SetValueFn<string>;
+  value: T;
+  setValue: SetValueFn<T>;
   /** onChange returns the currently selected string value */
-  onChange?: (next: string) => void;
+  onChange?: (next: T) => void;
 };
 
-export type ToggleProps = CommonProps & (SwitchProps | LabeledProps);
+export type ToggleProps<T extends string = string> = CommonProps &
+  (SwitchProps | LabeledProps<T>);
 
 const INACTIVE_BG = textColors.grey250 ?? "#C7C7CC"; // per spec
 const ACTIVE_BG = textColors.black; // per spec
@@ -54,7 +55,7 @@ const KNOB_COLOR = textColors.white; // per spec
 
 const ANIMATION_DURATION_MS = 180;
 
-const Toggle: React.FC<ToggleProps> = (props) => {
+const Toggle = <T extends string = string>(props: ToggleProps<T>) => {
   // Labeled string variant
   if (props.variant === "labeled") {
     const {
@@ -66,7 +67,7 @@ const Toggle: React.FC<ToggleProps> = (props) => {
       onChange,
       style,
       size,
-    } = props as CommonProps & LabeledProps;
+    } = props as CommonProps & LabeledProps<T>;
 
     const dimensions = useMemo(() => {
       const width = size?.width ?? 150;
@@ -93,7 +94,7 @@ const Toggle: React.FC<ToggleProps> = (props) => {
       outputRange: [0, dimensions.halfWidth],
     });
 
-    const commit = (nextValue: string) => {
+    const commit = (nextValue: T) => {
       if (disabled) return;
       const fn = setValue as any;
       if (typeof fn === "function") {

@@ -1,3 +1,4 @@
+import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import { ToastHost } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { DriverProvider } from "@/context/DriverContext";
@@ -42,6 +43,7 @@ export default function RootLayout() {
             <AuthProvider>
               <DriverProvider>
                 <SettingsProvider>
+                  <OnlineLocationTracker />
                   <Stack initialRouteName="(screens)/auth">
                     <Stack.Screen
                       name="(screens)/auth"

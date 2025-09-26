@@ -97,6 +97,22 @@ export default function LiveJobOffersScreen({
     LIVE_JOB_ENDPOINTS.cancelBid
   );
 
+  // DEV-ONLY: Automatically mark bid as ACCEPTED after 10 seconds when waiting starts
+  useEffect(() => {
+    if (!__DEV__) return;
+    if (!isWaitingForCustomer) return;
+
+    const timeout = setTimeout(() => {
+      log("[Dev] Auto-accepting bid after 10s for testing purposes");
+      setIsWaitingForCustomer(false);
+      setSelectedJobForBid(null);
+      setBidStatus(BID_STATUS.ACCEPTED);
+      setIsBidStatusOpen(true);
+    }, 10000);
+
+    return () => clearTimeout(timeout);
+  }, [isWaitingForCustomer]);
+
   // Filter jobs by "offered" status and apply local status filtering
   const filteredJobs = useMemo(() => {
     // if (!liveJobsData) return [];
@@ -594,6 +610,20 @@ export default function LiveJobOffersScreen({
     router.replace("/(tabs)");
   }, []);
 
+  // Handle status timer completion (redirect on ACCEPTED)
+  const handleStatusTimerComplete = useCallback(() => {
+    if (bidStatus === BID_STATUS.ACCEPTED) {
+      setIsBidStatusOpen(false);
+      setIsWaitingForCustomer(false);
+      setSelectedJobForBid(null);
+      router.replace("/(screens)/active-ride");
+      return;
+    }
+
+    // Default behavior for other statuses (e.g., EXPIRED)
+    handleClose();
+  }, [bidStatus, handleClose]);
+
   // Handle special requirements press
   const handleSpecialRequirements = useCallback((jobId: string) => {
     log(`[LiveJobOffersScreen] Special requirements pressed for job: ${jobId}`);
@@ -851,7 +881,7 @@ export default function LiveJobOffersScreen({
       <BidStatusSheet
         open={isBidStatusOpen}
         status={bidStatus}
-        onTimerComplete={handleClose}
+        onTimerComplete={handleStatusTimerComplete}
         onClose={handleClose}
       />
     </View>
