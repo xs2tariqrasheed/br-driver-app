@@ -13,8 +13,8 @@ export const AUTH_ENDPOINTS = {
   resetPassword: "/auth/reset-password",
   /** Update/change password (authenticated flow) */
   updatePassword: "/auth/update-password",
-  /** Create account */
-  signup: "/auth/signup",
+  /** Get current user */
+  getCurrentUser: "/auth/me",
 } as const;
 
 export const HEATMAP_ENDPOINTS = {
@@ -33,9 +33,9 @@ export const LIVE_JOB_ENDPOINTS = {
 
 export const DRIVER_ENDPOINTS = {
   /** Mark driver as offline */
-  markOffline: "/online-drivers/location",
+  markOffline: (driverId: string) => `/api/drivers/${driverId}`,
   /** Post or update driver's current location while online */
-  postOnlineLocation: "/online-drivers/location",
+  postOnlineLocation: (driverId: string) => `/api/drivers/${driverId}/location`,
 } as const;
 
 export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;

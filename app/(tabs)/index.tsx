@@ -14,13 +14,14 @@ import {
   DRIVER_TYPES,
   PREVIOUS_LOCATION_STORAGE_KEY,
   URLS,
-  type DriverStatusLabel
+  type DriverStatusLabel,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
-import { logger, setStorageItem } from "@/utils/helpers";
+import { usePost } from "@/hooks/usePost";
+import { logger, removeStorageItem, setStorageItem } from "@/utils/helpers";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -30,7 +31,7 @@ import {
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 export default function HomeScreen() {
@@ -39,11 +40,14 @@ export default function HomeScreen() {
   const [driver, setDriver] = useDriver();
   const { notifications } = useDriver();
   const [settings, setSettings] = useSettings();
-  // Offline API using shared delete hook (no ID required)
-  const {
-    execute: deleteOnlineLocation,
-    loading: offlineLoading,
-  } = useDelete(DRIVER_ENDPOINTS.markOffline);
+  // Offline API using shared delete hook
+  const { execute: deleteOnlineLocation, loading: offlineLoading } = useDelete(
+    DRIVER_ENDPOINTS.markOffline(auth?.user?.id || "")
+  );
+
+  // Online location API using shared post hook
+  const { execute: postOnlineLocation, loading: onlineLocationLoading } =
+    usePost(DRIVER_ENDPOINTS.postOnlineLocation(auth?.user?.id || ""));
 
   // Interval is managed centrally in OnlineLocationTracker (app/_layout)
 
@@ -132,10 +136,8 @@ export default function HomeScreen() {
     const isGoingOnline = next === DRIVER_STATUS.ONLINE;
     const isGoingOffline = next === DRIVER_STATUS.OFFLINE;
 
-    // If going online, set state and trigger initial post + start interval
+    // If going online, call API first with current location
     if (isGoingOnline) {
-      await setDriver({ ...(driver ?? {}), online: true });
-
       try {
         // Request permission and get current location for first post
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -143,26 +145,36 @@ export default function HomeScreen() {
           showToast("Location permission is required to go Online.", {
             variant: "error",
           });
-          // revert to offline if permission denied
-          await setDriver({ ...(driver ?? {}), online: false });
           return;
         }
 
         const first = await Location.getCurrentPositionAsync({});
-        const payload = { lat: first.coords.latitude, lng: first.coords.longitude };
-        // Initial post handled centrally by OnlineLocationTracker; we only persist prev here
+        const payload = {
+          lat: first.coords.latitude,
+          lng: first.coords.longitude,
+        };
+
+        // Call the online location API first
+        log("[HomeScreen] Posting initial location to go online");
+        await postOnlineLocation(payload as any);
+
+        // Store the location for future tracking
         await setStorageItem(
           PREVIOUS_LOCATION_STORAGE_KEY,
           JSON.stringify(payload)
         );
+
+        // Only set driver online if API call succeeds
+        await setDriver({ ...(driver ?? {}), online: true });
         showToast("You are now Online", { variant: "success" });
 
         // Interval loop is managed centrally in OnlineLocationTracker
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to go online.";
+        log("[HomeScreen] Error going online:", error);
         showToast(message, { variant: "error" });
-        await setDriver({ ...(driver ?? {}), online: false });
+        // Don't set driver online if API fails
       }
       return;
     }
@@ -173,6 +185,10 @@ export default function HomeScreen() {
         log("[HomeScreen] Marking driver as offline via API");
         await deleteOnlineLocation();
 
+        // Clear the previous location storage when going offline
+        await removeStorageItem(PREVIOUS_LOCATION_STORAGE_KEY);
+        log("[HomeScreen] Cleared previous location storage");
+
         await setDriver({
           ...(driver ?? {}),
           online: false,
@@ -182,7 +198,9 @@ export default function HomeScreen() {
         log("[HomeScreen] Driver successfully marked as offline");
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Failed to go offline. Please try again.";
+          error instanceof Error
+            ? error.message
+            : "Failed to go offline. Please try again.";
         showToast(message, { variant: "error" });
         log("[HomeScreen] Error marking driver offline:", error);
       }
@@ -241,7 +259,7 @@ export default function HomeScreen() {
                 value={statusValue}
                 setValue={handleDriverStatusToggle}
                 size={styles.headerToggleSize}
-                disabled={offlineLoading}
+                disabled={offlineLoading || onlineLocationLoading}
               />
             </View>
           }

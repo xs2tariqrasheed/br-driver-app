@@ -18,14 +18,16 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import {
+  API_CLIENT_TYPES,
   DRIVER_TYPES,
   OTP_LENGTH,
   OTP_RESEND_SECONDS,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
+import { useFetch } from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
-import { clearStorage } from "@/utils/helpers";
+import { clearStorage, logger } from "@/utils/helpers";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 // OTP length is centralized in constants/global.ts
@@ -38,8 +40,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
  */
 export default function VerifyOtpScreen() {
   const router = useRouter();
+  const log = logger();
   const { context } = useLocalSearchParams<{ context?: string }>();
-  const [, setAuth] = useAuth();
+  const [currentAuth, setAuth] = useAuth();
   const [, setDriver] = useDriver();
   const [otp, setOtp] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -50,31 +53,30 @@ export default function VerifyOtpScreen() {
   const caretAnimRef = useRef<Animated.CompositeAnimation | null>(null);
   const [isFocused, setIsFocused] = useState<boolean>(true);
 
-  const { execute: verifyOtp, loading: verifying } = usePost<
-    any,
-    { code: string }
-  >(AUTH_ENDPOINTS.verifyOtp);
-  const { execute: resendOtp, loading: resending } = usePost<any, {}>(
-    AUTH_ENDPOINTS.requestOtp
-  );
+  const {
+    execute: verifyOtp,
+    loading: verifying,
+    error: verifyOtpError,
+  } = usePost<any, { code: string }>(AUTH_ENDPOINTS.verifyOtp);
 
-  const disabled = verifying || resending;
+  const {
+    execute: resendOtp,
+    loading: resending,
+    error: resendOtpError,
+  } = usePost<any, {}>(AUTH_ENDPOINTS.requestOtp);
+  const {
+    data: userData,
+    loading,
+    execute,
+    error: userDataError,
+  } = useFetch(AUTH_ENDPOINTS.getCurrentUser, API_CLIENT_TYPES.ME);
+
+  const disabled = verifying || resending || loading;
 
   // Handles granting app access after a successful OTP verification for login
   const completeLoginAfterOtp = async () => {
-    await setAuth({
-      token: "1234567890",
-      user: {
-        id: "1234567890",
-        name: "Mujahid Ali",
-        type: DRIVER_TYPES.INDEPENDENT_OPERATOR,
-      },
-    } as any);
-    showToast("Logged in successfully", {
-      variant: "success",
-      position: "top",
-    });
-    router.replace("/(tabs)");
+    await execute();
+    log("Current user", userData);
   };
 
   // Handles profile deletion cleanup and navigation after OTP verification
@@ -243,6 +245,40 @@ export default function VerifyOtpScreen() {
     if (verified) return textColors.teal700;
     return textColors.black;
   };
+
+  const handleCompleteLoginAfterOtp = async (data: any) => {
+    log("User data", data);
+    if (data?.user) {
+      await setAuth({
+        ...currentAuth,
+        user: {
+          id: data?.user?.id,
+          name: data?.user?.name,
+          type: DRIVER_TYPES.INDEPENDENT_OPERATOR,
+        },
+      } as any);
+      showToast("Logged in successfully", {
+        variant: "success",
+        position: "top",
+      });
+      router.replace("/(tabs)");
+    }
+  };
+
+  useEffect(() => {
+    if (userData) {
+      handleCompleteLoginAfterOtp(userData);
+    }
+    if (verifyOtpError) {
+      showToast(verifyOtpError, { variant: "error", position: "top" });
+    }
+    if (resendOtpError) {
+      showToast(resendOtpError, { variant: "error", position: "top" });
+    }
+    if (userDataError) {
+      showToast(userDataError, { variant: "error", position: "top" });
+    }
+  }, [verifyOtpError, resendOtpError, userDataError, userData]);
 
   return (
     <SafeAreaView style={styles.container}>

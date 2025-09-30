@@ -824,7 +824,6 @@ export default function LiveJobOffersScreen({
     </View>
   );
 
-  log("displayJobs???", displayJobs);
   return (
     <View style={[styles.container, style]}>
       {sortedJobs.length === 0 ? (

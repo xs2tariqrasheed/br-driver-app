@@ -24,7 +24,7 @@ export const RIDE_TOGGLE_LABELS = {
 // Previous location storage key (used for online location posting)
 export const PREVIOUS_LOCATION_STORAGE_KEY = "@previous_location";
 // Threshold in meters before re-posting location
-export const MENTIONED_DISTANCE = 50;
+export const MENTIONED_DISTANCE = 10;
 // Interval (ms) for posting driver's online location
 export const ONLINE_LOCATION_INTERVAL_MS = 5000;
 
@@ -273,3 +273,13 @@ export const NOTIFICATION_TYPES = {
 
 export type NotificationType =
   (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
+
+// API Client Types
+export const API_CLIENT_TYPES = {
+  AUTH: "auth",
+  ME: "me",
+  DEFAULT: "default",
+} as const;
+
+export type ApiClientType =
+  (typeof API_CLIENT_TYPES)[keyof typeof API_CLIENT_TYPES];

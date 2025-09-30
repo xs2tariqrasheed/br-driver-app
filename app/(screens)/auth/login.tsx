@@ -21,7 +21,7 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
-import { BiometricMethod, URLS } from "@/constants/global";
+import { API_CLIENT_TYPES, BiometricMethod, URLS } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { usePost } from "@/hooks/usePost";
@@ -59,6 +59,7 @@ type LoginFormValues = {
  */
 export default function LoginScreen() {
   const router = useRouter();
+  const log = logger();
   const [auth, setAuth] = useAuth() as any;
   const [settings] = useSettings();
   const {
@@ -73,10 +74,11 @@ export default function LoginScreen() {
 
   // API: login
   const {
+    data: loginData,
     loading: submitting,
     error: submitError,
     execute: submitLogin,
-  } = usePost<any, LoginFormValues>(AUTH_ENDPOINTS.login);
+  } = usePost<any, any>(AUTH_ENDPOINTS.login, API_CLIENT_TYPES.AUTH);
 
   /**
    * Handles validated form submission.
@@ -92,33 +94,45 @@ export default function LoginScreen() {
    * @param data Parsed and validated form values
    */
   const onSubmit = async (data: LoginFormValues) => {
-    const log = logger();
     log("Login submit", data);
+    const apiPaylod = {
+      email: "one@example.com",
+      password: "123456",
+    };
     try {
-      // const response = await submitLogin(data);
-      // log("Login response", response);
-      // After successful login, require OTP verification before granting access
-      router.push({
-        pathname: "/(screens)/auth/verify-otp",
-        params: { context: "login" },
-      });
+      await submitLogin(apiPaylod);
     } catch (e) {
       // Error state handled by hook; show toast as well
       const message = e instanceof Error ? e.message : "Login failed";
       showToast(message, { variant: "error", position: "top" });
     }
   };
-  // Removed auto-redirect: even if already authenticated, keep user on Login screen
+
+  const handleLoginSuccess = async (token: string) => {
+    await setAuth({
+      token: token,
+    } as any);
+    // After login successful login, require OTP verification before granting access
+    router.push({
+      pathname: "/(screens)/auth/verify-otp",
+      params: { context: "login" },
+    });
+  };
 
   // Also react to hook error state changes (defensive)
   /**
    * Reflect asynchronous submit errors via toast notifications.
    */
   useEffect(() => {
+    console.log("Login data", loginData);
+    if (loginData?.token) {
+      handleLoginSuccess(loginData?.token);
+    }
+
     if (submitError) {
       showToast(submitError, { variant: "error", position: "top" });
     }
-  }, [submitError]);
+  }, [submitError, loginData]);
 
   // Bottom sheet state & handlers
   const [forgotSheetOpen, setForgotSheetOpen] = useState<boolean>(false);
@@ -278,7 +292,6 @@ export default function LoginScreen() {
       LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION
     );
   };
-
   return (
     <SafeAreaView style={styles.container}>
       <Header title="Login" hideBackIcon onBackPress={undefined} />
