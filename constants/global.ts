@@ -283,3 +283,14 @@ export const API_CLIENT_TYPES = {
 
 export type ApiClientType =
   (typeof API_CLIENT_TYPES)[keyof typeof API_CLIENT_TYPES];
+
+export const SOCKET_EVENTS = {
+  NEW_OFFER: "trip-offer",
+} as const;
+
+export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
+
+export const SOCKET = {
+  OFFERS_SERVER_URL:
+    process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.100.160:3002",
+} as const;

@@ -21,6 +21,7 @@ import { useDriver } from "@/context/DriverContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
 import { usePost } from "@/hooks/usePost";
+import { useSocket } from "@/hooks/useSocket";
 import { logger, removeStorageItem, setStorageItem } from "@/utils/helpers";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
@@ -40,6 +41,9 @@ export default function HomeScreen() {
   const [driver, setDriver] = useDriver();
   const { notifications } = useDriver();
   const [settings, setSettings] = useSettings();
+  const { connectSocket, disconnectSocket } = useSocket({
+    driverId: auth?.user?.id,
+  });
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation, loading: offlineLoading } = useDelete(
     DRIVER_ENDPOINTS.markOffline(auth?.user?.id || "")
@@ -164,8 +168,18 @@ export default function HomeScreen() {
           JSON.stringify(payload)
         );
 
+        // Connect to socket when going online
+        try {
+          await connectSocket();
+          log("[HomeScreen] Socket connected successfully");
+        } catch (error) {
+          log("[HomeScreen] Failed to connect socket:", error);
+          // Don't fail the online process if socket connection fails
+        }
+
         // Only set driver online if API call succeeds
         await setDriver({ ...(driver ?? {}), online: true });
+
         showToast("You are now Online", { variant: "success" });
 
         // Interval loop is managed centrally in OnlineLocationTracker
@@ -188,6 +202,15 @@ export default function HomeScreen() {
         // Clear the previous location storage when going offline
         await removeStorageItem(PREVIOUS_LOCATION_STORAGE_KEY);
         log("[HomeScreen] Cleared previous location storage");
+
+        // Disconnect socket when going offline
+        try {
+          disconnectSocket();
+          log("[HomeScreen] Socket disconnected successfully");
+        } catch (error) {
+          log("[HomeScreen] Error disconnecting socket:", error);
+          // Don't fail the offline process if socket disconnection fails
+        }
 
         await setDriver({
           ...(driver ?? {}),

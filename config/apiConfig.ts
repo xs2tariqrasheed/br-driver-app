@@ -49,7 +49,7 @@ export interface ApiError {
  */
 const createApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://172.20.96.213:3000",
+    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -166,7 +166,7 @@ const createApiClient = (): AxiosInstance => {
 const createAuthApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://172.20.96.213:3001",
+      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -276,7 +276,7 @@ const createAuthApiClient = (): AxiosInstance => {
 const createMeApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://172.20.96.213:3001",
+      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",

@@ -53,6 +53,7 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "rn-swipe-button": "^3.0.1",
+    "socket.io-client": "^4.8.1",
     "toastify-react-native": "^7.2.3"
   },
   "devDependencies": {

@@ -1,3 +1,4 @@
+import { GlobalSocketListener } from "@/components/GlobalSocketListener";
 import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import { ToastHost } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
@@ -43,7 +44,6 @@ export default function RootLayout() {
             <AuthProvider>
               <DriverProvider>
                 <SettingsProvider>
-                  <OnlineLocationTracker />
                   <Stack initialRouteName="(screens)/auth">
                     <Stack.Screen
                       name="(screens)/auth"
@@ -69,6 +69,10 @@ export default function RootLayout() {
                   </Stack>
                   <StatusBar style="auto" />
                   <ToastHost />
+                  {/* Global Socket Listener */}
+                  <GlobalSocketListener />
+                  {/* Online Location Tracker */}
+                  <OnlineLocationTracker />
                 </SettingsProvider>
               </DriverProvider>
             </AuthProvider>

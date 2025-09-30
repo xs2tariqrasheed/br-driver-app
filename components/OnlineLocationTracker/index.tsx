@@ -15,7 +15,7 @@ import {
 } from "@/utils/helpers";
 import * as Location from "expo-location";
 import { usePathname } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 
 const OnlineLocationTracker: React.FC = () => {
@@ -26,63 +26,68 @@ const OnlineLocationTracker: React.FC = () => {
   const { execute: postOnlineLocation } = usePost(
     DRIVER_ENDPOINTS.postOnlineLocation(auth?.user?.id || "")
   );
-  const intervalRef = useRef<NodeJS.Timer | null>(null);
-  const appState = useRef(AppState.currentState);
-  const driverOnlineRef = useRef<boolean>(!!driver?.online);
-  const disableTrackingRef = useRef<boolean>(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [appIsActive, setAppIsActive] = useState(
+    AppState.currentState === "active"
+  );
 
   // Check if we should disable tracking
-  const disableTracking =
+  const trackingBlocked =
     pathname === "/(screens)/active-ride" ||
     pathname.startsWith("/auth") ||
-    !auth?.token ||
-    !driver?.online;
+    !auth?.token;
+
+  const shouldTrack = !!driver?.online && !trackingBlocked && appIsActive;
 
   // Debug logging
   log(
     `[OnlineLocationTracker] Debug - pathname: ${pathname}, hasToken: ${!!auth?.token}, driverOnline: ${
       driver?.online
-    }, disableTracking: ${disableTracking}`
+    }, appIsActive: ${appIsActive}, trackingBlocked: ${trackingBlocked}, shouldTrack: ${shouldTrack}`
   );
 
-  // Keep latest values available inside interval callback without stale closures
+  // Listen to AppState changes - ONLY update state, don't manage intervals
   useEffect(() => {
-    driverOnlineRef.current = !!driver?.online;
-  }, [driver?.online]);
-
-  useEffect(() => {
-    disableTrackingRef.current = disableTracking;
-  }, [disableTracking]);
-
-  const start = () => {
-    // Don't start tracking if conditions are met
-    if (disableTrackingRef.current || !driverOnlineRef.current) {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      const isActive = nextState === "active";
       log(
-        "[OnlineLocationTracker] Skipping location tracking - disabled due to current conditions"
+        `[OnlineLocationTracker] AppState changed to: ${nextState} (active: ${isActive})`
+      );
+      setAppIsActive(isActive);
+    });
+    return () => sub.remove();
+  }, [log]);
+
+  // Main tracking effect - reacts to shouldTrack changes
+  useEffect(() => {
+    // Clear any existing interval first
+    if (intervalRef.current) {
+      log(
+        "[OnlineLocationTracker] Clearing existing interval before state change"
+      );
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    if (!shouldTrack) {
+      log(
+        "[OnlineLocationTracker] Tracking disabled - interval cleared and not restarting"
       );
       return;
     }
 
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current as unknown as number);
-      intervalRef.current = null;
-    }
-    intervalRef.current = setInterval(async () => {
-      try {
-        // Double check using refs to avoid stale closures
-        if (disableTrackingRef.current || !driverOnlineRef.current) {
-          log(
-            "[OnlineLocationTracker] Tracking disabled or driver offline - clearing interval"
-          );
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current as unknown as number);
-            intervalRef.current = null;
-          }
-          return;
-        }
+    log(
+      "[OnlineLocationTracker] Starting location tracking - driver is online and conditions allow tracking"
+    );
 
+    // Function to run tracking tick
+    const runTrackingTick = async () => {
+      try {
         const loc = await Location.getCurrentPositionAsync({});
-        const current = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        const current = {
+          lat: loc.coords.latitude,
+          lng: loc.coords.longitude,
+        };
         const prevRaw = await getStorageItem(PREVIOUS_LOCATION_STORAGE_KEY);
         const prev = prevRaw
           ? (JSON.parse(prevRaw) as { lat: number; lng: number })
@@ -94,7 +99,16 @@ const OnlineLocationTracker: React.FC = () => {
             prev ? `${prev.lat}, ${prev.lng}` : "None"
           }`
         );
+
         const distanceMeters = calculateDistanceMeters(prev, current);
+
+        if (prev && !Number.isFinite(distanceMeters)) {
+          log(
+            "[OnlineLocationTracker] Invalid distance calculated - skipping API call"
+          );
+          return;
+        }
+
         if (distanceMeters > MENTIONED_DISTANCE) {
           log(
             `[OnlineLocationTracker] Moved ${distanceMeters}m (threshold: ${MENTIONED_DISTANCE}m) - calling API`
@@ -112,53 +126,28 @@ const OnlineLocationTracker: React.FC = () => {
       } catch (e) {
         log("[OnlineLocationTracker] interval error", e);
       }
-    }, ONLINE_LOCATION_INTERVAL_MS) as unknown as NodeJS.Timer;
-  };
+    };
 
-  useEffect(() => {
-    // React to state changes: ensure interval cleared when disabled/offline; start when allowed
-    if (driver?.online && !disableTracking) {
-      log(
-        "[OnlineLocationTracker] Starting location tracking - driver is online"
-      );
-      start();
-    } else {
-      if (intervalRef.current) {
-        log(
-          "[OnlineLocationTracker] Clearing interval - tracking disabled or driver offline"
-        );
-        clearInterval(intervalRef.current as unknown as number);
-        intervalRef.current = null;
-      }
-    }
+    // Run immediately
+    runTrackingTick();
+
+    // Start interval
+    intervalRef.current = setInterval(
+      runTrackingTick,
+      ONLINE_LOCATION_INTERVAL_MS
+    );
+
+    // Cleanup on unmount or when shouldTrack changes
     return () => {
       if (intervalRef.current) {
-        log("[OnlineLocationTracker] Cleanup - clearing interval on unmount");
-        clearInterval(intervalRef.current as unknown as number);
+        log(
+          "[OnlineLocationTracker] Cleanup - clearing interval on unmount or dependency change"
+        );
+        clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     };
-  }, [driver?.online, disableTracking]);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (nextState) => {
-      const was = appState.current;
-      appState.current = nextState;
-      if (was.match(/inactive|background/) && nextState === "active") {
-        if (driverOnlineRef.current && !disableTrackingRef.current) {
-          log(
-            "[OnlineLocationTracker] App became active - restarting tracking"
-          );
-          start();
-        } else {
-          log(
-            "[OnlineLocationTracker] App became active but tracking disabled/offline - not starting"
-          );
-        }
-      }
-    });
-    return () => sub.remove();
-  }, [driver?.online, disableTracking]);
+  }, [shouldTrack, log, postOnlineLocation]);
 
   return null;
 };
