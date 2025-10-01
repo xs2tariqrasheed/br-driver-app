@@ -61,12 +61,6 @@
           "icon": "./assets/images/black-bell-icon.png",
           "color": "#007A7A"
         }
-      ],
-      [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8"
-        }
       ]
     ],
     "experiments": {
