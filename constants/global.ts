@@ -292,5 +292,5 @@ export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
 
 export const SOCKET = {
   OFFERS_SERVER_URL:
-    process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.100.160:3002",
+    process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://172.20.96.213:3002",
 } as const;

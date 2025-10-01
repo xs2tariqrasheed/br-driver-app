@@ -16,7 +16,7 @@ import Logo from "@/components/Logo";
 import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import { AUTH_ENDPOINTS } from "@/constants/endpoints";
+import { AUTH_ENDPOINTS, DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import {
   API_CLIENT_TYPES,
   DRIVER_TYPES,
@@ -25,9 +25,11 @@ import {
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
+import { useDelete } from "@/hooks/useDelete";
 import { useFetch } from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { clearStorage, logger } from "@/utils/helpers";
+import { disconnectSocket } from "@/utils/socket";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 // OTP length is centralized in constants/global.ts
@@ -43,7 +45,7 @@ export default function VerifyOtpScreen() {
   const log = logger();
   const { context } = useLocalSearchParams<{ context?: string }>();
   const [currentAuth, setAuth] = useAuth();
-  const [, setDriver] = useDriver();
+  const [driver, setDriver] = useDriver();
   const [otp, setOtp] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [verified, setVerified] = useState<boolean>(false);
@@ -71,6 +73,11 @@ export default function VerifyOtpScreen() {
     error: userDataError,
   } = useFetch(AUTH_ENDPOINTS.getCurrentUser, API_CLIENT_TYPES.ME);
 
+  // Offline API using shared delete hook
+  const { execute: deleteOnlineLocation } = useDelete(
+    DRIVER_ENDPOINTS.markOffline(currentAuth?.user?.id || "")
+  );
+
   const disabled = verifying || resending || loading;
 
   // Handles granting app access after a successful OTP verification for login
@@ -82,6 +89,28 @@ export default function VerifyOtpScreen() {
   // Handles profile deletion cleanup and navigation after OTP verification
   const completeDeleteProfileAfterOtp = async () => {
     try {
+      // Call offline API if driver is online
+      if (driver?.online) {
+        try {
+          log("[VerifyOtpScreen] Marking driver as offline via API");
+          await deleteOnlineLocation();
+          log("[VerifyOtpScreen] Driver successfully marked as offline");
+        } catch (error) {
+          log("[VerifyOtpScreen] Error marking driver offline:", error);
+          // Continue with delete even if API call fails
+        }
+      }
+
+      // Disconnect socket
+      try {
+        disconnectSocket();
+        log("[VerifyOtpScreen] Socket disconnected successfully");
+      } catch (error) {
+        log("[VerifyOtpScreen] Error disconnecting socket:", error);
+        // Continue with delete even if socket disconnect fails
+      }
+
+      // Clear storage and reset contexts
       await clearStorage();
       await setAuth(null);
       await setDriver(null);

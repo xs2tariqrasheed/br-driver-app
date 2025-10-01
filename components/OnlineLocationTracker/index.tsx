@@ -7,6 +7,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { usePost } from "@/hooks/usePost";
+import { useSocket } from "@/hooks/useSocket";
 import {
   calculateDistanceMeters,
   getStorageItem,
@@ -26,10 +27,14 @@ const OnlineLocationTracker: React.FC = () => {
   const { execute: postOnlineLocation } = usePost(
     DRIVER_ENDPOINTS.postOnlineLocation(auth?.user?.id || "")
   );
+  const { connectSocket, socketStatus } = useSocket({
+    driverId: auth?.user?.id,
+  });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [appIsActive, setAppIsActive] = useState(
     AppState.currentState === "active"
   );
+  const [wasInBackground, setWasInBackground] = useState(false);
 
   // Check if we should disable tracking
   const trackingBlocked =
@@ -43,20 +48,76 @@ const OnlineLocationTracker: React.FC = () => {
   log(
     `[OnlineLocationTracker] Debug - pathname: ${pathname}, hasToken: ${!!auth?.token}, driverOnline: ${
       driver?.online
-    }, appIsActive: ${appIsActive}, trackingBlocked: ${trackingBlocked}, shouldTrack: ${shouldTrack}`
+    }, appIsActive: ${appIsActive}, socketStatus: ${socketStatus}, trackingBlocked: ${trackingBlocked}, shouldTrack: ${shouldTrack}`
   );
 
-  // Listen to AppState changes - ONLY update state, don't manage intervals
+  // Listen to AppState changes - Handle location tracking and socket reconnection
+  // Note: We do NOT call offline API or disconnect socket on background
+  // because the driver should stay online even when app is backgrounded
   useEffect(() => {
-    const sub = AppState.addEventListener("change", (nextState) => {
+    const sub = AppState.addEventListener("change", async (nextState) => {
       const isActive = nextState === "active";
+      const wasActive = appIsActive;
+
       log(
-        `[OnlineLocationTracker] AppState changed to: ${nextState} (active: ${isActive})`
+        `[OnlineLocationTracker] AppState changed to: ${nextState} (active: ${isActive}, wasActive: ${wasActive})`
       );
+
+      // Track if we were in background
+      if (!wasActive && isActive) {
+        setWasInBackground(true);
+        log(
+          "[OnlineLocationTracker] App became active from background/inactive state"
+        );
+      } else if (wasActive && !isActive) {
+        setWasInBackground(false);
+        log("[OnlineLocationTracker] App went to background/inactive state");
+      }
+
       setAppIsActive(isActive);
+
+      // Reconnect socket when app becomes active and driver is online
+      if (
+        !wasActive &&
+        isActive &&
+        driver?.online &&
+        socketStatus !== "connected"
+      ) {
+        try {
+          log(
+            "[OnlineLocationTracker] Reconnecting socket after app became active..."
+          );
+          await connectSocket();
+          log("[OnlineLocationTracker] Socket reconnected successfully");
+        } catch (error) {
+          log("[OnlineLocationTracker] Failed to reconnect socket:", error);
+        }
+      }
     });
     return () => sub.remove();
-  }, [log]);
+  }, [log, appIsActive, driver?.online, socketStatus, connectSocket]);
+
+  // Handle socket reconnection when driver comes online
+  useEffect(() => {
+    if (driver?.online && socketStatus !== "connected" && appIsActive) {
+      const reconnectSocket = async () => {
+        try {
+          log(
+            "[OnlineLocationTracker] Driver is online but socket not connected, reconnecting..."
+          );
+          await connectSocket();
+          log("[OnlineLocationTracker] Socket reconnected for online driver");
+        } catch (error) {
+          log(
+            "[OnlineLocationTracker] Failed to reconnect socket for online driver:",
+            error
+          );
+        }
+      };
+
+      reconnectSocket();
+    }
+  }, [driver?.online, socketStatus, appIsActive, connectSocket, log]);
 
   // Main tracking effect - reacts to shouldTrack changes
   useEffect(() => {

@@ -155,61 +155,22 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // If no notifications exist, add sample ones
-        if (!parsed?.notifications || parsed.notifications.length === 0) {
-          log("No notifications found, adding sample ones");
-          const sampleNotifications: NotificationItem[] = [
-            {
-              id: "1",
-              messageTitle: "Ride Assigned",
-              messageBody: "New ride request near you",
-              dateTime: "2 mins ago",
-              messageType: "unread",
-              isSpecial: false,
-            },
-            {
-              id: "2",
-              messageTitle: "Make Stop",
-              messageBody:
-                "Please make a stop as requested by the customer and wait 8 mins you will be paid extra for this stop",
-              dateTime: "Apr 10, 2025 10:30 am",
-              messageType: "unread",
-              isSpecial: true,
-            },
-            {
-              id: "3",
-              messageTitle: "Payment Received",
-              messageBody:
-                "You have received payment for your last ride. Amount: $25.50",
-              dateTime: "1 hour ago",
-              messageType: "unread",
-              isSpecial: false,
-            },
-            {
-              id: "4",
-              messageTitle: "New Bonus Available",
-              messageBody: "Complete 5 more rides today to earn a $10 bonus!",
-              dateTime: "3 hours ago",
-              messageType: "unread",
-              isSpecial: false,
-            },
-          ];
-
+        // Initialize notifications array if it doesn't exist
+        if (!parsed?.notifications) {
+          log("No notifications found, initializing empty array");
           if (parsed) {
             parsed = {
               ...parsed,
-              notifications: sampleNotifications,
+              notifications: [],
               readNotificationIds: [],
             };
           } else {
             parsed = {
               online: false,
-              notifications: sampleNotifications,
+              notifications: [],
               readNotificationIds: [],
             };
           }
-
-          log("Sample notifications added to parsed driver");
         }
 
         dispatch({ type: "HYDRATE_DRIVER", payload: parsed });

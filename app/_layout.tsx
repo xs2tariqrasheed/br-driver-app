@@ -3,6 +3,7 @@ import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import { ToastHost } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { DriverProvider } from "@/context/DriverContext";
+import { RideOfferProvider } from "@/context/RideOfferContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
@@ -44,35 +45,37 @@ export default function RootLayout() {
             <AuthProvider>
               <DriverProvider>
                 <SettingsProvider>
-                  <Stack initialRouteName="(screens)/auth">
-                    <Stack.Screen
-                      name="(screens)/auth"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="(screens)/more"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="(tabs)"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen name="+not-found" />
-                    <Stack.Screen
-                      name="notifications"
-                      options={{ title: "Notifications" }}
-                    />
-                    <Stack.Screen
-                      name="(screens)/heat-map"
-                      options={{ headerShown: false }}
-                    />
-                  </Stack>
-                  <StatusBar style="auto" />
-                  <ToastHost />
-                  {/* Global Socket Listener */}
-                  <GlobalSocketListener />
-                  {/* Online Location Tracker */}
-                  <OnlineLocationTracker />
+                  <RideOfferProvider>
+                    <Stack initialRouteName="(screens)/auth">
+                      <Stack.Screen
+                        name="(screens)/auth"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="(screens)/more"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="(tabs)"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen name="+not-found" />
+                      <Stack.Screen
+                        name="notifications"
+                        options={{ title: "Notifications" }}
+                      />
+                      <Stack.Screen
+                        name="(screens)/heat-map"
+                        options={{ headerShown: false }}
+                      />
+                    </Stack>
+                    <StatusBar style="auto" />
+                    <ToastHost />
+                    {/* Global Socket Listener */}
+                    <GlobalSocketListener />
+                    {/* Online Location Tracker */}
+                    <OnlineLocationTracker />
+                  </RideOfferProvider>
                 </SettingsProvider>
               </DriverProvider>
             </AuthProvider>

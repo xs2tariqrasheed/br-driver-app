@@ -5,11 +5,14 @@ import Header from "@/components/Header";
 import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import { CONTACT_BASE, URLS } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { DEFAULT_SETTINGS, useSettings } from "@/context/SettingsContext";
-import { clearStorage } from "@/utils/helpers";
+import { useDelete } from "@/hooks/useDelete";
+import { clearStorage, logger } from "@/utils/helpers";
+import { disconnectSocket } from "@/utils/socket";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -81,14 +84,42 @@ const ITEMS: MoreItem[] = [
 
 export default function MoreScreen() {
   const router = useRouter();
-  const [, setAuth] = useAuth();
-  const [, setDriver] = useDriver();
+  const log = logger();
+  const [auth, setAuth] = useAuth();
+  const [driver, setDriver] = useDriver();
   const [, setSettings] = useSettings();
   const [logoutSheetOpen, setLogoutSheetOpen] = useState(false);
   const [deleteProfileSheetOpen, setDeleteProfileSheetOpen] = useState(false);
   const [contactBaseSheetOpen, setContactBaseSheetOpen] = useState(false);
 
+  // Offline API using shared delete hook
+  const { execute: deleteOnlineLocation } = useDelete(
+    DRIVER_ENDPOINTS.markOffline(auth?.user?.id || "")
+  );
+
   const handleDataDelete = async () => {
+    // Call offline API if driver is online
+    if (driver?.online) {
+      try {
+        log("[MoreScreen] Marking driver as offline via API");
+        await deleteOnlineLocation();
+        log("[MoreScreen] Driver successfully marked as offline");
+      } catch (error) {
+        log("[MoreScreen] Error marking driver offline:", error);
+        // Continue with logout/delete even if API call fails
+      }
+    }
+
+    // Disconnect socket
+    try {
+      disconnectSocket();
+      log("[MoreScreen] Socket disconnected successfully");
+    } catch (error) {
+      log("[MoreScreen] Error disconnecting socket:", error);
+      // Continue with logout/delete even if socket disconnect fails
+    }
+
+    // Clear storage and reset contexts
     try {
       await clearStorage();
     } catch {}

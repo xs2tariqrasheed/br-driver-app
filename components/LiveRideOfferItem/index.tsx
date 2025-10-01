@@ -98,6 +98,8 @@ export interface LiveRideOfferItemProps {
   showHiddenJobs?: boolean;
   /** Whether the bid button should be hidden */
   hideBidButton?: boolean;
+  /** Whether to remove the flex from the container */
+  removeFlex?: boolean;
 }
 
 /**
@@ -156,6 +158,7 @@ export default function LiveRideOfferItem({
   isScrolling = false,
   showHiddenJobs = false,
   hideBidButton = false,
+  removeFlex = false,
 }: LiveRideOfferItemProps) {
   const { skipLiveOffer, hideLiveOffer } = useDriver();
   const translateX = new Animated.Value(0);
@@ -353,7 +356,10 @@ export default function LiveRideOfferItem({
               <View
                 style={[
                   styles.container,
-                  { backgroundColor: getBackgroundColor(rideType) },
+                  {
+                    flex: removeFlex ? undefined : 1,
+                    backgroundColor: getBackgroundColor(rideType),
+                  },
                   style,
                 ]}
               >
@@ -432,7 +438,6 @@ const styles = StyleSheet.create({
   },
   container: {
     backgroundColor: textColors.white,
-    flex: 1,
     flexDirection: "column",
     gap: 12,
     borderWidth: 1,

@@ -1,5 +1,6 @@
 import { DESIRED_DESTINATION_EXPIRY_MS, TOKEN_KEY } from "@/constants/global";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import dayjs from "dayjs";
 import * as Location from "expo-location";
 import { Alert } from "react-native";
 
@@ -1277,3 +1278,12 @@ export function formatExpirationTime(expiredAt: string): string {
     return `Expires in ${diffMinutes}m`;
   }
 }
+
+/**
+ * Format a timestamp string into a readable date format
+ * @param timestamp - ISO timestamp string
+ * @returns string - Formatted date string (MM/DD/YYYY hh:mm A)
+ */
+export const formatDateTimestamp = (timestamp: string): string => {
+  return dayjs(timestamp).format("MM/DD/YYYY hh:mm A");
+};
