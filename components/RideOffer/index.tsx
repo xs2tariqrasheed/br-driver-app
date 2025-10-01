@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -16,6 +16,7 @@ import Header from "@/components/Header";
 import LiveRideOfferItem from "@/components/LiveRideOfferItem";
 import { colors, textColors } from "@/constants/colors";
 import { LIVE_JOB_STATUS } from "@/constants/global";
+import { checkOfferStatus } from "@/utils/helpers";
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
 
@@ -38,8 +39,41 @@ interface TripOffer {
 }
 
 interface RideOffer {
+  // Basic ride offer info
+  id: string;
   type: "sequential" | "broadcast";
+  status: "offered" | "accepted" | "skipped" | "expired";
+
+  // Trip offer details
   tripOffer: TripOffer;
+
+  // LiveRideOfferItem required fields
+  rideType: "one-way" | "round-trip" | "hourly";
+  peopleCount: number;
+  rating: number;
+  hasSpecialRequirements: boolean;
+  hasPackage: boolean;
+
+  // Pickup details
+  pickupTime: number;
+  pickupDistance: number;
+  pickupAddress: string;
+
+  // Dropoff details
+  dropoffTime: number;
+  dropoffDistance: number;
+  dropoffAddress: string;
+
+  // Ride details
+  rideTime: number;
+  rideDistance: number;
+  totalPrice: number;
+  driverEarn: number;
+
+  // Button details
+  buttonTitle: string;
+
+  // Timestamps
   timestamp: string;
   timeout: number;
 }
@@ -51,6 +85,7 @@ interface RideOfferModalProps {
   onAccept?: () => void;
   onSkipPrice?: () => void;
   onHide?: () => void;
+  isSubmittingResponse?: boolean;
 }
 
 /**
@@ -65,13 +100,17 @@ interface RideOfferModalProps {
 export default function RideOfferModal({
   visible,
   onClose,
-  offer,
+  offer: offerProp,
   onAccept,
   onSkipPrice,
   onHide,
+  isSubmittingResponse = false,
 }: RideOfferModalProps) {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const mapRef = useRef<MapView>(null);
+
+  const [offer, setOffer] = useState<any | null>(null);
+  const refStatus = useRef<number>(0);
 
   // Modal animation effect
   useEffect(() => {
@@ -126,63 +165,47 @@ export default function RideOfferModal({
 
   const region = getMapRegion();
 
-  // Mock data for the ride offer tile (static data for missing fields)
-  const rideOfferData = {
-    id: "4",
-    status: LIVE_JOB_STATUS.OFFERED,
-    pickupTime: 45,
-    pickupDistance: 180,
-    pickupAddress: "999 Birch Boulevard, Business District, USA",
-    dropoffTime: 20,
-    dropoffDistance: 220,
-    dropoffAddress: "111 Spruce Street, Residential Area, USA",
-    rideTime: 55,
-    rideDistance: 650,
-    totalPrice: 220,
-    driverEarn: 220,
-    buttonTitle: "Waiting",
-    peopleCount: 1,
-    disabled: true,
-    rating: 4.9,
-    hasSpecialRequirements: true,
-    hasPackage: true,
-    rideType: "one-way" as any,
-    createdAt: "2024-01-15T10:45:00Z",
-    expiresAt: "2024-01-15T11:15:00Z",
-    bid: {
-      amount: 20,
-      bosstedAmount: 5,
-      driverEarn: 16.76,
-      numberOfBids: 4,
-      systemEta: 5,
-      systemSuggestedBids: [
-        {
-          amount: 10,
-          driverEarn: 8.38,
-        },
-        {
-          amount: 15,
-          driverEarn: 12.57,
-        },
-        {
-          amount: 20,
-          driverEarn: 16.76,
-        },
-        {
-          amount: 25,
-          driverEarn: 20.95,
-        },
-        {
-          amount: 30,
-          driverEarn: 25.14,
-        },
-      ],
-      boostedPrices: [1, 3, 4, 7],
-      createdAt: "2024-01-15T10:30:00Z",
-      expiresAt: "2024-01-15T11:00:00Z",
-    },
-  };
+  // Set initial offer when offerProp changes
+  useEffect(() => {
+    setOffer(offerProp || null);
+  }, [offerProp]);
 
+  // Status checking interval - only when modal is visible
+  useEffect(() => {
+    if (!visible || !offer) return;
+
+    // Clear any existing interval
+    if (refStatus.current) {
+      clearInterval(refStatus.current);
+      refStatus.current = 0;
+    }
+
+    // Start status checking interval
+    refStatus.current = setInterval(() => {
+      setOffer((prevOffer: any | null) => {
+        if (!prevOffer) return prevOffer;
+        const newStatus = checkOfferStatus(prevOffer);
+        return {
+          ...prevOffer,
+          status: newStatus,
+        };
+      });
+    }, 1000);
+
+    return () => {
+      if (refStatus.current) {
+        clearInterval(refStatus.current);
+        refStatus.current = 0;
+      }
+    };
+  }, [visible, offer]);
+
+  const isOffered = offer?.status === LIVE_JOB_STATUS.OFFERED;
+  const isExpired = offer?.status === LIVE_JOB_STATUS.EXPIRED;
+
+  console.log("STATUS", offer?.status);
+  console.log("IS OFFERED", isOffered);
+  console.log("IS EXPIRED", isExpired);
   return (
     <Modal visible={visible} transparent animationType="none">
       <View style={styles.container}>
@@ -240,7 +263,7 @@ export default function RideOfferModal({
                     longitude: offer.tripOffer.pickupLocation.lng,
                   }}
                   title="Pickup Location"
-                  description={rideOfferData.pickupAddress}
+                  description={offer.pickupAddress}
                   icon={{
                     uri: pickupIconUrl,
                     width: 30,
@@ -257,7 +280,7 @@ export default function RideOfferModal({
                     longitude: offer.tripOffer.dropoffLocation.lng,
                   }}
                   title="Dropoff Location"
-                  description={rideOfferData.dropoffAddress}
+                  description={offer.dropoffAddress}
                   icon={{
                     uri: dropoffIconUrl,
                     width: 30,
@@ -272,11 +295,11 @@ export default function RideOfferModal({
               {/* Ride Offer Tile */}
               <View style={styles.offerSection}>
                 <LiveRideOfferItem
-                  {...rideOfferData}
+                  {...offer}
                   onPressSpecialRequirements={() => {}}
                   onPressPackage={() => {}}
                   onButtonClick={() => {}}
-                  itemStatus={rideOfferData?.status as any}
+                  itemStatus={offer?.status as any}
                   hideBidButton={true}
                   removeFlex
                   disabled
@@ -284,8 +307,7 @@ export default function RideOfferModal({
               </View>
 
               {/* Action Buttons or Expired UI */}
-              {offer?.tripOffer &&
-              rideOfferData.status === LIVE_JOB_STATUS.OFFERED ? (
+              {isOffered && (
                 <View style={styles.buttonContainer}>
                   <Button
                     variant="outlined"
@@ -293,6 +315,8 @@ export default function RideOfferModal({
                     rounded="half"
                     style={styles.hideButton}
                     onPress={onHide}
+                    disabled={isSubmittingResponse}
+                    loading={isSubmittingResponse}
                   >
                     Hide
                   </Button>
@@ -303,6 +327,8 @@ export default function RideOfferModal({
                     rounded="half"
                     style={styles.skipButton}
                     onPress={onSkipPrice}
+                    disabled={isSubmittingResponse}
+                    loading={isSubmittingResponse}
                   >
                     Skip Price
                   </Button>
@@ -313,11 +339,14 @@ export default function RideOfferModal({
                     rounded="half"
                     style={styles.acceptButton}
                     onPress={onAccept}
+                    disabled={isSubmittingResponse}
+                    loading={isSubmittingResponse}
                   >
                     Accept
                   </Button>
                 </View>
-              ) : (
+              )}
+              {isExpired && (
                 <View style={styles.expiredContainer}>
                   <View style={styles.expiredAlert}>
                     <Text style={styles.expiredText}>

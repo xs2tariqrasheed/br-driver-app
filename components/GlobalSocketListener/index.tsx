@@ -1,12 +1,17 @@
 import { useEffect } from "react";
 
-import { SOCKET_EVENTS } from "@/constants/global";
+import {
+  NOTIFICATION_TYPES,
+  NotificationType,
+  RIDE_OFFER_STORAGE_KEY,
+  SOCKET_EVENTS,
+} from "@/constants/global";
 import { useSocket } from "@/hooks/useSocket";
 
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useRideOffer } from "@/context/RideOfferContext";
-import { logger } from "@/utils/helpers";
+import { formatDateTimestamp, logger, setStorageItem } from "@/utils/helpers";
 import { showToast } from "../Toast";
 
 /**
@@ -33,7 +38,7 @@ import { showToast } from "../Toast";
 export function GlobalSocketListener() {
   const log = logger();
   const [auth] = useAuth();
-  const { onEvent, onDisconnect } = useSocket({
+  const { onEvent, onDisconnect, socketStatus } = useSocket({
     driverId: auth?.user?.id,
   });
   const { addNotification } = useDriver();
@@ -42,7 +47,10 @@ export function GlobalSocketListener() {
 
   useEffect(() => {
     if (!driver?.online) {
-      log("🔴 Driver not online, skipping global listeners setup");
+      log(
+        `🔴 Driver not online OR Socket status is ${socketStatus}, skipping global listeners setup`
+      );
+      log("Socket status:", socketStatus);
       return;
     }
 
@@ -61,12 +69,17 @@ export function GlobalSocketListener() {
     const newJobOfferCleanup = onEvent(
       SOCKET_EVENTS.NEW_OFFER,
       async (data: any) => {
-        log("💬 Global new job offer received:", data);
+        log("💬 Global new job offer received test:", data);
 
         try {
-          // Transform socket data to RideOffer format
+          // Transform socket data to RideOffer format with complete mock data
           const rideOffer = {
+            // Basic ride offer info
+            id: data.tripOffer?.tripId || data.tripId || `ride-${Date.now()}`,
             type: data.type || ("sequential" as "sequential" | "broadcast"),
+            status: "offered" as const,
+
+            // Trip offer details
             tripOffer: {
               tripId:
                 data.tripOffer?.tripId || data.tripId || String(Date.now()),
@@ -94,12 +107,39 @@ export function GlobalSocketListener() {
                 parseFloat(data.tripOffer?.fare) ||
                 parseFloat(data.offerAmount) ||
                 55,
-              expiresAt: data.tripOffer?.expiresAt
-                ? new Date(data.tripOffer.expiresAt)
-                : data.expiredAt
-                ? new Date(data.expiredAt)
-                : new Date(Date.now() + 30000), // Default 30 seconds
+              expiresAt: data.tripOffer?.expiresAt,
             },
+
+            // LiveRideOfferItem required fields
+            rideType: data.rideType || ("one-way" as const),
+            peopleCount: data.peopleCount || 2,
+            rating: data.rating || 4.5,
+            hasSpecialRequirements: data.hasSpecialRequirements || false,
+            hasPackage: data.hasPackage || false,
+
+            // Pickup details
+            pickupTime: data.pickupTime || 13,
+            pickupDistance: data.pickupDistance || 3.4,
+            pickupAddress:
+              data.pickupAddress ||
+              "Pascal Ave N & N Terrace AR. Roseville 69 Main Street",
+
+            // Dropoff details
+            dropoffTime: data.dropoffTime || 24,
+            dropoffDistance: data.dropoffDistance || 3.4,
+            dropoffAddress:
+              data.dropoffAddress || "3272 Gale Ave Long Island City NY 11101",
+
+            // Ride details
+            rideTime: data.rideTime || 49,
+            rideDistance: data.rideDistance || 23.4,
+            totalPrice: data.totalPrice || 55,
+            driverEarn: data.driverEarn || 46,
+
+            // Button details
+            buttonTitle: data.buttonTitle || "",
+
+            // Timestamps
             timestamp: data.timestamp || new Date().toISOString(),
             timeout: data.timeout || 30000, // Default 30 seconds
           };
@@ -109,27 +149,26 @@ export function GlobalSocketListener() {
           // Add notification to notification center
           const notification = {
             id: `ride-offer-${rideOffer.tripOffer.tripId}-${Date.now()}`,
-            messageTitle: "New Ride Offer",
+            messageTitle: "Special Ride Offer",
             messageBody: `${
               rideOffer.type === "sequential" ? "Sequential" : "Broadcast"
             } ride offer received. Fare: $${rideOffer.tripOffer.fare.toFixed(
               2
             )}`,
-            dateTime: new Date().toISOString(),
+            dateTime: formatDateTimestamp(rideOffer?.timestamp),
             messageType: "unread" as const,
-            isSpecial: true,
+            notificationType:
+              NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER as NotificationType,
+            rideOfferData: rideOffer,
           };
           await addNotification(notification);
+
+          // Store ride offer data separately for easy retrieval
+          setStorageItem(RIDE_OFFER_STORAGE_KEY, JSON.stringify(rideOffer));
           log("✅ Ride offer notification added to notification center");
 
           // Show the modal using global handlers
           showRideOfferModal(rideOffer);
-
-          // Show toast notification
-          showToast("New ride offer received!", {
-            variant: "success",
-            position: "top",
-          });
         } catch (error) {
           log("❌ Error processing ride offer:", error);
           showToast("Failed to load ride offer", {
@@ -155,7 +194,13 @@ export function GlobalSocketListener() {
       });
       log("✅ Global socket listeners cleaned up");
     };
-  }, [driver?.online, onEvent, showRideOfferModal, addNotification]);
+  }, [
+    driver?.online,
+    socketStatus,
+    onEvent,
+    showRideOfferModal,
+    addNotification,
+  ]);
 
   // Component renders nothing - only provides side effects
   return null;

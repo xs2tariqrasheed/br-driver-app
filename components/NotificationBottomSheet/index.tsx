@@ -3,8 +3,11 @@ import Button from "@/components/Button";
 import Input from "@/components/Form/Input";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { NOTIFICATION_TYPES, RIDE_OFFER_STORAGE_KEY } from "@/constants/global";
 import { NotificationItem } from "@/context/DriverContext";
-import React, { useState } from "react";
+import { useRideOffer } from "@/context/RideOfferContext";
+import { getStorageItem } from "@/utils/helpers";
+import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 export interface NotificationBottomSheetProps {
@@ -25,6 +28,28 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   onSendReply,
 }) => {
   const [replyText, setReplyText] = useState("");
+  const [rideOffer, setRideOffer] = useState<any>(null);
+  const { showRideOfferModal } = useRideOffer();
+
+  // Load ride offer data when notification changes
+  useEffect(() => {
+    const loadRideOffer = async () => {
+      if (notification?.id) {
+        try {
+          const storedData = await getStorageItem(RIDE_OFFER_STORAGE_KEY);
+          if (storedData) {
+            const parsedData = JSON.parse(storedData);
+            setRideOffer(parsedData);
+            console.log("👁️ rideOffer loaded:", parsedData);
+          }
+        } catch (error) {
+          console.error("Error loading ride offer data:", error);
+        }
+      }
+    };
+
+    loadRideOffer();
+  }, [notification?.id]);
 
   if (!notification) return null;
 
@@ -46,6 +71,13 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
 
   const handleDone = () => {
     onClose();
+  };
+
+  const handleViewDetails = () => {
+    if (rideOffer) {
+      showRideOfferModal(rideOffer);
+      onClose(); // Close the bottom sheet when opening the ride offer modal
+    }
   };
 
   return (
@@ -70,8 +102,20 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
           {notification.messageBody}
         </Typography>
 
-        {/* Special notification reply section */}
-        {notification.isSpecial ? (
+        {/* Special ride offer notification section */}
+        {notification.notificationType ===
+          NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER && rideOffer ? (
+          <View style={styles.specialRideOfferSection}>
+            <Button
+              rounded="half"
+              variant="primary"
+              onPress={handleViewDetails}
+            >
+              View Details
+            </Button>
+          </View>
+        ) : notification.isSpecial ? (
+          /* Special notification reply section */
           <View style={styles.replySection}>
             <Input
               placeholder="Reply"
@@ -94,7 +138,6 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
                 block="half"
                 variant="primary"
                 onPress={handleSendReply}
-                style={[styles.button, styles.sendButton]}
               >
                 Send
               </Button>
@@ -103,12 +146,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
         ) : (
           /* Regular notification done button */
           <View style={styles.doneSection}>
-            <Button
-              rounded="half"
-              variant="primary"
-              onPress={handleDone}
-              style={[styles.button, styles.doneButton]}
-            >
+            <Button rounded="half" variant="primary" onPress={handleDone}>
               Done
             </Button>
           </View>
@@ -183,6 +221,15 @@ const styles = StyleSheet.create({
   doneButtonText: {
     color: textColors.white,
     fontWeight: "600",
+  },
+  specialRideOfferSection: {
+    marginTop: "auto",
+    paddingBottom: 20,
+  },
+  viewDetailsButton: {
+    backgroundColor: textColors.teal700,
+    borderRadius: 25,
+    paddingVertical: 12,
   },
 });
 

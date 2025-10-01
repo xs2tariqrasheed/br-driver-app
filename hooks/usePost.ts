@@ -17,6 +17,7 @@
 
 import {
   apiClient,
+  auctionApiClient,
   authApiClient,
   meApiClient,
   type ApiResponse,
@@ -66,12 +67,16 @@ export const usePost = <T = any, B = any>(
             ? authApiClient
             : clientType === API_CLIENT_TYPES.ME
             ? meApiClient
+            : clientType === API_CLIENT_TYPES.AUCTION
+            ? auctionApiClient
             : apiClient;
         const logPrefix =
           clientType === API_CLIENT_TYPES.AUTH
             ? "[usePost-Auth]"
             : clientType === API_CLIENT_TYPES.ME
             ? "[usePost-Me]"
+            : clientType === API_CLIENT_TYPES.AUCTION
+            ? "[usePost-Auction]"
             : "[usePost]";
 
         const response = await client.post<ApiResponse<T>>(endpoint, body, {
@@ -97,6 +102,8 @@ export const usePost = <T = any, B = any>(
             ? "[usePost-Auth]"
             : clientType === API_CLIENT_TYPES.ME
             ? "[usePost-Me]"
+            : clientType === API_CLIENT_TYPES.AUCTION
+            ? "[usePost-Auction]"
             : "[usePost]";
         log(`${logPrefix} ❌ Error`, {
           endpoint,

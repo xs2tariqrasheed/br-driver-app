@@ -19,6 +19,27 @@ import io from "socket.io-client";
 
 let socket: ReturnType<typeof io> | null = null;
 
+type SocketHandler = (...args: any[]) => void;
+
+const eventHandlers = new Map<string, Set<SocketHandler>>();
+const disconnectHandlers = new Set<SocketHandler>();
+
+const attachStoredHandlers = () => {
+  if (!socket) {
+    return;
+  }
+
+  eventHandlers.forEach((handlers, eventName) => {
+    handlers.forEach((handler) => {
+      socket?.on(eventName, handler);
+    });
+  });
+
+  disconnectHandlers.forEach((handler) => {
+    socket?.on("disconnect", handler as (reason: string) => void);
+  });
+};
+
 /**
  * Connects to the Socket.IO server with mobile-optimized configuration
  *
@@ -40,6 +61,7 @@ export const connectSocket = async (): Promise<ReturnType<typeof io>> => {
 
   // Disconnect existing socket if any
   if (socket) {
+    socket.off();
     socket.disconnect();
     socket = null;
   }
@@ -58,6 +80,8 @@ export const connectSocket = async (): Promise<ReturnType<typeof io>> => {
     reconnectionDelayMax: 5000, // Max 5 seconds between reconnection attempts
     randomizationFactor: 0.5, // Add randomness to reconnection delay
   });
+
+  attachStoredHandlers();
 
   return socket;
 };
@@ -87,9 +111,14 @@ export const connectSocket = async (): Promise<ReturnType<typeof io>> => {
 export const onDisconnect = (
   handler: (reason: string) => void
 ): (() => void) => {
-  if (!socket) return () => {};
-  socket.on("disconnect", handler);
+  disconnectHandlers.add(handler);
+
+  if (socket) {
+    socket.on("disconnect", handler);
+  }
+
   return () => {
+    disconnectHandlers.delete(handler);
     if (!socket) return;
     socket.off("disconnect", handler);
   };
@@ -146,9 +175,22 @@ export const onEvent = (
   eventName: string,
   handler: (data: any) => void
 ): (() => void) => {
-  if (!socket) return () => {};
-  socket.on(eventName, handler);
+  const handlers = eventHandlers.get(eventName) ?? new Set();
+  handlers.add(handler);
+  eventHandlers.set(eventName, handlers);
+
+  if (socket) {
+    socket.on(eventName, handler);
+  }
+
   return () => {
+    if (!eventHandlers.has(eventName)) return;
+    const existingHandlers = eventHandlers.get(eventName);
+    existingHandlers?.delete(handler);
+    if (existingHandlers && existingHandlers.size === 0) {
+      eventHandlers.delete(eventName);
+    }
+
     if (!socket) return;
     socket.off(eventName, handler);
   };
@@ -169,7 +211,11 @@ export const onEvent = (
 export const disconnectSocket = (): void => {
   if (socket) {
     console.log("🔌 Disconnecting socket");
+    socket.off();
     socket.disconnect();
     socket = null;
   }
+
+  eventHandlers.clear();
+  disconnectHandlers.clear();
 };

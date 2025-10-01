@@ -17,6 +17,7 @@
 
 import {
   apiClient,
+  auctionApiClient,
   authApiClient,
   meApiClient,
   type ApiResponse,
@@ -80,12 +81,16 @@ export const useFetch = <T = any>(endpoint: string, clientType?: string) => {
             ? authApiClient
             : clientType === API_CLIENT_TYPES.ME
             ? meApiClient
+            : clientType === API_CLIENT_TYPES.AUCTION
+            ? auctionApiClient
             : apiClient;
         const logPrefix =
           clientType === API_CLIENT_TYPES.AUTH
             ? "[useFetch-Auth]"
             : clientType === API_CLIENT_TYPES.ME
             ? "[useFetch-Me]"
+            : clientType === API_CLIENT_TYPES.AUCTION
+            ? "[useFetch-Auction]"
             : "[useFetch]";
 
         const response = await client.get<ApiResponse<T>>(endpoint, {
@@ -110,6 +115,8 @@ export const useFetch = <T = any>(endpoint: string, clientType?: string) => {
             ? "[useFetch-Auth]"
             : clientType === API_CLIENT_TYPES.ME
             ? "[useFetch-Me]"
+            : clientType === API_CLIENT_TYPES.AUCTION
+            ? "[useFetch-Auction]"
             : "[useFetch]";
         log(`${logPrefix} ❌ Error`, { endpoint, error: errorMessage });
         setState({

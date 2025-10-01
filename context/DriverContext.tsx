@@ -1,8 +1,10 @@
 import {
   DRIVER_STORAGE_KEY,
   LOCAL_JOB_STATUS,
+  NotificationType,
   type LocalJobStatus,
 } from "@/constants/global";
+
 import {
   DesiredDestination,
   filterExpiredDestinations,
@@ -30,6 +32,8 @@ export type NotificationItem = {
   dateTime: string;
   messageType: "read" | "unread";
   isSpecial?: boolean;
+  notificationType?: NotificationType;
+  rideOfferData?: any;
 };
 
 export type HiddenLiveOffer = {

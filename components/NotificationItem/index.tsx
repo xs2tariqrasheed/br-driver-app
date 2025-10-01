@@ -4,11 +4,11 @@ import { textColors } from "@/constants/colors";
 import { Image } from "expo-image";
 import React from "react";
 import {
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    type StyleProp,
-    type ViewStyle,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 
 export type MessageType = "read" | "unread";
@@ -43,11 +43,11 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   style,
 }) => {
   const isRead = messageType === "read";
-  
+
   const handlePress = () => {
     onPress?.(id);
   };
-  
+
   return (
     <TouchableOpacity
       style={[
@@ -62,16 +62,12 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       <View style={styles.logoContainer}>
         <Logo size="Small" />
       </View>
-      
+
       {/* Content */}
       <View style={styles.contentContainer}>
         {/* Title Row with optional double tick */}
         <View style={styles.titleRow}>
-          <Typography
-            type="bodyLarge"
-            weight="medium"
-            style={styles.title}
-          >
+          <Typography type="bodyLarge" weight="medium" style={styles.title}>
             {messageTitle}
           </Typography>
           {isRead && (
@@ -82,7 +78,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             />
           )}
         </View>
-        
+
         {/* Message Body */}
         <Typography
           type="bodyMedium"
@@ -91,13 +87,9 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         >
           {messageBody}
         </Typography>
-        
+
         {/* Date Time */}
-        <Typography
-          type="bodySmall"
-          weight="regular"
-          style={styles.dateTime}
-        >
+        <Typography type="bodySmall" weight="regular" style={styles.dateTime}>
           {dateTime}
         </Typography>
       </View>

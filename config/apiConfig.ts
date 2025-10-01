@@ -49,7 +49,124 @@ export interface ApiError {
  */
 const createApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://172.20.96.213:3000",
+    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
+    HEADERS: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+  };
+  const client = axios.create({
+    baseURL: API_CONFIG.BASE_URL,
+    headers: API_CONFIG.HEADERS,
+  });
+
+  /**
+   * Request Interceptor
+   *
+   * Caller: Axios interceptor system
+   * Purpose: Log requests and add authentication headers
+   * Input/Output:
+   *   - Input: Axios request config
+   *   - Output: Modified request config or rejected promise
+   * Description: Logs outgoing requests (dev-only via logger) and reads the auth token
+   *             from AsyncStorage (key: "@token"), adding it to the Authorization header.
+   *             Handles request-level errors.
+   * Expected Outcome: Request logging for debugging and proper error handling.
+   */
+  client.interceptors.request.use(
+    async (config) => {
+      log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+      const dynamicBaseUrl = config.baseURL;
+      log(`🚀 Dynamic Base URL: ${dynamicBaseUrl}`);
+      const data = await getStorageItem(AUTH_STORAGE_KEY);
+      const token = data ? JSON.parse(data).token : null;
+      if (token) {
+        config.headers = config.headers || {};
+        (config.headers as Record<string, string>)[
+          "Authorization"
+        ] = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => {
+      log("❌ Request Error:", error);
+      return Promise.reject(error);
+    }
+  );
+
+  /**
+   * Response Interceptor
+   *
+   * Caller: Axios interceptor system
+   * Purpose: Handle common response scenarios and errors
+   * Input/Output:
+   *   - Input: Axios response or error
+   *   - Output: Response or rejected promise with error message
+   * Description: Logs successful responses (dev-only) and handles common error scenarios
+   *             including timeouts, authentication errors, and server errors.
+   *             Provides user-friendly error messages. For 401 responses, simply
+   *             returns an auth error; token persistence is managed via AsyncStorage
+   *             elsewhere in the app (no localStorage in React Native).
+   * Expected Outcome: Consistent error handling with user-friendly messages
+   *                   and proper authentication state management.
+   */
+  client.interceptors.response.use(
+    (response: AxiosResponse) => {
+      // Log successful response for debugging (remove in production)
+      log(`✅ API Response: ${response.status} ${response.config.url}`);
+      return response;
+    },
+    (error: AxiosError) => {
+      // Handle common error scenarios
+      let errorMessage: string = "An unexpected error occurred";
+
+      if (error.code === "ECONNABORTED") {
+        errorMessage = "Request timed out";
+      } else if (error.response?.status === 401) {
+        errorMessage = "Authentication required. Please log in again.";
+      } else if (error.response?.status === 403) {
+        errorMessage =
+          "Access denied. You do not have permission for this action.";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Resource not found";
+      } else if (error.response?.status && error.response.status >= 500) {
+        errorMessage = "Server error";
+      } else if (
+        error.response?.data &&
+        typeof error.response.data === "object" &&
+        "message" in error.response.data
+      ) {
+        errorMessage = (error.response.data as { message: string }).message;
+      }
+
+      log("❌ API Error:", errorMessage);
+      return Promise.reject(new Error(errorMessage));
+    }
+  );
+
+  return client;
+};
+
+/**
+ * Create Auction API Client Function
+ *
+ * Caller: API utility functions and hooks
+ * Purpose: Provide consistent axios configuration with request/response interceptors
+ * Input/Output:
+ *   - Input: None (uses Expo public environment variables for configuration)
+ *   - Output: Configured AxiosInstance with interceptors
+ * Description: Creates axios instance with base URL, default headers, and interceptors.
+ *             Includes request logging and comprehensive error handling for common
+ *             HTTP status codes. Reads the auth token from AsyncStorage and attaches
+ *             it to the Authorization header. Provides consistent error messages.
+ * Expected Outcome: Consistent API client configuration with automatic error handling
+ *                   and proper logging for debugging and monitoring.
+ */
+const createAuctionApiClient = (): AxiosInstance => {
+  const API_CONFIG = {
+    BASE_URL:
+      process.env.EXPO_PUBLIC_OFFERS_SERVER_URL ||
+      "http://192.168.100.160:3002",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -166,7 +283,7 @@ const createApiClient = (): AxiosInstance => {
 const createAuthApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://172.20.96.213:3001",
+      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -276,7 +393,7 @@ const createAuthApiClient = (): AxiosInstance => {
 const createMeApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://172.20.96.213:3001",
+      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -377,5 +494,6 @@ const createMeApiClient = (): AxiosInstance => {
 export const apiClient = createApiClient();
 export const authApiClient = createAuthApiClient();
 export const meApiClient = createMeApiClient();
+export const auctionApiClient = createAuctionApiClient();
 
 export { axios };

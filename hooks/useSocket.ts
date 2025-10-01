@@ -8,7 +8,7 @@ import {
 import { useCallback, useRef, useState } from "react";
 
 // Socket connection status constants
-const STATUS = {
+export const STATUS = {
   DISCONNECTED: "disconnected",
   CONNECTING: "connecting",
   CONNECTED: "connected",

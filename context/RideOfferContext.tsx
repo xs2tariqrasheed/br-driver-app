@@ -1,4 +1,11 @@
+import ETABottomSheet from "@/components/ETABottomSheet";
 import RideOfferModal from "@/components/RideOffer";
+import { showToast } from "@/components/Toast";
+import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
+import { API_CLIENT_TYPES, RIDE_OFFER_STORAGE_KEY } from "@/constants/global";
+import { useAuth } from "@/context/AuthContext";
+import { usePost } from "@/hooks/usePost";
+import { removeStorageItem } from "@/utils/helpers";
 import { createContext, ReactNode, useContext, useState } from "react";
 
 interface TripOffer {
@@ -10,8 +17,41 @@ interface TripOffer {
 }
 
 interface RideOffer {
+  // Basic ride offer info
+  id: string;
   type: "sequential" | "broadcast";
+  status: "offered" | "accepted" | "rejected" | "expired";
+
+  // Trip offer details
   tripOffer: TripOffer;
+
+  // LiveRideOfferItem required fields
+  rideType: "one-way" | "round-trip" | "hourly";
+  peopleCount: number;
+  rating: number;
+  hasSpecialRequirements: boolean;
+  hasPackage: boolean;
+
+  // Pickup details
+  pickupTime: number;
+  pickupDistance: number;
+  pickupAddress: string;
+
+  // Dropoff details
+  dropoffTime: number;
+  dropoffDistance: number;
+  dropoffAddress: string;
+
+  // Ride details
+  rideTime: number;
+  rideDistance: number;
+  totalPrice: number;
+  driverEarn: number;
+
+  // Button details
+  buttonTitle: string;
+
+  // Timestamps
   timestamp: string;
   timeout: number;
 }
@@ -27,12 +67,15 @@ interface RideOfferContextType {
   isRideOfferModalVisible: boolean;
   currentOffer: RideOffer | null;
   modalCallbacks: ModalCallbacks | null;
+  isSubmittingResponse: boolean;
+  isETABottomSheetVisible: boolean;
   // Actions
   showRideOfferModal: (offer: RideOffer, callbacks?: ModalCallbacks) => void;
   hideRideOfferModal: () => void;
   acceptRideOffer: () => Promise<void>;
   skipRideOfferPrice: () => Promise<void>;
   hideRideOffer: () => Promise<void>;
+  submitETA: (eta: number) => Promise<void>;
 }
 
 const RideOfferContext = createContext<RideOfferContextType | undefined>(
@@ -40,11 +83,19 @@ const RideOfferContext = createContext<RideOfferContextType | undefined>(
 );
 
 export function RideOfferProvider({ children }: { children: ReactNode }) {
+  const [auth] = useAuth();
+
+  const driverId = auth?.user?.id;
   const [isRideOfferModalVisible, setIsRideOfferModalVisible] = useState(false);
   const [currentOffer, setCurrentOffer] = useState<RideOffer | null>(null);
   const [modalCallbacks, setModalCallbacks] = useState<ModalCallbacks | null>(
     null
   );
+  const [isETABottomSheetVisible, setIsETABottomSheetVisible] = useState(false);
+
+  // API hooks for driver responses
+  const { execute: submitDriverResponse, loading: isSubmittingResponse } =
+    usePost(LIVE_JOB_ENDPOINTS.driverResponse, API_CLIENT_TYPES.AUCTION);
 
   /**
    * Show the ride offer modal with optional callbacks
@@ -70,7 +121,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
 
   /**
    * Accept the current ride offer
-   * Calls the provided callback if available, otherwise handles globally
+   * Shows ETA bottom sheet instead of calling API directly
    */
   const acceptRideOffer = async () => {
     if (!currentOffer) return;
@@ -84,8 +135,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         // Hide modal after successful acceptance
         hideRideOfferModal();
       } else {
-        // No callbacks provided - handle globally
-        await handleGlobalAcceptOffer();
+        // No callbacks provided - show ETA bottom sheet
+        setIsETABottomSheetVisible(true); // Show ETA bottom sheet
       }
     } catch (error) {
       console.error("❌ Error in accept callback:", error);
@@ -151,49 +202,48 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   // ============================================================================
 
   /**
-   * Global handler for accepting ride offer
-   * TODO: Implement API call when backend is ready
+   * Submit ETA and accept the ride offer
    */
-  const handleGlobalAcceptOffer = async () => {
+  const submitETA = async (eta: number) => {
     if (!currentOffer) return;
 
     try {
       console.log(
-        "🌐 Global accept ride offer:",
-        currentOffer.tripOffer.tripId
+        "🌐 Submitting ETA for ride offer:",
+        currentOffer.tripOffer.tripId,
+        "ETA:",
+        eta
       );
 
-      // TODO: Implement API call
-      // const response = await acceptRideOfferAPI({
-      //   tripId: currentOffer.tripOffer.tripId,
-      // });
+      // Submit driver response to API with ETA
+      await submitDriverResponse({
+        tripId: currentOffer.tripOffer.tripId,
+        action: "accept",
+        type: currentOffer.type,
+        eta: eta,
+      });
 
-      // Simulate success for now
-      console.log("✅ Global ride offer accepted successfully");
+      console.log("✅ Ride offer accepted with ETA successfully");
+      showToast("Ride offer accepted successfully!", {
+        variant: "success",
+        position: "top",
+      });
 
-      // TODO: Show success toast
-      // Toast.show({
-      //   type: "success",
-      //   text1: "Ride Accepted",
-      //   text2: "You have successfully accepted this ride offer.",
-      // });
-
-      // Hide modal
-      hideRideOfferModal();
+      // Hide ETA bottom sheet and clear current offer
+      setIsETABottomSheetVisible(false);
+      setCurrentOffer(null);
+      setModalCallbacks(null);
     } catch (error) {
-      console.error("❌ Error in global accept:", error);
-      // TODO: Show error toast
-      // Toast.show({
-      //   type: "error",
-      //   text1: "Failed to Accept Offer",
-      //   text2: error instanceof Error ? error.message : "Unknown error",
-      // });
+      console.error("❌ Error in submit ETA:", error);
+      showToast("Failed to accept ride offer. Please try again.", {
+        variant: "error",
+        position: "top",
+      });
     }
   };
 
   /**
    * Global handler for skipping ride offer price
-   * TODO: Implement API call when backend is ready
    */
   const handleGlobalSkipPrice = async () => {
     if (!currentOffer) return;
@@ -204,37 +254,33 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         currentOffer.tripOffer.tripId
       );
 
-      // TODO: Implement API call
-      // const response = await skipRideOfferPriceAPI({
-      //   tripId: currentOffer.tripOffer.tripId,
-      // });
+      // Submit driver response to API
+      await submitDriverResponse({
+        driverId: driverId,
+        tripId: currentOffer.tripOffer.tripId,
+        response: "skip",
+      });
 
-      // Simulate success for now
       console.log("✅ Global ride offer price skipped successfully");
-
-      // TODO: Show success toast
-      // Toast.show({
-      //   type: "success",
-      //   text1: "Price Skipped",
-      //   text2: "You have skipped the price for this ride offer.",
-      // });
+      showToast("Ride offer price skipped successfully!", {
+        variant: "success",
+        position: "top",
+      });
+      removeStorageItem(RIDE_OFFER_STORAGE_KEY);
 
       // Hide modal
       hideRideOfferModal();
     } catch (error) {
       console.error("❌ Error in global skip price:", error);
-      // TODO: Show error toast
-      // Toast.show({
-      //   type: "error",
-      //   text1: "Failed to Skip Price",
-      //   text2: error instanceof Error ? error.message : "Unknown error",
-      // });
+      showToast("Failed to skip ride offer price. Please try again.", {
+        variant: "error",
+        position: "top",
+      });
     }
   };
 
   /**
    * Global handler for hiding ride offer
-   * TODO: Implement API call when backend is ready
    */
   const handleGlobalHideOffer = async () => {
     if (!currentOffer) return;
@@ -242,31 +288,27 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     try {
       console.log("🌐 Global hide ride offer:", currentOffer.tripOffer.tripId);
 
-      // TODO: Implement API call
-      // const response = await hideRideOfferAPI({
-      //   tripId: currentOffer.tripOffer.tripId,
-      // });
+      // Submit driver response to API
+      await submitDriverResponse({
+        driverId: driverId,
+        tripId: currentOffer.tripOffer.tripId,
+        response: "skip",
+      });
 
-      // Simulate success for now
       console.log("✅ Global ride offer hidden successfully");
-
-      // TODO: Show success toast
-      // Toast.show({
-      //   type: "success",
-      //   text1: "Offer Hidden",
-      //   text2: "This ride offer has been hidden.",
-      // });
-
+      showToast("Ride offer hidden successfully!", {
+        variant: "success",
+        position: "top",
+      });
+      removeStorageItem(RIDE_OFFER_STORAGE_KEY);
       // Hide modal
       hideRideOfferModal();
     } catch (error) {
       console.error("❌ Error in global hide:", error);
-      // TODO: Show error toast
-      // Toast.show({
-      //   type: "error",
-      //   text1: "Failed to Hide Offer",
-      //   text2: error instanceof Error ? error.message : "Unknown error",
-      // });
+      showToast("Failed to hide ride offer. Please try again.", {
+        variant: "error",
+        position: "top",
+      });
     }
   };
 
@@ -274,11 +316,14 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     isRideOfferModalVisible,
     currentOffer,
     modalCallbacks,
+    isSubmittingResponse,
+    isETABottomSheetVisible,
     showRideOfferModal,
     hideRideOfferModal,
     acceptRideOffer,
     skipRideOfferPrice,
     hideRideOffer,
+    submitETA,
   };
 
   return (
@@ -289,10 +334,18 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       <RideOfferModal
         visible={isRideOfferModalVisible}
         onClose={hideRideOfferModal}
-        offer={currentOffer || undefined}
+        offer={currentOffer as any}
         onAccept={acceptRideOffer}
         onSkipPrice={skipRideOfferPrice}
         onHide={hideRideOffer}
+        isSubmittingResponse={isSubmittingResponse}
+      />
+
+      {/* ETA Bottom Sheet */}
+      <ETABottomSheet
+        open={isETABottomSheetVisible}
+        onClose={() => setIsETABottomSheetVisible(false)}
+        onSubmit={submitETA}
       />
     </RideOfferContext.Provider>
   );

@@ -8,6 +8,8 @@ export const TOKEN_KEY = "@token";
 export const AUTH_STORAGE_KEY = "@auth";
 // Driver status storage key
 export const DRIVER_STORAGE_KEY = "@driver";
+// Ride offer storage key
+export const RIDE_OFFER_STORAGE_KEY = "@ride-offer";
 
 // Driver status display labels (used in UI)
 export const DRIVER_STATUS = {
@@ -269,6 +271,7 @@ export const NOTIFICATION_TYPES = {
   WARNING: "warning",
   SUCCESS: "success",
   ERROR: "error",
+  SPECIAL_RIDE_OFFER: "special-ride-offer",
 } as const;
 
 export type NotificationType =
@@ -278,6 +281,7 @@ export type NotificationType =
 export const API_CLIENT_TYPES = {
   AUTH: "auth",
   ME: "me",
+  AUCTION: "auction",
   DEFAULT: "default",
 } as const;
 
@@ -292,5 +296,5 @@ export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
 
 export const SOCKET = {
   OFFERS_SERVER_URL:
-    process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://172.20.96.213:3002",
+    process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.100.160:3002",
 } as const;

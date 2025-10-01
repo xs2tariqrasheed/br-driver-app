@@ -29,6 +29,8 @@ export const LIVE_JOB_ENDPOINTS = {
   submitBid: "/bids/submit",
   /** Cancel a bid */
   cancelBid: "/bids/cancel",
+  /** Submit driver response to trip offer (bid, rebid, or skip) */
+  driverResponse: "/api/trip-offers/driver-response",
 } as const;
 
 export const DRIVER_ENDPOINTS = {
