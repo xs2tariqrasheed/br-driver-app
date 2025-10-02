@@ -70,6 +70,9 @@ export default function HomeScreen() {
   // View hidden jobs toggle state
   const [showHiddenJobs, setShowHiddenJobs] = useState<boolean>(false);
 
+  // Local loading state for online toggle (includes location fetch time)
+  const [isTogglingOnline, setIsTogglingOnline] = useState<boolean>(false);
+
   // Sorting bottom sheet state
   const [sortSheetOpen, setSortSheetOpen] = useState<boolean>(false);
   const openSortSheet = () => {
@@ -143,12 +146,15 @@ export default function HomeScreen() {
     // If going online, call API first with current location
     if (isGoingOnline) {
       try {
+        setIsTogglingOnline(true); // Start loading immediately
+
         // Request permission and get current location for first post
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
           showToast("Location permission is required to go Online.", {
             variant: "error",
           });
+          setIsTogglingOnline(false);
           return;
         }
 
@@ -189,6 +195,8 @@ export default function HomeScreen() {
         log("[HomeScreen] Error going online:", error);
         showToast(message, { variant: "error" });
         // Don't set driver online if API fails
+      } finally {
+        setIsTogglingOnline(false); // Stop loading
       }
       return;
     }
@@ -282,7 +290,12 @@ export default function HomeScreen() {
                 value={statusValue}
                 setValue={handleDriverStatusToggle}
                 size={styles.headerToggleSize}
-                disabled={offlineLoading || onlineLocationLoading}
+                disabled={
+                  offlineLoading || onlineLocationLoading || isTogglingOnline
+                }
+                loading={
+                  offlineLoading || onlineLocationLoading || isTogglingOnline
+                }
               />
             </View>
           }

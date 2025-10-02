@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import CustomBottomSheet from "../BottomSheet";
 import Button from "../Button";
 import Counter from "../Counter";
+import Divider from "../Divider";
 import Typography from "../Typography";
 
 export interface ETABottomSheetProps {
@@ -16,6 +17,7 @@ export interface ETABottomSheetProps {
   backdrop?: boolean | ((props: any) => React.ReactElement);
   swipeToClose?: boolean;
   snapPointsWhenKeyboardVisible?: (string | number)[];
+  isLoading?: boolean;
 }
 
 /**
@@ -33,6 +35,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
   showHeader = true,
   backdrop = true,
   swipeToClose = false,
+  isLoading = false,
 }) => {
   const [eta, setEta] = useState(15); // Default 15 minutes
 
@@ -50,8 +53,10 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
       showHeader={showHeader}
       backdrop={backdrop}
       swipeToClose={swipeToClose}
-      headerTitle="Set Your ETA"
+      headerTitle="Provide ETA"
+      disabledClose={isLoading}
     >
+      <Divider />
       <View style={styles.container}>
         {/* ETA Section */}
         <View style={styles.etaSection}>
@@ -77,12 +82,19 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
             max={60}
             step={1}
             formatLabel={(value) => `${value} mins`}
+            disabled={isLoading}
           />
         </View>
 
         {/* Submit Button */}
         <View style={styles.submitSection}>
-          <Button variant="primary" rounded="half" onPress={handleSubmit}>
+          <Button
+            variant="primary"
+            rounded="half"
+            onPress={handleSubmit}
+            disabled={isLoading}
+            loading={isLoading}
+          >
             Submit
           </Button>
         </View>
@@ -94,7 +106,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: 10,
   },
   etaSection: {
     flex: 1,

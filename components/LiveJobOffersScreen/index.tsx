@@ -79,6 +79,11 @@ export default function LiveJobOffersScreen({
   const [isBidStatusOpen, setIsBidStatusOpen] = useState<boolean>(false);
   const [bidStatus, setBidStatus] = useState<BidStatusType>(BID_STATUS.EXPIRED);
 
+  // Track which offer is being processed (skip/hide operation)
+  const [processingOfferId, setProcessingOfferId] = useState<string | null>(
+    null
+  );
+
   // API hook for fetching live jobs
   const {
     data: liveJobsData,
@@ -292,9 +297,9 @@ export default function LiveJobOffersScreen({
         rideDistance: 650,
         totalPrice: 220,
         driverEarn: 220,
-        buttonTitle: "Waiting",
+        buttonTitle: "Bid",
         peopleCount: 1,
-        disabled: true,
+        disabled: false,
         rating: 4.9,
         hasSpecialRequirements: true,
         hasPackage: true,
@@ -392,14 +397,18 @@ export default function LiveJobOffersScreen({
     return mockLiveJobsData
       ?.filter((job) => job.status === LIVE_JOB_STATUS.OFFERED)
       ?.filter((job) => {
-        // If showHiddenJobs is true, show all jobs including hidden/skipped
+        const localStatus = getLiveOfferStatus(job.id);
+
+        // If showHiddenJobs is true, show ONLY hidden/skipped jobs
         if (showHiddenJobs) {
-          return true;
+          return (
+            localStatus &&
+            (localStatus.status === LOCAL_JOB_STATUS.HIDDEN ||
+              localStatus.status === LOCAL_JOB_STATUS.SKIPPED)
+          );
         }
 
-        // Otherwise, apply normal filtering for hidden/skipped jobs
-        const localStatus = getLiveOfferStatus(job.id);
-        // Show job if it's not hidden or skipped, or if it's visible
+        // Otherwise, show only visible jobs (not hidden or skipped)
         return !localStatus || localStatus.status === LOCAL_JOB_STATUS.VISIBLE;
       });
   }, [liveJobsData, getLiveOfferStatus, showHiddenJobs]);
@@ -793,36 +802,45 @@ export default function LiveJobOffersScreen({
   }: {
     item: any;
     isScrolling?: boolean;
-  }) => (
-    <View style={styles.jobItemWrapper}>
-      <LiveRideOfferItem
-        id={item.id}
-        rideType={item.rideType}
-        peopleCount={item.peopleCount}
-        rating={item.rating}
-        hasSpecialRequirements={item.hasSpecialRequirements}
-        onPressSpecialRequirements={() => handleSpecialRequirements(item.id)}
-        hasPackage={false} // Mock data doesn't have package info
-        onPressPackage={() => handlePackagePress(item.id)}
-        pickupTime={item.pickupTime}
-        pickupDistance={item.pickupDistance}
-        pickupAddress={item.pickupAddress}
-        dropoffTime={item.dropoffTime}
-        dropoffDistance={item.dropoffDistance}
-        dropoffAddress={item.dropoffAddress}
-        rideTime={item.rideTime}
-        rideDistance={item.rideDistance}
-        totalPrice={item.totalPrice}
-        driverEarn={item.driverEarn}
-        buttonTitle={item.buttonTitle}
-        onButtonClick={() => handleJobAction(item.id)}
-        itemStatus={getItemStatus(item.id)}
-        isScrolling={isScrolling}
-        showHiddenJobs={showHiddenJobs}
-        disabled={item.disabled}
-      />
-    </View>
-  );
+  }) => {
+    // Disable this item if another offer is being processed
+    const isAnotherOfferProcessing =
+      processingOfferId !== null && processingOfferId !== item.id;
+
+    return (
+      <View style={styles.jobItemWrapper}>
+        <LiveRideOfferItem
+          id={item.id}
+          rideType={item.rideType}
+          peopleCount={item.peopleCount}
+          rating={item.rating}
+          hasSpecialRequirements={item.hasSpecialRequirements}
+          onPressSpecialRequirements={() => handleSpecialRequirements(item.id)}
+          hasPackage={false} // Mock data doesn't have package info
+          onPressPackage={() => handlePackagePress(item.id)}
+          pickupTime={item.pickupTime}
+          pickupDistance={item.pickupDistance}
+          pickupAddress={item.pickupAddress}
+          dropoffTime={item.dropoffTime}
+          dropoffDistance={item.dropoffDistance}
+          dropoffAddress={item.dropoffAddress}
+          rideTime={item.rideTime}
+          rideDistance={item.rideDistance}
+          totalPrice={item.totalPrice}
+          driverEarn={item.driverEarn}
+          buttonTitle={item.buttonTitle}
+          onButtonClick={() => handleJobAction(item.id)}
+          itemStatus={getItemStatus(item.id)}
+          isScrolling={isScrolling}
+          showHiddenJobs={showHiddenJobs}
+          disabled={item.disabled || isAnotherOfferProcessing}
+          processingOfferId={processingOfferId}
+          onProcessingStart={(offerId) => setProcessingOfferId(offerId)}
+          onProcessingEnd={() => setProcessingOfferId(null)}
+        />
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.container, style]}>

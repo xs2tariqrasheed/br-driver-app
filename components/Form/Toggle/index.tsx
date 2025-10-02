@@ -3,6 +3,7 @@ import { SF_PRO_FONTS } from "@/components/Typography/constants";
 import { textColors } from "@/constants/colors";
 import { useEffect, useMemo, useRef } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Pressable,
@@ -20,6 +21,8 @@ type SetValueFn<T> =
 type CommonProps = {
   /** Disable interaction and apply disabled visuals */
   disabled?: boolean;
+  /** Show loading indicator and disable interaction */
+  loading?: boolean;
   /** Optional field name for react-hook-form's setValue(name, value) signature */
   name?: string;
   /** Optional style override for outer wrapper */
@@ -60,6 +63,7 @@ const Toggle = <T extends string = string>(props: ToggleProps<T>) => {
   if (props.variant === "labeled") {
     const {
       disabled = false,
+      loading = false,
       name,
       labels,
       value,
@@ -95,7 +99,7 @@ const Toggle = <T extends string = string>(props: ToggleProps<T>) => {
     });
 
     const commit = (nextValue: T) => {
-      if (disabled) return;
+      if (disabled || loading) return;
       const fn = setValue as any;
       if (typeof fn === "function") {
         if (name && fn.length >= 2) {
@@ -107,6 +111,8 @@ const Toggle = <T extends string = string>(props: ToggleProps<T>) => {
       onChange?.(nextValue);
     };
 
+    const isInteractionDisabled = disabled || loading;
+
     return (
       <View
         accessibilityRole="tablist"
@@ -116,6 +122,7 @@ const Toggle = <T extends string = string>(props: ToggleProps<T>) => {
             width: dimensions.width,
             height: dimensions.height,
             borderRadius: dimensions.borderRadius,
+            opacity: isInteractionDisabled ? 0.5 : 1,
           },
           style,
         ]}
@@ -145,50 +152,64 @@ const Toggle = <T extends string = string>(props: ToggleProps<T>) => {
         <View style={styles.labeledRow}>
           <Pressable
             accessibilityRole="tab"
-            accessibilityState={{ selected: selectedIndex === 0, disabled }}
+            accessibilityState={{
+              selected: selectedIndex === 0,
+              disabled: isInteractionDisabled,
+            }}
             onPress={() => commit(labels[0])}
-            disabled={disabled}
+            disabled={isInteractionDisabled}
             style={styles.labeledCell}
           >
-            <Typography
-              type="bodyMedium"
-              weight="regular"
-              style={
-                StyleSheet.flatten([
-                  styles.labeledText,
-                  selectedIndex === 0
-                    ? styles.labeledTextActive
-                    : styles.labeledTextInactive,
-                ]) as TextStyle
-              }
-              numberOfLines={1}
-            >
-              {labels[0]}
-            </Typography>
+            {loading && selectedIndex === 0 ? (
+              <ActivityIndicator size="small" color={textColors.white} />
+            ) : (
+              <Typography
+                type="bodyMedium"
+                weight="regular"
+                style={
+                  StyleSheet.flatten([
+                    styles.labeledText,
+                    selectedIndex === 0
+                      ? styles.labeledTextActive
+                      : styles.labeledTextInactive,
+                  ]) as TextStyle
+                }
+                numberOfLines={1}
+              >
+                {labels[0]}
+              </Typography>
+            )}
           </Pressable>
 
           <Pressable
             accessibilityRole="tab"
-            accessibilityState={{ selected: selectedIndex === 1, disabled }}
+            accessibilityState={{
+              selected: selectedIndex === 1,
+              disabled: isInteractionDisabled,
+            }}
             onPress={() => commit(labels[1])}
-            disabled={disabled}
+            disabled={isInteractionDisabled}
             style={styles.labeledCell}
           >
-            <Typography
-              type="bodyMedium"
-              weight="regular"
-              style={
-                StyleSheet.flatten([
-                  styles.labeledText,
-                  selectedIndex === 1
-                    ? styles.labeledTextActive
-                    : styles.labeledTextInactive,
-                ]) as TextStyle
-              }
-              numberOfLines={1}
-            >
-              {labels[1]}
-            </Typography>
+            {loading && selectedIndex === 1 ? (
+              <ActivityIndicator size="small" color={textColors.white} />
+            ) : (
+              <Typography
+                type="bodyMedium"
+                weight="regular"
+                style={
+                  StyleSheet.flatten([
+                    styles.labeledText,
+                    selectedIndex === 1
+                      ? styles.labeledTextActive
+                      : styles.labeledTextInactive,
+                  ]) as TextStyle
+                }
+                numberOfLines={1}
+              >
+                {labels[1]}
+              </Typography>
+            )}
           </Pressable>
         </View>
       </View>

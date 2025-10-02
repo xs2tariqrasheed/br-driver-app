@@ -16,7 +16,6 @@ import Header from "@/components/Header";
 import LiveRideOfferItem from "@/components/LiveRideOfferItem";
 import { colors, textColors } from "@/constants/colors";
 import { LIVE_JOB_STATUS } from "@/constants/global";
-import { checkOfferStatus } from "@/utils/helpers";
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
 
@@ -85,7 +84,8 @@ interface RideOfferModalProps {
   onAccept?: () => void;
   onSkipPrice?: () => void;
   onHide?: () => void;
-  isSubmittingResponse?: boolean;
+  isSkipLoading?: boolean;
+  isHideLoading?: boolean;
 }
 
 /**
@@ -104,7 +104,8 @@ export default function RideOfferModal({
   onAccept,
   onSkipPrice,
   onHide,
-  isSubmittingResponse = false,
+  isSkipLoading = false,
+  isHideLoading = false,
 }: RideOfferModalProps) {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const mapRef = useRef<MapView>(null);
@@ -184,10 +185,10 @@ export default function RideOfferModal({
     refStatus.current = setInterval(() => {
       setOffer((prevOffer: any | null) => {
         if (!prevOffer) return prevOffer;
-        const newStatus = checkOfferStatus(prevOffer);
+        // const newStatus = checkOfferStatus(prevOffer);
         return {
           ...prevOffer,
-          status: newStatus,
+          // status: newStatus,
         };
       });
     }, 1000);
@@ -202,10 +203,8 @@ export default function RideOfferModal({
 
   const isOffered = offer?.status === LIVE_JOB_STATUS.OFFERED;
   const isExpired = offer?.status === LIVE_JOB_STATUS.EXPIRED;
+  const shouldDisabled = isSkipLoading || isHideLoading;
 
-  console.log("STATUS", offer?.status);
-  console.log("IS OFFERED", isOffered);
-  console.log("IS EXPIRED", isExpired);
   return (
     <Modal visible={visible} transparent animationType="none">
       <View style={styles.container}>
@@ -315,8 +314,8 @@ export default function RideOfferModal({
                     rounded="half"
                     style={styles.hideButton}
                     onPress={onHide}
-                    disabled={isSubmittingResponse}
-                    loading={isSubmittingResponse}
+                    disabled={shouldDisabled}
+                    loading={isHideLoading}
                   >
                     Hide
                   </Button>
@@ -327,8 +326,8 @@ export default function RideOfferModal({
                     rounded="half"
                     style={styles.skipButton}
                     onPress={onSkipPrice}
-                    disabled={isSubmittingResponse}
-                    loading={isSubmittingResponse}
+                    disabled={shouldDisabled}
+                    loading={isSkipLoading}
                   >
                     Skip Price
                   </Button>
@@ -339,8 +338,7 @@ export default function RideOfferModal({
                     rounded="half"
                     style={styles.acceptButton}
                     onPress={onAccept}
-                    disabled={isSubmittingResponse}
-                    loading={isSubmittingResponse}
+                    disabled={shouldDisabled}
                   >
                     Accept
                   </Button>

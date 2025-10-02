@@ -6,6 +6,7 @@ import { API_CLIENT_TYPES, RIDE_OFFER_STORAGE_KEY } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { usePost } from "@/hooks/usePost";
 import { removeStorageItem } from "@/utils/helpers";
+import { router } from "expo-router";
 import { createContext, ReactNode, useContext, useState } from "react";
 
 interface TripOffer {
@@ -67,7 +68,8 @@ interface RideOfferContextType {
   isRideOfferModalVisible: boolean;
   currentOffer: RideOffer | null;
   modalCallbacks: ModalCallbacks | null;
-  isSubmittingResponse: boolean;
+  isSkipLoading: boolean;
+  isHideLoading: boolean;
   isETABottomSheetVisible: boolean;
   // Actions
   showRideOfferModal: (offer: RideOffer, callbacks?: ModalCallbacks) => void;
@@ -93,9 +95,16 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   );
   const [isETABottomSheetVisible, setIsETABottomSheetVisible] = useState(false);
 
+  // Separate loading states for each button
+  const [isSkipLoading, setIsSkipLoading] = useState(false);
+  const [isHideLoading, setIsHideLoading] = useState(false);
+  const [isSubmitETALoading, setIsSubmitETALoading] = useState(false);
+
   // API hooks for driver responses
-  const { execute: submitDriverResponse, loading: isSubmittingResponse } =
-    usePost(LIVE_JOB_ENDPOINTS.driverResponse, API_CLIENT_TYPES.AUCTION);
+  const { execute: submitDriverResponse } = usePost(
+    LIVE_JOB_ENDPOINTS.driverResponse,
+    API_CLIENT_TYPES.AUCTION
+  );
 
   /**
    * Show the ride offer modal with optional callbacks
@@ -128,19 +137,21 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
 
     console.log("✅ Accepting ride offer:", currentOffer.tripOffer.tripId);
 
-    try {
-      // If callbacks are provided, use them
-      if (modalCallbacks?.onAccept) {
+    // If callbacks are provided, use them
+    if (modalCallbacks?.onAccept) {
+      try {
         await modalCallbacks.onAccept();
         // Hide modal after successful acceptance
         hideRideOfferModal();
-      } else {
-        // No callbacks provided - show ETA bottom sheet
-        setIsETABottomSheetVisible(true); // Show ETA bottom sheet
+      } catch (error) {
+        console.error("❌ Error in accept callback:", error);
+        // Don't hide modal on error - let the callback handle error display
       }
-    } catch (error) {
-      console.error("❌ Error in accept callback:", error);
-      // Don't hide modal on error - let the callback handle error display
+    } else {
+      // No callbacks provided - show ETA bottom sheet
+      // Hide the ride offer modal first to prevent z-index issues
+      setIsRideOfferModalVisible(false);
+      setIsETABottomSheetVisible(true); // Show ETA bottom sheet
     }
   };
 
@@ -157,6 +168,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     );
 
     try {
+      setIsSkipLoading(true);
+
       // If callbacks are provided, use them
       if (modalCallbacks?.onSkipPrice) {
         await modalCallbacks.onSkipPrice();
@@ -169,6 +182,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("❌ Error in skip price callback:", error);
       // Don't hide modal on error - let the callback handle error display
+    } finally {
+      setIsSkipLoading(false);
     }
   };
 
@@ -182,6 +197,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     console.log("👁️ Hiding ride offer:", currentOffer.tripOffer.tripId);
 
     try {
+      setIsHideLoading(true);
+
       // If callbacks are provided, use them
       if (modalCallbacks?.onHide) {
         await modalCallbacks.onHide();
@@ -194,6 +211,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("❌ Error in hide callback:", error);
       // Don't hide modal on error - let the callback handle error display
+    } finally {
+      setIsHideLoading(false);
     }
   };
 
@@ -208,6 +227,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     if (!currentOffer) return;
 
     try {
+      setIsSubmitETALoading(true);
+
       console.log(
         "🌐 Submitting ETA for ride offer:",
         currentOffer.tripOffer.tripId,
@@ -217,9 +238,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
 
       // Submit driver response to API with ETA
       await submitDriverResponse({
+        driverId: driverId,
         tripId: currentOffer.tripOffer.tripId,
-        action: "accept",
-        type: currentOffer.type,
+        response: "accept",
         eta: eta,
       });
 
@@ -229,16 +250,23 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         position: "top",
       });
 
-      // Hide ETA bottom sheet and clear current offer
+      // Hide ETA bottom sheet and modal, clear current offer
       setIsETABottomSheetVisible(false);
+      setIsRideOfferModalVisible(false);
       setCurrentOffer(null);
       setModalCallbacks(null);
+
+      // Navigate to active-ride screen
+      router.replace("/(screens)/active-ride");
     } catch (error) {
       console.error("❌ Error in submit ETA:", error);
       showToast("Failed to accept ride offer. Please try again.", {
         variant: "error",
         position: "top",
       });
+      // On error, keep the ETA bottom sheet open so user can retry
+    } finally {
+      setIsSubmitETALoading(false);
     }
   };
 
@@ -316,7 +344,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     isRideOfferModalVisible,
     currentOffer,
     modalCallbacks,
-    isSubmittingResponse,
+    isSkipLoading,
+    isHideLoading,
     isETABottomSheetVisible,
     showRideOfferModal,
     hideRideOfferModal,
@@ -338,14 +367,20 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         onAccept={acceptRideOffer}
         onSkipPrice={skipRideOfferPrice}
         onHide={hideRideOffer}
-        isSubmittingResponse={isSubmittingResponse}
+        isSkipLoading={isSkipLoading}
+        isHideLoading={isHideLoading}
       />
 
       {/* ETA Bottom Sheet */}
       <ETABottomSheet
         open={isETABottomSheetVisible}
-        onClose={() => setIsETABottomSheetVisible(false)}
+        onClose={() => {
+          // When closing ETA sheet without submitting, show the ride offer modal again
+          setIsETABottomSheetVisible(false);
+          setIsRideOfferModalVisible(true);
+        }}
         onSubmit={submitETA}
+        isLoading={isSubmitETALoading}
       />
     </RideOfferContext.Provider>
   );

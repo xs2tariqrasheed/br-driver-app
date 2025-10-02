@@ -1,10 +1,13 @@
+import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import {
+  API_CLIENT_TYPES,
   DRIVER_STORAGE_KEY,
   LOCAL_JOB_STATUS,
   NotificationType,
   type LocalJobStatus,
 } from "@/constants/global";
 
+import { usePost } from "@/hooks/usePost";
 import {
   DesiredDestination,
   filterExpiredDestinations,
@@ -21,6 +24,7 @@ import React, {
   useMemo,
   useReducer,
 } from "react";
+import { useAuth } from "./AuthContext";
 
 // Re-export the DesiredDestination type for backward compatibility
 export type { DesiredDestination };
@@ -115,6 +119,14 @@ const DriverContext = createContext<DriverContextValue | undefined>(undefined);
 
 export function DriverProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(driverReducer, initialState);
+  const [auth] = useAuth();
+  const driverId = auth?.user?.id;
+
+  // API hook for driver responses
+  const { execute: submitDriverResponse } = usePost(
+    LIVE_JOB_ENDPOINTS.driverResponse,
+    API_CLIENT_TYPES.AUCTION
+  );
 
   // Logger function
   const log = logger();
@@ -316,44 +328,64 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     async (offerId: string) => {
       if (!state.driver) return;
 
-      const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
-      const existingOffer = currentHiddenOffers.find(
-        (offer) => offer.id === offerId
-      );
+      try {
+        log(`[DriverContext] Hiding offer ${offerId} - calling API`);
 
-      if (existingOffer) {
-        // Update existing offer status to hidden
-        const updatedOffers = currentHiddenOffers.map((offer) =>
-          offer.id === offerId
-            ? {
-                ...offer,
-                status: LOCAL_JOB_STATUS.HIDDEN,
-                timestamp: Date.now(),
-              }
-            : offer
+        // Call API first
+        await submitDriverResponse({
+          driverId: driverId,
+          tripId: offerId,
+          response: "skip",
+        });
+
+        log(
+          `[DriverContext] API success - updating local state for offer ${offerId}`
         );
 
-        const updatedDriver = {
-          ...state.driver,
-          hiddenLiveOffers: updatedOffers,
-        };
-        await setDriver(updatedDriver);
-      } else {
-        // Add new hidden offer
-        const newHiddenOffer: HiddenLiveOffer = {
-          id: offerId,
-          status: LOCAL_JOB_STATUS.HIDDEN,
-          timestamp: Date.now(),
-        };
+        // Only update local state if API succeeds
+        const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+        const existingOffer = currentHiddenOffers.find(
+          (offer) => offer.id === offerId
+        );
 
-        const updatedDriver = {
-          ...state.driver,
-          hiddenLiveOffers: [...currentHiddenOffers, newHiddenOffer],
-        };
-        await setDriver(updatedDriver);
+        if (existingOffer) {
+          // Update existing offer status to hidden
+          const updatedOffers = currentHiddenOffers.map((offer) =>
+            offer.id === offerId
+              ? {
+                  ...offer,
+                  status: LOCAL_JOB_STATUS.HIDDEN,
+                  timestamp: Date.now(),
+                }
+              : offer
+          );
+
+          const updatedDriver = {
+            ...state.driver,
+            hiddenLiveOffers: updatedOffers,
+          };
+          await setDriver(updatedDriver);
+        } else {
+          // Add new hidden offer
+          const newHiddenOffer: HiddenLiveOffer = {
+            id: offerId,
+            status: LOCAL_JOB_STATUS.HIDDEN,
+            timestamp: Date.now(),
+          };
+
+          const updatedDriver = {
+            ...state.driver,
+            hiddenLiveOffers: [...currentHiddenOffers, newHiddenOffer],
+          };
+          await setDriver(updatedDriver);
+        }
+      } catch (error) {
+        log(`[DriverContext] Failed to hide offer ${offerId}:`, error);
+        // Re-throw error so UI can handle it
+        throw error;
       }
     },
-    [state.driver, setDriver]
+    [state.driver, setDriver, submitDriverResponse, driverId, log]
   );
 
   // Skip live offer
@@ -361,44 +393,64 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     async (offerId: string) => {
       if (!state.driver) return;
 
-      const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
-      const existingOffer = currentHiddenOffers.find(
-        (offer) => offer.id === offerId
-      );
+      try {
+        log(`[DriverContext] Skipping offer ${offerId} - calling API`);
 
-      if (existingOffer) {
-        // Update existing offer status to skipped
-        const updatedOffers = currentHiddenOffers.map((offer) =>
-          offer.id === offerId
-            ? {
-                ...offer,
-                status: LOCAL_JOB_STATUS.SKIPPED,
-                timestamp: Date.now(),
-              }
-            : offer
+        // Call API first
+        await submitDriverResponse({
+          driverId: driverId,
+          tripId: offerId,
+          response: "skip",
+        });
+
+        log(
+          `[DriverContext] API success - updating local state for offer ${offerId}`
         );
 
-        const updatedDriver = {
-          ...state.driver,
-          hiddenLiveOffers: updatedOffers,
-        };
-        await setDriver(updatedDriver);
-      } else {
-        // Add new skipped offer
-        const newSkippedOffer: HiddenLiveOffer = {
-          id: offerId,
-          status: LOCAL_JOB_STATUS.SKIPPED,
-          timestamp: Date.now(),
-        };
+        // Only update local state if API succeeds
+        const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+        const existingOffer = currentHiddenOffers.find(
+          (offer) => offer.id === offerId
+        );
 
-        const updatedDriver = {
-          ...state.driver,
-          hiddenLiveOffers: [...currentHiddenOffers, newSkippedOffer],
-        };
-        await setDriver(updatedDriver);
+        if (existingOffer) {
+          // Update existing offer status to skipped
+          const updatedOffers = currentHiddenOffers.map((offer) =>
+            offer.id === offerId
+              ? {
+                  ...offer,
+                  status: LOCAL_JOB_STATUS.SKIPPED,
+                  timestamp: Date.now(),
+                }
+              : offer
+          );
+
+          const updatedDriver = {
+            ...state.driver,
+            hiddenLiveOffers: updatedOffers,
+          };
+          await setDriver(updatedDriver);
+        } else {
+          // Add new skipped offer
+          const newSkippedOffer: HiddenLiveOffer = {
+            id: offerId,
+            status: LOCAL_JOB_STATUS.SKIPPED,
+            timestamp: Date.now(),
+          };
+
+          const updatedDriver = {
+            ...state.driver,
+            hiddenLiveOffers: [...currentHiddenOffers, newSkippedOffer],
+          };
+          await setDriver(updatedDriver);
+        }
+      } catch (error) {
+        log(`[DriverContext] Failed to skip offer ${offerId}:`, error);
+        // Re-throw error so UI can handle it
+        throw error;
       }
     },
-    [state.driver, setDriver]
+    [state.driver, setDriver, submitDriverResponse, driverId, log]
   );
 
   // Get live offer status

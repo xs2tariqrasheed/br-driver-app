@@ -40,8 +40,13 @@ import Button from "../Button";
 import RideAddress from "../RideAddress";
 import RideOfferItemFooter from "../RideOfferItemFooter";
 import RideOfferItemHeader from "../RideOfferItemHeader";
+import { showToast } from "../Toast";
 
-import { type LocalJobStatus, type RideType } from "@/constants/global";
+import {
+  LOCAL_JOB_STATUS,
+  type LocalJobStatus,
+  type RideType,
+} from "@/constants/global";
 
 export type ItemStatus = LocalJobStatus;
 
@@ -100,6 +105,12 @@ export interface LiveRideOfferItemProps {
   hideBidButton?: boolean;
   /** Whether to remove the flex from the container */
   removeFlex?: boolean;
+  /** ID of the offer currently being processed (skip/hide) */
+  processingOfferId?: string | null;
+  /** Callback when this offer starts processing */
+  onProcessingStart?: (offerId: string) => void;
+  /** Callback when this offer finishes processing */
+  onProcessingEnd?: () => void;
 }
 
 /**
@@ -159,11 +170,35 @@ export default function LiveRideOfferItem({
   showHiddenJobs = false,
   hideBidButton = false,
   removeFlex = false,
+  processingOfferId = null,
+  onProcessingStart,
+  onProcessingEnd,
 }: LiveRideOfferItemProps) {
-  const { skipLiveOffer, hideLiveOffer } = useDriver();
-  const translateX = new Animated.Value(0);
+  const { skipLiveOffer, hideLiveOffer, getLiveOfferStatus } = useDriver();
+  const translateX = React.useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get("window").width;
   const [showHideButton, setShowHideButton] = React.useState(false);
+  const [isSkipping, setIsSkipping] = React.useState(false);
+  const [isHiding, setIsHiding] = React.useState(false);
+
+  // Get the current status of this offer
+  const offerStatus = getLiveOfferStatus(id);
+
+  // Determine button title based on offer status
+  const getButtonTitle = () => {
+    if (!showHiddenJobs) {
+      return buttonTitle; // Use original title for active offers
+    }
+
+    // When viewing hidden/skipped jobs, show the action that was taken
+    if (offerStatus?.status === LOCAL_JOB_STATUS.SKIPPED) {
+      return "Skipped";
+    } else if (offerStatus?.status === LOCAL_JOB_STATUS.HIDDEN) {
+      return "Hidden";
+    }
+
+    return buttonTitle; // Fallback
+  };
 
   // Log showHiddenJobs state changes for debugging
   React.useEffect(() => {
@@ -237,6 +272,9 @@ export default function LiveRideOfferItem({
         console.log(
           `[LiveRideOfferItem] Left swipe detected for job ${id}, velocity: ${velocityX}`
         );
+        setIsSkipping(true);
+        onProcessingStart?.(id); // Notify parent that processing started
+
         Animated.timing(translateX, {
           toValue: -screenWidth,
           duration: 200,
@@ -244,9 +282,18 @@ export default function LiveRideOfferItem({
         }).start(async () => {
           try {
             await skipLiveOffer(id);
+            // Success - keep it swiped away
+            setIsSkipping(false);
+            onProcessingEnd?.(); // Notify parent that processing ended
           } catch (error) {
             console.error("Failed to skip offer:", error);
+            showToast("Failed to skip offer. Please try again.", {
+              variant: "error",
+              position: "top",
+            });
             // Reset position if skip fails
+            setIsSkipping(false);
+            onProcessingEnd?.(); // Notify parent that processing ended
             Animated.spring(translateX, {
               toValue: 0,
               useNativeDriver: false,
@@ -282,10 +329,23 @@ export default function LiveRideOfferItem({
   // Handle hide action
   const handleHideOffer = async () => {
     try {
+      setIsHiding(true);
+      onProcessingStart?.(id); // Notify parent that processing started
+
       await hideLiveOffer(id);
+
       setShowHideButton(false);
+      setIsHiding(false);
+      onProcessingEnd?.(); // Notify parent that processing ended
     } catch (error) {
       console.error("Failed to hide offer:", error);
+      showToast("Failed to hide offer. Please try again.", {
+        variant: "error",
+        position: "top",
+      });
+      setIsHiding(false);
+      onProcessingEnd?.(); // Notify parent that processing ended
+      // Keep the overlay open so user can retry
     }
   };
 
@@ -317,6 +377,8 @@ export default function LiveRideOfferItem({
                 block="half"
                 rounded="half"
                 onPress={handleHideOffer}
+                disabled={isHiding}
+                loading={isHiding}
               >
                 Hide
               </Button>
@@ -329,18 +391,29 @@ export default function LiveRideOfferItem({
       <LongPressGestureHandler
         onHandlerStateChange={onLongPressStateChange}
         minDurationMs={500}
-        enabled={!isScrolling && !showHiddenJobs && !disabled}
+        enabled={
+          !isScrolling &&
+          !showHiddenJobs &&
+          !disabled &&
+          processingOfferId === null
+        }
       >
         <View>
           <PanGestureHandler
             onGestureEvent={onGestureEvent}
             onHandlerStateChange={onHandlerStateChange}
-            enabled={!isScrolling && !showHiddenJobs && !disabled}
+            enabled={
+              !isScrolling &&
+              !showHiddenJobs &&
+              !disabled &&
+              processingOfferId === null
+            }
             // Gesture configuration for horizontal-only left swipes
             // activeOffsetX: Only activate if moved 10px horizontally (left/right)
             // failOffsetY: Fail gesture if moved 15px vertically (allows scrolling)
             // minVelocityX: Require 500px/s horizontal velocity for swipe activation
             // Note: Disabled when showHiddenJobs=true to prevent re-skipping viewed jobs
+            // Note: Disabled when any offer is being processed to prevent race conditions
             activeOffsetX={[-10, 10]}
             failOffsetY={[-15, 15]}
             minVelocityX={500}
@@ -390,8 +463,8 @@ export default function LiveRideOfferItem({
                   rideDistance={rideDistance}
                   totalPrice={totalPrice}
                   driverEarn={driverEarn}
-                  buttonTitle={buttonTitle}
-                  disabled={disabled}
+                  buttonTitle={getButtonTitle()}
+                  disabled={disabled || showHiddenJobs}
                   onButtonClick={onButtonClick}
                   hideBidButton={hideBidButton}
                 />
