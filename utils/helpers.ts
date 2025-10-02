@@ -1296,7 +1296,6 @@ export const formatDateTimestamp = (timestamp: string): string => {
 export const checkOfferStatus = (offer: any): string => {
   // Check if offer has timed out (30 seconds)
   const expiresAt = offer?.tripOffer?.expiresAt || offer?.expiresAt;
-  console.log("EXPIRES AT", expiresAt);
   const currentTime = Date.now();
   let expirationTime: number | null = null;
 

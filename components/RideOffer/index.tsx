@@ -16,6 +16,7 @@ import Header from "@/components/Header";
 import LiveRideOfferItem from "@/components/LiveRideOfferItem";
 import { colors, textColors } from "@/constants/colors";
 import { LIVE_JOB_STATUS } from "@/constants/global";
+import { checkOfferStatus } from "@/utils/helpers";
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
 
@@ -185,10 +186,10 @@ export default function RideOfferModal({
     refStatus.current = setInterval(() => {
       setOffer((prevOffer: any | null) => {
         if (!prevOffer) return prevOffer;
-        // const newStatus = checkOfferStatus(prevOffer);
+        const newStatus = checkOfferStatus(prevOffer);
         return {
           ...prevOffer,
-          // status: newStatus,
+          status: newStatus,
         };
       });
     }, 1000);
