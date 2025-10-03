@@ -28,6 +28,8 @@ export interface NotificationItemProps {
   isSpecial?: boolean;
   /** Optional callback when notification is pressed */
   onPress?: (id: string) => void;
+  /** Optional callback when delete button is pressed */
+  onDelete?: (id: string) => void;
   /** Optional style overrides */
   style?: StyleProp<ViewStyle>;
 }
@@ -40,12 +42,17 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   messageType,
   isSpecial = false,
   onPress,
+  onDelete,
   style,
 }) => {
   const isRead = messageType === "read";
 
   const handlePress = () => {
     onPress?.(id);
+  };
+
+  const handleDelete = () => {
+    onDelete?.(id);
   };
 
   return (
@@ -93,6 +100,21 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           {dateTime}
         </Typography>
       </View>
+
+      {/* Delete Button */}
+      {onDelete && (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDelete}
+          activeOpacity={0.6}
+        >
+          <Image
+            source={require("@/assets/images/delete-icon.png")}
+            style={styles.deleteIcon}
+            contentFit="contain"
+          />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 };
@@ -140,6 +162,17 @@ const styles = StyleSheet.create({
   },
   dateTime: {
     color: textColors.grey600,
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteIcon: {
+    width: 20,
+    height: 20,
+    tintColor: textColors.red500,
   },
 });
 

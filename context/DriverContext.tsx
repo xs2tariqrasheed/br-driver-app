@@ -108,6 +108,8 @@ type DriverContextValue = [
   addNotification: (notification: NotificationItem) => Promise<void>;
   addNotifications: (notifications: NotificationItem[]) => Promise<void>;
   getNotificationById: (id: string) => NotificationItem | undefined;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  deleteAllNotifications: () => Promise<void>;
   hiddenLiveOffers: HiddenLiveOffer[];
   hideLiveOffer: (offerId: string) => Promise<void>;
   skipLiveOffer: (offerId: string) => Promise<void>;
@@ -318,6 +320,54 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     [notifications]
   );
 
+  // Delete a single notification
+  const deleteNotification = useCallback(
+    async (notificationId: string) => {
+      if (!state.driver) return;
+
+      log(`Deleting notification with ID: ${notificationId}`);
+
+      const currentNotifications = state.driver.notifications || [];
+      const currentReadIds = state.driver.readNotificationIds || [];
+
+      // Remove notification from notifications array
+      const updatedNotifications = currentNotifications.filter(
+        (notification) => notification.id !== notificationId
+      );
+
+      // Remove notification ID from readNotificationIds if it exists
+      const updatedReadIds = currentReadIds.filter(
+        (id) => id !== notificationId
+      );
+
+      const updatedDriver = {
+        ...state.driver,
+        notifications: updatedNotifications,
+        readNotificationIds: updatedReadIds,
+      };
+
+      await setDriver(updatedDriver);
+      log(`Notification ${notificationId} deleted successfully`);
+    },
+    [state.driver, setDriver, log]
+  );
+
+  // Delete all notifications
+  const deleteAllNotifications = useCallback(async () => {
+    if (!state.driver) return;
+
+    log("Deleting all notifications");
+
+    const updatedDriver = {
+      ...state.driver,
+      notifications: [],
+      readNotificationIds: [],
+    };
+
+    await setDriver(updatedDriver);
+    log("All notifications deleted successfully");
+  }, [state.driver, setDriver, log]);
+
   // Get hidden live offers
   const hiddenLiveOffers = useMemo(() => {
     return state.driver?.hiddenLiveOffers || [];
@@ -493,6 +543,8 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       addNotification,
       addNotifications,
       getNotificationById,
+      deleteNotification,
+      deleteAllNotifications,
       hiddenLiveOffers,
       hideLiveOffer,
       skipLiveOffer,
@@ -507,6 +559,8 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     addNotification,
     addNotifications,
     getNotificationById,
+    deleteNotification,
+    deleteAllNotifications,
     hiddenLiveOffers,
     hideLiveOffer,
     skipLiveOffer,

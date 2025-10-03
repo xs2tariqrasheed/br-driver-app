@@ -8,6 +8,7 @@ import {
   NotificationItem as NotificationItemType,
   useDriver,
 } from "@/context/DriverContext";
+import { Image } from "expo-image";
 import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -26,6 +27,8 @@ const NotificationsScreen: React.FC = () => {
     markNotificationAsRead,
     addNotifications,
     getNotificationById,
+    deleteNotification,
+    deleteAllNotifications,
   } = useDriver();
   const [selectedNotification, setSelectedNotification] =
     useState<NotificationItemType | null>(null);
@@ -59,6 +62,48 @@ const NotificationsScreen: React.FC = () => {
     );
     console.log("Reply sent:", reply);
     // Here you would typically send the reply to your backend
+  };
+
+  const handleDeleteNotification = async (notificationId: string) => {
+    Alert.alert(
+      "Delete Notification",
+      "Are you sure you want to delete this notification?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await deleteNotification(notificationId);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAll = async () => {
+    if (notifications.length === 0) return;
+
+    Alert.alert(
+      "Delete All Notifications",
+      "Are you sure you want to delete all notifications? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete All",
+          style: "destructive",
+          onPress: async () => {
+            await deleteAllNotifications();
+          },
+        },
+      ]
+    );
   };
 
   // Filter notifications based on active tab
@@ -111,6 +156,28 @@ const NotificationsScreen: React.FC = () => {
         title="Notifications"
         hideBackIcon={false}
         onBackPress={() => router.back()}
+        rightAccessory={
+          notifications.length > 0 ? (
+            <TouchableOpacity
+              style={styles.deleteAllButton}
+              onPress={handleDeleteAll}
+              activeOpacity={0.6}
+            >
+              <Image
+                source={require("@/assets/images/delete-icon.png")}
+                style={styles.deleteAllIcon}
+                contentFit="contain"
+              />
+              <Typography
+                type="bodySmall"
+                weight="medium"
+                style={styles.deleteAllText}
+              >
+                Clear All
+              </Typography>
+            </TouchableOpacity>
+          ) : null
+        }
       />
 
       {/* Tab Navigator */}
@@ -128,6 +195,7 @@ const NotificationsScreen: React.FC = () => {
               messageType={notification.messageType}
               isSpecial={notification.isSpecial}
               onPress={handleNotificationPress}
+              onDelete={handleDeleteNotification}
             />
           ))}
         </ScrollView>
@@ -178,6 +246,21 @@ const styles = StyleSheet.create({
   },
   inactiveTabText: {
     color: "#717171",
+  },
+  deleteAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  deleteAllIcon: {
+    width: 16,
+    height: 16,
+    tintColor: textColors.red500,
+  },
+  deleteAllText: {
+    color: textColors.red500,
   },
 });
 
