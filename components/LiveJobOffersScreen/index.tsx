@@ -29,6 +29,8 @@ import {
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
+import { usePackageInfo } from "@/context/PackageInfoContext";
+import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
 import { useFetch } from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
@@ -78,7 +80,37 @@ export default function LiveJobOffersScreen({
     useState<boolean>(false);
   const [isBidStatusOpen, setIsBidStatusOpen] = useState<boolean>(false);
   const [bidStatus, setBidStatus] = useState<BidStatusType>(BID_STATUS.EXPIRED);
+  const { openSpecialRequirements } = useSpecialRequirements();
+  const { openPackageInfo } = usePackageInfo();
 
+  // Example: All requirements filled
+  const handleShowSpecialRequirements = () => {
+    openSpecialRequirements({
+      totalPassengers: 2,
+      bags: 4,
+      pets: true,
+      wheelchair: false,
+      childSeat: {
+        infant: 1,
+        toddler: 1,
+        booster: 0,
+      },
+      armedDriver: true,
+      driverLanguage: "English",
+    });
+  };
+
+  // Example: Package
+  const handleShowPackage = () => {
+    openPackageInfo({
+      numberOfPackages: 1,
+      weight: "5.6 Kg",
+      phoneNumber: "0123456789",
+      recipientName: "John Smith",
+      instructions:
+        "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s. ",
+    });
+  };
   // Track which offer is being processed (skip/hide operation)
   const [processingOfferId, setProcessingOfferId] = useState<string | null>(
     null
@@ -139,7 +171,7 @@ export default function LiveJobOffersScreen({
         peopleCount: 1,
         rating: 4.5,
         hasSpecialRequirements: false,
-        hasPackage: false,
+        hasPackage: true,
         rideType: "hourly",
         createdAt: "2024-01-15T10:30:00Z",
         expiresAt: "2024-01-15T11:00:00Z",
@@ -193,7 +225,7 @@ export default function LiveJobOffersScreen({
         peopleCount: 3,
         rating: 4.8,
         hasSpecialRequirements: true,
-        hasPackage: false,
+        hasPackage: true,
         rideType: "round-trip",
         createdAt: "2024-01-15T10:35:00Z",
         expiresAt: "2024-01-15T11:05:00Z",
@@ -815,9 +847,9 @@ export default function LiveJobOffersScreen({
           peopleCount={item.peopleCount}
           rating={item.rating}
           hasSpecialRequirements={item.hasSpecialRequirements}
-          onPressSpecialRequirements={() => handleSpecialRequirements(item.id)}
-          hasPackage={false} // Mock data doesn't have package info
-          onPressPackage={() => handlePackagePress(item.id)}
+          onPressSpecialRequirements={handleShowSpecialRequirements}
+          hasPackage={item.hasPackage}
+          onPressPackage={() => handleShowPackage()}
           pickupTime={item.pickupTime}
           pickupDistance={item.pickupDistance}
           pickupAddress={item.pickupAddress}

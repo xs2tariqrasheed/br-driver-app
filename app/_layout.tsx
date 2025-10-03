@@ -1,10 +1,15 @@
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
 import OnlineLocationTracker from "@/components/OnlineLocationTracker";
+import PackageInfoSheet from "@/components/PackageInfoSheet";
+import SpecialRequirementsSheet from "@/components/SpecialRequirementsSheet";
 import { ToastHost } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
+import { ContentProvider } from "@/context/ContentContext";
 import { DriverProvider } from "@/context/DriverContext";
+import { PackageInfoProvider } from "@/context/PackageInfoContext";
 import { RideOfferProvider } from "@/context/RideOfferContext";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { SpecialRequirementsProvider } from "@/context/SpecialRequirementsContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
@@ -42,43 +47,53 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Host>
           <BottomSheetModalProvider>
-            <AuthProvider>
-              <DriverProvider>
-                <SettingsProvider>
-                  <RideOfferProvider>
-                    <Stack initialRouteName="(screens)/auth">
-                      <Stack.Screen
-                        name="(screens)/auth"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="(screens)/more"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="(tabs)"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen name="+not-found" />
-                      <Stack.Screen
-                        name="notifications"
-                        options={{ title: "Notifications" }}
-                      />
-                      <Stack.Screen
-                        name="(screens)/heat-map"
-                        options={{ headerShown: false }}
-                      />
-                    </Stack>
-                    <StatusBar style="auto" />
-                    <ToastHost />
-                    {/* Global Socket Listener */}
-                    <GlobalSocketListener />
-                    {/* Online Location Tracker */}
-                    <OnlineLocationTracker />
-                  </RideOfferProvider>
-                </SettingsProvider>
-              </DriverProvider>
-            </AuthProvider>
+            <ContentProvider>
+              <AuthProvider>
+                <DriverProvider>
+                  <SettingsProvider>
+                    <RideOfferProvider>
+                      <SpecialRequirementsProvider>
+                        <PackageInfoProvider>
+                          <Stack initialRouteName="(screens)/auth">
+                            <Stack.Screen
+                              name="(screens)/auth"
+                              options={{ headerShown: false }}
+                            />
+                            <Stack.Screen
+                              name="(screens)/more"
+                              options={{ headerShown: false }}
+                            />
+                            <Stack.Screen
+                              name="(tabs)"
+                              options={{ headerShown: false }}
+                            />
+                            <Stack.Screen name="+not-found" />
+                            <Stack.Screen
+                              name="notifications"
+                              options={{ title: "Notifications" }}
+                            />
+                            <Stack.Screen
+                              name="(screens)/heat-map"
+                              options={{ headerShown: false }}
+                            />
+                          </Stack>
+                          <StatusBar style="auto" />
+                          <ToastHost />
+                          {/* Global Socket Listener */}
+                          <GlobalSocketListener />
+                          {/* Online Location Tracker */}
+                          <OnlineLocationTracker />
+                          {/* Special Requirements Sheet */}
+                          <SpecialRequirementsSheet />
+                          {/* Package Info Sheet */}
+                          <PackageInfoSheet />
+                        </PackageInfoProvider>
+                      </SpecialRequirementsProvider>
+                    </RideOfferProvider>
+                  </SettingsProvider>
+                </DriverProvider>
+              </AuthProvider>
+            </ContentProvider>
           </BottomSheetModalProvider>
         </Host>
       </GestureHandlerRootView>
