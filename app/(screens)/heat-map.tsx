@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import HeatMapWebView from "@/components/HeatMapWebView";
+import HeatMap from "@/components/HeatMap";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { HEATMAP_REFRESH_INTERVAL_MS } from "@/constants/global";
@@ -32,23 +32,29 @@ export default function HeatMapScreen() {
   const [heatmapData, setHeatmapData] = useState<HeatmapDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   // Dummy heatmap data for now - will be replaced with real API call
   const dummyHeatmapData: HeatmapDataPoint[] = [
-    { // Bahria Town
+    {
+      // Bahria Town
       lat: 31.3675,
       lng: 74.1862,
       weight: 0.9,
       demandLevel: "high",
     },
-    { // Modal Town
+    {
+      // Modal Town
       lat: 31.4697,
       lng: 74.2728,
       weight: 0.7,
       demandLevel: "medium",
     },
-    { // Ichhra
+    {
+      // Ichhra
       lat: 31.5313,
       lng: 74.3183,
       weight: 0.3,
@@ -88,7 +94,7 @@ export default function HeatMapScreen() {
       // Calculate ETAs for dummy data if user location is available
       let processedData = dummyHeatmapData;
       if (currentUserLocation) {
-        processedData = dummyHeatmapData.map(point => ({
+        processedData = dummyHeatmapData.map((point) => ({
           ...point,
           eta: calculateETA(
             currentUserLocation!,
@@ -149,7 +155,7 @@ export default function HeatMapScreen() {
         <Header title="Heat Map" onBackPress={handleGoBack} />
         <View style={styles.loadingContainer}>
           <Typography type="bodyLarge" style={styles.loadingText}>
-            Loading heat map data...
+            Loading heat map...
           </Typography>
         </View>
       </SafeAreaView>
@@ -176,30 +182,15 @@ export default function HeatMapScreen() {
     <SafeAreaView style={styles.container}>
       <Header title="Heat Map" onBackPress={handleGoBack} />
       <View style={styles.mapContainer}>
-        <HeatMapWebView
+        <HeatMap
           heatmapData={heatmapData}
           onLocationSelect={(address, coordinates) => {
             log("Location selected on heatmap:", address, coordinates);
           }}
           heatmapOptions={{
-            radius: 100,
+            radius: 500,
             opacity: 0.7,
-            // gradient: [
-            //   "rgba(56, 221, 56, 0)",      // Transparent green (low demand start)
-            //   "rgba(56, 221, 56, 0.3)",    // Light green
-            //   "rgba(56, 221, 56, 0.6)",    // Medium green
-            //   "rgba(56, 221, 56, 1)",      // Full green (low demand)
-            //   "rgba(100, 221, 56, 1)",     // Green-yellow transition
-            //   "rgba(150, 221, 56, 1)",     // More yellow-green
-            //   "rgba(200, 221, 56, 1)",     // Yellow-green
-            //   "rgba(221, 200, 56, 1)",     // Yellow transition
-            //   "rgba(221, 151, 38, 1)",     // Yellow-500 (medium demand)
-            //   "rgba(221, 120, 38, 1)",     // Yellow-orange transition
-            //   "rgba(221, 80, 38, 1)",      // Orange-red transition
-            //   "rgba(221, 60, 38, 1)",      // More red
-            //   "rgba(221, 38, 38, 1)",      // Red-500 (high demand)
-            //   "rgba(221, 38, 38, 1)",      // Full red (high demand end)
-            // ],
+            showETALabels: true,
           }}
         />
       </View>

@@ -4,7 +4,7 @@ import JobDetails from "@/components/JobDetails";
 import Notification from "@/components/Notification";
 import RideAction from "@/components/RideAction";
 import RideLocations from "@/components/RideLocations";
-import RideMapWebView from "@/components/RideMapWebView";
+import RideMap from "@/components/RideMap";
 import { textColors } from "@/constants/colors";
 import {
   ACTION_ICON_SOURCE_MAP,
@@ -286,7 +286,7 @@ export default function ActiveRideScreen() {
 
       {toggleValue === RIDE_TOGGLE_LABELS.MAP && (
         <View style={styles.mapContainer}>
-          <RideMapWebView
+          <RideMap
             pickupAddress="99C7+8WV, Service Road, Kahna Nau, Lahore"
             dropoffAddress="18-KM Main Lahore – Kasur Rd، opp. Descon Head Office,"
             eta={isDriverReachedOnPickup ? "" : "10 mins"}
