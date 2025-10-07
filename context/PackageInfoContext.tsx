@@ -69,6 +69,7 @@ export function PackageInfoProvider({
   const [state, dispatch] = useReducer(packageInfoReducer, initialState);
 
   const openPackageInfo = useCallback((data: PackageInfo) => {
+    console.log("📦 PackageInfoContext: Opening with data:", data);
     dispatch({ type: "OPEN", payload: data });
   }, []);
 

@@ -1313,7 +1313,10 @@ export const checkOfferStatus = (offer: any): string => {
   const isExpired =
     expirationTime !== null ? currentTime > expirationTime : false;
 
-  if (isExpired) return "expired";
+  if (isExpired) {
+    console.log("⏰ Offer is EXPIRED");
+    return "expired";
+  }
 
   // Check if offer was accepted by someone (and not expired)
   if (

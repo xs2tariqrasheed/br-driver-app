@@ -37,7 +37,7 @@ const RideLocations: React.FC<RideLocationsProps> = ({
   resetCountdown,
   resetStopwatch,
 }) => {
-  const rows: Array<{ label: "PU:" | "DO:"; value: string }> = [];
+  const rows: { label: "PU:" | "DO:"; value: string }[] = [];
   if (pickupAddress) rows.push({ label: "PU:", value: pickupAddress });
   if (dropoffAddress) rows.push({ label: "DO:", value: dropoffAddress });
 

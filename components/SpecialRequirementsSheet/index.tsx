@@ -1,4 +1,5 @@
 import BottomSheet from "@/components/BottomSheet";
+import BottomSheetModal from "@/components/BottomSheetModal";
 import Button from "@/components/Button";
 import Divider from "@/components/Divider";
 import Typography from "@/components/Typography";
@@ -27,127 +28,129 @@ const SpecialRequirementsSheet: React.FC = () => {
   } = data;
 
   return (
-    <BottomSheet
-      open={isOpen}
-      onClose={closeSpecialRequirements}
-      snapPoints={["85%"]}
-      initialSnapIndex={0}
-      headerTitle="Special Requirements"
-      showHeader={true}
-      scrollable={true}
-    >
-      <View style={styles.container}>
-        {/* Section 1: Rider Details */}
-        <Typography
-          type="bodyLarge"
-          weight="semibold"
-          style={styles.sectionTitle}
-        >
-          Rider Details
-        </Typography>
-
-        {/* Total Passengers Row */}
-        <RequirementRow
-          icon={require("@/assets/images/sepcialRequirments/total-passengers.png")}
-          title="Total Passengers"
-          rightElement={<ValueBox value={totalPassengers} />}
-        />
-
-        {/* Bags Row */}
-        <RequirementRow
-          icon={require("@/assets/images/sepcialRequirments/bags.png")}
-          title="Bags"
-          description="Number of bags that would require trunk space."
-          rightElement={<ValueBox value={bags} />}
-        />
-
-        <Divider marginVertical={16} />
-
-        {/* Section 2: Pets and Wheelchair */}
-        <RequirementRow
-          icon={require("@/assets/images/sepcialRequirments/pets.png")}
-          title="Pets"
-          rightElement={<Checkbox checked={pets} />}
-        />
-
-        <RequirementRow
-          icon={require("@/assets/images/sepcialRequirments/wheelchair.png")}
-          title="Wheelchair"
-          rightElement={<Checkbox checked={wheelchair} />}
-        />
-
-        <Divider marginVertical={16} />
-
-        {/* Section 3: Child Seat */}
-        <View style={styles.sectionHeader}>
-          <Image
-            source={require("@/assets/images/sepcialRequirments/child-seat.png")}
-            style={styles.sectionIcon}
-          />
+    <BottomSheetModal visible={isOpen} onClose={closeSpecialRequirements}>
+      <BottomSheet
+        open={true}
+        onClose={closeSpecialRequirements}
+        snapPoints={["85%"]}
+        initialSnapIndex={0}
+        headerTitle="Special Requirements"
+        showHeader={true}
+        scrollable={true}
+      >
+        <View style={styles.container}>
+          {/* Section 1: Rider Details */}
           <Typography
-            type="bodyMedium"
+            type="bodyLarge"
             weight="semibold"
             style={styles.sectionTitle}
           >
-            Child Seat:
+            Rider Details
           </Typography>
-        </View>
 
-        {/* Infant */}
-        <ChildSeatRow
-          title="Infant"
-          description='Rear facing 4 to 35 LBS, up to 32"'
-          value={childSeat?.infant || 0}
-        />
+          {/* Total Passengers Row */}
+          <RequirementRow
+            icon={require("@/assets/images/sepcialRequirments/total-passengers.png")}
+            title="Total Passengers"
+            rightElement={<ValueBox value={totalPassengers} />}
+          />
 
-        {/* Toddler */}
-        <ChildSeatRow
-          title="Toddler"
-          description="Forward facing 9 to 40 LBS, 2yrs+"
-          value={childSeat?.toddler || 0}
-        />
+          {/* Bags Row */}
+          <RequirementRow
+            icon={require("@/assets/images/sepcialRequirments/bags.png")}
+            title="Bags"
+            description="Number of bags that would require trunk space."
+            rightElement={<ValueBox value={bags} />}
+          />
 
-        {/* Booster */}
-        <ChildSeatRow
-          title="Booster"
-          description='Over 4 yrs+, 40" to 63"'
-          value={childSeat?.booster || 0}
-        />
+          <Divider marginVertical={16} />
 
-        <Divider marginVertical={16} />
+          {/* Section 2: Pets and Wheelchair */}
+          <RequirementRow
+            icon={require("@/assets/images/sepcialRequirments/pets.png")}
+            title="Pets"
+            rightElement={<Checkbox checked={pets} />}
+          />
 
-        {/* Section 4: Armed Driver and Language */}
-        <RequirementRow
-          icon={require("@/assets/images/sepcialRequirments/armed-driver.png")}
-          title="Armed driver"
-          rightElement={<Checkbox checked={armedDriver} />}
-        />
+          <RequirementRow
+            icon={require("@/assets/images/sepcialRequirments/wheelchair.png")}
+            title="Wheelchair"
+            rightElement={<Checkbox checked={wheelchair} />}
+          />
 
-        <RequirementRow
-          icon={require("@/assets/images/sepcialRequirments/language.png")}
-          title="Driver Language"
-          rightElement={
+          <Divider marginVertical={16} />
+
+          {/* Section 3: Child Seat */}
+          <View style={styles.sectionHeader}>
+            <Image
+              source={require("@/assets/images/sepcialRequirments/child-seat.png")}
+              style={styles.sectionIcon}
+            />
             <Typography
               type="bodyMedium"
               weight="semibold"
-              style={styles.languageTitle}
+              style={styles.sectionTitle}
             >
-              {driverLanguage}
+              Child Seat:
             </Typography>
-          }
-        />
+          </View>
 
-        {/* Continue Button */}
-        <Button
-          variant="primary"
-          onPress={closeSpecialRequirements}
-          style={styles.continueButton}
-          rounded="half"
-        >
-          Continue
-        </Button>
-      </View>
-    </BottomSheet>
+          {/* Infant */}
+          <ChildSeatRow
+            title="Infant"
+            description='Rear facing 4 to 35 LBS, up to 32"'
+            value={childSeat?.infant || 0}
+          />
+
+          {/* Toddler */}
+          <ChildSeatRow
+            title="Toddler"
+            description="Forward facing 9 to 40 LBS, 2yrs+"
+            value={childSeat?.toddler || 0}
+          />
+
+          {/* Booster */}
+          <ChildSeatRow
+            title="Booster"
+            description='Over 4 yrs+, 40" to 63"'
+            value={childSeat?.booster || 0}
+          />
+
+          <Divider marginVertical={16} />
+
+          {/* Section 4: Armed Driver and Language */}
+          <RequirementRow
+            icon={require("@/assets/images/sepcialRequirments/armed-driver.png")}
+            title="Armed driver"
+            rightElement={<Checkbox checked={armedDriver} />}
+          />
+
+          <RequirementRow
+            icon={require("@/assets/images/sepcialRequirments/language.png")}
+            title="Driver Language"
+            rightElement={
+              <Typography
+                type="bodyMedium"
+                weight="semibold"
+                style={styles.languageTitle}
+              >
+                {driverLanguage}
+              </Typography>
+            }
+          />
+
+          {/* Continue Button */}
+          <Button
+            variant="primary"
+            onPress={closeSpecialRequirements}
+            style={styles.continueButton}
+            rounded="half"
+          >
+            Continue
+          </Button>
+        </View>
+      </BottomSheet>
+    </BottomSheetModal>
   );
 };
 

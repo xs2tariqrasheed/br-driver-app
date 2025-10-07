@@ -1,6 +1,6 @@
-import { textColors } from '@/constants/colors';
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { textColors } from "@/constants/colors";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, StyleSheet, View } from "react-native";
 
 export interface ProgressProps {
   progress: number;
@@ -16,7 +16,7 @@ export interface ProgressProps {
   onComplete?: () => void;
   animated?: boolean;
   animationDuration?: number;
-  direction?: 'left-to-right' | 'right-to-left';
+  direction?: "left-to-right" | "right-to-left";
 }
 
 const Progress: React.FC<ProgressProps> = ({
@@ -24,20 +24,24 @@ const Progress: React.FC<ProgressProps> = ({
   color = [textColors.teal400, textColors.teal850],
   unfilledColor = textColors.black,
   borderWidth = 0,
-  borderColor = 'transparent',
+  borderColor = "transparent",
   borderRadius = 12,
-  width = '100%',
+  width = "100%",
   height = 20,
   duration,
   onEnd,
   onComplete,
   animated = true,
   animationDuration = 300,
-  direction = 'right-to-left',
+  direction = "right-to-left",
 }) => {
-  const [currentProgress, setCurrentProgress] = useState(duration ? 1 : Math.max(0, Math.min(1, progress)));
+  const [currentProgress, setCurrentProgress] = useState(
+    duration ? 1 : Math.max(0, Math.min(1, progress))
+  );
   const [isTimerActive, setIsTimerActive] = useState(!!duration);
-  const progressAnimation = useRef(new Animated.Value(duration ? 1 : Math.max(0, Math.min(1, progress)))).current;
+  const progressAnimation = useRef(
+    new Animated.Value(duration ? 1 : Math.max(0, Math.min(1, progress)))
+  ).current;
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
@@ -63,7 +67,8 @@ const Progress: React.FC<ProgressProps> = ({
         setCurrentProgress(clampedProgress);
 
         // Only trigger callbacks when progress is effectively 0
-        if (clampedProgress <= 0.001) { // Small threshold for floating-point safety
+        if (clampedProgress <= 0.001) {
+          // Small threshold for floating-point safety
           setIsTimerActive(false);
           setCurrentProgress(0);
           progressAnimation.setValue(0); // Ensure animation reflects 0
@@ -90,7 +95,7 @@ const Progress: React.FC<ProgressProps> = ({
         progressAnimation.setValue(normalizedProgress);
       }
     }
-  }, [duration, onEnd, onComplete, animated, progressAnimation]);
+  }, [duration, onEnd, onComplete, animated, progressAnimation, progress]);
 
   // Animate progress changes
   useEffect(() => {
@@ -126,8 +131,8 @@ const Progress: React.FC<ProgressProps> = ({
   // Interpolate filled width
   const filledWidth = progressAnimation.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-    extrapolate: 'clamp',
+    outputRange: ["0%", "100%"],
+    extrapolate: "clamp",
   });
 
   return (
@@ -149,13 +154,12 @@ const Progress: React.FC<ProgressProps> = ({
           styles.filled,
           {
             width: filledWidth,
-            height: '100%',
+            height: "100%",
             borderRadius: borderRadius - (borderWidth || 0),
             backgroundColor: gradientColors[0],
-            ...(direction === 'right-to-left' 
+            ...(direction === "right-to-left"
               ? { right: 0, left: undefined }
-              : { left: 0, right: undefined }
-            ),
+              : { left: 0, right: undefined }),
           },
         ]}
       >
@@ -166,10 +170,9 @@ const Progress: React.FC<ProgressProps> = ({
               {
                 borderRadius: borderRadius - (borderWidth || 0),
                 backgroundColor: gradientColors[1],
-                ...(direction === 'right-to-left' 
+                ...(direction === "right-to-left"
                   ? { right: 0, left: undefined }
-                  : { left: 0, right: undefined }
-                ),
+                  : { left: 0, right: undefined }),
               },
             ]}
           />
@@ -181,18 +184,18 @@ const Progress: React.FC<ProgressProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    overflow: 'hidden',
-    position: 'relative',
+    overflow: "hidden",
+    position: "relative",
   },
   filled: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
   },
   gradientOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     bottom: 0,
-    width: '50%',
+    width: "50%",
     opacity: 0.7,
   },
 });

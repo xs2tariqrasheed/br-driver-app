@@ -1,9 +1,18 @@
+import GlobalRideOfferModal from "@/components/GlobalRideOfferModal";
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
 import OnlineLocationTracker from "@/components/OnlineLocationTracker";
+import PackageInfoModal from "@/components/PackageInfoModal";
 import PackageInfoSheet from "@/components/PackageInfoSheet";
+import SpecialRequirementsModal from "@/components/SpecialRequirementsModal";
 import SpecialRequirementsSheet from "@/components/SpecialRequirementsSheet";
 import { ToastHost } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
+import { BidAcceptedProvider } from "@/context/BidAcceptedContext";
+import { BidBottomSheetProvider } from "@/context/BidBottomSheetContext";
+import { BidExpiredProvider } from "@/context/BidExpiredContext";
+import { BidUnsuccessfulProvider } from "@/context/BidUnsuccessfulContext";
+import { BidWaitingTimerProvider } from "@/context/BidWaitingTimerContext";
+import { BroadcastJobOffersProvider } from "@/context/BroadcastJobOffersContext";
 import { ContentProvider } from "@/context/ContentContext";
 import { DriverProvider } from "@/context/DriverContext";
 import { PackageInfoProvider } from "@/context/PackageInfoContext";
@@ -54,39 +63,57 @@ export default function RootLayout() {
                     <RideOfferProvider>
                       <SpecialRequirementsProvider>
                         <PackageInfoProvider>
-                          <Stack initialRouteName="(screens)/auth">
-                            <Stack.Screen
-                              name="(screens)/auth"
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="(screens)/more"
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="(tabs)"
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen name="+not-found" />
-                            <Stack.Screen
-                              name="notifications"
-                              options={{ title: "Notifications" }}
-                            />
-                            <Stack.Screen
-                              name="(screens)/heat-map"
-                              options={{ headerShown: false }}
-                            />
-                          </Stack>
-                          <StatusBar style="auto" />
-                          <ToastHost />
-                          {/* Global Socket Listener */}
-                          <GlobalSocketListener />
-                          {/* Online Location Tracker */}
-                          <OnlineLocationTracker />
-                          {/* Special Requirements Sheet */}
-                          <SpecialRequirementsSheet />
-                          {/* Package Info Sheet */}
-                          <PackageInfoSheet />
+                          <BroadcastJobOffersProvider>
+                            <BidExpiredProvider>
+                              <BidBottomSheetProvider>
+                                <BidWaitingTimerProvider>
+                                  <BidAcceptedProvider>
+                                    <BidUnsuccessfulProvider>
+                                      <Stack initialRouteName="(screens)/auth">
+                                        <Stack.Screen
+                                          name="(screens)/auth"
+                                          options={{ headerShown: false }}
+                                        />
+                                        <Stack.Screen
+                                          name="(screens)/more"
+                                          options={{ headerShown: false }}
+                                        />
+                                        <Stack.Screen
+                                          name="(tabs)"
+                                          options={{ headerShown: false }}
+                                        />
+                                        <Stack.Screen name="+not-found" />
+                                        <Stack.Screen
+                                          name="(screens)/notifications"
+                                          options={{ title: "Notifications" }}
+                                        />
+                                        <Stack.Screen
+                                          name="(screens)/heat-map"
+                                          options={{ headerShown: false }}
+                                        />
+                                      </Stack>
+                                      <StatusBar style="auto" />
+                                      <ToastHost />
+                                      {/* Global Socket Listener */}
+                                      <GlobalSocketListener />
+                                      {/* Online Location Tracker */}
+                                      <OnlineLocationTracker />
+                                      {/* Special Requirements Sheet */}
+                                      <SpecialRequirementsSheet />
+                                      {/* Package Info Sheet */}
+                                      <PackageInfoSheet />
+                                      {/* Special Requirements Modal */}
+                                      <SpecialRequirementsModal />
+                                      {/* Package Info Modal */}
+                                      <PackageInfoModal />
+                                      {/* Global Ride Offer Modal */}
+                                      <GlobalRideOfferModal />
+                                    </BidUnsuccessfulProvider>
+                                  </BidAcceptedProvider>
+                                </BidWaitingTimerProvider>
+                              </BidBottomSheetProvider>
+                            </BidExpiredProvider>
+                          </BroadcastJobOffersProvider>
                         </PackageInfoProvider>
                       </SpecialRequirementsProvider>
                     </RideOfferProvider>

@@ -38,12 +38,12 @@ export const ActionIconButton: React.FC<ActionIconButtonProps> = ({
 
 export type ActionIconBarProps = {
   /** Array of button configurations */
-  buttons: Array<{
+  buttons: {
     onPress: () => void;
     iconUrl: ImageSourcePropType;
     disabled?: boolean;
     visible?: boolean;
-  }>;
+  }[];
   /** Enable horizontal scrolling for many buttons */
   scrollable?: boolean;
 };

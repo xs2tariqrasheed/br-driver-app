@@ -1,3 +1,4 @@
+import ActiveOfferLoader from "@/components/ActiveOfferLoader";
 import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
 import DriverOffline from "@/components/DriverOffline";
@@ -18,6 +19,7 @@ import {
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
+import { useRideOffer } from "@/context/RideOfferContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
 import { usePost } from "@/hooks/usePost";
@@ -40,6 +42,7 @@ export default function HomeScreen() {
   const [auth] = useAuth();
   const [driver, setDriver] = useDriver();
   const { notifications } = useDriver();
+  const { hasAnyActiveOffer, setHasAnyActiveOffer } = useRideOffer();
   const [settings, setSettings] = useSettings();
   const { connectSocket, disconnectSocket } = useSocket({
     driverId: auth?.user?.id,
@@ -219,7 +222,7 @@ export default function HomeScreen() {
           log("[HomeScreen] Error disconnecting socket:", error);
           // Don't fail the offline process if socket disconnection fails
         }
-
+        setHasAnyActiveOffer(false);
         await setDriver({
           ...(driver ?? {}),
           online: false,
@@ -410,6 +413,8 @@ export default function HomeScreen() {
         )}
         {!driver?.online ? (
           <DriverOffline />
+        ) : hasAnyActiveOffer ? (
+          <ActiveOfferLoader />
         ) : (
           <LiveJobOffersScreen
             sortBy={activeSortBy}

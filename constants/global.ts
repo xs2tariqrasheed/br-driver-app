@@ -290,6 +290,8 @@ export type ApiClientType =
 
 export const SOCKET_EVENTS = {
   NEW_OFFER: "trip-offer",
+  ACCEPTED_RESPONSE: "accepted-response",
+  BID_RESPONSE: "bid-response",
 } as const;
 
 export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
@@ -297,4 +299,16 @@ export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
 export const SOCKET = {
   OFFERS_SERVER_URL:
     process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.100.160:3002",
+} as const;
+
+export const TRIP_OFFER_ACTIONS = {
+  ACCEPT: "accept",
+  SKIP: "skip",
+  HIDE: "hide",
+  BID: "bid",
+} as const;
+
+export const TRIP_OFFER_TYPES = {
+  SEQUENTIAL: "sequential",
+  BROADCAST: "broadcast",
 } as const;

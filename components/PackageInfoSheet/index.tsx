@@ -1,4 +1,5 @@
 import BottomSheet from "@/components/BottomSheet";
+import BottomSheetModal from "@/components/BottomSheetModal";
 import Button from "@/components/Button";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
@@ -23,65 +24,67 @@ const PackageInfoSheet: React.FC = () => {
   } = data;
 
   return (
-    <BottomSheet
-      open={isOpen}
-      onClose={closePackageInfo}
-      snapPoints={["85%"]}
-      initialSnapIndex={0}
-      headerTitle="Package Information"
-      showHeader={true}
-      scrollable={true}
-    >
-      <View style={styles.container}>
-        {/* Number of Packages */}
-        <InfoRow
-          label="Number of Packages"
-          value={<ValueBox value={numberOfPackages} />}
-        />
+    <BottomSheetModal visible={isOpen} onClose={closePackageInfo}>
+      <BottomSheet
+        open={true}
+        onClose={closePackageInfo}
+        snapPoints={["85%"]}
+        initialSnapIndex={0}
+        headerTitle="Package Information"
+        showHeader={true}
+        scrollable={true}
+      >
+        <View style={styles.container}>
+          {/* Number of Packages */}
+          <InfoRow
+            label="Number of Packages"
+            value={<ValueBox value={numberOfPackages} />}
+          />
 
-        {/* Weight */}
-        <InfoRow label="Weight" value={weight} />
+          {/* Weight */}
+          <InfoRow label="Weight" value={weight} />
 
-        <Divider />
-        {/* Phone Number */}
-        <InfoRow
-          style={styles.infoRow}
-          label="Phone Number"
-          value={phoneNumber}
-        />
+          <Divider />
+          {/* Phone Number */}
+          <InfoRow
+            style={styles.infoRow}
+            label="Phone Number"
+            value={phoneNumber}
+          />
 
-        {/* Recipient Name */}
-        <InfoRow label="Recipient Name" value={recipientName} />
-        <Divider marginVertical={8} />
-        {/* Instructions */}
-        <View style={styles.instructionsSection}>
-          <Typography
-            type="bodyMedium"
-            weight="semibold"
-            style={styles.instructionsLabel}
+          {/* Recipient Name */}
+          <InfoRow label="Recipient Name" value={recipientName} />
+          <Divider marginVertical={8} />
+          {/* Instructions */}
+          <View style={styles.instructionsSection}>
+            <Typography
+              type="bodyMedium"
+              weight="semibold"
+              style={styles.instructionsLabel}
+            >
+              Instructions:
+            </Typography>
+            <Typography
+              type="bodyMedium"
+              weight="regular"
+              style={styles.instructionsText}
+            >
+              {instructions}
+            </Typography>
+          </View>
+
+          {/* Continue Button */}
+          <Button
+            variant="primary"
+            onPress={closePackageInfo}
+            style={styles.continueButton}
+            rounded="half"
           >
-            Instructions:
-          </Typography>
-          <Typography
-            type="bodyMedium"
-            weight="regular"
-            style={styles.instructionsText}
-          >
-            {instructions}
-          </Typography>
+            Continue
+          </Button>
         </View>
-
-        {/* Continue Button */}
-        <Button
-          variant="primary"
-          onPress={closePackageInfo}
-          style={styles.continueButton}
-          rounded="half"
-        >
-          Continue
-        </Button>
-      </View>
-    </BottomSheet>
+      </BottomSheet>
+    </BottomSheetModal>
   );
 };
 

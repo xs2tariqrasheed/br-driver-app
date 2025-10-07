@@ -4,6 +4,7 @@ import {
   DRIVER_STORAGE_KEY,
   LOCAL_JOB_STATUS,
   NotificationType,
+  TRIP_OFFER_ACTIONS,
   type LocalJobStatus,
 } from "@/constants/global";
 
@@ -385,7 +386,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         await submitDriverResponse({
           driverId: driverId,
           tripId: offerId,
-          response: "skip",
+          response: TRIP_OFFER_ACTIONS.HIDE,
         });
 
         log(
@@ -450,7 +451,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         await submitDriverResponse({
           driverId: driverId,
           tripId: offerId,
-          response: "skip",
+          response: TRIP_OFFER_ACTIONS.SKIP,
         });
 
         log(

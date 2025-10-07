@@ -78,6 +78,7 @@ export function SpecialRequirementsProvider({
   );
 
   const openSpecialRequirements = useCallback((data: SpecialRequirements) => {
+    console.log("🔍 SpecialRequirementsContext: Opening with data:", data);
     dispatch({ type: "OPEN", payload: data });
   }, []);
 

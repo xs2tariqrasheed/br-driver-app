@@ -31,6 +31,7 @@ const OnlineLocationTracker: React.FC = () => {
     driverId: auth?.user?.id,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const socketReconnectAttemptedRef = useRef(false); // Track socket reconnection attempts
   const [appIsActive, setAppIsActive] = useState(
     AppState.currentState === "active"
   );
@@ -99,24 +100,45 @@ const OnlineLocationTracker: React.FC = () => {
 
   // Handle socket reconnection when driver comes online
   useEffect(() => {
-    if (driver?.online && socketStatus !== "connected" && appIsActive) {
-      const reconnectSocket = async () => {
-        try {
-          log(
-            "[OnlineLocationTracker] Driver is online but socket not connected, reconnecting..."
-          );
-          await connectSocket();
-          log("[OnlineLocationTracker] Socket reconnected for online driver");
-        } catch (error) {
-          log(
-            "[OnlineLocationTracker] Failed to reconnect socket for online driver:",
-            error
-          );
-        }
-      };
-
-      reconnectSocket();
+    // Reset reconnection flag when socket connects successfully
+    if (socketStatus === "connected") {
+      socketReconnectAttemptedRef.current = false;
+      return;
     }
+
+    // Don't attempt reconnection if:
+    // 1. Driver is not online
+    // 2. App is not active
+    // 3. Socket is connecting
+    // 4. Socket is in error state (prevent infinite reconnection loop)
+    // 5. Already attempted reconnection for this error
+    if (
+      !driver?.online ||
+      !appIsActive ||
+      socketStatus === "connecting" ||
+      socketStatus === "error" ||
+      socketReconnectAttemptedRef.current
+    ) {
+      return;
+    }
+
+    const reconnectSocket = async () => {
+      try {
+        socketReconnectAttemptedRef.current = true; // Mark as attempted
+        log(
+          "[OnlineLocationTracker] Driver is online but socket not connected, reconnecting..."
+        );
+        await connectSocket();
+        log("[OnlineLocationTracker] Socket reconnected for online driver");
+      } catch (error) {
+        log(
+          "[OnlineLocationTracker] Failed to reconnect socket for online driver:",
+          error
+        );
+      }
+    };
+
+    reconnectSocket();
   }, [driver?.online, socketStatus, appIsActive, connectSocket, log]);
 
   // Main tracking effect - reacts to shouldTrack changes
