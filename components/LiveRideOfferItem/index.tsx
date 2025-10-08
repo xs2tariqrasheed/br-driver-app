@@ -68,6 +68,8 @@ export interface LiveRideOfferItemProps {
   hasPackage: boolean;
   /** Callback function for package icon press */
   onPressPackage: () => void;
+  /** Whether the offer is bidable */
+  bidable: boolean;
   /** Pickup time in minutes */
   pickupTime: number;
   /** Pickup distance in miles */
@@ -88,8 +90,6 @@ export interface LiveRideOfferItemProps {
   totalPrice: number;
   /** Driver earning amount */
   driverEarn: number;
-  /** Button title text */
-  buttonTitle: string;
   /** Whether the button is disabled */
   disabled?: boolean;
   /** Callback function for button click */
@@ -97,11 +97,9 @@ export interface LiveRideOfferItemProps {
   /** Custom style for the container */
   style?: ViewStyle;
   /** Status of the item (visible by default) */
-  itemStatus?: ItemStatus;
+  itemStatus?: ItemStatus | "expired" | "accepted" | "offered";
   /** Whether the parent list is currently scrolling (disables swipe gestures) */
   isScrolling?: boolean;
-  /** Whether hidden jobs are currently being shown (disables swipe gestures) */
-  showHiddenJobs?: boolean;
   /** Whether the bid button should be hidden */
   hideBidButton?: boolean;
   /** Whether to remove the flex from the container */
@@ -152,6 +150,7 @@ export default function LiveRideOfferItem({
   onPressSpecialRequirements,
   hasPackage,
   onPressPackage,
+  bidable,
   pickupTime,
   pickupDistance,
   pickupAddress,
@@ -162,13 +161,11 @@ export default function LiveRideOfferItem({
   rideDistance,
   totalPrice,
   driverEarn,
-  buttonTitle,
   disabled = false,
   onButtonClick,
   style,
-  itemStatus = "visible",
+  itemStatus = "offered",
   isScrolling = false,
-  showHiddenJobs = false,
   hideBidButton = false,
   removeFlex = false,
   processingOfferId = null,
@@ -186,28 +183,52 @@ export default function LiveRideOfferItem({
   // Get the current status of this offer
   const offerStatus = getLiveOfferStatus(id);
 
-  // Determine button title based on offer status
+  // Determine button title based on offer status and bidable prop
   const getButtonTitle = () => {
-    if (!showHiddenJobs) {
-      return buttonTitle; // Use original title for active offers
+    // Check if the offer itself is expired (from broadcast context) - highest priority
+    if (itemStatus === "expired") {
+      console.log(`[LiveRideOfferItem] Job ${id} - showing Expired`);
+      return "Expired";
     }
 
-    // When viewing hidden/skipped jobs, show the action that was taken
-    if (offerStatus?.status === LOCAL_JOB_STATUS.SKIPPED) {
+    // Check for user actions based on itemStatus (from broadcast context)
+    if (itemStatus === "accepted") {
+      console.log(`[LiveRideOfferItem] Job ${id} - showing Accepted`);
+      return "Accepted";
+    } else if (itemStatus === "skipped") {
+      console.log(`[LiveRideOfferItem] Job ${id} - showing Skipped`);
       return "Skipped";
-    } else if (offerStatus?.status === LOCAL_JOB_STATUS.HIDDEN) {
+    } else if (itemStatus === "hidden") {
+      console.log(`[LiveRideOfferItem] Job ${id} - showing Hidden`);
       return "Hidden";
     }
 
-    return buttonTitle; // Fallback
-  };
+    // Check for fresh offers (offered status) - show default state based on bidable prop
+    if (itemStatus === "offered") {
+      // This is a fresh offer - show default state based on bidable prop
+      const defaultTitle = bidable ? "Bid" : "Accept";
+      console.log(
+        `[LiveRideOfferItem] Job ${id} - fresh offer, showing default: ${defaultTitle}`
+      );
+      return defaultTitle;
+    }
 
-  // Log showHiddenJobs state changes for debugging
-  React.useEffect(() => {
+    // Fallback: Show the action that was taken based on offerStatus (for backward compatibility)
+    if (offerStatus?.status === LOCAL_JOB_STATUS.SKIPPED) {
+      console.log(`[LiveRideOfferItem] Job ${id} - showing Skipped (fallback)`);
+      return "Skipped";
+    } else if (offerStatus?.status === LOCAL_JOB_STATUS.HIDDEN) {
+      console.log(`[LiveRideOfferItem] Job ${id} - showing Hidden (fallback)`);
+      return "Hidden";
+    }
+
+    // Fallback to default state based on bidable prop
+    const defaultTitle = bidable ? "Bid" : "Accept";
     console.log(
-      `[LiveRideOfferItem] Job ${id} - showHiddenJobs: ${showHiddenJobs}`
+      `[LiveRideOfferItem] Job ${id} - fallback, showing default: ${defaultTitle}`
     );
-  }, [showHiddenJobs, id]);
+    return defaultTitle;
+  };
 
   // Animated value for skip background opacity
   const skipOpacity = translateX.interpolate({
@@ -258,11 +279,14 @@ export default function LiveRideOfferItem({
         translationX < -100 &&
         Math.abs(velocityX) > 300
       ) {
-        // Check if swipe is disabled due to showHiddenJobs mode
-        if (showHiddenJobs) {
-          console.log(
-            `[LiveRideOfferItem] Left swipe blocked for job ${id} - viewing hidden jobs mode`
-          );
+        // Valid left swipe - skip the offer
+        console.log(
+          `[LiveRideOfferItem] Left swipe detected for job ${id}, velocity: ${velocityX}`
+        );
+
+        // Check if offer is expired before attempting to skip
+        if (itemStatus === "expired") {
+          console.log(`[LiveRideOfferItem] Job ${id} is expired, cannot skip`);
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: false,
@@ -270,10 +294,6 @@ export default function LiveRideOfferItem({
           return;
         }
 
-        // Valid left swipe - skip the offer
-        console.log(
-          `[LiveRideOfferItem] Left swipe detected for job ${id}, velocity: ${velocityX}`
-        );
         setIsSkipping(true);
         onProcessingStart?.(id); // Notify parent that processing started
 
@@ -291,9 +311,15 @@ export default function LiveRideOfferItem({
               `[LiveRideOfferItem] Marked job ${id} as skipped in broadcast context`
             );
 
-            // Success - keep it swiped away
-            setIsSkipping(false);
-            onProcessingEnd?.(); // Notify parent that processing ended
+            // Success - reset animation back to 0 so item shows "Skipped" state
+            // The item will be filtered out by the parent component
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: false,
+            }).start(() => {
+              setIsSkipping(false);
+              onProcessingEnd?.(); // Notify parent that processing ended
+            });
           } catch (error) {
             console.error("Failed to skip offer:", error);
             const errorMessage =
@@ -305,12 +331,13 @@ export default function LiveRideOfferItem({
               position: "top",
             });
             // Reset position if skip fails
-            setIsSkipping(false);
-            onProcessingEnd?.(); // Notify parent that processing ended
             Animated.spring(translateX, {
               toValue: 0,
               useNativeDriver: false,
-            }).start();
+            }).start(() => {
+              setIsSkipping(false);
+              onProcessingEnd?.(); // Notify parent that processing ended
+            });
           }
         });
       } else {
@@ -342,6 +369,13 @@ export default function LiveRideOfferItem({
   // Handle hide action
   const handleHideOffer = async () => {
     try {
+      // Check if offer is expired before attempting to hide
+      if (itemStatus === "expired") {
+        console.log(`[LiveRideOfferItem] Job ${id} is expired, cannot hide`);
+        setShowHideButton(false);
+        return;
+      }
+
       setIsHiding(true);
       onProcessingStart?.(id); // Notify parent that processing started
 
@@ -414,28 +448,17 @@ export default function LiveRideOfferItem({
       <LongPressGestureHandler
         onHandlerStateChange={onLongPressStateChange}
         minDurationMs={500}
-        enabled={
-          !isScrolling &&
-          !showHiddenJobs &&
-          !disabled &&
-          processingOfferId === null
-        }
+        enabled={!isScrolling && !disabled && processingOfferId === null}
       >
         <View>
           <PanGestureHandler
             onGestureEvent={onGestureEvent}
             onHandlerStateChange={onHandlerStateChange}
-            enabled={
-              !isScrolling &&
-              !showHiddenJobs &&
-              !disabled &&
-              processingOfferId === null
-            }
+            enabled={!isScrolling && !disabled && processingOfferId === null}
             // Gesture configuration for horizontal-only left swipes
             // activeOffsetX: Only activate if moved 10px horizontally (left/right)
             // failOffsetY: Fail gesture if moved 15px vertically (allows scrolling)
             // minVelocityX: Require 500px/s horizontal velocity for swipe activation
-            // Note: Disabled when showHiddenJobs=true to prevent re-skipping viewed jobs
             // Note: Disabled when any offer is being processed to prevent race conditions
             activeOffsetX={[-10, 10]}
             failOffsetY={[-15, 15]}
@@ -487,7 +510,7 @@ export default function LiveRideOfferItem({
                   totalPrice={totalPrice}
                   driverEarn={driverEarn}
                   buttonTitle={getButtonTitle()}
-                  disabled={disabled || showHiddenJobs}
+                  disabled={disabled}
                   onButtonClick={onButtonClick}
                   hideBidButton={hideBidButton}
                 />

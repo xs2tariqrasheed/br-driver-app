@@ -156,7 +156,7 @@ export type LiveJobStatus =
 
 // Local UI Status types (for swipe/hide functionality)
 export const LOCAL_JOB_STATUS = {
-  VISIBLE: "visible",
+  VISIBLE: "offered",
   SKIPPED: "skipped",
   HIDDEN: "hidden",
 } as const;

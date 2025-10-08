@@ -49,7 +49,6 @@ import Typography from "../Typography";
 interface LiveJobOffersScreenProps {
   style?: ViewStyle;
   sortBy?: "time" | "distance";
-  showHiddenJobs?: boolean;
   isOnline?: boolean;
 }
 
@@ -58,7 +57,6 @@ const log = logger();
 export default function LiveJobOffersScreen({
   style,
   sortBy: externalSortBy = "distance",
-  showHiddenJobs = false,
 }: LiveJobOffersScreenProps) {
   const { getLiveOfferStatus } = useDriver();
   const [auth] = useAuth();
@@ -120,13 +118,6 @@ export default function LiveJobOffersScreen({
     return broadcastOffers;
   }, [broadcastOffers]);
 
-  // Log toggle state changes for debugging
-  useEffect(() => {
-    log(
-      `[LiveJobOffersScreen] Show hidden jobs: ${showHiddenJobs ? "ON" : "OFF"}`
-    );
-  }, [showHiddenJobs]);
-
   // Sort jobs based on external sort criteria
   const sortedJobs = useMemo(() => {
     log(`[LiveJobOffersScreen] sortedJobs useMemo triggered`);
@@ -150,11 +141,56 @@ export default function LiveJobOffersScreen({
 
   // Get item status for each job
   const getItemStatus = useCallback(
-    (jobId: string): LocalJobStatus => {
+    (jobId: string): LocalJobStatus | "expired" | "accepted" | "offered" => {
       const hiddenOffer = getLiveOfferStatus(jobId);
-      return hiddenOffer?.status || LOCAL_JOB_STATUS.VISIBLE;
+      const broadcastOffer = broadcastOffers.find(
+        (offer) => offer.id === jobId
+      );
+
+      // Debug logging
+      console.log(`[LiveJobOffersScreen] getItemStatus for ${jobId}:`);
+      console.log(`  - hiddenOffer:`, hiddenOffer);
+      console.log(`  - broadcastOffer:`, broadcastOffer);
+      console.log(`  - broadcastOffer.status:`, broadcastOffer?.status);
+
+      // Check if the offer is expired in the broadcast context FIRST (highest priority)
+      if (broadcastOffer?.status === "expired") {
+        console.log(`  - returning expired status (highest priority)`);
+        return "expired";
+      }
+
+      // For fresh offers (status "offered"), always return "offered" regardless of previous status
+      if (broadcastOffer?.status === "offered") {
+        console.log(
+          `  - fresh offer, returning offered status (ignoring previous status)`
+        );
+        return "offered";
+      }
+
+      // Check broadcast offer status for user actions (accepted, skipped, hidden)
+      if (broadcastOffer?.status === "accepted") {
+        console.log(`  - returning accepted status from broadcast offer`);
+        return "accepted";
+      } else if (broadcastOffer?.status === "skipped") {
+        console.log(`  - returning skipped status from broadcast offer`);
+        return "skipped";
+      } else if (broadcastOffer?.status === "hidden") {
+        console.log(`  - returning hidden status from broadcast offer`);
+        return "hidden";
+      }
+
+      // Fallback to hiddenOffer status for backward compatibility
+      if (hiddenOffer?.status) {
+        console.log(
+          `  - returning hidden status from hiddenOffer: ${hiddenOffer.status}`
+        );
+        return hiddenOffer.status;
+      }
+
+      console.log(`  - returning visible status`);
+      return LOCAL_JOB_STATUS.VISIBLE;
     },
-    [getLiveOfferStatus]
+    [getLiveOfferStatus, broadcastOffers]
   );
 
   // Handle button click (bid/accept)
@@ -442,11 +478,6 @@ export default function LiveJobOffersScreen({
     }
   }, [hasMoreJobs, sortedJobs.length]);
 
-  // Log showHiddenJobs state changes
-  useEffect(() => {
-    log(`[LiveJobOffersScreen] showHiddenJobs: ${showHiddenJobs}`);
-  }, [showHiddenJobs]);
-
   // Error handling is now managed by the BroadcastJobOffersContext
 
   // Show loading state only when there are no broadcast offers yet and timeout hasn't occurred
@@ -473,28 +504,19 @@ export default function LiveJobOffersScreen({
     const isAnotherOfferProcessing =
       processingOfferId !== null && processingOfferId !== item.id;
 
-    // Determine button title and disabled state based on actual status
-    let buttonTitle = "Accept";
+    // Determine disabled state based on actual status
     let isDisabled = false;
 
     // Check if action has been taken
     if (item.status === "accepted") {
-      buttonTitle = "Accepted";
       isDisabled = true;
     } else if (item.status === "skipped") {
-      buttonTitle = "Skipped";
       isDisabled = true;
     } else if (item.status === "hidden") {
-      buttonTitle = "Hidden";
       isDisabled = true;
     } else if (item.status === "expired") {
-      buttonTitle = "Expired";
       isDisabled = true;
-    } else if (item.bidable) {
-      buttonTitle = "Bid";
-      isDisabled = false;
     } else {
-      buttonTitle = "Accept";
       isDisabled = false;
     }
 
@@ -518,6 +540,7 @@ export default function LiveJobOffersScreen({
             handleShowPackage(item?.packageInfo);
           }}
           hasPackage={item.hasPackage}
+          bidable={item.bidable}
           pickupTime={item.pickupTime}
           pickupDistance={item.pickupDistance}
           pickupAddress={item.pickupAddress}
@@ -528,11 +551,9 @@ export default function LiveJobOffersScreen({
           rideDistance={item.rideDistance}
           totalPrice={item.totalPrice}
           driverEarn={item.driverEarn}
-          buttonTitle={buttonTitle}
           onButtonClick={() => handleJobAction(item.id)}
           itemStatus={getItemStatus(item.id)}
           isScrolling={isScrolling}
-          showHiddenJobs={showHiddenJobs}
           disabled={isDisabled}
           processingOfferId={processingOfferId}
           onProcessingStart={(offerId) => setProcessingOfferId(offerId)}
