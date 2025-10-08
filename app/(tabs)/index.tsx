@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
     left: 18,
     backgroundColor: textColors.red500,
     borderRadius: 10,
-    minWidth: 16,
+    minWidth: 20,
     height: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: textColors.white,
     fontSize: 10,
-    lineHeight: 12,
+    lineHeight: 10,
   },
   toggleWrap: {
     alignItems: "center",

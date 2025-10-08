@@ -3,11 +3,10 @@ import Button from "@/components/Button";
 import Input from "@/components/Form/Input";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import { NOTIFICATION_TYPES, RIDE_OFFER_STORAGE_KEY } from "@/constants/global";
+import { NOTIFICATION_TYPES } from "@/constants/global";
 import { NotificationItem } from "@/context/DriverContext";
 import { useRideOffer } from "@/context/RideOfferContext";
-import { getStorageItem } from "@/utils/helpers";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 export interface NotificationBottomSheetProps {
@@ -28,28 +27,11 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   onSendReply,
 }) => {
   const [replyText, setReplyText] = useState("");
-  const [rideOffer, setRideOffer] = useState<any>(null);
-  const { showRideOfferModal } = useRideOffer();
+  const { showRideOfferModal, hasAnyActiveOffer, getTemporaryRide } =
+    useRideOffer();
 
-  // Load ride offer data when notification changes
-  useEffect(() => {
-    const loadRideOffer = async () => {
-      if (notification?.id) {
-        try {
-          const storedData = await getStorageItem(RIDE_OFFER_STORAGE_KEY);
-          if (storedData) {
-            const parsedData = JSON.parse(storedData);
-            setRideOffer(parsedData);
-            console.log("👁️ rideOffer loaded:", parsedData);
-          }
-        } catch (error) {
-          console.error("Error loading ride offer data:", error);
-        }
-      }
-    };
-
-    loadRideOffer();
-  }, [notification?.id]);
+  // Get ride offer data from temporary ride state using notification ID
+  const rideOffer = notification?.id ? getTemporaryRide(notification.id) : null;
 
   if (!notification) return null;
 
@@ -71,6 +53,16 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
 
   const handleDone = () => {
     onClose();
+  };
+
+  // Check if we should show the "View Details" button
+  const shouldShowViewDetails = () => {
+    return (
+      notification?.notificationType ===
+        NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER &&
+      rideOffer &&
+      hasAnyActiveOffer
+    );
   };
 
   const handleViewDetails = () => {
@@ -102,9 +94,23 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
           {notification.messageBody}
         </Typography>
 
+        {/* Expired Offer Message */}
+        {notification?.notificationType ===
+          NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER &&
+          !rideOffer && (
+            <View style={styles.expiredSection}>
+              <Typography
+                type="bodyMedium"
+                weight="medium"
+                style={styles.expiredText}
+              >
+                This offer has expired and is no longer available.
+              </Typography>
+            </View>
+          )}
+
         {/* Special ride offer notification section */}
-        {notification.notificationType ===
-          NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER && rideOffer ? (
+        {shouldShowViewDetails() ? (
           <View style={styles.specialRideOfferSection}>
             <Button
               rounded="half"
@@ -230,6 +236,18 @@ const styles = StyleSheet.create({
     backgroundColor: textColors.teal700,
     borderRadius: 25,
     paddingVertical: 12,
+  },
+  expiredSection: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: textColors.red0,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: textColors.red200,
+  },
+  expiredText: {
+    color: textColors.red600,
+    textAlign: "center",
   },
 });
 

@@ -78,6 +78,8 @@ interface RideOfferContextType {
   hasAnyActiveOffer: boolean;
   isSubmitBidLoading: boolean;
   isSubmitETALoading: boolean;
+  // Temporary ride state for notifications
+  temporaryRides: { [notificationId: string]: RideOffer };
   // Actions
   showRideOfferModal: (offer: RideOffer, callbacks?: ModalCallbacks) => void;
   hideRideOfferModal: () => void;
@@ -88,6 +90,11 @@ interface RideOfferContextType {
   submitBid: (bidAmount: number) => Promise<{ success: boolean } | undefined>;
   markSequentialOfferAsExpired: (tripId: string) => void;
   setHasAnyActiveOffer: (hasActive: boolean) => Promise<void>;
+  // Temporary ride methods
+  saveTemporaryRide: (notificationId: string, rideOffer: RideOffer) => void;
+  getTemporaryRide: (notificationId: string) => RideOffer | null;
+  removeTemporaryRide: (notificationId: string) => void;
+  removeTemporaryRidesByTripId: (tripId: string) => void;
 }
 
 const RideOfferContext = createContext<RideOfferContextType | undefined>(
@@ -112,6 +119,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   const [isHideLoading, setIsHideLoading] = useState(false);
   const [isSubmitETALoading, setIsSubmitETALoading] = useState(false);
   const [isSubmitBidLoading, setIsSubmitBidLoading] = useState(false);
+
+  // Temporary ride state for notifications
+  const [temporaryRides, setTemporaryRides] = useState<{
+    [notificationId: string]: RideOffer;
+  }>({});
 
   // API hooks for driver responses
   const { execute: submitDriverResponse } = usePost(
@@ -468,6 +480,56 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // ============================================================================
+  // TEMPORARY RIDE METHODS FOR NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Save a temporary ride offer for a specific notification
+   */
+  const saveTemporaryRide = (notificationId: string, rideOffer: RideOffer) => {
+    console.log(`💾 Saving temporary ride for notification: ${notificationId}`);
+    setTemporaryRides((prev) => ({
+      ...prev,
+      [notificationId]: rideOffer,
+    }));
+  };
+
+  /**
+   * Get a temporary ride offer by notification ID
+   */
+  const getTemporaryRide = (notificationId: string): RideOffer | null => {
+    return temporaryRides[notificationId] || null;
+  };
+
+  /**
+   * Remove a temporary ride offer by notification ID
+   */
+  const removeTemporaryRide = (notificationId: string) => {
+    console.log(
+      `🗑️ Removing temporary ride for notification: ${notificationId}`
+    );
+    setTemporaryRides((prev) => {
+      const { [notificationId]: removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  /**
+   * Remove temporary rides by tripId (for expiration handling)
+   */
+  const removeTemporaryRidesByTripId = (tripId: string) => {
+    console.log(`🗑️ Removing temporary rides for tripId: ${tripId}`);
+    setTemporaryRides((prev) => {
+      const filtered = Object.fromEntries(
+        Object.entries(prev).filter(
+          ([_, rideOffer]) => rideOffer.tripOffer.tripId !== tripId
+        )
+      );
+      return filtered;
+    });
+  };
+
   const value: RideOfferContextType = {
     isRideOfferModalVisible,
     currentOffer,
@@ -478,6 +540,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     hasAnyActiveOffer,
     isSubmitBidLoading,
     isSubmitETALoading,
+    temporaryRides,
     showRideOfferModal,
     hideRideOfferModal,
     acceptRideOffer,
@@ -487,6 +550,10 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     submitBid,
     markSequentialOfferAsExpired,
     setHasAnyActiveOffer,
+    saveTemporaryRide,
+    getTemporaryRide,
+    removeTemporaryRide,
+    removeTemporaryRidesByTripId,
   };
 
   return (

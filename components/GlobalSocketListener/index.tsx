@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import {
   NOTIFICATION_TYPES,
   NotificationType,
-  RIDE_OFFER_STORAGE_KEY,
   SOCKET_EVENTS,
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
@@ -17,7 +16,7 @@ import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { expirationService } from "@/services/ExpirationService";
-import { formatDateTimestamp, logger, setStorageItem } from "@/utils/helpers";
+import { formatDateTimestamp, logger } from "@/utils/helpers";
 import { showToast } from "../Toast";
 
 /**
@@ -54,6 +53,9 @@ export function GlobalSocketListener() {
     showRideOfferModal,
     markSequentialOfferAsExpired,
     hideRideOfferModal,
+    saveTemporaryRide,
+    removeTemporaryRide,
+    removeTemporaryRidesByTripId,
   } = useRideOffer();
   const { addBroadcastOffer, markBroadcastOfferAsExpired } =
     useBroadcastJobOffers();
@@ -169,12 +171,11 @@ export function GlobalSocketListener() {
               messageType: "unread" as const,
               notificationType:
                 NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER as NotificationType,
-              rideOfferData: rideOffer,
             };
             await addNotification(notification);
 
-            // Store ride offer data separately for easy retrieval
-            setStorageItem(RIDE_OFFER_STORAGE_KEY, JSON.stringify(rideOffer));
+            // Save temporary ride for this notification
+            saveTemporaryRide(notification.id, rideOffer);
             log("✅ Ride offer notification added to notification center");
 
             // Set hasAnyActiveOffer to true when new offer is received
@@ -294,7 +295,6 @@ export function GlobalSocketListener() {
               dateTime: formatDateTimestamp(broadcastOffer.timestamp),
               messageType: "unread" as const,
               notificationType: NOTIFICATION_TYPES.INFO as NotificationType,
-              rideOfferData: broadcastOffer,
             };
             await addNotification(notification);
             log("✅ Broadcast offer notification added to notification center");
@@ -450,6 +450,12 @@ export function GlobalSocketListener() {
             hideRideOfferModal,
             setHasAnyActiveOffer,
           });
+
+          // NEW: Remove temporary rides for expired offers
+          if (data.tripId) {
+            removeTemporaryRidesByTripId(data.tripId);
+            log("✅ Removed temporary rides for expired tripId:", data.tripId);
+          }
         } catch (error) {
           log("❌ Error processing expired offer:", error);
           showToast("Failed to process expired offer", {
