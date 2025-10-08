@@ -296,7 +296,11 @@ export default function LiveRideOfferItem({
             onProcessingEnd?.(); // Notify parent that processing ended
           } catch (error) {
             console.error("Failed to skip offer:", error);
-            showToast("Failed to skip offer. Please try again.", {
+            const errorMessage =
+              error instanceof Error
+                ? error.message
+                : "Failed to skip offer. Please try again.";
+            showToast(errorMessage, {
               variant: "error",
               position: "top",
             });
@@ -354,7 +358,11 @@ export default function LiveRideOfferItem({
       onProcessingEnd?.(); // Notify parent that processing ended
     } catch (error) {
       console.error("Failed to hide offer:", error);
-      showToast("Failed to hide offer. Please try again.", {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to hide offer. Please try again.";
+      showToast(errorMessage, {
         variant: "error",
         position: "top",
       });

@@ -133,10 +133,14 @@ const createApiClient = (): AxiosInstance => {
         errorMessage = "Server error";
       } else if (
         error.response?.data &&
-        typeof error.response.data === "object" &&
-        "message" in error.response.data
+        typeof error.response.data === "object"
       ) {
-        errorMessage = (error.response.data as { message: string }).message;
+        // Check for 'error' field first (backend format), then 'message' field
+        if ("error" in error.response.data) {
+          errorMessage = (error.response.data as { error: string }).error;
+        } else if ("message" in error.response.data) {
+          errorMessage = (error.response.data as { message: string }).message;
+        }
       }
 
       log("❌ API Error:", errorMessage);
@@ -249,10 +253,14 @@ const createAuctionApiClient = (): AxiosInstance => {
         errorMessage = "Server error";
       } else if (
         error.response?.data &&
-        typeof error.response.data === "object" &&
-        "message" in error.response.data
+        typeof error.response.data === "object"
       ) {
-        errorMessage = (error.response.data as { message: string }).message;
+        // Check for 'error' field first (backend format), then 'message' field
+        if ("error" in error.response.data) {
+          errorMessage = (error.response.data as { error: string }).error;
+        } else if ("message" in error.response.data) {
+          errorMessage = (error.response.data as { message: string }).message;
+        }
       }
 
       log("❌ API Error:", errorMessage);
@@ -360,10 +368,14 @@ const createAuthApiClient = (): AxiosInstance => {
         errorMessage = "Authentication service error. Please try again later.";
       } else if (
         error.response?.data &&
-        typeof error.response.data === "object" &&
-        "message" in error.response.data
+        typeof error.response.data === "object"
       ) {
-        errorMessage = (error.response.data as { message: string }).message;
+        // Check for 'error' field first (backend format), then 'message' field
+        if ("error" in error.response.data) {
+          errorMessage = (error.response.data as { error: string }).error;
+        } else if ("message" in error.response.data) {
+          errorMessage = (error.response.data as { message: string }).message;
+        }
       }
 
       log("❌ Auth API Error:", errorMessage);
@@ -476,10 +488,14 @@ const createMeApiClient = (): AxiosInstance => {
         errorMessage = "Server error";
       } else if (
         error.response?.data &&
-        typeof error.response.data === "object" &&
-        "message" in error.response.data
+        typeof error.response.data === "object"
       ) {
-        errorMessage = (error.response.data as { message: string }).message;
+        // Check for 'error' field first (backend format), then 'message' field
+        if ("error" in error.response.data) {
+          errorMessage = (error.response.data as { error: string }).error;
+        } else if ("message" in error.response.data) {
+          errorMessage = (error.response.data as { message: string }).message;
+        }
       }
 
       log("❌ API Error:", errorMessage);

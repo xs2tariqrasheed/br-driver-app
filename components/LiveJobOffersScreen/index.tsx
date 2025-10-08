@@ -116,27 +116,6 @@ export default function LiveJobOffersScreen({
       `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (no filtering)`
     );
 
-    // Check for expiration and update status if needed
-    broadcastOffers.forEach((job) => {
-      // Only mark as expired if no action has been taken (not accepted, skipped, or hidden)
-      const hasActionBeenTaken =
-        job.status === "accepted" ||
-        job.status === "skipped" ||
-        job.status === "hidden";
-
-      if (!hasActionBeenTaken && job.status !== "expired") {
-        // Update the job status in context only if no action was taken
-        updateBroadcastOffer(job.id, { status: "expired" });
-        log(
-          `[LiveJobOffersScreen] Marking job ${job.id} as expired - no action taken`
-        );
-      } else if (hasActionBeenTaken) {
-        log(
-          `[LiveJobOffersScreen] Job ${job.id} has action taken (${job.status}) - not marking as expired`
-        );
-      }
-    });
-
     log(`[LiveJobOffersScreen] Returning ${broadcastOffers.length} offers`);
     return broadcastOffers;
   }, [broadcastOffers]);
@@ -244,7 +223,11 @@ export default function LiveJobOffersScreen({
       // No need to manage local state here
     } catch (error) {
       log("[LiveJobOffersScreen] Failed to submit bid:", error);
-      showToast("Failed to submit bid. Please try again.", {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to submit bid. Please try again.";
+      showToast(errorMessage, {
         variant: "error",
         position: "top",
       });
@@ -290,7 +273,11 @@ export default function LiveJobOffersScreen({
         router.replace("/(screens)/active-ride");
       } catch (error) {
         log("[LiveJobOffersScreen] Failed to submit ETA:", error);
-        showToast("Failed to submit ETA. Please try again.", {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to submit ETA. Please try again.";
+        showToast(errorMessage, {
           variant: "error",
           position: "top",
         });

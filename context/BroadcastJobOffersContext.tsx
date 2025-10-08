@@ -1,11 +1,5 @@
 import { TRIP_OFFER_TYPES } from "@/constants/global";
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, ReactNode, useContext, useState } from "react";
 
 export interface BroadcastJobOffer {
   // Basic job offer info
@@ -72,6 +66,7 @@ interface BroadcastJobOffersContextType {
   ) => void;
   clearAllBroadcastOffers: () => void;
   getBroadcastOffer: (offerId: string) => BroadcastJobOffer | undefined;
+  markBroadcastOfferAsExpired: (tripId: string) => void;
 }
 
 const BroadcastJobOffersContext = createContext<
@@ -176,35 +171,26 @@ export function BroadcastJobOffersProvider({
     return broadcastOffers.find((offer) => offer.id === offerId);
   };
 
-  // Auto-cleanup expired offers every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      setBroadcastOffers((prev) =>
-        prev.map((offer) => {
-          const expiresAt = new Date(offer.tripOffer.expiresAt);
-          const isExpired = expiresAt <= now;
+  /**
+   * Mark a broadcast offer as expired by tripId
+   * This method is called by the ExpirationService when server sends expiration event
+   */
+  const markBroadcastOfferAsExpired = (tripId: string) => {
+    console.log(`⏰ Marking broadcast offer as expired: ${tripId}`);
 
-          if (isExpired && offer.status !== "expired") {
-            console.log(
-              `[BroadcastJobOffersContext] Marking offer ${offer.id} as expired:`,
-              {
-                offerId: offer.id,
-                expiresAt: offer.tripOffer.expiresAt,
-                parsedExpiresAt: expiresAt.toISOString(),
-                now: now.toISOString(),
-                isExpired,
-              }
-            );
-            return { ...offer, status: "expired" as const };
-          }
-          return offer;
-        })
-      );
-    }, 30000); // Check every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
+    setBroadcastOffers((prev) =>
+      prev.map((offer) => {
+        // Check if this offer matches the expired tripId
+        if (offer.tripOffer.tripId === tripId && offer.status !== "expired") {
+          console.log(
+            `📡 Found matching broadcast offer to mark as expired: ${offer.id}`
+          );
+          return { ...offer, status: "expired" as const };
+        }
+        return offer;
+      })
+    );
+  };
 
   const contextValue: BroadcastJobOffersContextType = {
     broadcastOffers,
@@ -213,6 +199,7 @@ export function BroadcastJobOffersProvider({
     updateBroadcastOffer,
     clearAllBroadcastOffers,
     getBroadcastOffer,
+    markBroadcastOfferAsExpired,
   };
 
   return (

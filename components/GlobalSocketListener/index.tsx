@@ -16,6 +16,7 @@ import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
 import { useRideOffer } from "@/context/RideOfferContext";
+import { expirationService } from "@/services/ExpirationService";
 import { formatDateTimestamp, logger, setStorageItem } from "@/utils/helpers";
 import { showToast } from "../Toast";
 
@@ -48,8 +49,14 @@ export function GlobalSocketListener() {
   });
   const { addNotification } = useDriver();
   const [driver] = useDriver();
-  const { setHasAnyActiveOffer, showRideOfferModal } = useRideOffer();
-  const { addBroadcastOffer } = useBroadcastJobOffers();
+  const {
+    setHasAnyActiveOffer,
+    showRideOfferModal,
+    markSequentialOfferAsExpired,
+    hideRideOfferModal,
+  } = useRideOffer();
+  const { addBroadcastOffer, markBroadcastOfferAsExpired } =
+    useBroadcastJobOffers();
 
   // Bid context hooks
   const { showBidAccepted } = useBidAccepted();
@@ -57,11 +64,6 @@ export function GlobalSocketListener() {
   const { hideBidWaitingTimer } = useBidWaitingTimer();
 
   useEffect(() => {
-    // if (!driver) {
-    //   log("🔴 Driver context not ready, skipping global listeners setup");
-    //   return;
-    // }
-
     if (!driver?.online) {
       log(
         `🔴 Driver not online OR Socket status is ${socketStatus}, skipping global listeners setup`
@@ -434,22 +436,23 @@ export function GlobalSocketListener() {
     );
     cleanupFunctions.push(bidResponseCleanup);
 
-    // 3. Bid Response Event for bidable offers
+    // 3. Expired Offer Event - Server-driven expiration
     const expiredOfferCleanup = onEvent(
       SOCKET_EVENTS.EXPIRED_OFFER,
       async (data: any) => {
         log("💬 Global Expired offer received:", data);
 
         try {
-          const { tripId, timestamp } = data;
-
-          showToast("Ride offer expired!", {
-            variant: "warning",
-            position: "top",
+          // Use the ExpirationService to handle the expiration
+          await expirationService.handleOfferExpiration(data, {
+            markSequentialOfferAsExpired,
+            markBroadcastOfferAsExpired,
+            hideRideOfferModal,
+            setHasAnyActiveOffer,
           });
         } catch (error) {
-          log("❌ Error processing bid response:", error);
-          showToast("Failed to load expired offer", {
+          log("❌ Error processing expired offer:", error);
+          showToast("Failed to process expired offer", {
             variant: "error",
             position: "top",
           });

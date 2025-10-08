@@ -18,7 +18,6 @@ interface TripOffer {
   pickupLocation: { lat: number; lng: number };
   dropoffLocation: { lat: number; lng: number };
   fare: number;
-  expiresAt: Date;
 }
 
 interface RideOffer {
@@ -87,7 +86,7 @@ interface RideOfferContextType {
   hideRideOffer: () => Promise<void>;
   submitETA: (eta: number) => Promise<void>;
   submitBid: (bidAmount: number) => Promise<{ success: boolean } | undefined>;
-  handleOfferExpired: () => Promise<void>;
+  markSequentialOfferAsExpired: (tripId: string) => void;
   setHasAnyActiveOffer: (hasActive: boolean) => Promise<void>;
 }
 
@@ -286,7 +285,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       router.replace("/(screens)/active-ride");
     } catch (error) {
       console.error("❌ Error in submit ETA:", error);
-      showToast("Failed to accept ride offer. Please try again.", {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to accept ride offer. Please try again.";
+      showToast(errorMessage, {
         variant: "error",
         position: "top",
       });
@@ -331,7 +334,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       hideRideOfferModal();
     } catch (error) {
       console.error("❌ Error in global skip price:", error);
-      showToast("Failed to skip ride offer price. Please try again.", {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to skip ride offer price. Please try again.";
+      showToast(errorMessage, {
         variant: "error",
         position: "top",
       });
@@ -371,7 +378,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       hideRideOfferModal();
     } catch (error) {
       console.error("❌ Error in global hide:", error);
-      showToast("Failed to hide ride offer. Please try again.", {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to hide ride offer. Please try again.";
+      showToast(errorMessage, {
         variant: "error",
         position: "top",
       });
@@ -410,7 +421,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       // Note: hasAnyActiveOffer will be set to false when bid response is received via socket
     } catch (error) {
       console.error("❌ Error submitting bid:", error);
-      showToast("Failed to submit bid. Please try again.", {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to submit bid. Please try again.";
+      showToast(errorMessage, {
         variant: "error",
         position: "top",
       });
@@ -420,32 +435,36 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   };
 
   /**
-   * Handle offer expiration
+   * Mark a sequential offer as expired by tripId
+   * This method is called by the ExpirationService when server sends expiration event
    */
-  const handleOfferExpired = async () => {
-    if (!currentOffer) return;
+  const markSequentialOfferAsExpired = (tripId: string) => {
+    console.log(`⏰ Marking sequential offer as expired: ${tripId}`);
 
-    try {
-      console.log("⏰ Ride offer expired:", currentOffer.tripOffer.tripId);
+    // Check if the current offer matches the expired tripId
+    if (currentOffer && currentOffer.tripOffer.tripId === tripId) {
+      console.log(`📱 Current offer matches expired tripId, updating status`);
 
-      // Set hasAnyActiveOffer to false when offer expires
-      await setHasAnyActiveOffer(false);
+      // Update the current offer status to expired
+      setCurrentOffer((prev) =>
+        prev ? { ...prev, status: "expired" as const } : null
+      );
 
-      showToast("Ride offer expired!", {
-        variant: "warning",
-        position: "top",
-      });
-      // If currently on notifications screen, redirect to home
-      if (pathname === "/(screens)/notifications") {
-        router.replace("/(tabs)");
-      }
+      // Clear the ride offer storage
+      removeStorageItem(RIDE_OFFER_STORAGE_KEY);
 
-      // Hide modal and clear state
+      // Hide the modal and clear state
       hideRideOfferModal();
 
-      console.log("✅ Offer expiration handled successfully");
-    } catch (error) {
-      console.error("❌ Error handling offer expiration:", error);
+      // Set hasAnyActiveOffer to false
+      setHasAnyActiveOffer(false);
+
+      // Redirect to home screen
+      router.replace("/(tabs)");
+
+      console.log("✅ Sequential offer marked as expired successfully");
+    } else {
+      console.log(`📱 Current offer does not match expired tripId: ${tripId}`);
     }
   };
 
@@ -466,7 +485,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     hideRideOffer,
     submitETA,
     submitBid,
-    handleOfferExpired,
+    markSequentialOfferAsExpired,
     setHasAnyActiveOffer,
   };
 

@@ -28,7 +28,7 @@ import {
   SpecialRequirements,
   useSpecialRequirements,
 } from "@/context/SpecialRequirementsContext";
-import { checkOfferStatus, removeStorageItem } from "@/utils/helpers";
+import { removeStorageItem } from "@/utils/helpers";
 import { router, usePathname } from "expo-router";
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
@@ -48,7 +48,6 @@ interface TripOffer {
   pickupLocation: { lat: number; lng: number };
   dropoffLocation: { lat: number; lng: number };
   fare: number;
-  expiresAt: Date;
 }
 
 interface RideOffer {
@@ -160,7 +159,6 @@ export default function RideOfferModal({
       systemSuggestedBids,
       boostedPrices,
       createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 60 * 1000).toISOString(),
     } as any;
   };
 
@@ -221,36 +219,6 @@ export default function RideOfferModal({
   useEffect(() => {
     setOffer(offerProp || null);
   }, [offerProp]);
-
-  // Status checking interval - only when modal is visible
-  useEffect(() => {
-    if (!visible || !offer) return;
-
-    // Clear any existing interval
-    if (refStatus.current) {
-      clearInterval(refStatus.current);
-      refStatus.current = 0;
-    }
-
-    // Start status checking interval
-    refStatus.current = setInterval(() => {
-      setOffer((prevOffer: any | null) => {
-        if (!prevOffer) return prevOffer;
-        const newStatus = checkOfferStatus(prevOffer);
-        return {
-          ...prevOffer,
-          status: newStatus,
-        };
-      });
-    }, 1000);
-
-    return () => {
-      if (refStatus.current) {
-        clearInterval(refStatus.current);
-        refStatus.current = 0;
-      }
-    };
-  }, [visible, offer]);
 
   const isOffered = offer?.status === LIVE_JOB_STATUS.OFFERED;
   const isExpired = offer?.status === LIVE_JOB_STATUS.EXPIRED;

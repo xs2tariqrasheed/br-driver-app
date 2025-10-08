@@ -46,7 +46,6 @@ export default function RideDetailsScreen() {
         pickupLocation: { lat: 37.7749, lng: -122.4194 },
         dropoffLocation: { lat: 37.7849, lng: -122.4094 },
         fare: 55,
-        expiresAt: new Date(Date.now() + 30000),
       },
       timestamp: new Date().toISOString(),
       timeout: 30000,
@@ -179,7 +178,6 @@ interface RideOffer {
     pickupLocation: { lat: number; lng: number };
     dropoffLocation: { lat: number; lng: number };
     fare: number;
-    expiresAt: Date;
   };
   timestamp: string;
   timeout: number;

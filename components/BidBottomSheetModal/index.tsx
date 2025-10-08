@@ -29,7 +29,6 @@ export interface BidData {
   systemSuggestedBids: SystemSuggestedBid[];
   boostedPrices: number[];
   createdAt: string;
-  expiresAt: string;
 }
 
 export interface BidBottomSheetModalProps {
