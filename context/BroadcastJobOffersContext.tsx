@@ -11,7 +11,13 @@ export interface BroadcastJobOffer {
   // Basic job offer info
   id: string;
   type: (typeof TRIP_OFFER_TYPES)[keyof typeof TRIP_OFFER_TYPES];
-  status: "offered" | "accepted" | "rejected" | "expired";
+  status:
+    | "offered"
+    | "accepted"
+    | "rejected"
+    | "expired"
+    | "skipped"
+    | "hidden";
   bidable: boolean;
 
   // Trip offer details
@@ -20,7 +26,6 @@ export interface BroadcastJobOffer {
     pickupLocation: { lat: number; lng: number };
     dropoffLocation: { lat: number; lng: number };
     fare: number;
-    expiresAt: Date;
   };
 
   // LiveRideOfferItem required fields
@@ -85,12 +90,42 @@ export function BroadcastJobOffersProvider({
   // Add a new broadcast offer
   const addBroadcastOffer = (offer: BroadcastJobOffer) => {
     setBroadcastOffers((prev) => {
-      // Check if offer already exists (avoid duplicates)
-      const exists = prev.some((existing) => existing.id === offer.id);
-      if (exists) {
-        return prev;
+      console.log(
+        `[BroadcastJobOffersContext] Previous offers count: ${prev.length}`
+      );
+
+      // Check if offer already exists - if so, replace it instead of skipping
+      const existingIndex = prev.findIndex(
+        (existing) => existing.id === offer.id
+      );
+      if (existingIndex !== -1) {
+        console.log(
+          `[BroadcastJobOffersContext] Offer ${offer.id} already exists, replacing with new status: ${offer.status}`
+        );
+        // Replace the existing offer with the new one
+        const newOffers = [...prev];
+        newOffers[existingIndex] = offer;
+        console.log(
+          `[BroadcastJobOffersContext] Replaced offer - offers count: ${newOffers.length}`
+        );
+        console.log(
+          `[BroadcastJobOffersContext] All offers after replacement:`,
+          newOffers.map((o) => ({ id: o.id, status: o.status }))
+        );
+        return newOffers;
       }
-      return [offer, ...prev]; // Add to beginning
+
+      // If offer doesn't exist, add it to the beginning
+      const newOffers = [offer, ...prev];
+      console.log(
+        `[BroadcastJobOffersContext] New offer added - offers count: ${newOffers.length}`
+      );
+      console.log(
+        `[BroadcastJobOffersContext] All offers:`,
+        newOffers.map((o) => ({ id: o.id, status: o.status }))
+      );
+
+      return newOffers;
     });
   };
 
@@ -104,15 +139,35 @@ export function BroadcastJobOffersProvider({
     offerId: string,
     updates: Partial<BroadcastJobOffer>
   ) => {
-    setBroadcastOffers((prev) =>
-      prev.map((offer) =>
-        offer.id === offerId ? { ...offer, ...updates } : offer
-      )
+    console.log(
+      `[BroadcastJobOffersContext] Updating offer ${offerId}:`,
+      updates
     );
+
+    setBroadcastOffers((prev) => {
+      console.log(
+        `[BroadcastJobOffersContext] Before update - offers count: ${prev.length}`
+      );
+
+      const updated = prev.map((offer) =>
+        offer.id === offerId ? { ...offer, ...updates } : offer
+      );
+
+      console.log(
+        `[BroadcastJobOffersContext] After update - offers count: ${updated.length}`
+      );
+      console.log(
+        `[BroadcastJobOffersContext] All offers after update:`,
+        updated.map((o) => ({ id: o.id, status: o.status }))
+      );
+
+      return updated;
+    });
   };
 
   // Clear all broadcast offers
   const clearAllBroadcastOffers = () => {
+    console.log(`[BroadcastJobOffersContext] Clearing all broadcast offers`);
     setBroadcastOffers([]);
   };
 
@@ -127,8 +182,20 @@ export function BroadcastJobOffersProvider({
       const now = new Date();
       setBroadcastOffers((prev) =>
         prev.map((offer) => {
-          const isExpired = new Date(offer.tripOffer.expiresAt) <= now;
+          const expiresAt = new Date(offer.tripOffer.expiresAt);
+          const isExpired = expiresAt <= now;
+
           if (isExpired && offer.status !== "expired") {
+            console.log(
+              `[BroadcastJobOffersContext] Marking offer ${offer.id} as expired:`,
+              {
+                offerId: offer.id,
+                expiresAt: offer.tripOffer.expiresAt,
+                parsedExpiresAt: expiresAt.toISOString(),
+                now: now.toISOString(),
+                isExpired,
+              }
+            );
             return { ...offer, status: "expired" as const };
           }
           return offer;

@@ -2,9 +2,7 @@ import GlobalRideOfferModal from "@/components/GlobalRideOfferModal";
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
 import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import PackageInfoModal from "@/components/PackageInfoModal";
-import PackageInfoSheet from "@/components/PackageInfoSheet";
 import SpecialRequirementsModal from "@/components/SpecialRequirementsModal";
-import SpecialRequirementsSheet from "@/components/SpecialRequirementsSheet";
 import { ToastHost } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { BidAcceptedProvider } from "@/context/BidAcceptedContext";
@@ -98,10 +96,6 @@ export default function RootLayout() {
                                       <GlobalSocketListener />
                                       {/* Online Location Tracker */}
                                       <OnlineLocationTracker />
-                                      {/* Special Requirements Sheet */}
-                                      <SpecialRequirementsSheet />
-                                      {/* Package Info Sheet */}
-                                      <PackageInfoSheet />
                                       {/* Special Requirements Modal */}
                                       <SpecialRequirementsModal />
                                       {/* Package Info Modal */}

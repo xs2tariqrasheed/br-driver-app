@@ -78,6 +78,7 @@ interface RideOfferContextType {
   isETABottomSheetVisible: boolean;
   hasAnyActiveOffer: boolean;
   isSubmitBidLoading: boolean;
+  isSubmitETALoading: boolean;
   // Actions
   showRideOfferModal: (offer: RideOffer, callbacks?: ModalCallbacks) => void;
   hideRideOfferModal: () => void;
@@ -457,6 +458,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     isETABottomSheetVisible,
     hasAnyActiveOffer,
     isSubmitBidLoading,
+    isSubmitETALoading,
     showRideOfferModal,
     hideRideOfferModal,
     acceptRideOffer,

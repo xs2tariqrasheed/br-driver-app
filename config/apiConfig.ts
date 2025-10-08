@@ -49,7 +49,7 @@ export interface ApiError {
  */
 const createApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
+    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.1.2:3000",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -165,8 +165,7 @@ const createApiClient = (): AxiosInstance => {
 const createAuctionApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_OFFERS_SERVER_URL ||
-      "http://192.168.100.160:3002",
+      process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.1.2:3002",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -283,7 +282,7 @@ const createAuctionApiClient = (): AxiosInstance => {
 const createAuthApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
+      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.1.2:3001",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -393,7 +392,7 @@ const createAuthApiClient = (): AxiosInstance => {
 const createMeApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
+      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.1.2:3001",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",

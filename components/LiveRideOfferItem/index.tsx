@@ -20,6 +20,7 @@
  */
 
 import { textColors, tripTypeColors } from "@/constants/colors";
+import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
 import React from "react";
 import {
@@ -175,6 +176,7 @@ export default function LiveRideOfferItem({
   onProcessingEnd,
 }: LiveRideOfferItemProps) {
   const { skipLiveOffer, hideLiveOffer, getLiveOfferStatus } = useDriver();
+  const { updateBroadcastOffer } = useBroadcastJobOffers();
   const translateX = React.useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get("window").width;
   const [showHideButton, setShowHideButton] = React.useState(false);
@@ -282,6 +284,13 @@ export default function LiveRideOfferItem({
         }).start(async () => {
           try {
             await skipLiveOffer(id);
+
+            // Also update the broadcast offers context status
+            updateBroadcastOffer(id, { status: "skipped" });
+            console.log(
+              `[LiveRideOfferItem] Marked job ${id} as skipped in broadcast context`
+            );
+
             // Success - keep it swiped away
             setIsSkipping(false);
             onProcessingEnd?.(); // Notify parent that processing ended
@@ -333,6 +342,12 @@ export default function LiveRideOfferItem({
       onProcessingStart?.(id); // Notify parent that processing started
 
       await hideLiveOffer(id);
+
+      // Also update the broadcast offers context status
+      updateBroadcastOffer(id, { status: "hidden" });
+      console.log(
+        `[LiveRideOfferItem] Marked job ${id} as hidden in broadcast context`
+      );
 
       setShowHideButton(false);
       setIsHiding(false);

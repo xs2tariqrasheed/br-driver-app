@@ -88,7 +88,7 @@ export function GlobalSocketListener() {
         log("💬 Global new job offer received:", data);
 
         // Handle Sequential offers (show modal)
-        if (data?.type === TRIP_OFFER_TYPES.SEQUENTIAL) {
+        if (data?.tripOffer?.type === TRIP_OFFER_TYPES.SEQUENTIAL) {
           try {
             // Check if driver context is still available
             if (!driver) {
@@ -118,7 +118,6 @@ export function GlobalSocketListener() {
                   lng: data.tripOffer?.dropoffLocation?.lng || -122.4094,
                 },
                 fare: parseFloat(data.tripOffer?.fare) || 0,
-                expiresAt: data.tripOffer?.expiresAt,
               },
 
               // LiveRideOfferItem required fields from rideDetails
@@ -192,7 +191,7 @@ export function GlobalSocketListener() {
         }
 
         // Handle Broadcast offers (add to context array)
-        if (data?.type === TRIP_OFFER_TYPES.BROADCAST) {
+        if (data?.tripOffer?.type === TRIP_OFFER_TYPES.BROADCAST) {
           try {
             // Check if driver context is still available
             if (!driver) {
@@ -228,8 +227,6 @@ export function GlobalSocketListener() {
                   lng: data.tripOffer?.dropoffLocation?.lng || -122.4094,
                 },
                 fare: parseFloat(data.tripOffer?.fare) || 0,
-                expiresAt:
-                  data.tripOffer?.expiresAt || new Date(Date.now() + 300000), // 5 minutes default
               },
 
               // LiveRideOfferItem required fields from rideDetails
@@ -240,7 +237,8 @@ export function GlobalSocketListener() {
               hasSpecialRequirements:
                 data.tripOffer?.rideDetails?.hasSpecialRequirements || false,
               hasPackage: data.tripOffer?.rideDetails?.hasPackage || false,
-
+              specialRequirements: data.tripOffer?.specialRequirements || {},
+              packageInfo: data.tripOffer?.packageInfo || {},
               // Pickup details from rideDetails
               pickupTime: data.tripOffer?.rideDetails?.pickupTime || 5,
               pickupDistance:
@@ -435,6 +433,30 @@ export function GlobalSocketListener() {
       }
     );
     cleanupFunctions.push(bidResponseCleanup);
+
+    // 3. Bid Response Event for bidable offers
+    const expiredOfferCleanup = onEvent(
+      SOCKET_EVENTS.EXPIRED_OFFER,
+      async (data: any) => {
+        log("💬 Global Expired offer received:", data);
+
+        try {
+          const { tripId, timestamp } = data;
+
+          showToast("Ride offer expired!", {
+            variant: "warning",
+            position: "top",
+          });
+        } catch (error) {
+          log("❌ Error processing bid response:", error);
+          showToast("Failed to load expired offer", {
+            variant: "error",
+            position: "top",
+          });
+        }
+      }
+    );
+    cleanupFunctions.push(expiredOfferCleanup);
 
     log("✅ Global socket listeners set up successfully");
 

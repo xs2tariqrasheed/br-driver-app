@@ -17,22 +17,18 @@
  */
 
 import { textColors } from "@/constants/colors";
-import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import {
-  BID_STATUS,
-  BID_WAITING_TIMER_DURATION_MS,
   EMPTY_STATE_MESSAGES,
-  LIVE_JOB_STATUS,
   LOCAL_JOB_STATUS,
-  type BidStatus as BidStatusType,
   type LocalJobStatus,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
+import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
+import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
 import { usePackageInfo } from "@/context/PackageInfoContext";
+import { useRideOffer } from "@/context/RideOfferContext";
 import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
-import { useFetch } from "@/hooks/useFetch";
-import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -44,10 +40,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import BidBottomSheet from "../BidBottomSheet";
-import BidStatusSheet from "../BidStatusSheet";
-import BidWaitingTimer from "../BidWaitingTimer";
-import ConfirmationSheet from "../ConfirmationSheet";
+import ETAModal from "../ETAModal";
 import LiveRideOfferItem from "../LiveRideOfferItem";
 import SkeletonLoader from "../Loader/SkeletonLoader";
 import { showToast } from "../Toast";
@@ -69,381 +62,84 @@ export default function LiveJobOffersScreen({
 }: LiveJobOffersScreenProps) {
   const { getLiveOfferStatus } = useDriver();
   const [auth] = useAuth();
-
-  const [showAllJobs, setShowAllJobs] = useState<boolean>(false);
-  const [isScrolling, setIsScrolling] = useState<boolean>(false);
-  const [selectedJobForBid, setSelectedJobForBid] = useState<any>(null);
-  const [isBidSheetOpen, setIsBidSheetOpen] = useState<boolean>(false);
-  const [isWaitingForCustomer, setIsWaitingForCustomer] =
-    useState<boolean>(false);
-  const [isCancelConfirmationOpen, setIsCancelConfirmationOpen] =
-    useState<boolean>(false);
-  const [isBidStatusOpen, setIsBidStatusOpen] = useState<boolean>(false);
-  const [bidStatus, setBidStatus] = useState<BidStatusType>(BID_STATUS.EXPIRED);
+  const { broadcastOffers, updateBroadcastOffer, clearAllBroadcastOffers } =
+    useBroadcastJobOffers();
+  const { showRideOfferModal, submitETA, isSubmitETALoading } = useRideOffer();
   const { openSpecialRequirements } = useSpecialRequirements();
   const { openPackageInfo } = usePackageInfo();
+  const { showBidBottomSheet } = useBidBottomSheet();
+  const [showAllJobs, setShowAllJobs] = useState<boolean>(false);
+  const [isScrolling, setIsScrolling] = useState<boolean>(false);
+  const [hasTimedOut, setHasTimedOut] = useState<boolean>(false);
+  const [isETAModalOpen, setIsETAModalOpen] = useState<boolean>(false);
+  const [selectedJobForAccept, setSelectedJobForAccept] = useState<any>(null);
 
-  // Example: All requirements filled
-  const handleShowSpecialRequirements = () => {
-    openSpecialRequirements({
-      totalPassengers: 2,
-      bags: 4,
-      pets: true,
-      wheelchair: false,
-      childSeat: {
-        infant: 1,
-        toddler: 1,
-        booster: 0,
-      },
-      armedDriver: true,
-      driverLanguage: "English",
-    });
-  };
-
-  // Example: Package
-  const handleShowPackage = () => {
-    openPackageInfo({
-      numberOfPackages: 1,
-      weight: "5.6 Kg",
-      phoneNumber: "0123456789",
-      recipientName: "John Smith",
-      instructions:
-        "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s. ",
-    });
-  };
   // Track which offer is being processed (skip/hide operation)
   const [processingOfferId, setProcessingOfferId] = useState<string | null>(
     null
   );
 
-  // API hook for fetching live jobs
-  const {
-    data: liveJobsData,
-    loading,
-    error,
-    execute: fetchLiveJobs,
-  } = useFetch<any[]>(LIVE_JOB_ENDPOINTS.getLiveJobs);
-
-  // API hook for submitting bids
-  const { loading: isSubmittingBid, execute: submitBid } = usePost(
-    LIVE_JOB_ENDPOINTS.submitBid
-  );
-
-  // API hook for canceling bids
-  const { loading: isCancelingBid, execute: cancelBid } = usePost(
-    LIVE_JOB_ENDPOINTS.cancelBid
-  );
-
-  // DEV-ONLY: Automatically mark bid as ACCEPTED after 10 seconds when waiting starts
+  // Timeout effect: Show empty state after 7 seconds if no offers received
   useEffect(() => {
-    if (!__DEV__) return;
-    if (!isWaitingForCustomer) return;
-
     const timeout = setTimeout(() => {
-      log("[Dev] Auto-accepting bid after 10s for testing purposes");
-      setIsWaitingForCustomer(false);
-      setSelectedJobForBid(null);
-      setBidStatus(BID_STATUS.ACCEPTED);
-      setIsBidStatusOpen(true);
-    }, 10000);
+      if (broadcastOffers.length === 0) {
+        setHasTimedOut(true);
+        log("[LiveJobOffersScreen] Timeout reached - showing empty state");
+      }
+    }, 7000); // 7 seconds timeout
 
     return () => clearTimeout(timeout);
-  }, [isWaitingForCustomer]);
+  }, [broadcastOffers.length]);
 
-  // Filter jobs by "offered" status and apply local status filtering
+  // Reset timeout state when offers are received
+  useEffect(() => {
+    if (broadcastOffers.length > 0) {
+      setHasTimedOut(false);
+    }
+  }, [broadcastOffers.length]);
+
+  // Show all broadcast offers without any filtering
   const filteredJobs = useMemo(() => {
-    // if (!liveJobsData) return [];
-    const mockLiveJobsData = [
-      {
-        id: "1",
-        status: LIVE_JOB_STATUS.OFFERED,
-        pickupTime: 32,
-        pickupDistance: 100,
-        pickupAddress: "123 Main St, Anytown, USA",
-        dropoffTime: 12,
-        dropoffDistance: 200,
-        dropoffAddress: "456 Oak Ave, Anytown, USA",
-        rideTime: 30,
-        rideDistance: 300,
-        totalPrice: 100,
-        driverEarn: 100,
-        buttonTitle: "Bid",
-        peopleCount: 1,
-        rating: 4.5,
-        hasSpecialRequirements: false,
-        hasPackage: true,
-        rideType: "hourly",
-        createdAt: "2024-01-15T10:30:00Z",
-        expiresAt: "2024-01-15T11:00:00Z",
-        bid: {
-          amount: 20,
-          bosstedAmount: 5,
-          driverEarn: 16.76,
-          numberOfBids: 4,
-          systemEta: 5,
-          systemSuggestedBids: [
-            {
-              amount: 10,
-              driverEarn: 8.38,
-            },
-            {
-              amount: 15,
-              driverEarn: 12.57,
-            },
-            {
-              amount: 20,
-              driverEarn: 16.76,
-            },
-            {
-              amount: 25,
-              driverEarn: 20.95,
-            },
-            {
-              amount: 30,
-              driverEarn: 25.14,
-            },
-          ],
-          boostedPrices: [1, 3, 4, 7],
-          createdAt: "2024-01-15T10:30:00Z",
-          expiresAt: "2024-01-15T11:00:00Z",
-        },
-      },
-      {
-        id: "2",
-        status: LIVE_JOB_STATUS.OFFERED,
-        pickupTime: 15,
-        pickupDistance: 250,
-        pickupAddress: "789 Elm Street, Downtown, USA",
-        dropoffTime: 25,
-        dropoffDistance: 150,
-        dropoffAddress: "321 Pine Road, Uptown, USA",
-        rideTime: 45,
-        rideDistance: 500,
-        totalPrice: 180,
-        driverEarn: 180,
-        buttonTitle: "Bid",
-        peopleCount: 3,
-        rating: 4.8,
-        hasSpecialRequirements: true,
-        hasPackage: true,
-        rideType: "round-trip",
-        createdAt: "2024-01-15T10:35:00Z",
-        expiresAt: "2024-01-15T11:05:00Z",
-        bid: {
-          amount: 20,
-          bosstedAmount: 5,
-          driverEarn: 16.76,
-          numberOfBids: 4,
-          systemEta: 5,
-          systemSuggestedBids: [
-            {
-              amount: 10,
-              driverEarn: 8.38,
-            },
-            {
-              amount: 15,
-              driverEarn: 12.57,
-            },
-            {
-              amount: 20,
-              driverEarn: 16.76,
-            },
-            {
-              amount: 25,
-              driverEarn: 20.95,
-            },
-            {
-              amount: 30,
-              driverEarn: 25.14,
-            },
-          ],
-          boostedPrices: [1, 3, 4, 7],
-          createdAt: "2024-01-15T10:30:00Z",
-          expiresAt: "2024-01-15T11:00:00Z",
-        },
-      },
-      {
-        id: "3",
-        status: LIVE_JOB_STATUS.OFFERED,
-        pickupTime: 8,
-        pickupDistance: 50,
-        pickupAddress: "555 Maple Drive, Suburbia, USA",
-        dropoffTime: 18,
-        dropoffDistance: 300,
-        dropoffAddress: "777 Cedar Lane, Airport, USA",
-        rideTime: 35,
-        rideDistance: 400,
-        totalPrice: 140,
-        driverEarn: 140,
-        buttonTitle: "Bid",
-        peopleCount: 2,
-        rating: 4.2,
-        hasSpecialRequirements: false,
-        hasPackage: true,
-        rideType: "one-way",
-        createdAt: "2024-01-15T10:40:00Z",
-        expiresAt: "2024-01-15T11:10:00Z",
-        bid: {
-          amount: 20,
-          bosstedAmount: 5,
-          driverEarn: 16.76,
-          numberOfBids: 4,
-          systemEta: 5,
-          systemSuggestedBids: [
-            {
-              amount: 10,
-              driverEarn: 8.38,
-            },
-            {
-              amount: 15,
-              driverEarn: 12.57,
-            },
-            {
-              amount: 20,
-              driverEarn: 16.76,
-            },
-            {
-              amount: 25,
-              driverEarn: 20.95,
-            },
-            {
-              amount: 30,
-              driverEarn: 25.14,
-            },
-          ],
-          boostedPrices: [1, 3, 4, 7],
-          createdAt: "2024-01-15T10:30:00Z",
-          expiresAt: "2024-01-15T11:00:00Z",
-        },
-      },
-      {
-        id: "4",
-        status: LIVE_JOB_STATUS.OFFERED,
-        pickupTime: 45,
-        pickupDistance: 180,
-        pickupAddress: "999 Birch Boulevard, Business District, USA",
-        dropoffTime: 20,
-        dropoffDistance: 220,
-        dropoffAddress: "111 Spruce Street, Residential Area, USA",
-        rideTime: 55,
-        rideDistance: 650,
-        totalPrice: 220,
-        driverEarn: 220,
-        buttonTitle: "Bid",
-        peopleCount: 1,
-        disabled: false,
-        rating: 4.9,
-        hasSpecialRequirements: true,
-        hasPackage: true,
-        rideType: "one-way",
-        createdAt: "2024-01-15T10:45:00Z",
-        expiresAt: "2024-01-15T11:15:00Z",
-        bid: {
-          amount: 20,
-          bosstedAmount: 5,
-          driverEarn: 16.76,
-          numberOfBids: 4,
-          systemEta: 5,
-          systemSuggestedBids: [
-            {
-              amount: 10,
-              driverEarn: 8.38,
-            },
-            {
-              amount: 15,
-              driverEarn: 12.57,
-            },
-            {
-              amount: 20,
-              driverEarn: 16.76,
-            },
-            {
-              amount: 25,
-              driverEarn: 20.95,
-            },
-            {
-              amount: 30,
-              driverEarn: 25.14,
-            },
-          ],
-          boostedPrices: [1, 3, 4, 7],
-          createdAt: "2024-01-15T10:30:00Z",
-          expiresAt: "2024-01-15T11:00:00Z",
-        },
-      },
-      {
-        id: "5",
-        status: LIVE_JOB_STATUS.OFFERED,
-        pickupTime: 22,
-        pickupDistance: 120,
-        pickupAddress: "333 Willow Way, Shopping Center, USA",
-        dropoffTime: 15,
-        dropoffDistance: 280,
-        dropoffAddress: "888 Aspen Court, Hotel District, USA",
-        rideTime: 40,
-        rideDistance: 450,
-        totalPrice: 160,
-        driverEarn: 160,
-        buttonTitle: "Accept",
-        peopleCount: 4,
-        rating: 4.6,
-        hasSpecialRequirements: false,
-        hasPackage: false,
-        rideType: "round-trip",
-        createdAt: "2024-01-15T10:50:00Z",
-        expiresAt: "2024-01-15T11:20:00Z",
-        bid: {
-          amount: 20,
-          bosstedAmount: 5,
-          driverEarn: 16.76,
-          numberOfBids: 4,
-          systemEta: 5,
-          systemSuggestedBids: [
-            {
-              amount: 10,
-              driverEarn: 8.38,
-            },
-            {
-              amount: 15,
-              driverEarn: 12.57,
-            },
-            {
-              amount: 20,
-              driverEarn: 16.76,
-            },
-            {
-              amount: 25,
-              driverEarn: 20.95,
-            },
-            {
-              amount: 30,
-              driverEarn: 25.14,
-            },
-          ],
-          boostedPrices: [1, 3, 4, 7],
-          createdAt: "2024-01-15T10:30:00Z",
-          expiresAt: "2024-01-15T11:00:00Z",
-        },
-      },
-    ];
-    return mockLiveJobsData
-      ?.filter((job) => job.status === LIVE_JOB_STATUS.OFFERED)
-      ?.filter((job) => {
-        const localStatus = getLiveOfferStatus(job.id);
+    log(`[LiveJobOffersScreen] filteredJobs useMemo triggered`);
+    log(
+      `[LiveJobOffersScreen] broadcastOffers length: ${
+        broadcastOffers?.length || 0
+      }`
+    );
 
-        // If showHiddenJobs is true, show ONLY hidden/skipped jobs
-        if (showHiddenJobs) {
-          return (
-            localStatus &&
-            (localStatus.status === LOCAL_JOB_STATUS.HIDDEN ||
-              localStatus.status === LOCAL_JOB_STATUS.SKIPPED)
-          );
-        }
+    if (!broadcastOffers || broadcastOffers.length === 0) {
+      log(`[LiveJobOffersScreen] No broadcast offers available`);
+      return [];
+    }
 
-        // Otherwise, show only visible jobs (not hidden or skipped)
-        return !localStatus || localStatus.status === LOCAL_JOB_STATUS.VISIBLE;
-      });
-  }, [liveJobsData, getLiveOfferStatus, showHiddenJobs]);
+    log(
+      `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (no filtering)`
+    );
+
+    // Check for expiration and update status if needed
+    broadcastOffers.forEach((job) => {
+      // Only mark as expired if no action has been taken (not accepted, skipped, or hidden)
+      const hasActionBeenTaken =
+        job.status === "accepted" ||
+        job.status === "skipped" ||
+        job.status === "hidden";
+
+      if (!hasActionBeenTaken && job.status !== "expired") {
+        // Update the job status in context only if no action was taken
+        updateBroadcastOffer(job.id, { status: "expired" });
+        log(
+          `[LiveJobOffersScreen] Marking job ${job.id} as expired - no action taken`
+        );
+      } else if (hasActionBeenTaken) {
+        log(
+          `[LiveJobOffersScreen] Job ${job.id} has action taken (${job.status}) - not marking as expired`
+        );
+      }
+    });
+
+    log(`[LiveJobOffersScreen] Returning ${broadcastOffers.length} offers`);
+    return broadcastOffers;
+  }, [broadcastOffers]);
 
   // Log toggle state changes for debugging
   useEffect(() => {
@@ -454,28 +150,24 @@ export default function LiveJobOffersScreen({
 
   // Sort jobs based on external sort criteria
   const sortedJobs = useMemo(() => {
-    return [...(filteredJobs ?? [])].sort((a, b) => {
+    log(`[LiveJobOffersScreen] sortedJobs useMemo triggered`);
+    log(
+      `[LiveJobOffersScreen] filteredJobs length: ${filteredJobs?.length || 0}`
+    );
+
+    const sorted = [...(filteredJobs ?? [])].sort((a, b) => {
       if (externalSortBy === "time") {
         return a.pickupTime - b.pickupTime;
       }
       return a.pickupDistance - b.pickupDistance;
     });
+
+    log(`[LiveJobOffersScreen] sortedJobs result length: ${sorted.length}`);
+    return sorted;
   }, [filteredJobs, externalSortBy]);
 
-  // Initial data fetch
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const data = await fetchLiveJobs();
-        // In production, this would set the data from the API response
-        // For now, we set it manually
-      } catch (err) {
-        log("[LiveJobOffersScreen] Failed to fetch initial data:", err);
-      }
-    };
-
-    fetchInitialData();
-  }, [fetchLiveJobs]);
+  // Data is now managed by the BroadcastJobOffersContext
+  // No need for initial data fetch as data comes from global listeners
 
   // Get item status for each job
   const getItemStatus = useCallback(
@@ -493,195 +185,119 @@ export default function LiveJobOffersScreen({
 
       // Find the job data
       const job = sortedJobs.find((j) => j.id === jobId);
-      if (job && job.buttonTitle === "Bid") {
-        setSelectedJobForBid(job);
-        setIsBidSheetOpen(true);
+      if (!job) return;
+
+      // Check if job is expired (but still allow interaction for debugging)
+      const now = new Date();
+      const isExpired = job.status === "expired";
+
+      if (isExpired) {
+        log(
+          `[LiveJobOffersScreen] Job ${jobId} is expired, but allowing action for debugging`
+        );
+        // Don't return - allow the action to proceed
+      }
+
+      if (job.bidable) {
+        // Handle bidable offers - show bid bottom sheet
+        const bidData = {
+          amount: 20, // Default bid amount - this should come from the job data
+          bosstedAmount: 5,
+          driverEarn: job.driverEarn,
+          numberOfBids: 4,
+          systemEta: 5,
+          systemSuggestedBids: [
+            { amount: 10, driverEarn: 8.38 },
+            { amount: 15, driverEarn: 12.57 },
+            { amount: 20, driverEarn: 16.76 },
+            { amount: 25, driverEarn: 20.95 },
+            { amount: 30, driverEarn: 25.14 },
+          ],
+          boostedPrices: [1, 3, 4, 7],
+          createdAt: job.timestamp,
+        };
+
+        // Show bid bottom sheet with submission callback
+        showBidBottomSheet(bidData, handleBidSubmitted);
+        log(`[LiveJobOffersScreen] Opening bid bottom sheet for job: ${jobId}`);
       } else {
-        // For non-bid actions, show toast (fallback)
-        showToast(`Action performed for job ${jobId}`, {
-          variant: "success",
-          position: "top",
-        });
+        // Handle non-bidable offers - show ETA modal for acceptance
+        setSelectedJobForAccept(job);
+        setIsETAModalOpen(true);
+        log(`[LiveJobOffersScreen] Opening ETA modal for job: ${jobId}`);
       }
     },
-    [sortedJobs]
+    [sortedJobs, showRideOfferModal]
   );
 
-  // Handle bid submission
-  const handleBidSubmit = useCallback(
-    async (bidData: {
-      selectedBid: number;
-      eta: number;
-      boostAmount: number;
-      isBoosted: boolean;
-    }) => {
-      if (!selectedJobForBid) {
-        log("[LiveJobOffersScreen] No selected job for bid submission");
+  // Handle bid submission from bid bottom sheet
+  const handleBidSubmitted = useCallback(async (bidData: any) => {
+    try {
+      log("[LiveJobOffersScreen] Bid submitted from bottom sheet:", bidData);
+
+      // Call the submit bid API
+      // await submitBid(bidData);
+
+      log("[LiveJobOffersScreen] Bid submitted successfully");
+
+      // The global bid waiting timer will be handled by the context
+      // No need to manage local state here
+    } catch (error) {
+      log("[LiveJobOffersScreen] Failed to submit bid:", error);
+      showToast("Failed to submit bid. Please try again.", {
+        variant: "error",
+        position: "top",
+      });
+    }
+  }, []);
+
+  // Handle ETA submission for accept flow
+  const handleETASubmit = useCallback(
+    async (eta: number) => {
+      if (!selectedJobForAccept) {
+        log("[LiveJobOffersScreen] No selected job for ETA submission");
         return;
       }
 
       try {
         log(
-          `[LiveJobOffersScreen] Submitting bid for job: ${selectedJobForBid.id}`,
-          bidData
+          `[LiveJobOffersScreen] Submitting ETA for job: ${selectedJobForAccept.id}`,
+          eta
         );
 
-        // Prepare all bid-related data for API call
-        const bidPayload = {
-          jobId: selectedJobForBid.id,
-          driverId: auth?.user?.id || "driver-123",
-          bidAmount: bidData.selectedBid,
-          eta: bidData.eta,
-          boostAmount: bidData.boostAmount,
-          isBoosted: bidData.isBoosted,
-          // Additional job data
-          pickupAddress: selectedJobForBid.pickupAddress,
-          dropoffAddress: selectedJobForBid.dropoffAddress,
-          pickupTime: selectedJobForBid.pickupTime,
-          dropoffTime: selectedJobForBid.dropoffTime,
-          rideTime: selectedJobForBid.rideTime,
-          rideDistance: selectedJobForBid.rideDistance,
-          totalPrice: selectedJobForBid.totalPrice,
-          driverEarn: selectedJobForBid.driverEarn,
-          peopleCount: selectedJobForBid.peopleCount,
-          rideType: selectedJobForBid.rideType,
-          hasSpecialRequirements: selectedJobForBid.hasSpecialRequirements,
-          hasPackage: selectedJobForBid.hasPackage,
-          // Timestamps
-          submittedAt: new Date().toISOString(),
-        };
+        // Call the submit ETA API
+        await submitETA(eta);
 
-        // Call the submit bid API
-        // await submitBid(bidPayload);
+        log("[LiveJobOffersScreen] ETA submitted successfully");
 
-        log("[LiveJobOffersScreen] Bid submitted successfully");
+        // Mark the offer as accepted in the context
+        updateBroadcastOffer(selectedJobForAccept.id, { status: "accepted" });
+        log(
+          `[LiveJobOffersScreen] Marked job ${selectedJobForAccept.id} as accepted`
+        );
 
-        // Close the bid sheet
-        setIsBidSheetOpen(false);
+        // Show success toast
+        showToast("Ride accepted successfully!", {
+          variant: "success",
+          position: "top",
+        });
 
-        // Show the waiting timer
-        setIsWaitingForCustomer(true);
+        // Close the ETA modal
+        setIsETAModalOpen(false);
+        setSelectedJobForAccept(null);
+
+        // Redirect to active ride screen
+        router.replace("/(screens)/active-ride");
       } catch (error) {
-        log("[LiveJobOffersScreen] Failed to submit bid:", error);
-        showToast("Failed to submit bid. Please try again.", {
+        log("[LiveJobOffersScreen] Failed to submit ETA:", error);
+        showToast("Failed to submit ETA. Please try again.", {
           variant: "error",
           position: "top",
         });
       }
     },
-    [selectedJobForBid, auth?.user?.id, submitBid]
+    [selectedJobForAccept, submitETA]
   );
-
-  // Handle bid sheet close
-  const handleBidSheetClose = useCallback(() => {
-    setIsBidSheetOpen(false);
-    setSelectedJobForBid(null);
-  }, []);
-
-  // Handle timer completion (customer reviewed the bid)
-  const handleTimerComplete = useCallback(() => {
-    log(
-      "[LiveJobOffersScreen] Timer completed - customer has reviewed the bid"
-    );
-    setIsWaitingForCustomer(false);
-    setSelectedJobForBid(null);
-
-    // Show expired bid status
-    setBidStatus(BID_STATUS.EXPIRED);
-    setIsBidStatusOpen(true);
-  }, []);
-
-  // Handle bid cancellation - show confirmation sheet
-  const handleCancelBid = useCallback(() => {
-    log("[LiveJobOffersScreen] Cancel bid requested - showing confirmation");
-    setIsCancelConfirmationOpen(true);
-  }, []);
-
-  // Handle confirmation of bid cancellation
-  const handleConfirmCancelBid = useCallback(async () => {
-    if (!selectedJobForBid) {
-      log("[LiveJobOffersScreen] No selected job for bid cancellation");
-      return;
-    }
-
-    try {
-      log(
-        "[LiveJobOffersScreen] Cancelling bid for job:",
-        selectedJobForBid.id
-      );
-
-      // Call the cancel bid API with bid ID and driver ID
-      // await cancelBid({
-      //   bidId: selectedJobForBid.id, // Using job ID as bid ID for now
-      //   driverId: auth?.user?.id || "driver-123", // Get driver ID from auth context
-      // });
-
-      // Close all sheets and reset state
-      setIsCancelConfirmationOpen(false);
-      setIsWaitingForCustomer(false);
-      setSelectedJobForBid(null);
-
-      log("[LiveJobOffersScreen] Bid cancelled successfully");
-
-      // Show success message
-      showToast("Your bid has been cancelled successfully.", {
-        variant: "success",
-        position: "top",
-      });
-    } catch (error) {
-      log("[LiveJobOffersScreen] Failed to cancel bid:", error);
-      showToast("Failed to cancel bid. Please try again.", {
-        variant: "error",
-        position: "top",
-      });
-    }
-  }, [selectedJobForBid, cancelBid]);
-
-  // Handle cancel confirmation sheet close
-  const handleCancelConfirmationClose = useCallback(() => {
-    setIsCancelConfirmationOpen(false);
-  }, []);
-
-  // Handle bid status sheet close
-  const handleClose = useCallback(() => {
-    setIsBidStatusOpen(false);
-    setBidStatus(BID_STATUS.EXPIRED);
-    setSelectedJobForBid(null);
-    setIsWaitingForCustomer(false);
-    router.replace("/(tabs)");
-  }, []);
-
-  // Handle status timer completion (redirect on ACCEPTED)
-  const handleStatusTimerComplete = useCallback(() => {
-    if (bidStatus === BID_STATUS.ACCEPTED) {
-      setIsBidStatusOpen(false);
-      setIsWaitingForCustomer(false);
-      setSelectedJobForBid(null);
-      router.replace("/(screens)/active-ride");
-      return;
-    }
-
-    // Default behavior for other statuses (e.g., EXPIRED)
-    handleClose();
-  }, [bidStatus, handleClose]);
-
-  // Handle special requirements press
-  const handleSpecialRequirements = useCallback((jobId: string) => {
-    log(`[LiveJobOffersScreen] Special requirements pressed for job: ${jobId}`);
-    showToast("Special requirements details would be shown here", {
-      variant: "warning",
-      position: "top",
-    });
-  }, []);
-
-  // Handle package press
-  const handlePackagePress = useCallback((jobId: string) => {
-    log(`[LiveJobOffersScreen] Package pressed for job: ${jobId}`);
-    showToast("Package details would be shown here", {
-      variant: "warning",
-      position: "top",
-    });
-  }, []);
 
   // Handle "View +X More" click
   const handleViewMorePress = useCallback(() => {
@@ -699,6 +315,16 @@ export default function LiveJobOffersScreen({
     setIsScrolling(false);
     log("[LiveJobOffersScreen] Scrolling ended - swipe gestures enabled");
   }, []);
+
+  const handleShowSpecialRequirements = (data: any) => {
+    // Open the special requirements modal (overlay on top of ride offer modal)
+    openSpecialRequirements(data);
+  };
+
+  const handleShowPackage = (data: any) => {
+    // Open the package info modal (overlay on top of ride offer modal)
+    openPackageInfo(data);
+  };
 
   // Render "View +X More" indicator
   const renderViewMoreIndicator = () => {
@@ -762,11 +388,14 @@ export default function LiveJobOffersScreen({
         weight="regular"
         style={styles.errorStateMessage}
       >
-        {error || "Something went wrong while loading jobs. Please try again."}
+        Something went wrong while loading jobs. Please try again.
       </Typography>
       <TouchableOpacity
         style={styles.retryButton}
-        onPress={() => fetchLiveJobs()}
+        onPress={() => {
+          // Refresh the broadcast offers by clearing and re-fetching
+          clearAllBroadcastOffers();
+        }}
       >
         <Typography
           type="bodyLarge"
@@ -794,6 +423,22 @@ export default function LiveJobOffersScreen({
   const displayJobs = showAllJobs ? sortedJobs : sortedJobs.slice(0, 3);
   const hasMoreJobs = !showAllJobs && sortedJobs.length > 3;
 
+  // Debug display jobs
+  useEffect(() => {
+    log(
+      `[LiveJobOffersScreen] displayJobs updated: ${displayJobs.length} jobs`
+    );
+    log(`[LiveJobOffersScreen] showAllJobs: ${showAllJobs}`);
+    log(`[LiveJobOffersScreen] sortedJobs.length: ${sortedJobs.length}`);
+    displayJobs.forEach((job, index) => {
+      log(
+        `[LiveJobOffersScreen] Display job ${index + 1}: ${job.id} (${
+          job.status
+        })`
+      );
+    });
+  }, [displayJobs, showAllJobs, sortedJobs.length]);
+
   // Reset showAllJobs when data changes (e.g., after auto-refresh)
   useEffect(() => {
     setShowAllJobs(false);
@@ -815,16 +460,18 @@ export default function LiveJobOffersScreen({
     log(`[LiveJobOffersScreen] showHiddenJobs: ${showHiddenJobs}`);
   }, [showHiddenJobs]);
 
-  // Show error state if there's an error
-  // if (error && !loading) {
-  //   return <View style={[styles.container, style]}>{renderErrorState()}</View>;
-  // }
+  // Error handling is now managed by the BroadcastJobOffersContext
 
-  // Show loading state
-  if (loading && (!liveJobsData || sortedJobs.length === 0)) {
+  // Show loading state only when there are no broadcast offers yet and timeout hasn't occurred
+  if (broadcastOffers.length === 0 && !hasTimedOut) {
     return (
       <View style={[styles.container, style]}>{renderLoadingState()}</View>
     );
+  }
+
+  // Show empty state if no offers and timeout has occurred
+  if (broadcastOffers.length === 0 && hasTimedOut) {
+    return <View style={[styles.container, style]}>{renderEmptyState()}</View>;
   }
 
   // Render job item for FlatList
@@ -839,6 +486,36 @@ export default function LiveJobOffersScreen({
     const isAnotherOfferProcessing =
       processingOfferId !== null && processingOfferId !== item.id;
 
+    // Determine button title and disabled state based on actual status
+    let buttonTitle = "Accept";
+    let isDisabled = false;
+
+    // Check if action has been taken
+    if (item.status === "accepted") {
+      buttonTitle = "Accepted";
+      isDisabled = true;
+    } else if (item.status === "skipped") {
+      buttonTitle = "Skipped";
+      isDisabled = true;
+    } else if (item.status === "hidden") {
+      buttonTitle = "Hidden";
+      isDisabled = true;
+    } else if (item.status === "expired") {
+      buttonTitle = "Expired";
+      isDisabled = true;
+    } else if (item.bidable) {
+      buttonTitle = "Bid";
+      isDisabled = false;
+    } else {
+      buttonTitle = "Accept";
+      isDisabled = false;
+    }
+
+    // Disable if another offer is being processed
+    if (isAnotherOfferProcessing) {
+      isDisabled = true;
+    }
+
     return (
       <View style={styles.jobItemWrapper}>
         <LiveRideOfferItem
@@ -847,9 +524,13 @@ export default function LiveJobOffersScreen({
           peopleCount={item.peopleCount}
           rating={item.rating}
           hasSpecialRequirements={item.hasSpecialRequirements}
-          onPressSpecialRequirements={handleShowSpecialRequirements}
+          onPressSpecialRequirements={() => {
+            handleShowSpecialRequirements(item?.specialRequirements);
+          }}
+          onPressPackage={() => {
+            handleShowPackage(item?.packageInfo);
+          }}
           hasPackage={item.hasPackage}
-          onPressPackage={() => handleShowPackage()}
           pickupTime={item.pickupTime}
           pickupDistance={item.pickupDistance}
           pickupAddress={item.pickupAddress}
@@ -860,12 +541,12 @@ export default function LiveJobOffersScreen({
           rideDistance={item.rideDistance}
           totalPrice={item.totalPrice}
           driverEarn={item.driverEarn}
-          buttonTitle={item.buttonTitle}
+          buttonTitle={buttonTitle}
           onButtonClick={() => handleJobAction(item.id)}
           itemStatus={getItemStatus(item.id)}
           isScrolling={isScrolling}
           showHiddenJobs={showHiddenJobs}
-          disabled={item.disabled || isAnotherOfferProcessing}
+          disabled={isDisabled}
           processingOfferId={processingOfferId}
           onProcessingStart={(offerId) => setProcessingOfferId(offerId)}
           onProcessingEnd={() => setProcessingOfferId(null)}
@@ -873,6 +554,15 @@ export default function LiveJobOffersScreen({
       </View>
     );
   };
+
+  // Debug render state
+  log(`[LiveJobOffersScreen] RENDER - sortedJobs.length: ${sortedJobs.length}`);
+  log(
+    `[LiveJobOffersScreen] RENDER - displayJobs.length: ${displayJobs.length}`
+  );
+  log(
+    `[LiveJobOffersScreen] RENDER - broadcastOffers.length: ${broadcastOffers.length}`
+  );
 
   return (
     <View style={[styles.container, style]}>
@@ -892,46 +582,15 @@ export default function LiveJobOffersScreen({
         />
       )}
 
-      {selectedJobForBid && (
-        <BidBottomSheet
-          bid={selectedJobForBid.bid}
-          onSubmit={handleBidSubmit}
-          onClose={handleBidSheetClose}
-          open={isBidSheetOpen}
-          snapPoints={["75%"]}
-          initialSnapIndex={0}
-        />
-      )}
-
-      {/* Bid Waiting Timer */}
-      <BidWaitingTimer
-        open={isWaitingForCustomer}
-        progressDuration={BID_WAITING_TIMER_DURATION_MS}
-        onCompleteProgress={handleTimerComplete}
-        onCancel={handleCancelBid}
-        snapPoints={["40%"]}
-        showHeader={false}
-        backdrop={true}
-        swipeToClose={false}
-      />
-
-      {/* Cancel Bid Confirmation Sheet */}
-      <ConfirmationSheet
-        open={isCancelConfirmationOpen}
-        title="Cancel Your Bid?"
-        description="Are you sure you want to cancel your bid for this ride? You may miss this opportunity if the customer accepts."
-        cancelButtonText="Go Back"
-        confirmButtonText="Yes, Cancel"
-        onCancel={handleCancelConfirmationClose}
-        onConfirm={handleConfirmCancelBid}
-      />
-
-      {/* Bid Status Sheet */}
-      <BidStatusSheet
-        open={isBidStatusOpen}
-        status={bidStatus}
-        onTimerComplete={handleStatusTimerComplete}
-        onClose={handleClose}
+      {/* ETA Modal for Accept Flow */}
+      <ETAModal
+        open={isETAModalOpen}
+        onClose={() => {
+          setIsETAModalOpen(false);
+          setSelectedJobForAccept(null);
+        }}
+        onSubmit={handleETASubmit}
+        isLoading={isSubmitETALoading}
       />
     </View>
   );
