@@ -317,3 +317,35 @@ export const TRIP_OFFER_TYPES = {
   SEQUENTIAL: "sequential",
   BROADCAST: "broadcast",
 } as const;
+
+// Network Monitoring Constants
+export const NETWORK_MONITORING = {
+  // Connection type thresholds (in Mbps) - estimated based on connection type
+  // Note: 1 Mbps = 125 KB/s, so 0.08 Mbps = 10 KB/s
+  CONNECTION_THRESHOLDS: {
+    wifi: { slow: 0.08, critical: 0.04 }, // WiFi: 10 KB/s slow, 5 KB/s critical
+    cellular: { slow: 0.08, critical: 0.04 }, // Cellular: 10 KB/s slow, 5 KB/s critical
+    bluetooth: { slow: 0.08, critical: 0.04 }, // Bluetooth: 10 KB/s slow, 5 KB/s critical
+    ethernet: { slow: 0.08, critical: 0.04 }, // Ethernet: 10 KB/s slow, 5 KB/s critical
+    unknown: { slow: 0.08, critical: 0.04 }, // Default: 10 KB/s slow, 5 KB/s critical
+  },
+
+  // Monitoring intervals (in milliseconds)
+  BANDWIDTH_CHECK_INTERVAL: 10000, // Check every 10 seconds
+  CONNECTION_CHECK_INTERVAL: 5000, // Check connection every 5 seconds
+
+  // UI behavior
+  // Note: Notifications now stay visible until connection improves (no auto-hide)
+
+  // Network quality levels
+  NETWORK_QUALITY: {
+    EXCELLENT: "excellent",
+    GOOD: "good",
+    SLOW: "slow",
+    CRITICAL: "critical",
+    OFFLINE: "offline",
+  } as const,
+} as const;
+
+export type NetworkQuality =
+  (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];

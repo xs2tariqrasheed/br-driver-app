@@ -17,6 +17,7 @@ import { useDriver } from "@/context/DriverContext";
 import { useModalManager } from "@/context/ModalManagerContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useRideOffer } from "@/context/RideOfferContext";
+// import { useNetworkMonitoring } from "@/hooks/useNetworkMonitoring";
 import { expirationService } from "@/services/ExpirationService";
 import { formatDateTimestamp, logger } from "@/utils/helpers";
 import {
@@ -56,6 +57,7 @@ export function GlobalSocketListener() {
   const [driver] = useDriver();
   const { closeAllModals } = useModalManager();
   const { showNotification: showVisualNotification } = useNotification();
+  // const { isNetworkSuitableFor, networkQuality } = useNetworkMonitoring();
   const {
     setHasAnyActiveOffer,
     showRideOfferModal,
@@ -81,6 +83,14 @@ export function GlobalSocketListener() {
       log("Socket status:", socketStatus);
       return;
     }
+
+    // Check if network is suitable for socket operations
+    // if (!isNetworkSuitableFor("socket")) {
+    //   log(
+    //     `🔴 Network quality (${networkQuality}) not suitable for socket operations, skipping global listeners setup`
+    //   );
+    //   return;
+    // }
 
     log("🟢 Setting up global socket listeners...");
     const cleanupFunctions: (() => void)[] = [];
@@ -394,6 +404,8 @@ export function GlobalSocketListener() {
   }, [
     driver?.online,
     socketStatus,
+    // networkQuality,
+    // isNetworkSuitableFor,
     onEvent,
     // Note: Intentionally not including function dependencies (showRideOfferModal, addNotification, etc.)
     // to prevent constant re-setup of listeners. The functions are accessed via closure and will

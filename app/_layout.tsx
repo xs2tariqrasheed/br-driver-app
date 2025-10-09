@@ -1,5 +1,6 @@
 import GlobalRideOfferModal from "@/components/GlobalRideOfferModal";
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
+// import NetworkNotification from "@/components/NetworkNotification";
 import NotificationModal from "@/components/NotificationModal";
 import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import PackageInfoModal from "@/components/PackageInfoModal";
@@ -15,6 +16,7 @@ import { BroadcastJobOffersProvider } from "@/context/BroadcastJobOffersContext"
 import { ContentProvider } from "@/context/ContentContext";
 import { DriverProvider } from "@/context/DriverContext";
 import { ModalManagerProvider } from "@/context/ModalManagerContext";
+// import { NetworkProvider } from "@/context/NetworkContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { PackageInfoProvider } from "@/context/PackageInfoContext";
 import { RideOfferProvider } from "@/context/RideOfferContext";
@@ -62,6 +64,7 @@ export default function RootLayout() {
           <BottomSheetModalProvider>
             <ContentProvider>
               <AuthProvider>
+                {/* <NetworkProvider> */}
                 <DriverProvider>
                   <SettingsProvider>
                     <ModalManagerProvider>
@@ -79,15 +82,21 @@ export default function RootLayout() {
                                             <Stack initialRouteName="(screens)/auth">
                                               <Stack.Screen
                                                 name="(screens)/auth"
-                                                options={{ headerShown: false }}
+                                                options={{
+                                                  headerShown: false,
+                                                }}
                                               />
                                               <Stack.Screen
                                                 name="(screens)/more"
-                                                options={{ headerShown: false }}
+                                                options={{
+                                                  headerShown: false,
+                                                }}
                                               />
                                               <Stack.Screen
                                                 name="(tabs)"
-                                                options={{ headerShown: false }}
+                                                options={{
+                                                  headerShown: false,
+                                                }}
                                               />
                                               <Stack.Screen name="+not-found" />
                                               <Stack.Screen
@@ -98,7 +107,9 @@ export default function RootLayout() {
                                               />
                                               <Stack.Screen
                                                 name="(screens)/heat-map"
-                                                options={{ headerShown: false }}
+                                                options={{
+                                                  headerShown: false,
+                                                }}
                                               />
                                             </Stack>
                                             <StatusBar style="auto" />
@@ -114,6 +125,8 @@ export default function RootLayout() {
                                             <GlobalRideOfferModal />
                                             {/* Visual Notification Manager */}
                                             <NotificationModal />
+                                            {/* Network Status Notification */}
+                                            {/* <NetworkNotification /> */}
                                           </ToastProvider>
                                         </NotificationProvider>
                                       </BroadcastJobOffersProvider>
@@ -128,6 +141,7 @@ export default function RootLayout() {
                     </ModalManagerProvider>
                   </SettingsProvider>
                 </DriverProvider>
+                {/* </NetworkProvider> */}
               </AuthProvider>
             </ContentProvider>
           </BottomSheetModalProvider>
