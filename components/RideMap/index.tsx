@@ -8,7 +8,7 @@ import {
   LocationCoordinates,
   logger,
 } from "@/utils/helpers";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -145,8 +145,33 @@ export default function RideMap({
   const dropoffIconSource = require("@/assets/images/dropoff-icon.png");
   const wazeIcon = require("@/assets/images/waze-icon.png");
 
+  // Memoize map region to prevent unnecessary re-renders
+  const mapRegion = useMemo(() => {
+    if (!currentLocation) return null;
+    return {
+      latitude: currentLocation.latitude,
+      longitude: currentLocation.longitude,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    };
+  }, [currentLocation]);
+
+  // Memoize animated coordinate object
+  const animatedCoordinate = useMemo(
+    () => ({
+      latitude: animatedLatitude.current,
+      longitude: animatedLongitude.current,
+    }),
+    []
+  );
+
+  // Memoize the initialization to prevent unnecessary re-runs
+  const initializeMapMemo = useCallback(async () => {
+    await initializeMap();
+  }, [pickupAddress, dropoffAddress]);
+
   useEffect(() => {
-    initializeMap();
+    initializeMapMemo();
 
     return () => {
       // Cleanup animations if testing
@@ -154,7 +179,7 @@ export default function RideMap({
         stopTesting();
       }
     };
-  }, [pickupAddress, dropoffAddress]);
+  }, [initializeMapMemo]);
 
   /**
    * Decode Google encoded polyline
@@ -550,18 +575,23 @@ export default function RideMap({
     );
   }
 
+  if (!mapRegion) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Typography type="bodyMedium" style={styles.loadingText}>
+          Preparing map...
+        </Typography>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <MapView
         ref={mapRef}
         style={styles.map}
         provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: currentLocation.latitude,
-          longitude: currentLocation.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
+        initialRegion={mapRegion}
         showsUserLocation={false}
         showsMyLocationButton={false}
         showsCompass={true}
@@ -597,10 +627,7 @@ export default function RideMap({
         {/* Current location marker (car) - Use Marker.Animated for smooth movement */}
         <Marker.Animated
           ref={markerRef}
-          coordinate={{
-            latitude: animatedLatitude.current,
-            longitude: animatedLongitude.current,
-          }}
+          coordinate={animatedCoordinate}
           anchor={{ x: 0.5, y: 0.5 }}
           rotation={animatedRotation.current}
           flat={true}

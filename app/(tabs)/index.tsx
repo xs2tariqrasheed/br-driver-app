@@ -151,16 +151,7 @@ export default function HomeScreen() {
       try {
         setIsTogglingOnline(true); // Start loading immediately
 
-        // Request permission and get current location for first post
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          showToast("Location permission is required to go Online.", {
-            variant: "error",
-          });
-          setIsTogglingOnline(false);
-          return;
-        }
-
+        // Get current location for first post (permission already granted by PermissionGate)
         const first = await Location.getCurrentPositionAsync({});
         const payload = {
           lat: first.coords.latitude,

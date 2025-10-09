@@ -280,23 +280,35 @@ export default function ActiveRideScreen() {
         />
       </View>
 
-      {toggleValue === RIDE_TOGGLE_LABELS.DETAILS && (
+      {/* Always render both components, but control visibility */}
+      <View
+        style={[
+          styles.detailsContainer,
+          {
+            display:
+              toggleValue === RIDE_TOGGLE_LABELS.DETAILS ? "flex" : "none",
+          },
+        ]}
+      >
         <JobDetails jobOffer={jobOffer} showActionBar={false} />
-      )}
+      </View>
 
-      {toggleValue === RIDE_TOGGLE_LABELS.MAP && (
-        <View style={styles.mapContainer}>
-          <RideMap
-            pickupAddress="99C7+8WV, Service Road, Kahna Nau, Lahore"
-            dropoffAddress="18-KM Main Lahore – Kasur Rd، opp. Descon Head Office,"
-            eta={isDriverReachedOnPickup ? "" : "10 mins"}
-            showWazeButton={true}
-            rideStatus={isDriverReachedOnPickup ? "On Scene" : "En Route"}
-            onMapReady={() => console.log("Map ready")}
-            onError={(error) => console.error("Map error:", error)}
-          />
-        </View>
-      )}
+      <View
+        style={[
+          styles.mapContainer,
+          { display: toggleValue === RIDE_TOGGLE_LABELS.MAP ? "flex" : "none" },
+        ]}
+      >
+        <RideMap
+          pickupAddress="99C7+8WV, Service Road, Kahna Nau, Lahore"
+          dropoffAddress="18-KM Main Lahore – Kasur Rd، opp. Descon Head Office,"
+          eta={isDriverReachedOnPickup ? "" : "10 mins"}
+          showWazeButton={true}
+          rideStatus={isDriverReachedOnPickup ? "On Scene" : "En Route"}
+          onMapReady={() => console.log("Map ready")}
+          onError={(error) => console.error("Map error:", error)}
+        />
+      </View>
 
       {toggleValue === RIDE_TOGGLE_LABELS.MAP && (
         <RideAction
@@ -369,6 +381,9 @@ const styles = StyleSheet.create({
   },
   rideLocationsContainer: {
     padding: 10,
+  },
+  detailsContainer: {
+    flex: 1,
   },
   mapContainer: {
     flex: 1,
