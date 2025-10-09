@@ -1,6 +1,13 @@
 import BidStatusModal from "@/components/BidStatusModal";
 import { BID_STATUS } from "@/constants/global";
-import { createContext, ReactNode, useContext, useState } from "react";
+import { useModalManager } from "@/context/ModalManagerContext";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 interface BidAcceptedContextType {
   // State
@@ -19,6 +26,7 @@ const BidAcceptedContext = createContext<BidAcceptedContextType | undefined>(
 
 export function BidAcceptedProvider({ children }: { children: ReactNode }) {
   const [isBidAcceptedVisible, setIsBidAcceptedVisible] = useState(false);
+  const { registerModal, unregisterModal } = useModalManager();
 
   const showBidAccepted = () => {
     setIsBidAcceptedVisible(true);
@@ -27,6 +35,12 @@ export function BidAcceptedProvider({ children }: { children: ReactNode }) {
   const hideBidAccepted = () => {
     setIsBidAcceptedVisible(false);
   };
+
+  // Register modal with ModalManager
+  useEffect(() => {
+    registerModal("bidAccepted", hideBidAccepted);
+    return () => unregisterModal("bidAccepted");
+  }, [registerModal, unregisterModal, hideBidAccepted]);
 
   const onTimerComplete = () => {
     // Default behavior - can be overridden by parent components

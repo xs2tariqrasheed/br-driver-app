@@ -35,6 +35,7 @@ export class ExpirationService {
       markBroadcastOfferAsExpired?: (tripId: string) => void;
       hideRideOfferModal?: () => void;
       setHasAnyActiveOffer?: (value: boolean) => Promise<void>;
+      closeAllModals?: () => void;
     }
   ): Promise<void> {
     try {
@@ -56,15 +57,8 @@ export class ExpirationService {
         this.log(`📱 Handling Sequential offer expiration: ${tripId}`);
 
         if (contexts.markSequentialOfferAsExpired) {
+          // markSequentialOfferAsExpired now handles all modal closing and state updates
           contexts.markSequentialOfferAsExpired(tripId);
-        }
-
-        if (contexts.hideRideOfferModal) {
-          contexts.hideRideOfferModal();
-        }
-
-        if (contexts.setHasAnyActiveOffer) {
-          await contexts.setHasAnyActiveOffer(false);
         }
       } else if (offerType === TRIP_OFFER_TYPES.BROADCAST) {
         // Handle Broadcast offer expiration
@@ -80,20 +74,28 @@ export class ExpirationService {
         );
 
         if (contexts.markSequentialOfferAsExpired) {
+          // markSequentialOfferAsExpired now handles all modal closing and state updates
           contexts.markSequentialOfferAsExpired(tripId);
         }
 
         if (contexts.markBroadcastOfferAsExpired) {
           contexts.markBroadcastOfferAsExpired(tripId);
         }
+      }
 
-        if (contexts.hideRideOfferModal) {
-          contexts.hideRideOfferModal();
-        }
+      // Close all modals when any offer expires
+      if (contexts.closeAllModals) {
+        this.log("🔽 Closing all modals due to offer expiration");
+        contexts.closeAllModals();
+      }
 
-        if (contexts.setHasAnyActiveOffer) {
-          await contexts.setHasAnyActiveOffer(false);
-        }
+      // Close ride offer modal and update state
+      if (contexts.hideRideOfferModal) {
+        contexts.hideRideOfferModal();
+      }
+
+      if (contexts.setHasAnyActiveOffer) {
+        await contexts.setHasAnyActiveOffer(false);
       }
 
       this.log(
@@ -118,6 +120,9 @@ export class ExpirationService {
     contexts: {
       markSequentialOfferAsExpired?: (tripId: string) => void;
       markBroadcastOfferAsExpired?: (tripId: string) => void;
+      hideRideOfferModal?: () => void;
+      setHasAnyActiveOffer?: (value: boolean) => Promise<void>;
+      closeAllModals?: () => void;
     }
   ): void {
     this.log(

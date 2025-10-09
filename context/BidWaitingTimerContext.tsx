@@ -2,8 +2,16 @@ import BidWaitingTimerModal from "@/components/BidWaitingTimerModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { BID_WAITING_TIMER_DURATION_MS } from "@/constants/global";
 import { useBidExpired } from "@/context/BidExpiredContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import { useRideOffer } from "@/context/RideOfferContext";
-import { createContext, ReactNode, useContext, useRef, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 interface BidWaitingTimerContextType {
   // State
@@ -36,6 +44,19 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
   const onCancelRef = useRef<(() => void) | null>(null);
   const { setHasAnyActiveOffer } = useRideOffer();
   const { showBidExpired } = useBidExpired();
+  const { registerModal, unregisterModal } = useModalManager();
+
+  const hideBidWaitingTimer = () => {
+    setIsBidWaitingTimerVisible(false);
+    onCompleteProgressRef.current = null;
+    onCancelRef.current = null;
+  };
+
+  // Register modal with ModalManager
+  useEffect(() => {
+    registerModal("bidWaitingTimer", hideBidWaitingTimer);
+    return () => unregisterModal("bidWaitingTimer");
+  }, [registerModal, unregisterModal, hideBidWaitingTimer]);
   const showBidWaitingTimer = (
     offer?: any,
     duration?: number,
@@ -48,12 +69,6 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
     onCompleteProgressRef.current = onComplete || null;
     onCancelRef.current = onCancelCallback || null;
     setIsBidWaitingTimerVisible(true);
-  };
-
-  const hideBidWaitingTimer = () => {
-    setIsBidWaitingTimerVisible(false);
-    onCompleteProgressRef.current = null;
-    onCancelRef.current = null;
   };
 
   const handleCompleteProgress = () => {

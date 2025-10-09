@@ -1,6 +1,13 @@
 import BidStatusModal from "@/components/BidStatusModal";
 import { BID_STATUS } from "@/constants/global";
-import { createContext, ReactNode, useContext, useState } from "react";
+import { useModalManager } from "@/context/ModalManagerContext";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 interface BidExpiredContextType {
   // State
@@ -19,6 +26,7 @@ const BidExpiredContext = createContext<BidExpiredContextType | undefined>(
 
 export function BidExpiredProvider({ children }: { children: ReactNode }) {
   const [isBidExpiredVisible, setIsBidExpiredVisible] = useState(false);
+  const { registerModal, unregisterModal } = useModalManager();
 
   const showBidExpired = () => {
     setIsBidExpiredVisible(true);
@@ -27,6 +35,12 @@ export function BidExpiredProvider({ children }: { children: ReactNode }) {
   const hideBidExpired = () => {
     setIsBidExpiredVisible(false);
   };
+
+  // Register modal with ModalManager
+  useEffect(() => {
+    registerModal("bidExpired", hideBidExpired);
+    return () => unregisterModal("bidExpired");
+  }, [registerModal, unregisterModal, hideBidExpired]);
 
   const onTimerComplete = () => {
     // Default behavior - can be overridden by parent components

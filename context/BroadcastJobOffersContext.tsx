@@ -178,6 +178,7 @@ export function BroadcastJobOffersProvider({
   const markBroadcastOfferAsExpired = (tripId: string) => {
     console.log(`⏰ Marking broadcast offer as expired: ${tripId}`);
 
+    // Update the offer status to expired
     setBroadcastOffers((prev) =>
       prev.map((offer) => {
         // Check if this offer matches the expired tripId
@@ -190,6 +191,8 @@ export function BroadcastJobOffersProvider({
         return offer;
       })
     );
+
+    console.log("✅ Broadcast offer marked as expired successfully");
   };
 
   const contextValue: BroadcastJobOffersContextType = {

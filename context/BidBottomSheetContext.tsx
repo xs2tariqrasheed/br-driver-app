@@ -1,5 +1,13 @@
 import BidBottomSheetModal, { BidData } from "@/components/BidBottomSheetModal";
-import { createContext, ReactNode, useContext, useRef, useState } from "react";
+import { useModalManager } from "@/context/ModalManagerContext";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 interface BidBottomSheetContextType {
   // State
@@ -38,6 +46,20 @@ export function BidBottomSheetProvider({ children }: { children: ReactNode }) {
   const [bidData, setBidData] = useState<BidData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitHandlerRef = useRef<((data: any) => void) | null>(null);
+  const { registerModal, unregisterModal } = useModalManager();
+
+  const hideBidBottomSheet = () => {
+    setIsBidBottomSheetVisible(false);
+    setBidData(null);
+    setIsSubmitting(false);
+    submitHandlerRef.current = null;
+  };
+
+  // Register modal with ModalManager
+  useEffect(() => {
+    registerModal("bidBottomSheet", hideBidBottomSheet);
+    return () => unregisterModal("bidBottomSheet");
+  }, [registerModal, unregisterModal, hideBidBottomSheet]);
 
   const showBidBottomSheet = (data: BidData, onSubmit: (data: any) => void) => {
     console.log("🔔 Show bid bottom sheet:", data);
@@ -46,13 +68,6 @@ export function BidBottomSheetProvider({ children }: { children: ReactNode }) {
     submitHandlerRef.current = onSubmit;
     console.log("🔔 Submit handler stored");
     setIsBidBottomSheetVisible(true);
-  };
-
-  const hideBidBottomSheet = () => {
-    setIsBidBottomSheetVisible(false);
-    setBidData(null);
-    setIsSubmitting(false);
-    submitHandlerRef.current = null;
   };
 
   const setSubmitting = (loading: boolean) => {

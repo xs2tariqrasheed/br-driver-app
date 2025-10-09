@@ -14,6 +14,7 @@ import { useBidUnsuccessful } from "@/context/BidUnsuccessfulContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { expirationService } from "@/services/ExpirationService";
 import { formatDateTimestamp, logger } from "@/utils/helpers";
@@ -48,6 +49,7 @@ export function GlobalSocketListener() {
   });
   const { addNotification } = useDriver();
   const [driver] = useDriver();
+  const { closeAllModals } = useModalManager();
   const {
     setHasAnyActiveOffer,
     showRideOfferModal,
@@ -449,6 +451,7 @@ export function GlobalSocketListener() {
             markBroadcastOfferAsExpired,
             hideRideOfferModal,
             setHasAnyActiveOffer,
+            closeAllModals,
           });
 
           // NEW: Remove temporary rides for expired offers

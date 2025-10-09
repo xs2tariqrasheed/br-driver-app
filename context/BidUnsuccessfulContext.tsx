@@ -1,6 +1,13 @@
 import BidStatusModal from "@/components/BidStatusModal";
 import { BID_STATUS } from "@/constants/global";
-import { createContext, ReactNode, useContext, useState } from "react";
+import { useModalManager } from "@/context/ModalManagerContext";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 interface BidUnsuccessfulContextType {
   // State
@@ -20,6 +27,7 @@ const BidUnsuccessfulContext = createContext<
 export function BidUnsuccessfulProvider({ children }: { children: ReactNode }) {
   const [isBidUnsuccessfulVisible, setIsBidUnsuccessfulVisible] =
     useState(false);
+  const { registerModal, unregisterModal } = useModalManager();
 
   const showBidUnsuccessful = () => {
     setIsBidUnsuccessfulVisible(true);
@@ -28,6 +36,12 @@ export function BidUnsuccessfulProvider({ children }: { children: ReactNode }) {
   const hideBidUnsuccessful = () => {
     setIsBidUnsuccessfulVisible(false);
   };
+
+  // Register modal with ModalManager
+  useEffect(() => {
+    registerModal("bidUnsuccessful", hideBidUnsuccessful);
+    return () => unregisterModal("bidUnsuccessful");
+  }, [registerModal, unregisterModal, hideBidUnsuccessful]);
 
   const onTimerComplete = () => {
     // Default behavior - can be overridden by parent components
