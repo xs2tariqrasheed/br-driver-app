@@ -8,8 +8,6 @@ export const TOKEN_KEY = "@token";
 export const AUTH_STORAGE_KEY = "@auth";
 // Driver status storage key
 export const DRIVER_STORAGE_KEY = "@driver";
-// Ride offer storage key
-export const RIDE_OFFER_STORAGE_KEY = "@ride-offer";
 
 // Driver status display labels (used in UI)
 export const DRIVER_STATUS = {

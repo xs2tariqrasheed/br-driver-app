@@ -15,11 +15,7 @@ import Button from "@/components/Button";
 import Header from "@/components/Header";
 import LiveRideOfferItem from "@/components/LiveRideOfferItem";
 import { colors, textColors } from "@/constants/colors";
-import {
-  LIVE_JOB_STATUS,
-  RIDE_OFFER_STORAGE_KEY,
-  TRIP_OFFER_TYPES,
-} from "@/constants/global";
+import { LIVE_JOB_STATUS, TRIP_OFFER_TYPES } from "@/constants/global";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { PackageInfo, usePackageInfo } from "@/context/PackageInfoContext";
@@ -28,8 +24,6 @@ import {
   SpecialRequirements,
   useSpecialRequirements,
 } from "@/context/SpecialRequirementsContext";
-import { removeStorageItem } from "@/utils/helpers";
-import { router, usePathname } from "expo-router";
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
 
@@ -126,7 +120,6 @@ export default function RideOfferModal({
 }: RideOfferModalProps) {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const mapRef = useRef<MapView>(null);
-  const pathname = usePathname();
 
   const [offer, setOffer] = useState<any | null>(null);
   const refStatus = useRef<number>(0);
@@ -224,14 +217,6 @@ export default function RideOfferModal({
   const isExpired = offer?.status === LIVE_JOB_STATUS.EXPIRED;
   const shouldDisabled = isSkipLoading || isHideLoading || isSubmitBidLoading;
 
-  useEffect(() => {
-    if (isExpired) {
-      removeStorageItem(RIDE_OFFER_STORAGE_KEY);
-      // Set hasAnyActiveOffer to false when offer expires
-      setHasAnyActiveOffer(false);
-    }
-  }, [isExpired]);
-
   // Handle bid button click for bidable offers
   const handleBidClick = () => {
     // Keep the ride offer modal open and show bid modal as overlay
@@ -285,16 +270,7 @@ export default function RideOfferModal({
             title="Ride Offer"
             hideBackIcon={false}
             onBackPress={() => {
-              if (isExpired) {
-                // Close the modal first
-                onClose();
-                // Then navigate to home screen
-                setTimeout(() => {
-                  router.replace("/(tabs)");
-                }, 100);
-              } else {
-                onClose();
-              }
+              onClose();
             }}
           />
 

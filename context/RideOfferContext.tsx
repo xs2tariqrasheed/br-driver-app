@@ -3,13 +3,11 @@ import { showToast } from "@/components/Toast";
 import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import {
   API_CLIENT_TYPES,
-  RIDE_OFFER_STORAGE_KEY,
   TRIP_OFFER_ACTIONS,
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { usePost } from "@/hooks/usePost";
-import { removeStorageItem } from "@/utils/helpers";
 import { router, usePathname } from "expo-router";
 import { createContext, ReactNode, useContext, useState } from "react";
 
@@ -282,7 +280,14 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         variant: "success",
         position: "top",
       });
-      removeStorageItem(RIDE_OFFER_STORAGE_KEY);
+      // NEW: Remove temporary rides for expired offers
+      if (currentOffer.tripOffer.tripId) {
+        removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
+        console.log(
+          "✅ Removed temporary rides for accepted tripId:",
+          currentOffer.tripOffer.tripId
+        );
+      }
 
       // Set hasAnyActiveOffer to false on successful acceptance
       await setHasAnyActiveOffer(false);
@@ -335,8 +340,14 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         variant: "success",
         position: "top",
       });
-      removeStorageItem(RIDE_OFFER_STORAGE_KEY);
-
+      // NEW: Remove temporary rides for expired offers
+      if (currentOffer.tripOffer.tripId) {
+        removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
+        console.log(
+          "✅ Removed temporary rides for skipped tripId:",
+          currentOffer.tripOffer.tripId
+        );
+      }
       // Set hasAnyActiveOffer to false on successful skip
       await setHasAnyActiveOffer(false);
 
@@ -378,7 +389,14 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         variant: "success",
         position: "top",
       });
-      removeStorageItem(RIDE_OFFER_STORAGE_KEY);
+      // NEW: Remove temporary rides for expired offers
+      if (currentOffer.tripOffer.tripId) {
+        removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
+        console.log(
+          "✅ Removed temporary rides for hidden tripId:",
+          currentOffer.tripOffer.tripId
+        );
+      }
 
       // Set hasAnyActiveOffer to false on successful hide
       await setHasAnyActiveOffer(false);
@@ -461,9 +479,6 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       setCurrentOffer((prev) =>
         prev ? { ...prev, status: "expired" as const } : null
       );
-
-      // Clear the ride offer storage
-      removeStorageItem(RIDE_OFFER_STORAGE_KEY);
 
       // Hide the modal and clear state
       hideRideOfferModal();
