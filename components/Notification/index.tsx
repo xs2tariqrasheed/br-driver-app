@@ -187,7 +187,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
-    paddingTop: 16,
   },
   modalBackdrop: {
     flex: 1,

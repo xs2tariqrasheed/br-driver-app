@@ -15,6 +15,7 @@ import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
 import { useModalManager } from "@/context/ModalManagerContext";
+import { useNotification } from "@/context/NotificationContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { expirationService } from "@/services/ExpirationService";
 import { formatDateTimestamp, logger } from "@/utils/helpers";
@@ -54,6 +55,7 @@ export function GlobalSocketListener() {
   const { addNotification } = useDriver();
   const [driver] = useDriver();
   const { closeAllModals } = useModalManager();
+  const { showNotification: showVisualNotification } = useNotification();
   const {
     setHasAnyActiveOffer,
     showRideOfferModal,
@@ -111,6 +113,16 @@ export function GlobalSocketListener() {
             // Use the helper function to format socket data to RideOffer format
             const rideOffer = formatSocketDataToRideOffer(data, auth?.user?.id);
 
+            // Show visual notification for sequential offer
+            showVisualNotification({
+              type: NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER,
+              title: "New Ride Offer",
+              subtitle: "Sequential",
+              message: `You have a new ride offer! with fare of $${rideOffer.tripOffer.fare.toFixed(
+                2
+              )}`,
+            });
+
             // Add notification to notification center
             const notification = {
               id: `ride-offer-${rideOffer.tripOffer.tripId}-${Date.now()}`,
@@ -167,16 +179,15 @@ export function GlobalSocketListener() {
             addBroadcastOffer(broadcastOffer);
             log("✅ Broadcast job offer added to context:", broadcastOffer.id);
 
-            // Show toast notification for broadcast offer
-            showToast(
-              `New broadcast job available! Fare: $${broadcastOffer.tripOffer.fare.toFixed(
+            // Show visual notification for broadcast offer
+            showVisualNotification({
+              type: NOTIFICATION_TYPES.INFO,
+              title: "New Broadcast Job",
+              subtitle: "Available Now",
+              message: `You have a new broadcast job offer! with fare of $${broadcastOffer.tripOffer.fare.toFixed(
                 2
               )}`,
-              {
-                variant: "success",
-                position: "top",
-              }
-            );
+            });
 
             // Add notification to notification center
             const notification = {
