@@ -1,4 +1,6 @@
+import { SPEECH_MESSAGES } from "@/constants/global";
 import { useNotification } from "@/context/NotificationContext";
+// import { speechManager } from "@/utils/speechManager";
 import React, { useEffect, useRef } from "react";
 import { Animated, Modal, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,13 +12,40 @@ const NotificationModal: React.FC = () => {
   const slideAnim = useRef(new Animated.Value(-200)).current;
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && data) {
       // Slide down when opening
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
+
+      // Speak the notification message
+      const speakMessage = async () => {
+        let message: string = SPEECH_MESSAGES.NEW_RIDE_OFFER; // Default message
+
+        // Choose appropriate speech message based on notification type
+        switch (data.type) {
+          case "special-ride-offer":
+            message = SPEECH_MESSAGES.NEW_RIDE_OFFER;
+            break;
+          case "info":
+            message = SPEECH_MESSAGES.NEW_BROADCAST_JOB;
+            break;
+          case "success":
+            message = SPEECH_MESSAGES.RIDE_ACCEPTED;
+            break;
+          case "error":
+            message = SPEECH_MESSAGES.RIDE_REJECTED;
+            break;
+          default:
+            message = SPEECH_MESSAGES.NEW_RIDE_OFFER;
+        }
+
+        // await speechManager.speak(message);
+      };
+
+      speakMessage();
 
       // Auto-hide after 5 seconds
       const timer = setTimeout(() => {
@@ -25,6 +54,9 @@ const NotificationModal: React.FC = () => {
 
       return () => clearTimeout(timer);
     } else {
+      // Stop any current speech when closing
+      // speechManager.stop();
+
       // Slide up when closing
       Animated.timing(slideAnim, {
         toValue: -200,
@@ -32,7 +64,7 @@ const NotificationModal: React.FC = () => {
         useNativeDriver: true,
       }).start();
     }
-  }, [isOpen, slideAnim, hideNotification]);
+  }, [isOpen, data, slideAnim, hideNotification]);
 
   if (!data) return null;
 

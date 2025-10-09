@@ -272,6 +272,12 @@ export const NOTIFICATION_TYPES = {
   SPECIAL_RIDE_OFFER: "special-ride-offer",
 } as const;
 
+// Speech Messages
+export const SPEECH_MESSAGES = {
+  NEW_RIDE_OFFER: "You have a new ride offer",
+  NEW_BROADCAST_JOB: "You have a new broadcast job",
+} as const;
+
 export type NotificationType =
   (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
 
