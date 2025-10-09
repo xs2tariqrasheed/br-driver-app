@@ -86,6 +86,10 @@ interface RideOfferContextType {
   hideRideOffer: () => Promise<void>;
   submitETA: (eta: number) => Promise<void>;
   submitBid: (bidAmount: number) => Promise<{ success: boolean } | undefined>;
+  submitBidForBroadcastOffer: (
+    tripId: string,
+    bidAmount: number
+  ) => Promise<{ success: boolean } | undefined>;
   markSequentialOfferAsExpired: (tripId: string) => void;
   setHasAnyActiveOffer: (hasActive: boolean) => Promise<void>;
   // Temporary ride methods
@@ -465,6 +469,57 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   };
 
   /**
+   * Submit a bid amount for a broadcast offer (used by LiveJobOffersScreen)
+   */
+  const submitBidForBroadcastOffer = async (
+    tripId: string,
+    bidAmount: number
+  ) => {
+    if (!tripId || !driverId) {
+      console.error("❌ Missing tripId or driverId for bid submission");
+      return;
+    }
+
+    try {
+      setIsSubmitBidLoading(true);
+      console.log(
+        "🌐 Submitting bid for broadcast offer:",
+        tripId,
+        "bidAmount:",
+        bidAmount
+      );
+
+      await submitDriverResponse({
+        driverId: driverId,
+        tripId: tripId,
+        response: TRIP_OFFER_ACTIONS.BID,
+        bidAmount,
+      });
+
+      console.log("✅ Bid submitted successfully for broadcast offer");
+      showToast("Bid submitted successfully!", {
+        variant: "success",
+        position: "top",
+      });
+      setIsSubmitBidLoading(false);
+      return { success: true };
+      // Note: hasAnyActiveOffer will be set to false when bid response is received via socket
+    } catch (error) {
+      console.error("❌ Error submitting bid for broadcast offer:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to submit bid. Please try again.";
+      showToast(errorMessage, {
+        variant: "error",
+        position: "top",
+      });
+      setIsSubmitBidLoading(false);
+      throw error;
+    }
+  };
+
+  /**
    * Mark a sequential offer as expired by tripId
    * This method is called by the ExpirationService when server sends expiration event
    */
@@ -563,6 +618,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     hideRideOffer,
     submitETA,
     submitBid,
+    submitBidForBroadcastOffer,
     markSequentialOfferAsExpired,
     setHasAnyActiveOffer,
     saveTemporaryRide,

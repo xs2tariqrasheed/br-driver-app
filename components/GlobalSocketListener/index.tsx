@@ -18,6 +18,10 @@ import { useModalManager } from "@/context/ModalManagerContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { expirationService } from "@/services/ExpirationService";
 import { formatDateTimestamp, logger } from "@/utils/helpers";
+import {
+  formatSocketDataToBroadcastOffer,
+  formatSocketDataToRideOffer,
+} from "@/utils/socketDataFormatter";
 import { showToast } from "../Toast";
 
 /**
@@ -103,64 +107,9 @@ export function GlobalSocketListener() {
               );
               return;
             }
-            // Transform socket data to RideOffer format using real server data
-            const rideOffer = {
-              // Basic ride offer info
-              id: data.tripOffer?.tripId || data.tripId || `ride-${Date.now()}`,
-              type: data.type || (TRIP_OFFER_TYPES.SEQUENTIAL as any),
-              status: "offered" as const,
-              bidable: data.tripOffer?.biddable || false,
 
-              // Trip offer details
-              tripOffer: {
-                tripId:
-                  data.tripOffer?.tripId || data.tripId || String(Date.now()),
-                pickupLocation: {
-                  lat: data.tripOffer?.pickupLocation?.lat || 37.7749,
-                  lng: data.tripOffer?.pickupLocation?.lng || -122.4194,
-                },
-                dropoffLocation: {
-                  lat: data.tripOffer?.dropoffLocation?.lat || 37.7849,
-                  lng: data.tripOffer?.dropoffLocation?.lng || -122.4094,
-                },
-                fare: parseFloat(data.tripOffer?.fare) || 0,
-              },
-
-              // LiveRideOfferItem required fields from rideDetails
-              rideType:
-                data.tripOffer?.rideDetails?.rideType || ("one-way" as const),
-              peopleCount: data.tripOffer?.rideDetails?.peopleCount || 2,
-              rating: data.tripOffer?.rideDetails?.rating || 4.5,
-              hasSpecialRequirements:
-                data.tripOffer?.rideDetails?.hasSpecialRequirements || false,
-              hasPackage: data.tripOffer?.rideDetails?.hasPackage || false,
-              specialRequirements: data.tripOffer?.specialRequirements || {},
-              packageInfo: data.tripOffer?.packageInfo || {},
-              // Pickup details from rideDetails
-              pickupTime: data.tripOffer?.rideDetails?.pickupTime || 5,
-              pickupDistance:
-                data.tripOffer?.rideDetails?.pickupDistance || 0.8,
-              pickupAddress: data.tripOffer?.rideDetails?.pickupAddress || "",
-
-              // Dropoff details from rideDetails
-              dropoffTime: data.tripOffer?.rideDetails?.dropoffTime || 15,
-              dropoffDistance:
-                data.tripOffer?.rideDetails?.dropoffDistance || 3.2,
-              dropoffAddress: data.tripOffer?.rideDetails?.dropoffAddress || "",
-
-              // Ride details from rideDetails
-              rideTime: data.tripOffer?.rideDetails?.rideTime || 20,
-              rideDistance: data.tripOffer?.rideDetails?.rideDistance || 4,
-              totalPrice: data.tripOffer?.rideDetails?.totalPrice || 0,
-              driverEarn: data.tripOffer?.rideDetails?.driverEarn || 0,
-
-              // Button details
-              buttonTitle: data.tripOffer?.biddable ? "Bid" : "Accept",
-
-              // Timestamps
-              timestamp: data.timestamp || new Date().toISOString(),
-              timeout: data.timeout || 30000, // Default 30 seconds
-            };
+            // Use the helper function to format socket data to RideOffer format
+            const rideOffer = formatSocketDataToRideOffer(data, auth?.user?.id);
 
             // Add notification to notification center
             const notification = {
@@ -208,67 +157,11 @@ export function GlobalSocketListener() {
 
             log("📡 Processing broadcast job offer:", data);
 
-            // Transform socket data to BroadcastJobOffer format using real server data
-            const broadcastOffer = {
-              // Basic job offer info
-              id:
-                data.tripOffer?.tripId ||
-                data.tripId ||
-                `broadcast-${Date.now()}`,
-              type: data.type || (TRIP_OFFER_TYPES.BROADCAST as any),
-              status: "offered" as const,
-              bidable: data.tripOffer?.biddable || false,
-
-              // Trip offer details
-              tripOffer: {
-                tripId:
-                  data.tripOffer?.tripId || data.tripId || String(Date.now()),
-                pickupLocation: {
-                  lat: data.tripOffer?.pickupLocation?.lat || 37.7749,
-                  lng: data.tripOffer?.pickupLocation?.lng || -122.4194,
-                },
-                dropoffLocation: {
-                  lat: data.tripOffer?.dropoffLocation?.lat || 37.7849,
-                  lng: data.tripOffer?.dropoffLocation?.lng || -122.4094,
-                },
-                fare: parseFloat(data.tripOffer?.fare) || 0,
-              },
-
-              // LiveRideOfferItem required fields from rideDetails
-              rideType:
-                data.tripOffer?.rideDetails?.rideType || ("one-way" as const),
-              peopleCount: data.tripOffer?.rideDetails?.peopleCount || 2,
-              rating: data.tripOffer?.rideDetails?.rating || 4.5,
-              hasSpecialRequirements:
-                data.tripOffer?.rideDetails?.hasSpecialRequirements || false,
-              hasPackage: data.tripOffer?.rideDetails?.hasPackage || false,
-              specialRequirements: data.tripOffer?.specialRequirements || {},
-              packageInfo: data.tripOffer?.packageInfo || {},
-              // Pickup details from rideDetails
-              pickupTime: data.tripOffer?.rideDetails?.pickupTime || 5,
-              pickupDistance:
-                data.tripOffer?.rideDetails?.pickupDistance || 0.8,
-              pickupAddress: data.tripOffer?.rideDetails?.pickupAddress || "",
-
-              // Dropoff details from rideDetails
-              dropoffTime: data.tripOffer?.rideDetails?.dropoffTime || 15,
-              dropoffDistance:
-                data.tripOffer?.rideDetails?.dropoffDistance || 3.2,
-              dropoffAddress: data.tripOffer?.rideDetails?.dropoffAddress || "",
-
-              // Ride details from rideDetails
-              rideTime: data.tripOffer?.rideDetails?.rideTime || 20,
-              rideDistance: data.tripOffer?.rideDetails?.rideDistance || 4,
-              totalPrice: data.tripOffer?.rideDetails?.totalPrice || 0,
-              driverEarn: data.tripOffer?.rideDetails?.driverEarn || 0,
-
-              // Button details
-              buttonTitle: data.tripOffer?.biddable ? "Bid" : "Accept",
-
-              // Timestamps
-              timestamp: data.timestamp || new Date().toISOString(),
-              timeout: data.timeout || 300000, // 5 minutes default
-            };
+            // Use the helper function to format socket data to BroadcastJobOffer format
+            const broadcastOffer = formatSocketDataToBroadcastOffer(
+              data,
+              auth?.user?.id
+            );
 
             // Add to broadcast offers context
             addBroadcastOffer(broadcastOffer);
@@ -443,10 +336,13 @@ export function GlobalSocketListener() {
       SOCKET_EVENTS.EXPIRED_OFFER,
       async (data: any) => {
         log("💬 Global Expired offer received:", data);
-
+        const modifiedData = {
+          ...data,
+          offerType: data?.offerType || TRIP_OFFER_TYPES.BROADCAST,
+        };
         try {
           // Use the ExpirationService to handle the expiration
-          await expirationService.handleOfferExpiration(data, {
+          await expirationService.handleOfferExpiration(modifiedData, {
             markSequentialOfferAsExpired,
             markBroadcastOfferAsExpired,
             hideRideOfferModal,

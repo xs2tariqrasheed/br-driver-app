@@ -273,7 +273,13 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
 
             {/* Submit Button */}
             <View style={styles.submitSection}>
-              <Button variant="primary" rounded="half" onPress={handleSubmit}>
+              <Button
+                variant="primary"
+                rounded="half"
+                onPress={handleSubmit}
+                loading={isLoading}
+                disabled={isLoading}
+              >
                 Submit
               </Button>
             </View>

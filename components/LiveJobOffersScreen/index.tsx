@@ -24,6 +24,7 @@ import {
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
+import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
 import { usePackageInfo } from "@/context/PackageInfoContext";
@@ -62,15 +63,24 @@ export default function LiveJobOffersScreen({
   const [auth] = useAuth();
   const { broadcastOffers, updateBroadcastOffer, clearAllBroadcastOffers } =
     useBroadcastJobOffers();
-  const { showRideOfferModal, submitETA, isSubmitETALoading } = useRideOffer();
+  const {
+    showRideOfferModal,
+    submitETA,
+    isSubmitETALoading,
+    submitBid,
+    submitBidForBroadcastOffer,
+    isSubmitBidLoading,
+  } = useRideOffer();
   const { openSpecialRequirements } = useSpecialRequirements();
   const { openPackageInfo } = usePackageInfo();
   const { showBidBottomSheet } = useBidBottomSheet();
+  const { showBidWaitingTimer } = useBidWaitingTimer();
   const [showAllJobs, setShowAllJobs] = useState<boolean>(false);
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const [hasTimedOut, setHasTimedOut] = useState<boolean>(false);
   const [isETAModalOpen, setIsETAModalOpen] = useState<boolean>(false);
   const [selectedJobForAccept, setSelectedJobForAccept] = useState<any>(null);
+  const [selectedJobForBid, setSelectedJobForBid] = useState<any>(null);
 
   // Track which offer is being processed (skip/hide operation)
   const [processingOfferId, setProcessingOfferId] = useState<string | null>(
@@ -214,6 +224,9 @@ export default function LiveJobOffersScreen({
       }
 
       if (job.bidable) {
+        // Store the selected job for bid submission
+        setSelectedJobForBid(job);
+
         // Handle bidable offers - show bid bottom sheet
         const bidData = {
           amount: 20, // Default bid amount - this should come from the job data
@@ -233,7 +246,9 @@ export default function LiveJobOffersScreen({
         };
 
         // Show bid bottom sheet with submission callback
-        showBidBottomSheet(bidData, handleBidSubmitted);
+        showBidBottomSheet(bidData, (bidData) =>
+          handleBidSubmitted(bidData, job)
+        );
         log(`[LiveJobOffersScreen] Opening bid bottom sheet for job: ${jobId}`);
       } else {
         // Handle non-bidable offers - show ETA modal for acceptance
@@ -242,33 +257,61 @@ export default function LiveJobOffersScreen({
         log(`[LiveJobOffersScreen] Opening ETA modal for job: ${jobId}`);
       }
     },
-    [sortedJobs, showRideOfferModal]
+    [sortedJobs, showRideOfferModal, showBidBottomSheet]
   );
 
   // Handle bid submission from bid bottom sheet
-  const handleBidSubmitted = useCallback(async (bidData: any) => {
-    try {
-      log("[LiveJobOffersScreen] Bid submitted from bottom sheet:", bidData);
+  const handleBidSubmitted = useCallback(
+    async (bidData: any, job?: any) => {
+      try {
+        log("[LiveJobOffersScreen] Bid submitted from bottom sheet:", bidData);
+        log("[LiveJobOffersScreen] Job data:", job);
 
-      // Call the submit bid API
-      // await submitBid(bidData);
+        // Use job parameter if provided, otherwise fall back to selectedJobForBid
+        const jobToUse = job || selectedJobForBid;
 
-      log("[LiveJobOffersScreen] Bid submitted successfully");
+        if (!jobToUse) {
+          log("[LiveJobOffersScreen] No job data available for bid submission");
+          return;
+        }
 
-      // The global bid waiting timer will be handled by the context
-      // No need to manage local state here
-    } catch (error) {
-      log("[LiveJobOffersScreen] Failed to submit bid:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to submit bid. Please try again.";
-      showToast(errorMessage, {
-        variant: "error",
-        position: "top",
-      });
-    }
-  }, []);
+        // Call the submit bid API with the selected bid amount and tripId
+        const result = await submitBidForBroadcastOffer(
+          jobToUse.tripOffer.tripId,
+          bidData.selectedBid
+        );
+
+        if (result?.success) {
+          log("[LiveJobOffersScreen] Bid submitted successfully");
+
+          // Mark the offer as accepted in the context
+          updateBroadcastOffer(jobToUse.id, { status: "accepted" });
+          log(`[LiveJobOffersScreen] Marked job ${jobToUse.id} as accepted`);
+          setSelectedJobForBid(null);
+
+          // Show waiting timer for customer response
+          showBidWaitingTimer();
+          log("[LiveJobOffersScreen] Showing bid waiting timer");
+        }
+      } catch (error) {
+        log("[LiveJobOffersScreen] Failed to submit bid:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to submit bid. Please try again.";
+        showToast(errorMessage, {
+          variant: "error",
+          position: "top",
+        });
+      }
+    },
+    [
+      submitBidForBroadcastOffer,
+      selectedJobForBid,
+      updateBroadcastOffer,
+      showBidWaitingTimer,
+    ]
+  );
 
   // Handle ETA submission for accept flow
   const handleETASubmit = useCallback(
@@ -467,6 +510,14 @@ export default function LiveJobOffersScreen({
     setShowAllJobs(false);
     log("[LiveJobOffersScreen] Reset showAllJobs due to data change");
   }, [sortedJobs.length]); // Reset when job count changes
+
+  // Clean up selected job when component unmounts or data changes
+  useEffect(() => {
+    return () => {
+      setSelectedJobForBid(null);
+      setSelectedJobForAccept(null);
+    };
+  }, []);
 
   // Log when "View +X More" indicator should be shown
   useEffect(() => {

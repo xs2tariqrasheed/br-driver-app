@@ -91,10 +91,15 @@ export function BidBottomSheetProvider({ children }: { children: ReactNode }) {
       {bidData && (
         <BidBottomSheetModal
           bid={bidData}
-          onSubmit={(data) => {
+          onSubmit={async (data) => {
             if (typeof submitHandlerRef.current === "function") {
               console.log("🔔 Calling submit handler...");
-              submitHandlerRef.current(data);
+              setIsSubmitting(true);
+              try {
+                await submitHandlerRef.current(data);
+              } finally {
+                setIsSubmitting(false);
+              }
             } else {
               console.error(
                 "🔔 Submit handler is not a function:",

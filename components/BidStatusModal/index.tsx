@@ -156,7 +156,8 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
 
             {/* Countdown timer for all statuses */}
             <Typography type="bodyLarge" weight="bold" style={styles.countdown}>
-              Closing in {formatCountdown(countdown)}
+              {status === BID_STATUS.ACCEPTED ? "Redirecting in" : "Closing in"}{" "}
+              {formatCountdown(countdown)}
             </Typography>
           </View>
         </View>

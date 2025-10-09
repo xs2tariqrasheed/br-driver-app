@@ -3,7 +3,7 @@ import { GlobalSocketListener } from "@/components/GlobalSocketListener";
 import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import PackageInfoModal from "@/components/PackageInfoModal";
 import SpecialRequirementsModal from "@/components/SpecialRequirementsModal";
-import { ToastHost } from "@/components/Toast";
+import { ToastProvider } from "@/components/Toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { BidAcceptedProvider } from "@/context/BidAcceptedContext";
 import { BidBottomSheetProvider } from "@/context/BidBottomSheetContext";
@@ -92,18 +92,19 @@ export default function RootLayout() {
                                             options={{ headerShown: false }}
                                           />
                                         </Stack>
-                                        <StatusBar style="auto" />
-                                        <ToastHost />
-                                        {/* Global Socket Listener */}
-                                        <GlobalSocketListener />
-                                        {/* Online Location Tracker */}
-                                        <OnlineLocationTracker />
-                                        {/* Special Requirements Modal */}
-                                        <SpecialRequirementsModal />
-                                        {/* Package Info Modal */}
-                                        <PackageInfoModal />
-                                        {/* Global Ride Offer Modal */}
-                                        <GlobalRideOfferModal />
+                                        <ToastProvider>
+                                          <StatusBar style="auto" />
+                                          {/* Global Socket Listener */}
+                                          <GlobalSocketListener />
+                                          {/* Online Location Tracker */}
+                                          <OnlineLocationTracker />
+                                          {/* Special Requirements Modal */}
+                                          <SpecialRequirementsModal />
+                                          {/* Package Info Modal */}
+                                          <PackageInfoModal />
+                                          {/* Global Ride Offer Modal */}
+                                          <GlobalRideOfferModal />
+                                        </ToastProvider>
                                       </BroadcastJobOffersProvider>
                                     </BidUnsuccessfulProvider>
                                   </BidAcceptedProvider>
