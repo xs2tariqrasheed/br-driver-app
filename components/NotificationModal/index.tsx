@@ -24,24 +24,6 @@ const NotificationModal: React.FC = () => {
       const speakMessage = async () => {
         let message: string = SPEECH_MESSAGES.NEW_RIDE_OFFER; // Default message
 
-        // Choose appropriate speech message based on notification type
-        switch (data.type) {
-          case "special-ride-offer":
-            message = SPEECH_MESSAGES.NEW_RIDE_OFFER;
-            break;
-          case "info":
-            message = SPEECH_MESSAGES.NEW_BROADCAST_JOB;
-            break;
-          case "success":
-            message = SPEECH_MESSAGES.RIDE_ACCEPTED;
-            break;
-          case "error":
-            message = SPEECH_MESSAGES.RIDE_REJECTED;
-            break;
-          default:
-            message = SPEECH_MESSAGES.NEW_RIDE_OFFER;
-        }
-
         // await speechManager.speak(message);
       };
 
