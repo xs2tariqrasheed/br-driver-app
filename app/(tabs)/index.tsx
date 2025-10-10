@@ -138,7 +138,6 @@ export default function HomeScreen() {
   const handleToggleHiddenJobs = () => {
     const newState = !showHiddenJobs;
     setShowHiddenJobs(newState);
-    log(`[HomeScreen] Show hidden jobs toggled: ${newState ? "ON" : "OFF"}`);
   };
 
   // Handle driver status toggle with API call for offline

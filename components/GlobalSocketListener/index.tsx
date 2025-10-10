@@ -99,9 +99,22 @@ export function GlobalSocketListener() {
     const disconnectCleanup = onDisconnect(async (reason: string) => {
       log("🔌 Socket disconnected:", reason);
       log("Socket disconnected:", reason);
-      showToast("Socket disconnected", { variant: "warning", position: "top" });
+      showToast("Connection lost - You may miss new ride offers", {
+        variant: "warning",
+        position: "top",
+      });
     });
     cleanupFunctions.push(disconnectCleanup);
+
+    // 1.1. Socket Reconnect Event (Connection Restored)
+    const reconnectCleanup = onEvent("reconnect", async () => {
+      log("🔄 Socket reconnected");
+      showToast("Connection restored - You'll receive new ride offers", {
+        variant: "success",
+        position: "top",
+      });
+    });
+    cleanupFunctions.push(reconnectCleanup);
 
     // 2. New Job Offer Event (Global Modal + Notification)
     const newJobOfferCleanup = onEvent(

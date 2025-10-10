@@ -51,6 +51,7 @@ interface LiveJobOffersScreenProps {
   style?: ViewStyle;
   sortBy?: "time" | "distance";
   isOnline?: boolean;
+  showHiddenJobs?: boolean;
 }
 
 const log = logger();
@@ -58,6 +59,7 @@ const log = logger();
 export default function LiveJobOffersScreen({
   style,
   sortBy: externalSortBy = "distance",
+  showHiddenJobs,
 }: LiveJobOffersScreenProps) {
   const { getLiveOfferStatus } = useDriver();
   const [auth] = useAuth();
@@ -94,7 +96,7 @@ export default function LiveJobOffersScreen({
         setHasTimedOut(true);
         log("[LiveJobOffersScreen] Timeout reached - showing empty state");
       }
-    }, 7000); // 7 seconds timeout
+    }, 3000); // 3 seconds timeout
 
     return () => clearTimeout(timeout);
   }, [broadcastOffers.length]);
@@ -106,7 +108,7 @@ export default function LiveJobOffersScreen({
     }
   }, [broadcastOffers.length]);
 
-  // Show all broadcast offers without any filtering
+  // Filter broadcast offers based on showHiddenJobs flag
   const filteredJobs = useMemo(() => {
     log(`[LiveJobOffersScreen] filteredJobs useMemo triggered`);
     log(
@@ -114,19 +116,34 @@ export default function LiveJobOffersScreen({
         broadcastOffers?.length || 0
       }`
     );
+    log(`[LiveJobOffersScreen] showHiddenJobs: ${showHiddenJobs}`);
 
     if (!broadcastOffers || broadcastOffers.length === 0) {
       log(`[LiveJobOffersScreen] No broadcast offers available`);
       return [];
     }
 
-    log(
-      `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (no filtering)`
-    );
+    let filtered: any[];
 
-    log(`[LiveJobOffersScreen] Returning ${broadcastOffers.length} offers`);
-    return broadcastOffers;
-  }, [broadcastOffers]);
+    if (showHiddenJobs) {
+      // Show all offers (offered, accepted, skipped, hidden, expired)
+      filtered = broadcastOffers;
+      log(
+        `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (including hidden/skipped/expired)`
+      );
+    } else {
+      // Show only active offers (offered or accepted)
+      filtered = broadcastOffers.filter(
+        (offer) => offer.status === "offered" || offer.status === "accepted"
+      );
+      log(
+        `[LiveJobOffersScreen] Showing ${filtered.length} active offers (offered/accepted only) out of ${broadcastOffers.length} total`
+      );
+    }
+
+    log(`[LiveJobOffersScreen] Returning ${filtered.length} offers`);
+    return filtered;
+  }, [broadcastOffers, showHiddenJobs]);
 
   // Sort jobs based on external sort criteria
   const sortedJobs = useMemo(() => {
@@ -156,12 +173,6 @@ export default function LiveJobOffersScreen({
       const broadcastOffer = broadcastOffers.find(
         (offer) => offer.id === jobId
       );
-
-      // Debug logging
-      console.log(`[LiveJobOffersScreen] getItemStatus for ${jobId}:`);
-      console.log(`  - hiddenOffer:`, hiddenOffer);
-      console.log(`  - broadcastOffer:`, broadcastOffer);
-      console.log(`  - broadcastOffer.status:`, broadcastOffer?.status);
 
       // Check if the offer is expired in the broadcast context FIRST (highest priority)
       if (broadcastOffer?.status === "expired") {
@@ -489,22 +500,6 @@ export default function LiveJobOffersScreen({
   const displayJobs = showAllJobs ? sortedJobs : sortedJobs.slice(0, 3);
   const hasMoreJobs = !showAllJobs && sortedJobs.length > 3;
 
-  // Debug display jobs
-  useEffect(() => {
-    log(
-      `[LiveJobOffersScreen] displayJobs updated: ${displayJobs.length} jobs`
-    );
-    log(`[LiveJobOffersScreen] showAllJobs: ${showAllJobs}`);
-    log(`[LiveJobOffersScreen] sortedJobs.length: ${sortedJobs.length}`);
-    displayJobs.forEach((job, index) => {
-      log(
-        `[LiveJobOffersScreen] Display job ${index + 1}: ${job.id} (${
-          job.status
-        })`
-      );
-    });
-  }, [displayJobs, showAllJobs, sortedJobs.length]);
-
   // Reset showAllJobs when data changes (e.g., after auto-refresh)
   useEffect(() => {
     setShowAllJobs(false);
@@ -613,15 +608,6 @@ export default function LiveJobOffersScreen({
       </View>
     );
   };
-
-  // Debug render state
-  log(`[LiveJobOffersScreen] RENDER - sortedJobs.length: ${sortedJobs.length}`);
-  log(
-    `[LiveJobOffersScreen] RENDER - displayJobs.length: ${displayJobs.length}`
-  );
-  log(
-    `[LiveJobOffersScreen] RENDER - broadcastOffers.length: ${broadcastOffers.length}`
-  );
 
   return (
     <View style={[styles.container, style]}>
