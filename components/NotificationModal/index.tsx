@@ -1,6 +1,6 @@
-import { SPEECH_MESSAGES } from "@/constants/global";
+import { NOTIFICATION_TYPES, SPEECH_MESSAGES } from "@/constants/global";
 import { useNotification } from "@/context/NotificationContext";
-// import { speechManager } from "@/utils/speechManager";
+import { speechManager } from "@/utils/speechManager";
 import React, { useEffect, useRef } from "react";
 import { Animated, Modal, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,7 +24,18 @@ const NotificationModal: React.FC = () => {
       const speakMessage = async () => {
         let message: string = SPEECH_MESSAGES.NEW_RIDE_OFFER; // Default message
 
-        // await speechManager.speak(message);
+        // Determine speech message based on notification type
+        if (data.type) {
+          switch (data.type) {
+            case NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER:
+              message = SPEECH_MESSAGES.NEW_BROADCAST_JOB;
+              break;
+            default:
+              message = SPEECH_MESSAGES.NEW_RIDE_OFFER;
+          }
+        }
+
+        await speechManager.speak(message);
       };
 
       speakMessage();
@@ -37,7 +48,7 @@ const NotificationModal: React.FC = () => {
       return () => clearTimeout(timer);
     } else {
       // Stop any current speech when closing
-      // speechManager.stop();
+      speechManager.stop();
 
       // Slide up when closing
       Animated.timing(slideAnim, {

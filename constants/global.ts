@@ -276,6 +276,11 @@ export const NOTIFICATION_TYPES = {
 export const SPEECH_MESSAGES = {
   NEW_RIDE_OFFER: "You have a new ride offer",
   NEW_BROADCAST_JOB: "You have a new broadcast job",
+  BID_ACCEPTED: "Your bid has been accepted! Get ready to start the ride.",
+  BID_EXPIRED:
+    "Your bid has expired. You can rebid if you're still interested.",
+  BID_UNSUCCESSFUL:
+    "Your bid was unsuccessful. Don't worry! More ride offers are coming your way.",
 } as const;
 
 export type NotificationType =
@@ -303,7 +308,7 @@ export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
 
 export const SOCKET = {
   OFFERS_SERVER_URL:
-    process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.1.2:3002",
+    process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.1.18:3002",
 } as const;
 
 export const TRIP_OFFER_ACTIONS = {

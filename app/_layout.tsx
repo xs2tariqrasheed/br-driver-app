@@ -22,7 +22,7 @@ import { PackageInfoProvider } from "@/context/PackageInfoContext";
 import { RideOfferProvider } from "@/context/RideOfferContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { SpecialRequirementsProvider } from "@/context/SpecialRequirementsContext";
-// import { speechManager } from "@/utils/speechManager";
+import { speechManager } from "@/utils/speechManager";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
@@ -48,7 +48,7 @@ export default function RootLayout() {
     if (loaded) {
       SplashScreen.hideAsync();
       // Initialize speech manager for instant voice alerts
-      // speechManager.initialize();
+      speechManager.initialize();
     }
   }, [loaded]);
 

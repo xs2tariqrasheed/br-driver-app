@@ -16,8 +16,10 @@ import {
   BID_STATUS_COLORS,
   BID_STATUS_COUNTDOWN_DURATION_SECONDS,
   BID_STATUS_MESSAGES,
+  SPEECH_MESSAGES,
   type BidStatus,
 } from "@/constants/global";
+import { speechManager } from "@/utils/speechManager";
 import React, { useCallback, useEffect, useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Typography from "../Typography";
@@ -74,6 +76,25 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
       setCountdown(BID_STATUS_COUNTDOWN_DURATION_SECONDS);
     }
   }, [open]);
+
+  // Speak the status message when modal opens
+  useEffect(() => {
+    if (open) {
+      switch (status) {
+        case BID_STATUS.EXPIRED:
+          speechManager.speak(SPEECH_MESSAGES.BID_EXPIRED);
+          break;
+        case BID_STATUS.UNSUCCESSFUL:
+          speechManager.speak(SPEECH_MESSAGES.BID_UNSUCCESSFUL);
+          break;
+        case BID_STATUS.ACCEPTED:
+          speechManager.speak(SPEECH_MESSAGES.BID_ACCEPTED);
+          break;
+        default:
+          break;
+      }
+    }
+  }, [open, status]);
 
   // Handle countdown timer for expired and accepted status
   useEffect(() => {
