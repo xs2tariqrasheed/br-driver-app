@@ -79,6 +79,12 @@ const NetworkNotification: React.FC = () => {
   // Get notification content based on network quality
   const getNotificationContent = () => {
     switch (networkQuality) {
+      case "offline":
+        return {
+          title: "No Internet Connection",
+          message: "Please check your internet connection and try again.",
+          backgroundColor: "#DC2626", // Red
+        };
       case "critical":
         return {
           title: "Poor Connection",

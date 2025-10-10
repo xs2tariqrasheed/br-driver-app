@@ -1,7 +1,13 @@
 import { NETWORK_MONITORING, NetworkQuality } from "@/constants/global";
 import { logger } from "@/utils/helpers";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 interface NetworkContextType {
   // Basic connection info
@@ -44,6 +50,7 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
     null
   );
   const [showNetworkWarning, setShowNetworkWarning] = useState<boolean>(false);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Derived states
   const isSlowConnection = networkQuality === "slow";
@@ -51,7 +58,13 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
 
   // Assess network quality based on connection type and state
   const assessNetworkQuality = (netInfoState: NetInfoState): NetworkQuality => {
+    // If not connected, return offline
     if (!netInfoState.isConnected) {
+      return "offline";
+    }
+
+    // If connected but internet is not reachable, treat as offline
+    if (netInfoState.isInternetReachable === false) {
       return "offline";
     }
 
@@ -167,10 +180,19 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
     const strength = estimateConnectionStrength(state);
     setConnectionStrength(strength);
 
-    // Show warning for slow or critical connections
-    if (quality === "slow" || quality === "critical") {
-      setShowNetworkWarning(true);
-      log("[NetworkContext] Showing network warning for quality:", quality);
+    // Clear any existing debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+
+    // Show warning for offline, slow, or critical connections
+    if (quality === "offline" || quality === "slow" || quality === "critical") {
+      // Debounce showing warning to prevent flickering
+      debounceTimeoutRef.current = setTimeout(() => {
+        setShowNetworkWarning(true);
+        log("[NetworkContext] Showing network warning for quality:", quality);
+      }, 500); // 500ms delay
     } else if (quality === "excellent" || quality === "good") {
       // Hide warning immediately when connection improves
       setShowNetworkWarning(false);
@@ -251,6 +273,10 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
 
     return () => {
       unsubscribe();
+      // Clear any pending debounce timeout
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
     };
   }, []);
 
