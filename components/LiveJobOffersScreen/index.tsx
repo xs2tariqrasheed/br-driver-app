@@ -43,7 +43,7 @@ import {
 } from "react-native";
 import ETAModal from "../ETAModal";
 import LiveRideOfferItem from "../LiveRideOfferItem";
-import SkeletonLoader from "../Loader/SkeletonLoader";
+import RideItemSkeleton from "../Loader/RideItemSkeleton";
 import { showToast } from "../Toast";
 import Typography from "../Typography";
 
@@ -488,9 +488,9 @@ export default function LiveJobOffersScreen({
   // Render loading state
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
-      {Array.from({ length: 3 }).map((_, index) => (
+      {Array.from({ length: 2 }).map((_, index) => (
         <View key={index} style={styles.skeletonWrapper}>
-          <SkeletonLoader height={200} borderRadius={12} />
+          <RideItemSkeleton />
         </View>
       ))}
     </View>
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   skeletonWrapper: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   viewMoreContainer: {
     flexDirection: "row",
