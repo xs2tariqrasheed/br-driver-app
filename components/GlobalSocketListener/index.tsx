@@ -4,6 +4,7 @@ import {
   NOTIFICATION_TYPES,
   NotificationType,
   SOCKET_EVENTS,
+  SPEECH_MESSAGES,
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
 import { useSocket } from "@/hooks/useSocket";
@@ -24,6 +25,7 @@ import {
   formatSocketDataToBroadcastOffer,
   formatSocketDataToRideOffer,
 } from "@/utils/socketDataFormatter";
+import { speechManager } from "@/utils/speechManager";
 import { showToast } from "../Toast";
 
 /**
@@ -135,17 +137,7 @@ export function GlobalSocketListener() {
 
             // Use the helper function to format socket data to RideOffer format
             const rideOffer = formatSocketDataToRideOffer(data, auth?.user?.id);
-
-            // Show visual notification for sequential offer
-            showVisualNotification({
-              type: NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER,
-              title: "New Ride Offer",
-              subtitle: "Sequential",
-              message: `You have a new ride offer! with fare of $${rideOffer.tripOffer.fare.toFixed(
-                2
-              )}`,
-            });
-
+            await speechManager.speak(SPEECH_MESSAGES.NEW_RIDE_OFFER);
             // Add notification to notification center
             const notification = {
               id: `ride-offer-${rideOffer.tripOffer.tripId}-${Date.now()}`,

@@ -324,12 +324,25 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   // Delete a single notification
   const deleteNotification = useCallback(
     async (notificationId: string) => {
-      if (!state.driver) return;
+      if (!state.driver) {
+        log("Cannot delete notification: No driver data available");
+        return;
+      }
 
       log(`Deleting notification with ID: ${notificationId}`);
 
       const currentNotifications = state.driver.notifications || [];
       const currentReadIds = state.driver.readNotificationIds || [];
+
+      // Check if notification exists
+      const notificationExists = currentNotifications.some(
+        (notification) => notification.id === notificationId
+      );
+
+      if (!notificationExists) {
+        log(`Notification with ID ${notificationId} not found`);
+        return;
+      }
 
       // Remove notification from notifications array
       const updatedNotifications = currentNotifications.filter(
@@ -347,17 +360,37 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         readNotificationIds: updatedReadIds,
       };
 
-      await setDriver(updatedDriver);
-      log(`Notification ${notificationId} deleted successfully`);
+      try {
+        await setDriver(updatedDriver);
+        log(
+          `Notification ${notificationId} deleted successfully from context and AsyncStorage`
+        );
+      } catch (error) {
+        log(`Error deleting notification ${notificationId}:`, error);
+        throw error;
+      }
     },
     [state.driver, setDriver, log]
   );
 
   // Delete all notifications
   const deleteAllNotifications = useCallback(async () => {
-    if (!state.driver) return;
+    if (!state.driver) {
+      log("Cannot delete all notifications: No driver data available");
+      return;
+    }
 
-    log("Deleting all notifications");
+    const currentNotifications = state.driver.notifications || [];
+    const currentReadIds = state.driver.readNotificationIds || [];
+
+    if (currentNotifications.length === 0 && currentReadIds.length === 0) {
+      log("No notifications to delete");
+      return;
+    }
+
+    log(
+      `Deleting all notifications (${currentNotifications.length} notifications, ${currentReadIds.length} read IDs)`
+    );
 
     const updatedDriver = {
       ...state.driver,
@@ -365,8 +398,15 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       readNotificationIds: [],
     };
 
-    await setDriver(updatedDriver);
-    log("All notifications deleted successfully");
+    try {
+      await setDriver(updatedDriver);
+      log(
+        "All notifications deleted successfully from context and AsyncStorage"
+      );
+    } catch (error) {
+      log("Error deleting all notifications:", error);
+      throw error;
+    }
   }, [state.driver, setDriver, log]);
 
   // Get hidden live offers

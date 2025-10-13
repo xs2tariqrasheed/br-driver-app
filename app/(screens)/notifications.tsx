@@ -77,7 +77,18 @@ const NotificationsScreen: React.FC = () => {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await deleteNotification(notificationId);
+            try {
+              await deleteNotification(notificationId);
+              // The notification will be automatically removed from the UI
+              // due to the context state update
+            } catch (error) {
+              console.error("Failed to delete notification:", error);
+              Alert.alert(
+                "Error",
+                "Failed to delete notification. Please try again.",
+                [{ text: "OK" }]
+              );
+            }
           },
         },
       ]
@@ -99,7 +110,18 @@ const NotificationsScreen: React.FC = () => {
           text: "Delete All",
           style: "destructive",
           onPress: async () => {
-            await deleteAllNotifications();
+            try {
+              await deleteAllNotifications();
+              // All notifications will be automatically removed from the UI
+              // due to the context state update
+            } catch (error) {
+              console.error("Failed to delete all notifications:", error);
+              Alert.alert(
+                "Error",
+                "Failed to delete all notifications. Please try again.",
+                [{ text: "OK" }]
+              );
+            }
           },
         },
       ]
