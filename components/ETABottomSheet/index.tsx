@@ -4,13 +4,13 @@ import { StyleSheet, View } from "react-native";
 import CustomBottomSheet from "../BottomSheet";
 import Button from "../Button";
 import Counter from "../Counter";
-import Divider from "../Divider";
+import TextArea from "../Form/TextArea";
 import Typography from "../Typography";
 
 export interface ETABottomSheetProps {
   open?: boolean;
   onClose: () => void;
-  onSubmit: (eta: number) => void;
+  onSubmit: (eta: number, note?: string) => void;
   snapPoints?: (string | number)[];
   initialSnapIndex?: number;
   showHeader?: boolean;
@@ -18,6 +18,12 @@ export interface ETABottomSheetProps {
   swipeToClose?: boolean;
   snapPointsWhenKeyboardVisible?: (string | number)[];
   isLoading?: boolean;
+  // Update ETA specific props
+  variant?: "default" | "update";
+  description?: string;
+  showNoteSection?: boolean;
+  buttonText?: string;
+  headerTitle?: string;
 }
 
 /**
@@ -36,11 +42,22 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
   backdrop = true,
   swipeToClose = false,
   isLoading = false,
+  variant = "default",
+  description,
+  showNoteSection = false,
+  buttonText = "Submit",
+  headerTitle = "Provide ETA",
+  snapPointsWhenKeyboardVisible,
 }) => {
   const [eta, setEta] = useState(15); // Default 15 minutes
+  const [note, setNote] = useState("");
 
   const handleSubmit = () => {
-    onSubmit(eta);
+    if (showNoteSection) {
+      onSubmit(eta, note);
+    } else {
+      onSubmit(eta);
+    }
   };
 
   return (
@@ -49,17 +66,36 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
       open={open}
       onClose={onClose}
       snapPoints={snapPoints}
-      initialSnapIndex={initialSnapIndex}
+      initialSnapIndex={snapPointsWhenKeyboardVisible ? 1 : initialSnapIndex}
       showHeader={showHeader}
       backdrop={backdrop}
       swipeToClose={swipeToClose}
-      headerTitle="Provide ETA"
+      headerTitle={headerTitle}
+      snapPointsWhenKeyboardVisible={snapPointsWhenKeyboardVisible}
       disabledClose={isLoading}
     >
-      <Divider />
+      {/* <Divider /> */}
       <View style={styles.container}>
+        {/* Description for Update variant */}
+        {variant === "update" && description && (
+          <Typography
+            type="bodyLarge"
+            weight="regular"
+            style={styles.description}
+          >
+            {description}
+          </Typography>
+        )}
+
         {/* ETA Section */}
-        <View style={styles.etaSection}>
+        <View
+          style={[
+            styles.etaSection,
+            variant === "update"
+              ? styles.etaSectionUpdate
+              : styles.etaSectionDefault,
+          ]}
+        >
           <Typography
             type="bodyLarge"
             weight="semibold"
@@ -74,6 +110,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
               (ETA)
             </Typography>
           </Typography>
+
           <Counter
             containerStyle={styles.etaCounterContainer}
             value={eta}
@@ -86,6 +123,28 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
           />
         </View>
 
+        {/* Note Section for Update variant */}
+        {variant === "update" && showNoteSection && (
+          <View style={styles.noteSection}>
+            <Typography
+              type="bodyLarge"
+              weight="medium"
+              style={styles.noteLabel}
+            >
+              Add a Note
+            </Typography>
+            <TextArea
+              placeholder="eg. Heavy traffic on main road."
+              value={note}
+              onChangeText={setNote}
+              numberOfLines={3}
+              style={styles.noteTextArea}
+              returnKeyType="done"
+              blurOnSubmit={true}
+            />
+          </View>
+        )}
+
         {/* Submit Button */}
         <View style={styles.submitSection}>
           <Button
@@ -95,7 +154,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
             disabled={isLoading}
             loading={isLoading}
           >
-            Submit
+            {buttonText || "Submit"}
           </Button>
         </View>
       </View>
@@ -108,23 +167,94 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 10,
   },
+  description: {
+    fontSize: 16,
+    color: textColors.black,
+    lineHeight: 22,
+    marginBottom: 24,
+  },
   etaSection: {
+    marginBottom: 24,
+  },
+  etaSectionDefault: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 24,
+  },
+  etaSectionUpdate: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   etaSectionTitle: {
-    flex: 1,
+    marginTop: 16,
     color: textColors.black,
   },
   etaCounterContainer: {
-    flex: 1,
+    width: "50%",
+  },
+  updateCounter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+  },
+  counterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: textColors.grey100,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  counterButtonText: {
+    fontSize: 20,
+    color: textColors.black,
+  },
+  counterButtonDisabled: {
+    color: textColors.grey400,
+  },
+  counterValue: {
+    minWidth: 80,
+    height: 48,
+    borderWidth: 1,
+    borderColor: textColors.teal600,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: textColors.white,
+  },
+  counterValueText: {
+    fontSize: 16,
+    color: textColors.black,
+  },
+  noteSection: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  noteLabel: {
+    fontSize: 16,
+    color: textColors.black,
+  },
+  noteTextArea: {
+    marginTop: 0,
   },
   submitSection: {
     marginTop: "auto",
     paddingBottom: 20,
+  },
+  updateButton: {
+    height: 48,
+    backgroundColor: textColors.teal600,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  updateButtonText: {
+    color: textColors.white,
+    fontSize: 16,
+    textTransform: "uppercase",
   },
 });
 
