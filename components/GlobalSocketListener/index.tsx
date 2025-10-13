@@ -315,23 +315,19 @@ export function GlobalSocketListener() {
             };
             await addNotification(notification);
           } else if (response === "reject" || response === "expired") {
-            // Show toast message and close waiting timer
-            const message =
-              response === "reject"
-                ? "Your bid was not accepted. Keep looking for other opportunities."
-                : "Your bid has expired. Keep looking for other opportunities.";
-
-            showToast(message, {
-              variant: response === "reject" ? "error" : "warning",
-              position: "top",
-            });
-
-            log(`❌ Bid ${response} - showing toast message`);
+            // Show BidUnsuccessful modal instead of toast
+            showBidUnsuccessful();
+            log(`❌ Bid ${response} - showing BidUnsuccessful modal`);
 
             // Set hasAnyActiveOffer to false on bid rejection/expiry
             setHasAnyActiveOffer(false);
 
             // Add notification
+            const message =
+              response === "reject"
+                ? "Your bid was not accepted. Keep looking for other opportunities."
+                : "Your bid has expired. Keep looking for other opportunities.";
+
             const notification = {
               id: `bid-${response}-${Date.now()}`,
               messageTitle:

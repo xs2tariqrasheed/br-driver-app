@@ -190,6 +190,8 @@ const TextArea = forwardRef<TextInput, TextAreaProps>(function TextArea(
       value={controlledValue}
       onChangeText={handleChange}
       textInputRef={innerRef as React.RefObject<TextInput>}
+      returnKeyType="done"
+      blurOnSubmit={true}
     />
   );
 });

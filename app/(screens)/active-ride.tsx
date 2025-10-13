@@ -1,4 +1,6 @@
 import BottomSheet from "@/components/BottomSheet";
+import ConfirmationModal from "@/components/ConfirmationModal";
+import TextArea from "@/components/Form/TextArea";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
 import JobDetails from "@/components/JobDetails";
@@ -12,13 +14,17 @@ import { openPhoneDialer, openSMSApp, openWhatsApp } from "@/utils/helpers";
 import Typography from "@/components/Typography";
 import {
   ACTION_ICON_SOURCE_MAP,
+  CANCEL_RIDE_REASONS,
+  CancelRideReason,
   NOTIFICATION_TYPES,
   RIDE_TOGGLE_LABELS,
   RIDE_TYPES,
   RideToggleLabel,
+  SOS_NUMBERS,
   SWIPE_BUTTON_STATES,
   SWIPE_BUTTON_TITLES,
   SwipeButtonState,
+  VEHICLE_ISSUE_OFFLINE_HOURS,
 } from "@/constants/global";
 import { router, Stack } from "expo-router";
 import { useCallback, useState } from "react";
@@ -52,9 +58,29 @@ export default function ActiveRideScreen() {
   // Bottom sheet state & handlers
   const [contactCustomerSheetOpen, setContactCustomerSheetOpen] =
     useState<boolean>(false);
+  const [sosSheetOpen, setSosSheetOpen] = useState<boolean>(false);
+  const [cancelRideSheetOpen, setCancelRideSheetOpen] =
+    useState<boolean>(false);
+  const [reasonsSheetOpen, setReasonsSheetOpen] = useState<boolean>(false);
+  const [confirmationModalOpen, setConfirmationModalOpen] =
+    useState<boolean>(false);
+
+  // Cancel ride state
+  const [selectedReason, setSelectedReason] = useState<CancelRideReason | null>(
+    null
+  );
+  const [cancelComments, setCancelComments] = useState<string>("");
 
   const handleToggle = (next: string) => {
     setToggleValue(next as RideToggleLabel);
+  };
+
+  const handleSos = () => {
+    setSosSheetOpen(true);
+  };
+
+  const handleCancelRide = () => {
+    setCancelRideSheetOpen(true);
   };
 
   const jobOffer = {
@@ -135,7 +161,7 @@ export default function ActiveRideScreen() {
         onPress: () => console.log("Update ETA"),
         key: "update-eta",
       },
-      { icon: "sos.png", onPress: () => console.log("SOS"), key: "sos" },
+      { icon: "sos.png", onPress: handleSos, key: "sos" },
       {
         icon: "contact-customer.png",
         onPress: () => console.log("Contact Customer"),
@@ -177,6 +203,22 @@ export default function ActiveRideScreen() {
     setContactCustomerSheetOpen(false);
   }, []);
 
+  const closeSosSheet = useCallback(() => {
+    setSosSheetOpen(false);
+  }, []);
+
+  const closeCancelRideSheet = useCallback(() => {
+    setCancelRideSheetOpen(false);
+  }, []);
+
+  const closeReasonsSheet = useCallback(() => {
+    setReasonsSheetOpen(false);
+  }, []);
+
+  const closeConfirmationModal = useCallback(() => {
+    setConfirmationModalOpen(false);
+  }, []);
+
   const handleContactCustomer = () => {
     setContactCustomerSheetOpen(true);
   };
@@ -204,7 +246,7 @@ export default function ActiveRideScreen() {
     },
     {
       icon: "cancel-ride.png",
-      onPress: () => console.log("Cancel Ride"),
+      onPress: handleCancelRide,
       key: "cancel-ride",
     },
     {
@@ -212,7 +254,7 @@ export default function ActiveRideScreen() {
       onPress: () => console.log("Update ETA"),
       key: "update-eta",
     },
-    { icon: "sos.png", onPress: () => console.log("SOS"), key: "sos" },
+    { icon: "sos.png", onPress: handleSos, key: "sos" },
     {
       icon: "contact-customer.png",
       onPress: handleContactCustomer,
@@ -248,6 +290,60 @@ export default function ActiveRideScreen() {
       // Error handling is done within the helper function
     }
     closeContactCustomerSheet();
+  };
+
+  // SOS action functions
+  const handleCallDispatch = async () => {
+    try {
+      await openPhoneDialer(SOS_NUMBERS.DISPATCH);
+    } catch (error) {
+      // Error handling is done within the helper function
+    }
+    closeSosSheet();
+  };
+
+  const handleCall911 = async () => {
+    try {
+      await openPhoneDialer(SOS_NUMBERS.EMERGENCY);
+    } catch (error) {
+      // Error handling is done within the helper function
+    }
+    closeSosSheet();
+  };
+
+  // Cancel ride handlers
+  const handleOpenReasons = () => {
+    setReasonsSheetOpen(true);
+  };
+
+  const handleSelectReason = (reason: CancelRideReason) => {
+    setSelectedReason(reason);
+    closeReasonsSheet();
+  };
+
+  const handleContinueCancel = () => {
+    if (selectedReason) {
+      setConfirmationModalOpen(true);
+    }
+  };
+
+  const handleConfirmCancel = () => {
+    // Handle cancel ride logic here
+    console.log("Ride cancelled:", {
+      reason: selectedReason,
+      comments: cancelComments,
+    });
+    closeConfirmationModal();
+    closeCancelRideSheet();
+    // Reset state
+    setSelectedReason(null);
+    setCancelComments("");
+    // Navigate to home
+    router.replace("/(tabs)");
+  };
+
+  const handleGoBack = () => {
+    closeConfirmationModal();
   };
 
   return (
@@ -439,6 +535,182 @@ export default function ActiveRideScreen() {
           ))}
         </View>
       </BottomSheet>
+
+      {/* SOS Bottom Sheet */}
+      <BottomSheet
+        open={sosSheetOpen}
+        onClose={closeSosSheet}
+        snapPoints={[250]}
+        headerTitle="SOS"
+      >
+        <View style={styles.sheetContainer}>
+          {[
+            {
+              label: "Call Dispatch",
+              iconUrl: require("@/assets/images/phone-call.png"),
+              onPress: handleCallDispatch,
+            },
+            {
+              label: "Call 911",
+              iconUrl: require("@/assets/images/sos-call.png"),
+              onPress: handleCall911,
+            },
+          ].map((item) => (
+            <View key={item.label}>
+              <TouchableOpacity
+                key={item.label}
+                style={styles.sheetRow}
+                disabled={false}
+                onPress={item.onPress}
+              >
+                <Typography
+                  type="bodyLarge"
+                  weight="medium"
+                  style={styles.sheetOptionText}
+                >
+                  {item.label}
+                </Typography>
+                <Image
+                  source={
+                    item.iconUrl ||
+                    require("@/assets/images/black-arrow-right.png")
+                  }
+                  style={styles.iconSize24}
+                />
+              </TouchableOpacity>
+              <View style={styles.sheetDivider} />
+            </View>
+          ))}
+        </View>
+      </BottomSheet>
+
+      {/* Cancel Ride Bottom Sheet */}
+      <BottomSheet
+        open={cancelRideSheetOpen}
+        onClose={closeCancelRideSheet}
+        snapPointsWhenKeyboardVisible={["75%"]}
+        headerTitle="Cancel Ride"
+      >
+        <View style={styles.cancelRideContainer}>
+          {/* Select Reason Section */}
+          <View style={styles.cancelRideSection}>
+            <Typography
+              type="bodyLarge"
+              weight="medium"
+              style={styles.cancelRideLabel}
+            >
+              Select a Reason
+            </Typography>
+            <TouchableOpacity
+              onPress={handleOpenReasons}
+              style={styles.cancelRideDropdown}
+            >
+              <Typography
+                type="bodyLarge"
+                weight="medium"
+                style={
+                  selectedReason
+                    ? styles.cancelRideSelectedText
+                    : styles.cancelRidePlaceholder
+                }
+                numberOfLines={1}
+              >
+                {selectedReason || "Choose reason..."}
+              </Typography>
+              <Image
+                source={require("@/assets/images/black-down-arrow-icon.png")}
+                style={styles.cancelRideDropdownIcon}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Add Comments Section */}
+          <View style={styles.cancelRideSection}>
+            <Typography
+              type="bodyLarge"
+              weight="medium"
+              style={styles.cancelRideLabel}
+            >
+              Add Comments
+            </Typography>
+            <TextArea
+              placeholder="Type Here"
+              value={cancelComments}
+              onChangeText={setCancelComments}
+              numberOfLines={3}
+              style={styles.cancelRideTextArea}
+            />
+          </View>
+
+          {/* Continue Button */}
+          <TouchableOpacity
+            style={[
+              styles.cancelRideContinueButton,
+              !selectedReason && styles.cancelRideContinueButtonDisabled,
+            ]}
+            onPress={handleContinueCancel}
+            disabled={!selectedReason}
+          >
+            <Typography
+              type="bodyLarge"
+              weight="semibold"
+              disabled={!selectedReason}
+              style={[
+                styles.cancelRideContinueButtonText,
+                !selectedReason && styles.cancelRideContinueButtonTextDisabled,
+              ]}
+            >
+              Continue
+            </Typography>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
+
+      {/* Reasons Selection Bottom Sheet */}
+      <BottomSheet
+        open={reasonsSheetOpen}
+        onClose={closeReasonsSheet}
+        snapPoints={["45%"]}
+        headerTitle="Select Reason"
+      >
+        <View style={styles.sheetContainer}>
+          {CANCEL_RIDE_REASONS.map((reason) => {
+            const selected = selectedReason === reason;
+            return (
+              <View key={reason}>
+                <TouchableOpacity
+                  style={styles.sheetRow}
+                  onPress={() => handleSelectReason(reason)}
+                >
+                  <Typography
+                    type={selected ? "titleMedium" : "bodyLarge"}
+                    weight={selected ? "bold" : "medium"}
+                    style={styles.textBlack}
+                  >
+                    {reason}
+                  </Typography>
+                </TouchableOpacity>
+                <View style={styles.sheetDivider} />
+              </View>
+            );
+          })}
+        </View>
+      </BottomSheet>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        open={confirmationModalOpen}
+        title="Are You Sure?"
+        description={
+          selectedReason === "Vehicle Issue"
+            ? `You'll be set offline for ${VEHICLE_ISSUE_OFFLINE_HOURS} hours to resolve vehicle issues. This can't be undone. Frequent bailouts may affect your score or job offers.`
+            : "This action cannot be undone. Cancellation may affect your driver score or future ride preferences."
+        }
+        onConfirm={handleConfirmCancel}
+        onCancel={handleGoBack}
+        cancelButtonText="Go Back"
+        confirmButtonText="Yes, Cancel"
+      />
     </View>
   );
 }
@@ -475,14 +747,6 @@ const styles = StyleSheet.create({
     borderColor: textColors.grey300,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: textColors.black,
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   actionIcon: {
     width: 20,
@@ -514,7 +778,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingVertical: 10,
   },
   iconSize24: {
     width: 24,
@@ -528,5 +792,62 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: textColors.black,
     marginBottom: 8,
+  },
+
+  // Cancel ride styles
+  cancelRideContainer: {
+    paddingTop: 20,
+    gap: 20,
+  },
+  cancelRideSection: {
+    gap: 8,
+  },
+  cancelRideLabel: {
+    fontSize: 16,
+    color: textColors.black,
+  },
+  cancelRideDropdown: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: textColors.grey200,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cancelRideSelectedText: {
+    color: textColors.black,
+  },
+  cancelRidePlaceholder: {
+    color: textColors.grey400,
+  },
+  cancelRideDropdownIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain",
+  },
+  cancelRideTextArea: {
+    marginTop: 0,
+  },
+  cancelRideContinueButton: {
+    height: 48,
+    backgroundColor: textColors.teal600,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelRideContinueButtonDisabled: {
+    backgroundColor: textColors.grey100,
+  },
+  cancelRideContinueButtonText: {
+    color: textColors.white,
+    fontSize: 16,
+  },
+  cancelRideContinueButtonTextDisabled: {
+    color: textColors.grey500,
+  },
+  textBlack: {
+    color: textColors.black,
   },
 });

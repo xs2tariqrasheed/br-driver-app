@@ -77,6 +77,29 @@ export const CONTACT_BASE = {
   businessOfficePhone: "000-000-0000",
 } as const;
 
+// SOS Emergency Numbers
+// Centralized so phone numbers can be easily updated
+export const SOS_NUMBERS = {
+  DISPATCH: "000-000-0000", // Dispatcher emergency number
+  EMERGENCY: "911", // Emergency services number
+} as const;
+
+// Cancel Ride Configuration
+// Hours driver will be set offline for vehicle issues
+export const VEHICLE_ISSUE_OFFLINE_HOURS = 4; // Can be easily changed
+
+// Cancel ride reasons
+export const CANCEL_RIDE_REASONS = [
+  "Vehicle Issue",
+  "Customer No Show",
+  "Wrong Address",
+  "Safety Concern",
+  "Personal Emergency",
+  "Other",
+] as const;
+
+export type CancelRideReason = (typeof CANCEL_RIDE_REASONS)[number];
+
 // App Settings screen configuration
 export const APP_SETTINGS_ITEMS = [
   { key: "login", label: "Login Settings" },
