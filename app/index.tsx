@@ -1,12 +1,13 @@
 import { textColors } from "@/constants/colors";
 import { APP_ENDPOINTS, DRIVER_ENDPOINTS } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useContent } from "@/context/ContentContext";
 import { useDriver } from "@/context/DriverContext";
 import { useDelete } from "@/hooks/useDelete";
 import { useFetch } from "@/hooks/useFetch";
 import { logger } from "@/utils/helpers";
-import { Redirect, router, Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -16,7 +17,10 @@ export default function Index() {
   const [driver, setDriver] = useDriver();
   const [, setContent] = useContent();
   const [shouldRedirect, setShouldRedirect] = useState(false);
-  const { data, loading, error, execute } = useFetch(APP_ENDPOINTS.content);
+  const { data, loading, error, execute } = useFetch(
+    APP_ENDPOINTS.content,
+    API_CLIENT_TYPES.SETTINGS
+  );
   const offlineCalledRef = useRef(false); // Track if offline API was already called
 
   // Offline API using shared delete hook
@@ -35,21 +39,23 @@ export default function Index() {
   };
 
   useEffect(() => {
+    setTimeout(() => {
+      setShouldRedirect(true);
+    }, 5000);
     // Fetch content when component mounts
-    fetchContent();
+    // fetchContent();
   }, []);
 
-  useEffect(() => {
-    // Store content in context when data is available
-    // if (data && !error) {
-    if (data && error) {
-      log("[Index] Content fetched successfully", data);
-      // setContent(data);
-      setShouldRedirect(true);
-    }
-  }, [data, error, setContent, log]);
+  // useEffect(() => {
+  //   // Store content in context when data is available
+  //   if (data && !error) {
+  //     log("[Index] Content fetched successfully", data);
+  //     // setContent(data);
+  //     setShouldRedirect(true);
+  //   }
+  // }, [data, error, setContent, log]);
 
-  // // Call offline API when content fetch fails (only once)
+  // Call offline API when content fetch fails (only once)
   // useEffect(() => {
   //   const handleOffline = async () => {
   //     if (error && auth?.user?.id && !offlineCalledRef.current) {
@@ -106,11 +112,7 @@ export default function Index() {
             {error ||
               "Unable to fetch app content. Please check your connection and try again."}
           </Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            //  onPress={fetchContent}
-            onPress={() => router.push("/(screens)/auth/login")}
-          >
+          <TouchableOpacity style={styles.retryButton} onPress={fetchContent}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>

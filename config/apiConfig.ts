@@ -49,7 +49,7 @@ export interface ApiError {
  */
 const createApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.1.2:3000",
+    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -169,7 +169,8 @@ const createApiClient = (): AxiosInstance => {
 const createAuctionApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.1.2:3002",
+      process.env.EXPO_PUBLIC_OFFERS_SERVER_URL ||
+      "http://192.168.100.160:3002",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -290,7 +291,7 @@ const createAuctionApiClient = (): AxiosInstance => {
 const createAuthApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.1.2:3001",
+      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -404,7 +405,7 @@ const createAuthApiClient = (): AxiosInstance => {
 const createMeApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.1.2:3001",
+      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -505,10 +506,138 @@ const createMeApiClient = (): AxiosInstance => {
 
   return client;
 };
+
+/**
+ * Create Settings API Client Function
+ *
+ * Caller: Settings-related API utility functions and hooks
+ * Purpose: Provide specialized axios configuration for settings service endpoints
+ * Input/Output:
+ *   - Input: None (uses Expo public environment variables for settings service configuration)
+ *   - Output: Configured AxiosInstance with settings-specific interceptors
+ * Description: Creates axios instance specifically for settings service endpoints with base URL,
+ *             default headers, and interceptors. Includes request logging and comprehensive
+ *             error handling for settings-specific scenarios. Reads the auth token from
+ *             AsyncStorage and attaches it to the Authorization header.
+ * Expected Outcome: Consistent settings API client configuration with proper error
+ *                   handling for settings-related operations.
+ */
+const createSettingsApiClient = (): AxiosInstance => {
+  const API_CONFIG = {
+    BASE_URL:
+      process.env.EXPO_PUBLIC_SETTINGS_BASE_URL ||
+      "http://192.168.100.160:3003",
+    HEADERS: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+  };
+  const client = axios.create({
+    baseURL: API_CONFIG.BASE_URL,
+    headers: API_CONFIG.HEADERS,
+  });
+
+  /**
+   * Request Interceptor
+   *
+   * Caller: Axios interceptor system
+   * Purpose: Log requests and add authentication headers for settings service
+   * Input/Output:
+   *   - Input: Axios request config
+   *   - Output: Modified request config or rejected promise
+   * Description: Logs outgoing settings requests (dev-only via logger) and reads the auth token
+   *             from AsyncStorage (key: "@token"), adding it to the Authorization header.
+   *             Handles request-level errors.
+   * Expected Outcome: Request logging for debugging and proper error handling.
+   */
+  client.interceptors.request.use(
+    async (config) => {
+      log(
+        `🚀 Settings API Request: ${config.method?.toUpperCase()} ${config.url}`
+      );
+      const dynamicBaseUrl = config.baseURL;
+      log(`🚀 Settings Dynamic Base URL: ${dynamicBaseUrl}`);
+      const data = await getStorageItem(AUTH_STORAGE_KEY);
+      const token = data ? JSON.parse(data).token : null;
+      if (token) {
+        config.headers = config.headers || {};
+        (config.headers as Record<string, string>)[
+          "Authorization"
+        ] = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => {
+      log("❌ Settings Request Error:", error);
+      return Promise.reject(error);
+    }
+  );
+
+  /**
+   * Response Interceptor
+   *
+   * Caller: Axios interceptor system
+   * Purpose: Handle settings-specific response scenarios and errors
+   * Input/Output:
+   *   - Input: Axios response or error
+   *   - Output: Response or rejected promise with settings-specific error message
+   * Description: Logs successful settings responses (dev-only) and handles settings-specific
+   *             error scenarios including configuration errors, validation errors, and server errors.
+   *             Provides user-friendly error messages for settings operations.
+   * Expected Outcome: Consistent settings error handling with user-friendly messages
+   *                   for settings-related operations.
+   */
+  client.interceptors.response.use(
+    (response: AxiosResponse) => {
+      // Log successful response for debugging (remove in production)
+      log(
+        `✅ Settings API Response: ${response.status} ${response.config.url}`
+      );
+      return response;
+    },
+    (error: AxiosError) => {
+      // Handle settings-specific error scenarios
+      let errorMessage: string = "An unexpected error occurred";
+
+      if (error.code === "ECONNABORTED") {
+        errorMessage = "Request timed out";
+      } else if (error.response?.status === 401) {
+        errorMessage = "Authentication required. Please log in again.";
+      } else if (error.response?.status === 403) {
+        errorMessage =
+          "Access denied. You do not have permission for this settings action.";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Settings resource not found";
+      } else if (error.response?.status === 422) {
+        errorMessage =
+          "Invalid settings configuration. Please check your input and try again.";
+      } else if (error.response?.status && error.response.status >= 500) {
+        errorMessage = "Settings service error. Please try again later.";
+      } else if (
+        error.response?.data &&
+        typeof error.response.data === "object"
+      ) {
+        // Check for 'error' field first (backend format), then 'message' field
+        if ("error" in error.response.data) {
+          errorMessage = (error.response.data as { error: string }).error;
+        } else if ("message" in error.response.data) {
+          errorMessage = (error.response.data as { message: string }).message;
+        }
+      }
+
+      log("❌ Settings API Error:", errorMessage);
+      return Promise.reject(new Error(errorMessage));
+    }
+  );
+
+  return client;
+};
+
 // Create the main API clients instance
 export const apiClient = createApiClient();
 export const authApiClient = createAuthApiClient();
 export const meApiClient = createMeApiClient();
 export const auctionApiClient = createAuctionApiClient();
+export const settingsApiClient = createSettingsApiClient();
 
 export { axios };
