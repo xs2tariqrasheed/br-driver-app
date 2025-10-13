@@ -1,5 +1,6 @@
 import BottomSheet from "@/components/BottomSheet";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import ETABottomSheet from "@/components/ETABottomSheet";
 import TextArea from "@/components/Form/TextArea";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
@@ -64,6 +65,7 @@ export default function ActiveRideScreen() {
   const [reasonsSheetOpen, setReasonsSheetOpen] = useState<boolean>(false);
   const [confirmationModalOpen, setConfirmationModalOpen] =
     useState<boolean>(false);
+  const [updateETASheetOpen, setUpdateETASheetOpen] = useState<boolean>(false);
 
   // Cancel ride state
   const [selectedReason, setSelectedReason] = useState<CancelRideReason | null>(
@@ -81,6 +83,10 @@ export default function ActiveRideScreen() {
 
   const handleCancelRide = () => {
     setCancelRideSheetOpen(true);
+  };
+
+  const handleUpdateETA = () => {
+    setUpdateETASheetOpen(true);
   };
 
   const jobOffer = {
@@ -219,6 +225,10 @@ export default function ActiveRideScreen() {
     setConfirmationModalOpen(false);
   }, []);
 
+  const closeUpdateETASheet = useCallback(() => {
+    setUpdateETASheetOpen(false);
+  }, []);
+
   const handleContactCustomer = () => {
     setContactCustomerSheetOpen(true);
   };
@@ -251,7 +261,7 @@ export default function ActiveRideScreen() {
     },
     {
       icon: "update-eta.png",
-      onPress: () => console.log("Update ETA"),
+      onPress: handleUpdateETA,
       key: "update-eta",
     },
     { icon: "sos.png", onPress: handleSos, key: "sos" },
@@ -344,6 +354,13 @@ export default function ActiveRideScreen() {
 
   const handleGoBack = () => {
     closeConfirmationModal();
+  };
+
+  // Update ETA handler
+  const handleUpdateETASubmit = (eta: number, note?: string) => {
+    // Handle ETA update logic here
+    console.log("ETA updated:", { eta, note });
+    closeUpdateETASheet();
   };
 
   return (
@@ -710,6 +727,20 @@ export default function ActiveRideScreen() {
         onCancel={handleGoBack}
         cancelButtonText="Go Back"
         confirmButtonText="Yes, Cancel"
+      />
+
+      {/* Update ETA Bottom Sheet */}
+      <ETABottomSheet
+        open={updateETASheetOpen}
+        onClose={closeUpdateETASheet}
+        onSubmit={handleUpdateETASubmit}
+        snapPoints={["45%"]}
+        snapPointsWhenKeyboardVisible={["80%"]}
+        variant="update"
+        headerTitle="Update ETA"
+        description="Let the rider know if your arrival time has changed."
+        showNoteSection={true}
+        buttonText="Update ETA"
       />
     </View>
   );
