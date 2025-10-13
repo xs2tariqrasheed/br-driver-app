@@ -1,3 +1,4 @@
+import BottomSheet from "@/components/BottomSheet";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
 import JobDetails from "@/components/JobDetails";
@@ -6,6 +7,9 @@ import RideAction from "@/components/RideAction";
 import RideLocations from "@/components/RideLocations";
 import RideMap from "@/components/RideMap";
 import { textColors } from "@/constants/colors";
+import { openPhoneDialer, openSMSApp, openWhatsApp } from "@/utils/helpers";
+
+import Typography from "@/components/Typography";
 import {
   ACTION_ICON_SOURCE_MAP,
   NOTIFICATION_TYPES,
@@ -17,7 +21,7 @@ import {
   SwipeButtonState,
 } from "@/constants/global";
 import { router, Stack } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -45,6 +49,9 @@ export default function ActiveRideScreen() {
 
   // Notification state
   const [showNotification, setShowNotification] = useState<boolean>(false);
+  // Bottom sheet state & handlers
+  const [contactCustomerSheetOpen, setContactCustomerSheetOpen] =
+    useState<boolean>(false);
 
   const handleToggle = (next: string) => {
     setToggleValue(next as RideToggleLabel);
@@ -146,6 +153,34 @@ export default function ActiveRideScreen() {
     setToggleValue(RIDE_TOGGLE_LABELS.DETAILS);
   };
 
+  const handleSwipeComplete = () => {
+    switch (swipeButtonState) {
+      case SWIPE_BUTTON_STATES.MARK_ARRIVED:
+        setIsDriverReachedOnPickup(true);
+        setSwipeButtonState(SWIPE_BUTTON_STATES.START_RIDE);
+        break;
+      case SWIPE_BUTTON_STATES.START_RIDE:
+        setShowNotification(true);
+        // Handle start ride logic
+        setSwipeButtonState(SWIPE_BUTTON_STATES.END_RIDE);
+        break;
+      case SWIPE_BUTTON_STATES.END_RIDE:
+        // Handle end ride logic
+        console.log("Ride ended");
+        break;
+      default:
+        console.warn("Unknown swipe button state:", swipeButtonState);
+    }
+  };
+
+  const closeContactCustomerSheet = useCallback(() => {
+    setContactCustomerSheetOpen(false);
+  }, []);
+
+  const handleContactCustomer = () => {
+    setContactCustomerSheetOpen(true);
+  };
+
   const actionButtons: any[] = [
     {
       icon: "details.png",
@@ -180,29 +215,39 @@ export default function ActiveRideScreen() {
     { icon: "sos.png", onPress: () => console.log("SOS"), key: "sos" },
     {
       icon: "contact-customer.png",
-      onPress: () => console.log("Contact Customer"),
+      onPress: handleContactCustomer,
       key: "contact-customer",
     },
   ];
 
-  const handleSwipeComplete = () => {
-    switch (swipeButtonState) {
-      case SWIPE_BUTTON_STATES.MARK_ARRIVED:
-        setIsDriverReachedOnPickup(true);
-        setSwipeButtonState(SWIPE_BUTTON_STATES.START_RIDE);
-        break;
-      case SWIPE_BUTTON_STATES.START_RIDE:
-        setShowNotification(true);
-        // Handle start ride logic
-        setSwipeButtonState(SWIPE_BUTTON_STATES.END_RIDE);
-        break;
-      case SWIPE_BUTTON_STATES.END_RIDE:
-        // Handle end ride logic
-        console.log("Ride ended");
-        break;
-      default:
-        console.warn("Unknown swipe button state:", swipeButtonState);
+  const customerPhone = "1234567890";
+
+  // Contact action functions
+  const handleCallCustomer = async () => {
+    try {
+      await openPhoneDialer(customerPhone);
+    } catch (error) {
+      // Error handling is done within the helper function
     }
+    closeContactCustomerSheet();
+  };
+
+  const handleSendSMS = async () => {
+    try {
+      await openSMSApp(customerPhone);
+    } catch (error) {
+      // Error handling is done within the helper function
+    }
+    closeContactCustomerSheet();
+  };
+
+  const handleWhatsApp = async () => {
+    try {
+      await openWhatsApp(customerPhone);
+    } catch (error) {
+      // Error handling is done within the helper function
+    }
+    closeContactCustomerSheet();
   };
 
   return (
@@ -313,23 +358,87 @@ export default function ActiveRideScreen() {
       {toggleValue === RIDE_TOGGLE_LABELS.MAP && (
         <RideAction
           leftComponent={
-            <Image
-              source={require("@/assets/images/actions/circling.png")}
-              style={{ width: 20, height: 20 }}
-            />
+            <TouchableOpacity>
+              <Image
+                source={require("@/assets/images/actions/circling.png")}
+                style={{ width: 20, height: 20 }}
+              />
+            </TouchableOpacity>
           }
           swipeTitle={SWIPE_BUTTON_TITLES[swipeButtonState]}
           onSwipeComplete={() => {
             handleSwipeComplete();
           }}
           rightComponent={
-            <Image
-              source={require("@/assets/images/actions/contact-customer.png")}
-              style={{ width: 20, height: 20 }}
-            />
+            <TouchableOpacity onPress={handleContactCustomer}>
+              <Image
+                source={require("@/assets/images/actions/contact-customer.png")}
+                style={{ width: 20, height: 20 }}
+              />
+            </TouchableOpacity>
           }
         />
       )}
+
+      {/* Forgot Bottom Sheet */}
+      <BottomSheet
+        open={contactCustomerSheetOpen}
+        onClose={closeContactCustomerSheet}
+        snapPoints={[250]}
+        headerTitle="Contact Customer"
+      >
+        <Typography
+          type="bodyLarge"
+          weight="bold"
+          style={styles.sheetHeaderText}
+        >
+          Phone: {customerPhone}
+        </Typography>
+        <View style={styles.sheetContainer}>
+          {[
+            {
+              label: "Call Using Cellular",
+              iconUrl: require("@/assets/images/phone-call.png"),
+              onPress: handleCallCustomer,
+            },
+            {
+              label: "Send SMS",
+              iconUrl: require("@/assets/images/sms.png"),
+              onPress: handleSendSMS,
+            },
+            {
+              label: "WhatsApp",
+              iconUrl: require("@/assets/images/whatsapp.png"),
+              onPress: handleWhatsApp,
+            },
+          ].map((item) => (
+            <View key={item.label}>
+              <TouchableOpacity
+                key={item.label}
+                style={styles.sheetRow}
+                disabled={false}
+                onPress={item.onPress}
+              >
+                <Typography
+                  type="bodyLarge"
+                  weight="medium"
+                  style={styles.sheetOptionText}
+                >
+                  {item.label}
+                </Typography>
+                <Image
+                  source={
+                    item.iconUrl ||
+                    require("@/assets/images/black-arrow-right.png")
+                  }
+                  style={styles.iconSize24}
+                />
+              </TouchableOpacity>
+              <View style={styles.sheetDivider} />
+            </View>
+          ))}
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -388,5 +497,36 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
     marginBottom: 85,
+  },
+
+  // bottom sheet
+  sheetContainer: {
+    paddingTop: 12,
+    backgroundColor: textColors.white,
+    gap: 12,
+  },
+  sheetDivider: {
+    height: 1,
+    backgroundColor: textColors.grey100,
+    marginTop: 12,
+  },
+  sheetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+  },
+  iconSize24: {
+    width: 24,
+    height: 24,
+  },
+  sheetOptionText: {
+    fontSize: 16,
+    color: textColors.black,
+  },
+  sheetHeaderText: {
+    fontSize: 20,
+    color: textColors.black,
+    marginBottom: 8,
   },
 });

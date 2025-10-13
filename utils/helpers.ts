@@ -1,8 +1,10 @@
 import { DESIRED_DESTINATION_EXPIRY_MS, TOKEN_KEY } from "@/constants/global";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
+import * as IntentLauncher from "expo-intent-launcher";
+import * as Linking from "expo-linking";
 import * as Location from "expo-location";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 
 // Types for destination management
 export type DesiredDestination = {
@@ -1286,4 +1288,152 @@ export function formatExpirationTime(expiredAt: string): string {
  */
 export const formatDateTimestamp = (timestamp: string): string => {
   return dayjs(timestamp).format("MM/DD/YYYY hh:mm A");
+};
+
+// =============================================================================
+// CONTACT ACTION HELPERS
+// =============================================================================
+
+/**
+ * Checks if the app is running on a simulator/emulator
+ * @returns boolean indicating if running on simulator
+ */
+const isSimulator = (): boolean => {
+  if (Platform.OS === "ios") {
+    return (
+      !Platform.isPad &&
+      !Platform.isTV &&
+      Platform.constants.systemName === "iOS Simulator"
+    );
+  }
+  return false;
+};
+
+/**
+ * Opens the phone dialer with the specified phone number
+ * @param phoneNumber - The phone number to dial
+ * @returns Promise<void>
+ * @throws Error if the device cannot make phone calls
+ *
+ * @example
+ * ```typescript
+ * await openPhoneDialer("1234567890");
+ * ```
+ */
+export const openPhoneDialer = async (phoneNumber: string): Promise<void> => {
+  try {
+    console.log("Attempting to open phone dialer for:", phoneNumber);
+
+    if (Platform.OS === "android") {
+      // For Android, use IntentLauncher for better compatibility
+      try {
+        await IntentLauncher.startActivityAsync("android.intent.action.CALL", {
+          data: `tel:${phoneNumber}`,
+        });
+        console.log("Phone dialer opened via IntentLauncher");
+        return;
+      } catch (intentError) {
+        console.log("IntentLauncher failed, trying Linking:", intentError);
+        // Fallback to Linking
+        await Linking.openURL(`tel:${phoneNumber}`);
+        console.log("Phone dialer opened via Linking");
+        return;
+      }
+    } else {
+      // For iOS, use standard Linking
+      await Linking.openURL(`tel:${phoneNumber}`);
+      console.log("Phone dialer opened successfully");
+    }
+  } catch (error) {
+    console.error("Error opening phone dialer:", error);
+
+    const message = isSimulator()
+      ? "Phone calls are not available in the simulator. On a real device, this would open the phone dialer with: " +
+        phoneNumber
+      : "Unable to open phone dialer. Please manually dial: " + phoneNumber;
+    Alert.alert("Phone Not Available", message);
+  }
+};
+
+/**
+ * Opens the SMS app with the specified phone number pre-filled
+ * @param phoneNumber - The phone number to send SMS to
+ * @returns Promise<void>
+ * @throws Error if the device cannot send SMS
+ *
+ * @example
+ * ```typescript
+ * await openSMSApp("1234567890");
+ * ```
+ */
+export const openSMSApp = async (phoneNumber: string): Promise<void> => {
+  try {
+    console.log("Attempting to open SMS app for:", phoneNumber);
+
+    if (Platform.OS === "android") {
+      // For Android, use IntentLauncher for better compatibility
+      try {
+        await IntentLauncher.startActivityAsync(
+          "android.intent.action.SENDTO",
+          {
+            data: `sms:${phoneNumber}`,
+          }
+        );
+        console.log("SMS app opened via IntentLauncher");
+        return;
+      } catch (intentError) {
+        console.log("IntentLauncher failed, trying Linking:", intentError);
+        // Fallback to Linking
+        await Linking.openURL(`sms:${phoneNumber}`);
+        console.log("SMS app opened via Linking");
+        return;
+      }
+    } else {
+      // For iOS, use standard Linking
+      await Linking.openURL(`sms:${phoneNumber}`);
+      console.log("SMS app opened successfully");
+    }
+  } catch (error) {
+    console.error("Error opening SMS app:", error);
+
+    const message = isSimulator()
+      ? "SMS is not available in the simulator. On a real device, this would open the messaging app with: " +
+        phoneNumber
+      : "Unable to open SMS app. Please manually text: " + phoneNumber;
+    Alert.alert("SMS Not Available", message);
+  }
+};
+
+/**
+ * Opens WhatsApp with the specified phone number
+ * Falls back to WhatsApp Web if the app is not installed
+ * @param phoneNumber - The phone number to contact via WhatsApp
+ * @returns Promise<void>
+ * @throws Error if WhatsApp cannot be opened
+ *
+ * @example
+ * ```typescript
+ * await openWhatsApp("1234567890");
+ * ```
+ */
+export const openWhatsApp = async (phoneNumber: string): Promise<void> => {
+  try {
+    // Format phone number for WhatsApp (remove any non-digit characters)
+    const formattedPhone = phoneNumber.replace(/\D/g, "");
+    const whatsappUrl = `whatsapp://send?phone=${formattedPhone}`;
+
+    const canOpen = await Linking.canOpenURL(whatsappUrl);
+
+    if (canOpen) {
+      await Linking.openURL(whatsappUrl);
+    } else {
+      // Fallback to WhatsApp web if app is not installed
+      const whatsappWebUrl = `https://wa.me/${formattedPhone}`;
+      await Linking.openURL(whatsappWebUrl);
+    }
+  } catch (error) {
+    console.error("Error opening WhatsApp:", error);
+    Alert.alert("Error", "Failed to open WhatsApp");
+    throw error;
+  }
 };
