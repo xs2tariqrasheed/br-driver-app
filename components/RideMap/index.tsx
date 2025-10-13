@@ -1,4 +1,5 @@
 import Button from "@/components/Button";
+import MapLoading from "@/components/MapLoading";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { GOOGLE_MAPS_API_KEY } from "@/constants/global";
@@ -136,6 +137,178 @@ export default function RideMap({
 
   // Speed for realistic movement
   const SPEED = 15; // meters per second
+
+  // Custom map theme
+  const customMapStyle = [
+    {
+      featureType: "all",
+      elementType: "geometry.fill",
+      stylers: [
+        {
+          weight: "2.00",
+        },
+      ],
+    },
+    {
+      featureType: "all",
+      elementType: "geometry.stroke",
+      stylers: [
+        {
+          color: "#9c9c9c",
+        },
+      ],
+    },
+    {
+      featureType: "all",
+      elementType: "labels.text",
+      stylers: [
+        {
+          visibility: "on",
+        },
+      ],
+    },
+    {
+      featureType: "landscape",
+      elementType: "all",
+      stylers: [
+        {
+          color: "#f2f2f2",
+        },
+      ],
+    },
+    {
+      featureType: "landscape",
+      elementType: "geometry.fill",
+      stylers: [
+        {
+          color: "#ffffff",
+        },
+      ],
+    },
+    {
+      featureType: "landscape.man_made",
+      elementType: "geometry.fill",
+      stylers: [
+        {
+          color: "#ffffff",
+        },
+      ],
+    },
+    {
+      featureType: "poi",
+      elementType: "all",
+      stylers: [
+        {
+          visibility: "off",
+        },
+      ],
+    },
+    {
+      featureType: "road",
+      elementType: "all",
+      stylers: [
+        {
+          saturation: -100,
+        },
+        {
+          lightness: 45,
+        },
+      ],
+    },
+    {
+      featureType: "road",
+      elementType: "geometry.fill",
+      stylers: [
+        {
+          color: "#eeeeee",
+        },
+      ],
+    },
+    {
+      featureType: "road",
+      elementType: "labels.text.fill",
+      stylers: [
+        {
+          color: "#7b7b7b",
+        },
+      ],
+    },
+    {
+      featureType: "road",
+      elementType: "labels.text.stroke",
+      stylers: [
+        {
+          color: "#ffffff",
+        },
+      ],
+    },
+    {
+      featureType: "road.highway",
+      elementType: "all",
+      stylers: [
+        {
+          visibility: "simplified",
+        },
+      ],
+    },
+    {
+      featureType: "road.arterial",
+      elementType: "labels.icon",
+      stylers: [
+        {
+          visibility: "off",
+        },
+      ],
+    },
+    {
+      featureType: "transit",
+      elementType: "all",
+      stylers: [
+        {
+          visibility: "off",
+        },
+      ],
+    },
+    {
+      featureType: "water",
+      elementType: "all",
+      stylers: [
+        {
+          color: "#46bcec",
+        },
+        {
+          visibility: "on",
+        },
+      ],
+    },
+    {
+      featureType: "water",
+      elementType: "geometry.fill",
+      stylers: [
+        {
+          color: "#b5dae1",
+        },
+      ],
+    },
+    {
+      featureType: "water",
+      elementType: "labels.text.fill",
+      stylers: [
+        {
+          color: "#070707",
+        },
+      ],
+    },
+    {
+      featureType: "water",
+      elementType: "labels.text.stroke",
+      stylers: [
+        {
+          color: "#ffffff",
+        },
+      ],
+    },
+  ];
 
   // Icon sources - use resolveAssetSource for native markers
   const carIcon = Image.resolveAssetSource(
@@ -546,13 +719,7 @@ export default function RideMap({
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Typography type="bodyMedium" style={styles.loadingText}>
-          Loading map...
-        </Typography>
-      </View>
-    );
+    return <MapLoading isLoading={isLoading} />;
   }
 
   if (error) {
@@ -566,23 +733,11 @@ export default function RideMap({
   }
 
   if (!currentLocation || !pickupLocation || !dropoffLocation) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Typography type="bodyMedium" style={styles.loadingText}>
-          Preparing map...
-        </Typography>
-      </View>
-    );
+    return <MapLoading isLoading={true} />;
   }
 
   if (!mapRegion) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Typography type="bodyMedium" style={styles.loadingText}>
-          Preparing map...
-        </Typography>
-      </View>
-    );
+    return <MapLoading isLoading={true} />;
   }
 
   return (
@@ -592,6 +747,7 @@ export default function RideMap({
         style={styles.map}
         provider={PROVIDER_GOOGLE}
         initialRegion={mapRegion}
+        customMapStyle={customMapStyle}
         showsUserLocation={false}
         showsMyLocationButton={false}
         showsCompass={true}
@@ -737,14 +893,10 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: textColors.grey100,
-  },
-  loadingText: {
-    color: textColors.grey600,
+  loadingTitle: {
+    color: textColors.grey800,
+    fontWeight: "600",
+    marginBottom: 16,
   },
   errorContainer: {
     flex: 1,
