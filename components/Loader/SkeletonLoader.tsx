@@ -36,6 +36,8 @@ export type SkeletonLoaderProps = {
   style?: StyleProp<ViewStyle>;
   /** Duration in ms for one shimmer sweep. Defaults to `SKELETON_DEFAULT_DURATION_MS`. */
   durationMs?: number;
+  /** Whether to enable the shimmer animation. Defaults to true. */
+  animated?: boolean;
 };
 
 /**
@@ -47,6 +49,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   borderRadius = SKELETON_DEFAULT_RADIUS,
   style,
   durationMs = SKELETON_DEFAULT_DURATION_MS,
+  animated = true,
 }) => {
   const translateX = useRef(new Animated.Value(-1)).current;
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -60,6 +63,8 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   }, [containerWidth]);
 
   useEffect(() => {
+    if (!animated) return;
+
     const loop = Animated.loop(
       Animated.timing(translateX, {
         toValue: 1,
@@ -70,7 +75,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     );
     loop.start();
     return () => loop.stop();
-  }, [translateX, durationMs]);
+  }, [translateX, durationMs, animated]);
 
   const onLayout = (e: LayoutChangeEvent) => {
     setContainerWidth(e.nativeEvent.layout.width);
@@ -104,20 +109,26 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       accessibilityRole="progressbar"
       accessibilityLabel="Loading content"
     >
-      <Animated.View
-        style={[
-          styles.shimmer,
-          { width: shimmerWidth, borderRadius },
-          animatedStyle,
-        ]}
-      >
-        <LinearGradient
-          colors={[textColors.grey100, textColors.grey200, textColors.grey100]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
+      {animated && (
+        <Animated.View
+          style={[
+            styles.shimmer,
+            { width: shimmerWidth, borderRadius },
+            animatedStyle,
+          ]}
+        >
+          <LinearGradient
+            colors={[
+              textColors.grey100,
+              textColors.grey200,
+              textColors.grey100,
+            ]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      )}
     </View>
   );
 };

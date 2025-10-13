@@ -6,36 +6,98 @@ import SkeletonLoader from "./SkeletonLoader";
  * Ultra-minimal skeleton component that mimics the structure of a LiveRideOfferItem
  * with white background and very few strategic skeleton elements for a clean, attractive look
  */
-export default function RideItemSkeleton() {
+export default function RideItemSkeleton({
+  animated = true,
+}: { animated?: boolean } = {}) {
   return (
     <View style={styles.container}>
       {/* Header Section - Minimal skeleton */}
       <View style={styles.headerSection}>
-        <SkeletonLoader width={60} height={16} borderRadius={8} />
-        <SkeletonLoader width={40} height={16} borderRadius={8} />
-        <SkeletonLoader width={20} height={20} borderRadius={10} />
-        <SkeletonLoader width={20} height={20} borderRadius={10} />
-        <SkeletonLoader width={30} height={16} borderRadius={8} />
+        <SkeletonLoader
+          width={60}
+          height={16}
+          borderRadius={8}
+          animated={false}
+        />
+        <SkeletonLoader
+          width={40}
+          height={16}
+          borderRadius={8}
+          animated={false}
+        />
+        <SkeletonLoader
+          width={20}
+          height={20}
+          borderRadius={10}
+          animated={false}
+        />
+        <SkeletonLoader
+          width={20}
+          height={20}
+          borderRadius={10}
+          animated={false}
+        />
+        <SkeletonLoader
+          width={30}
+          height={16}
+          borderRadius={8}
+          animated={false}
+        />
       </View>
 
       {/* Address Section - Simplified content skeleton */}
       <View style={styles.addressSection}>
         {/* Left side - Ride type indicator */}
-        <SkeletonLoader width={28} height={80} borderRadius={8} />
+        <SkeletonLoader
+          width={28}
+          height={80}
+          borderRadius={8}
+          animated={false}
+        />
 
         {/* Right side - Address information - Only 2 skeletons */}
         <View style={styles.rightSection}>
-          <SkeletonLoader width={240} height={16} borderRadius={6} />
-          <SkeletonLoader width={200} height={16} borderRadius={6} />
+          <SkeletonLoader
+            width={240}
+            height={16}
+            borderRadius={6}
+            animated={animated}
+          />
+          <SkeletonLoader
+            width={200}
+            height={16}
+            borderRadius={6}
+            animated={animated}
+          />
         </View>
       </View>
 
       {/* Footer Section - Minimal pricing and button */}
       <View style={styles.footerSection}>
-        <SkeletonLoader width={80} height={16} borderRadius={8} />
-        <SkeletonLoader width={60} height={16} borderRadius={8} />
-        <SkeletonLoader width={70} height={16} borderRadius={8} />
-        <SkeletonLoader width={80} height={32} borderRadius={16} />
+        <SkeletonLoader
+          width={80}
+          height={16}
+          borderRadius={8}
+          animated={false}
+        />
+        <SkeletonLoader
+          width={60}
+          height={16}
+          borderRadius={8}
+          animated={false}
+        />
+        <SkeletonLoader
+          width={70}
+          height={16}
+          borderRadius={8}
+          animated={false}
+        />
+        <SkeletonLoader
+          width={80}
+          height={32}
+          borderRadius={16}
+          animated={false}
+        />
       </View>
     </View>
   );
@@ -65,8 +127,8 @@ const styles = StyleSheet.create({
   rightSection: {
     flex: 1,
     justifyContent: "space-between",
-    minHeight: 80,
-    gap: 20,
+    minHeight: 65,
+    gap: 8,
   },
   footerSection: {
     flexDirection: "row",
