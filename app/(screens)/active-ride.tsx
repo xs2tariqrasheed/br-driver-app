@@ -13,13 +13,17 @@ import { textColors } from "@/constants/colors";
 import { openPhoneDialer, openSMSApp, openWhatsApp } from "@/utils/helpers";
 
 import Typography from "@/components/Typography";
+import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
 import {
   ACTION_ICON_SOURCE_MAP,
+  API_CLIENT_TYPES,
   CANCEL_RIDE_REASONS,
   CancelRideReason,
+  DRIVER_ACTIONS,
   NOTIFICATION_TYPES,
+  RIDE_HEADER_TITLES,
+  RIDE_STATES,
   RIDE_TOGGLE_LABELS,
-  RIDE_TYPES,
   RideToggleLabel,
   SOS_NUMBERS,
   SWIPE_BUTTON_STATES,
@@ -27,12 +31,18 @@ import {
   SwipeButtonState,
   VEHICLE_ISSUE_OFFLINE_HOURS,
 } from "@/constants/global";
-import { router, Stack } from "expo-router";
-import { useCallback, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useDriver } from "@/context/DriverContext";
+import { useFetch } from "@/hooks/useFetch";
+import { usePost } from "@/hooks/usePost";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -42,6 +52,20 @@ export default function ActiveRideScreen() {
     RIDE_TOGGLE_LABELS.MAP,
     RIDE_TOGGLE_LABELS.DETAILS,
   ];
+
+  // Get params from navigation
+  const params = useLocalSearchParams();
+  const {
+    getRetrievalId,
+    getTripId,
+    setRideState,
+    getRideState,
+    removeRideState,
+    removeRetrievalId,
+    removeTripId,
+  } = useDriver();
+  const [auth] = useAuth();
+  const driverId = auth?.user?.id;
 
   const [toggleValue, setToggleValue] = useState<RideToggleLabel>(
     RIDE_TOGGLE_LABELS.MAP
@@ -53,6 +77,294 @@ export default function ActiveRideScreen() {
   const [swipeButtonState, setSwipeButtonState] = useState<SwipeButtonState>(
     SWIPE_BUTTON_STATES.MARK_ARRIVED
   );
+
+  // Ride state management
+  const [currentRideState, setCurrentRideState] = useState<string>(
+    RIDE_STATES.EN_ROUTE
+  );
+  const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
+
+  // Data fetching state
+  const [jobOfferData, setJobOfferData] = useState<any>(null);
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  // API call for fetching active trip data when no params
+  const {
+    data: apiData,
+    loading: apiLoading,
+    error: apiError,
+    execute: fetchActiveTrip,
+  } = useFetch<any>(
+    driverId ? `${ACTIVE_TRIP_ROUTES.RETRIEVAL_ID}/${driverId}` : "",
+    API_CLIENT_TYPES.ACTIVE_TRIP
+  );
+
+  // API call for driver actions
+  const { execute: submitDriverAction } = usePost(
+    ACTIVE_TRIP_ROUTES.DRIVER_ACTION,
+    API_CLIENT_TYPES.ACTIVE_TRIP
+  );
+
+  // Load ride state on component mount
+  useEffect(() => {
+    const loadRideState = async () => {
+      try {
+        const { rideState } = await getRideState();
+        if (rideState) {
+          setCurrentRideState(rideState);
+          // Update UI based on stored ride state
+          updateUIForRideState(rideState);
+        }
+      } catch (error) {
+        console.error("Error loading ride state:", error);
+      }
+    };
+
+    loadRideState();
+    // Remove getRideState from dependencies to prevent infinite re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Data fetching and transformation logic
+  useEffect(() => {
+    const loadJobOfferData = async () => {
+      try {
+        setIsLoadingData(true);
+        setDataError(null);
+
+        // Check if we have data from params (from ActiveRideInitializer)
+        if (params.activeTripData) {
+          console.log("Using data from params:", params.activeTripData);
+          const parsedData = JSON.parse(params.activeTripData as string);
+
+          // Transform the data using the helper function
+          const transformedData = transformServerDataToJobOffer(parsedData);
+          setJobOfferData(transformedData);
+          setIsLoadingData(false);
+          return;
+        }
+
+        // If no params, check if we have retrievalId and fetch data
+        if (driverId) {
+          await fetchActiveTrip();
+        } else {
+          throw new Error("No active trip data available");
+        }
+      } catch (error) {
+        console.error("Error loading job offer data:", error);
+        setDataError(
+          error instanceof Error ? error.message : "Failed to load trip data"
+        );
+        setIsLoadingData(false);
+      }
+    };
+
+    loadJobOfferData();
+    // Remove function dependencies to prevent infinite re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.activeTripData, driverId]);
+
+  // Handle API data when fetched
+  useEffect(() => {
+    if (apiData && !apiLoading && !params.activeTripData) {
+      console.log("Using data from API:", apiData);
+      const transformedData = transformServerDataToJobOffer(apiData);
+      setJobOfferData(transformedData);
+      setIsLoadingData(false);
+    }
+  }, [apiData, apiLoading, params.activeTripData]);
+
+  // Handle API errors
+  useEffect(() => {
+    if (apiError && !params.activeTripData) {
+      console.error("API error:", apiError);
+      setDataError(apiError);
+      setIsLoadingData(false);
+    }
+  }, [apiError, params.activeTripData]);
+
+  // Update UI based on ride state
+  const updateUIForRideState = (rideState: string) => {
+    switch (rideState) {
+      case RIDE_STATES.EN_ROUTE:
+        setSwipeButtonState(SWIPE_BUTTON_STATES.MARK_ARRIVED);
+        setIsDriverReachedOnPickup(false);
+        break;
+      case RIDE_STATES.ON_SCENE:
+        setSwipeButtonState(SWIPE_BUTTON_STATES.START_RIDE);
+        setIsDriverReachedOnPickup(true);
+        break;
+      case RIDE_STATES.LOADED:
+        setSwipeButtonState(SWIPE_BUTTON_STATES.END_RIDE);
+        setIsDriverReachedOnPickup(true);
+        break;
+      case RIDE_STATES.STOPPED:
+        setSwipeButtonState(SWIPE_BUTTON_STATES.RESTART_RIDE);
+        setIsDriverReachedOnPickup(true);
+        break;
+      case RIDE_STATES.COMPLETED:
+        // Handle completion - this will be handled in the action handler
+        break;
+      default:
+        console.warn("Unknown ride state:", rideState);
+    }
+  };
+
+  // Handle driver action API call
+  const handleDriverAction = async (action: string) => {
+    if (!driverId || !jobOfferData?.id) {
+      console.error("Missing driverId or tripId for action:", action);
+      return false;
+    }
+
+    try {
+      setIsActionLoading(true);
+
+      const response = await submitDriverAction({
+        tripId: jobOfferData.id,
+        driverId,
+        action,
+      });
+
+      if (response?.success) {
+        console.log(`Driver action "${action}" submitted successfully`);
+        return true;
+      } else {
+        console.error("Failed to submit driver action:", response);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error submitting driver action:", error);
+      return false;
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Transform server data to job offer format
+  const transformServerDataToJobOffer = (serverData: any) => {
+    try {
+      // If the data is already in the correct format, return it
+      if (serverData.activeTrip && serverData.retrievalId) {
+        const activeTrip = serverData.activeTrip;
+
+        // Generate addresses from coordinates using real addresses
+        const generateAddressFromCoordinates = (
+          lat: number,
+          lng: number,
+          type: "pickup" | "dropoff"
+        ): string => {
+          // Use the provided Lahore addresses
+          if (type === "pickup") {
+            // PU location: 31.3709° N, 74.3648° E
+            return "99C7+8WV, Service Road, Kahna Nau, Lahore";
+          } else {
+            // DO location: 31.4244° N, 74.3574° E
+            return "18-KM Main Lahore – Kasur Rd، opp. Descon Head Office, Shadab Garden, Lahore";
+          }
+        };
+
+        // Calculate driver earnings (80% of total price - using a default fare for now)
+        const defaultFare = 25.0; // Default fare since it's not in the API response
+        const driverEarn = Math.round(defaultFare * 0.8);
+
+        return {
+          id: activeTrip.tripId,
+          dateTime: new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          }),
+          rideType: "one-way" as const,
+          peopleCount: 2,
+          rating: 4.8,
+          hasSpecialRequirements: false,
+          onPressSpecialRequirements: () => console.log("Special requirements"),
+          hasPackage: false,
+          onPressPackage: () => console.log("Package pressed"),
+          pickupTime: 5,
+          pickupDistance: 0.8,
+          pickupAddress: generateAddressFromCoordinates(
+            activeTrip.pickup.lat,
+            activeTrip.pickup.lng,
+            "pickup"
+          ),
+          dropoffTime: 15,
+          dropoffDistance: 3.2,
+          dropoffAddress: generateAddressFromCoordinates(
+            activeTrip.dropoff.lat,
+            activeTrip.dropoff.lng,
+            "dropoff"
+          ),
+          rideTime: 20,
+          rideDistance: 4.0,
+          totalPrice: defaultFare,
+          driverEarn: driverEarn,
+          hideBidButton: true,
+          onButtonClick: () => console.log("Accept pressed"),
+          driverInstructions: "Please call customer when you arrive",
+          fareDetails: [
+            {
+              label: "Ride Price",
+              value: `$${defaultFare.toFixed(2)}`,
+            },
+            {
+              label: "Tolls (EZ Pass)",
+              value: "$2.50",
+            },
+            { label: "Tips", value: "$0.00" },
+            {
+              label: "Discount",
+              value: "$0.00",
+            },
+            {
+              label: "Service Charges",
+              value: "$1.50",
+            },
+            {
+              label: "Fuel Surcharge",
+              value: "$1.00",
+            },
+            {
+              label: "NYC Congestion Surcharge",
+              value: "$2.75",
+            },
+          ],
+          customerDetails: [
+            { label: "Name", value: "John Smith" },
+            {
+              label: "Required Car Type",
+              value: "Sedan",
+            },
+            {
+              label: "Offer Price",
+              value: `$${defaultFare.toFixed(2)}`,
+            },
+            {
+              label: "Account No.",
+              value: "123456789",
+            },
+            {
+              label: "Profile No.",
+              value: "987654321",
+            },
+          ],
+        };
+      }
+
+      // Fallback: return null if data format is unexpected
+      console.warn("Unexpected server data format:", serverData);
+      return null;
+    } catch (error) {
+      console.error("Error transforming server data:", error);
+      return null;
+    }
+  };
 
   // Notification state
   const [showNotification, setShowNotification] = useState<boolean>(false);
@@ -89,119 +401,124 @@ export default function ActiveRideScreen() {
     setUpdateETASheetOpen(true);
   };
 
-  const jobOffer = {
-    id: "job-123",
-    dateTime: "Tuesday, Dec 7th, 10:15 am",
-    rideType: RIDE_TYPES.ONE_WAY,
-    peopleCount: 2,
-    rating: 3.5,
-    hasSpecialRequirements: true,
-    onPressSpecialRequirements: () => console.log("Special requirements"),
-    hasPackage: false,
-    onPressPackage: () => console.log("Package pressed"),
-    pickupTime: 13,
-    pickupDistance: 3.4,
-    pickupAddress: "Pascal Ave N & N Terrace AR. Roseville\n69 Main Street",
-    dropoffTime: 24,
-    dropoffDistance: 3.4,
-    dropoffAddress: "3272 Gale Ave Long Island City NY 11101",
-    rideTime: 49,
-    rideDistance: 23.4,
-    totalPrice: 55,
-    driverEarn: 46,
-    hideBidButton: true,
-    onButtonClick: () => console.log("Accept pressed"),
-    driverInstructions:
-      "Please wear the mask while driving and make sure to fasten the seat belt and keep the car clean and neat",
-    fareDetails: [
-      { label: "Ride Price", value: "$20.25" },
-      { label: "Tolls (EZ Pass)", value: "$0.75" },
-      { label: "Tips", value: "$2.00" },
-      { label: "Discount", value: "$00.00" },
-      { label: "Service Charges", value: "$4.00" },
-      { label: "Fuel Surcharge", value: "$3.25" },
-      { label: "NYC Congestion Surcharge", value: "$10.25" },
-    ],
-    customerDetails: [
-      { label: "Name", value: "John Smith" },
-      { label: "Required Car Type", value: "SUV" },
-      { label: "Offer Price", value: "$55.50" },
-      { label: "Account No.", value: "Wes123456789" },
-      { label: "Profile No.", value: "123-12321-12" },
-    ],
-    actionButtons: [
-      {
-        icon: "accept.png",
-        onPress: () => console.log("Accept"),
-        key: "accept",
-      },
-      {
-        icon: "reject.png",
-        onPress: () => console.log("Reject"),
-        key: "reject",
-      },
-      { icon: "hide.png", onPress: () => console.log("Hide"), key: "hide" },
-      { icon: "skip.png", onPress: () => console.log("Skip"), key: "skip" },
-      {
-        icon: "make-stop.png",
-        onPress: () => console.log("Make Stop"),
-        key: "make-stop",
-      },
-      {
-        icon: "add-toll.png",
-        onPress: () => console.log("Add Toll"),
-        key: "add-toll",
-      },
-      {
-        icon: "circling.png",
-        onPress: () => console.log("Circling"),
-        key: "circling",
-      },
-      {
-        icon: "cancel-ride.png",
-        onPress: () => console.log("Cancel Ride"),
-        key: "cancel-ride",
-      },
-      {
-        icon: "update-eta.png",
-        onPress: () => console.log("Update ETA"),
-        key: "update-eta",
-      },
-      { icon: "sos.png", onPress: handleSos, key: "sos" },
-      {
-        icon: "contact-customer.png",
-        onPress: () => console.log("Contact Customer"),
-        key: "contact-customer",
-      },
-      {
-        icon: "details.png",
-        onPress: () => console.log("Details"),
-        key: "details",
-      },
-    ],
-  };
-
   const handleDetails = () => {
     setToggleValue(RIDE_TOGGLE_LABELS.DETAILS);
   };
 
-  const handleSwipeComplete = () => {
-    switch (swipeButtonState) {
-      case SWIPE_BUTTON_STATES.MARK_ARRIVED:
-        setIsDriverReachedOnPickup(true);
-        setSwipeButtonState(SWIPE_BUTTON_STATES.START_RIDE);
-        break;
-      case SWIPE_BUTTON_STATES.START_RIDE:
-        setShowNotification(true);
-        // Handle start ride logic
-        setSwipeButtonState(SWIPE_BUTTON_STATES.END_RIDE);
-        break;
-      case SWIPE_BUTTON_STATES.END_RIDE:
-        // Handle end ride logic
-        console.log("Ride ended");
-        break;
-      default:
-        console.warn("Unknown swipe button state:", swipeButtonState);
+  // Handle stop action
+  const handleStop = async () => {
+    if (isActionLoading) return; // Prevent multiple actions
+
+    try {
+      setIsActionLoading(true);
+
+      // Call the API with stop action
+      const success = await handleDriverAction(DRIVER_ACTIONS.STOP);
+
+      if (success) {
+        // Update local state
+        setCurrentRideState(RIDE_STATES.STOPPED);
+        await setRideState(RIDE_STATES.STOPPED);
+
+        // Update UI
+        setSwipeButtonState(SWIPE_BUTTON_STATES.RESTART_RIDE);
+
+        console.log("Ride stopped successfully");
+      } else {
+        console.error("Failed to stop ride");
+      }
+    } catch (error) {
+      console.error("Error stopping ride:", error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleSwipeComplete = async () => {
+    if (isActionLoading) return; // Prevent multiple actions
+
+    try {
+      let action: string;
+      let newRideState: string;
+      let newSwipeState: SwipeButtonState;
+
+      switch (swipeButtonState) {
+        case SWIPE_BUTTON_STATES.MARK_ARRIVED:
+          action = DRIVER_ACTIONS.ARRIVED;
+          newRideState = RIDE_STATES.ON_SCENE;
+          newSwipeState = SWIPE_BUTTON_STATES.START_RIDE;
+          break;
+        case SWIPE_BUTTON_STATES.START_RIDE:
+          action = DRIVER_ACTIONS.START;
+          newRideState = RIDE_STATES.LOADED;
+          newSwipeState = SWIPE_BUTTON_STATES.END_RIDE;
+          break;
+        case SWIPE_BUTTON_STATES.END_RIDE:
+          action = DRIVER_ACTIONS.COMPLETED;
+          newRideState = RIDE_STATES.COMPLETED;
+          newSwipeState = SWIPE_BUTTON_STATES.MARK_ARRIVED; // This won't be used
+          break;
+        case SWIPE_BUTTON_STATES.RESTART_RIDE:
+          action = DRIVER_ACTIONS.START;
+          newRideState = RIDE_STATES.LOADED;
+          newSwipeState = SWIPE_BUTTON_STATES.END_RIDE;
+          break;
+        default:
+          console.warn("Unknown swipe button state:", swipeButtonState);
+          return;
+      }
+
+      // Call the API
+      const success = await handleDriverAction(action);
+
+      if (success) {
+        // Update local state
+        setCurrentRideState(newRideState);
+        await setRideState(newRideState);
+
+        // Update UI
+        setSwipeButtonState(newSwipeState);
+
+        // Handle special cases
+        if (action === DRIVER_ACTIONS.ARRIVED) {
+          setIsDriverReachedOnPickup(true);
+        } else if (action === DRIVER_ACTIONS.START) {
+          setShowNotification(true);
+        } else if (action === DRIVER_ACTIONS.COMPLETED) {
+          // Handle ride completion
+          console.log("Ride completed, redirecting to feedback screen...");
+          await handleRideCompletion();
+        }
+      } else {
+        // Show error message or handle failure
+        console.error("Failed to submit driver action:", action);
+        // You could show a toast or error message here
+      }
+    } catch (error) {
+      console.error("Error in handleSwipeComplete:", error);
+    }
+  };
+
+  // Handle ride completion
+  const handleRideCompletion = async () => {
+    try {
+      console.log("Starting ride completion process...");
+
+      // Remove retrieval ID and trip ID
+      await removeRetrievalId();
+      console.log("Removed retrieval ID");
+
+      await removeTripId();
+      console.log("Removed trip ID");
+
+      await removeRideState();
+      console.log("Removed ride state");
+
+      // Redirect to feedback screen
+      console.log("Redirecting to feedback screen...");
+      router.replace("/(screens)/feedback");
+    } catch (error) {
+      console.error("Error handling ride completion:", error);
     }
   };
 
@@ -241,8 +558,9 @@ export default function ActiveRideScreen() {
     },
     {
       icon: "make-stop.png",
-      onPress: () => console.log("Make Stop"),
+      onPress: handleStop,
       key: "make-stop",
+      disabled: isActionLoading || currentRideState !== RIDE_STATES.LOADED,
     },
     {
       icon: "add-toll.png",
@@ -363,6 +681,53 @@ export default function ActiveRideScreen() {
     closeUpdateETASheet();
   };
 
+  // Loading state
+  if (isLoadingData) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={textColors.teal700} />
+          <Text style={styles.loadingText}>Loading trip data...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Error state
+  if (dataError || !jobOfferData) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Unable to Load Trip Data</Text>
+          <Text style={styles.errorMessage}>
+            {dataError || "No active trip data available"}
+          </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              setDataError(null);
+              setIsLoadingData(true);
+              // Retry loading data
+              if (params.activeTripData) {
+                const parsedData = JSON.parse(params.activeTripData as string);
+                const transformedData =
+                  transformServerDataToJobOffer(parsedData);
+                setJobOfferData(transformedData);
+                setIsLoadingData(false);
+              } else {
+                fetchActiveTrip();
+              }
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -380,7 +745,11 @@ export default function ActiveRideScreen() {
       />
 
       <Header
-        title={isDriverReachedOnPickup ? "On Scene" : "En Route"}
+        title={
+          RIDE_HEADER_TITLES[
+            currentRideState as keyof typeof RIDE_HEADER_TITLES
+          ] || "En Route"
+        }
         rightAccessory={
           <View style={styles.toggleWrap}>
             <Toggle
@@ -406,17 +775,28 @@ export default function ActiveRideScreen() {
             {actionButtons.map((button) => (
               <TouchableOpacity
                 key={button.key}
-                style={styles.actionButton}
+                style={[
+                  styles.actionButton,
+                  button.disabled && styles.actionButtonDisabled,
+                ]}
                 onPress={button.onPress}
                 disabled={!button.onPress || button.disabled}
               >
-                <View style={styles.actionButtonContainer}>
+                <View
+                  style={[
+                    styles.actionButtonContainer,
+                    button.disabled && styles.actionButtonContainerDisabled,
+                  ]}
+                >
                   <Image
                     source={
                       ACTION_ICON_SOURCE_MAP[button.icon] ||
                       ACTION_ICON_SOURCE_MAP["details.png"]
                     }
-                    style={styles.actionIcon}
+                    style={[
+                      styles.actionIcon,
+                      button.disabled && styles.actionIconDisabled,
+                    ]}
                     resizeMode="contain"
                   />
                 </View>
@@ -429,12 +809,23 @@ export default function ActiveRideScreen() {
       <View style={styles.rideLocationsContainer}>
         <RideLocations
           pickupAddress={
-            isDriverReachedOnPickup
-              ? ""
-              : "99C7+8WV, Service Road, Kahna Nau, Lahore"
+            currentRideState === RIDE_STATES.EN_ROUTE
+              ? jobOfferData?.pickupAddress || "Loading address..."
+              : ""
           }
-          showFreeWaitTimer={isDriverReachedOnPickup}
-          resetCountdown={!isDriverReachedOnPickup}
+          dropoffAddress={
+            currentRideState === RIDE_STATES.LOADED
+              ? jobOfferData?.dropoffAddress || "Loading address..."
+              : ""
+          }
+          showFreeWaitTimer={
+            currentRideState === RIDE_STATES.ON_SCENE ||
+            currentRideState === RIDE_STATES.STOPPED
+          }
+          resetCountdown={
+            currentRideState !== RIDE_STATES.ON_SCENE &&
+            currentRideState !== RIDE_STATES.STOPPED
+          }
         />
       </View>
 
@@ -448,7 +839,7 @@ export default function ActiveRideScreen() {
           },
         ]}
       >
-        <JobDetails jobOffer={jobOffer} showActionBar={false} />
+        <JobDetails jobOffer={jobOfferData} showActionBar={false} />
       </View>
 
       <View
@@ -458,11 +849,15 @@ export default function ActiveRideScreen() {
         ]}
       >
         <RideMap
-          pickupAddress="99C7+8WV, Service Road, Kahna Nau, Lahore"
-          dropoffAddress="18-KM Main Lahore – Kasur Rd، opp. Descon Head Office,"
+          pickupAddress={jobOfferData?.pickupAddress || "Loading address..."}
+          dropoffAddress={jobOfferData?.dropoffAddress || "Loading address..."}
           eta={isDriverReachedOnPickup ? "" : "10 mins"}
           showWazeButton={true}
-          rideStatus={isDriverReachedOnPickup ? "On Scene" : "En Route"}
+          rideStatus={
+            RIDE_HEADER_TITLES[
+              currentRideState as keyof typeof RIDE_HEADER_TITLES
+            ] || "En Route"
+          }
           onMapReady={() => console.log("Map ready")}
           onError={(error) => console.error("Map error:", error)}
         />
@@ -471,22 +866,40 @@ export default function ActiveRideScreen() {
       {toggleValue === RIDE_TOGGLE_LABELS.MAP && (
         <RideAction
           leftComponent={
-            <TouchableOpacity>
+            <TouchableOpacity disabled={isActionLoading}>
               <Image
                 source={require("@/assets/images/actions/circling.png")}
-                style={{ width: 20, height: 20 }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  opacity: isActionLoading ? 0.5 : 1,
+                }}
               />
             </TouchableOpacity>
           }
-          swipeTitle={SWIPE_BUTTON_TITLES[swipeButtonState]}
+          swipeTitle={
+            isActionLoading
+              ? "Processing..."
+              : SWIPE_BUTTON_TITLES[swipeButtonState]
+          }
           onSwipeComplete={() => {
-            handleSwipeComplete();
+            if (!isActionLoading) {
+              handleSwipeComplete();
+            }
           }}
+          disabled={isActionLoading}
           rightComponent={
-            <TouchableOpacity onPress={handleContactCustomer}>
+            <TouchableOpacity
+              onPress={handleContactCustomer}
+              disabled={isActionLoading}
+            >
               <Image
                 source={require("@/assets/images/actions/contact-customer.png")}
-                style={{ width: 20, height: 20 }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  opacity: isActionLoading ? 0.5 : 1,
+                }}
               />
             </TouchableOpacity>
           }
@@ -783,6 +1196,16 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
+  actionButtonDisabled: {
+    opacity: 0.5,
+  },
+  actionButtonContainerDisabled: {
+    backgroundColor: textColors.grey100,
+    borderColor: textColors.grey200,
+  },
+  actionIconDisabled: {
+    opacity: 0.5,
+  },
   rideLocationsContainer: {
     padding: 10,
   },
@@ -880,5 +1303,50 @@ const styles = StyleSheet.create({
   },
   textBlack: {
     color: textColors.black,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: textColors.white,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: textColors.grey600,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: textColors.white,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: textColors.black,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: textColors.grey600,
+    marginBottom: 20,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  retryButton: {
+    backgroundColor: textColors.teal600,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: textColors.white,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

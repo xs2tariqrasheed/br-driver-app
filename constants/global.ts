@@ -12,6 +12,8 @@ export const DRIVER_STORAGE_KEY = "@driver";
 export const RETRIEVAL_ID_STORAGE_KEY = "@retrieval_id";
 // Trip ID storage key
 export const TRIP_ID_STORAGE_KEY = "@trip_id";
+// Ride state storage key
+export const RIDE_STATE_STORAGE_KEY = "@ride_state";
 
 // Driver status display labels (used in UI)
 export const DRIVER_STATUS = {
@@ -278,6 +280,7 @@ export const SWIPE_BUTTON_STATES = {
   MARK_ARRIVED: "mark_arrived",
   START_RIDE: "start_ride",
   END_RIDE: "end_ride",
+  RESTART_RIDE: "restart_ride",
 } as const;
 
 export type SwipeButtonState =
@@ -286,7 +289,8 @@ export type SwipeButtonState =
 export const SWIPE_BUTTON_TITLES = {
   [SWIPE_BUTTON_STATES.MARK_ARRIVED]: "Swipe to Mark as Arrived",
   [SWIPE_BUTTON_STATES.START_RIDE]: "Swipe to Start Ride",
-  [SWIPE_BUTTON_STATES.END_RIDE]: "Swipe to End Ride",
+  [SWIPE_BUTTON_STATES.END_RIDE]: "Swipe to Complete Ride",
+  [SWIPE_BUTTON_STATES.RESTART_RIDE]: "Swipe to Re-start Ride",
 } as const;
 
 // Notification Types
@@ -343,16 +347,38 @@ export const SOCKET = {
     "http://192.168.100.160:3003",
 } as const;
 
-// Active Trip API Routes
-export const ACTIVE_TRIP_ROUTES = {
-  RETRIEVAL_ID: "/api/active-trips/retrieval-id",
-} as const;
-
 export const TRIP_OFFER_ACTIONS = {
   ACCEPT: "accept",
   SKIP: "skip",
   HIDE: "hide",
   BID: "bid",
+} as const;
+
+// Driver actions for active trips
+export const DRIVER_ACTIONS = {
+  START: "start",
+  STOP: "stop",
+  ARRIVED: "arrived",
+  PICKED_UP: "picked_up",
+  COMPLETED: "completed",
+} as const;
+
+// Ride states for UI management
+export const RIDE_STATES = {
+  EN_ROUTE: "en_route",
+  ON_SCENE: "on_scene",
+  LOADED: "loaded",
+  STOPPED: "stopped",
+  COMPLETED: "completed",
+} as const;
+
+// Header titles based on ride state
+export const RIDE_HEADER_TITLES = {
+  [RIDE_STATES.EN_ROUTE]: "En Route",
+  [RIDE_STATES.ON_SCENE]: "On Scene",
+  [RIDE_STATES.LOADED]: "Loaded",
+  [RIDE_STATES.STOPPED]: "Stop",
+  [RIDE_STATES.COMPLETED]: "Completed",
 } as const;
 
 export const TRIP_OFFER_TYPES = {

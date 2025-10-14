@@ -3,11 +3,12 @@
  *
  * This component handles:
  * - Displaying bid status messages (Expired, Unsuccessful, Accepted)
- * - Countdown timer for expired and accepted bids (10 seconds)
+ * - Countdown timer for expired, accepted, and unsuccessful bids (10 seconds)
  * - Different background colors for each status type
  * - Proper typography using SF Pro font family
  * - Callback functions for timer completion and close actions
  * - Integration with Modal for consistent UI
+ * - Automatic navigation to active-ride screen when status is ACCEPTED
  */
 
 import { textColors } from "@/constants/colors";
@@ -20,6 +21,7 @@ import {
   type BidStatus,
 } from "@/constants/global";
 import { speechManager } from "@/utils/speechManager";
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Typography from "../Typography";
@@ -51,6 +53,10 @@ export interface BidStatusModalProps {
  * A modal component that displays bid status updates with appropriate
  * styling, countdown timers, and callbacks. Matches the UI style of
  * SpecialRequirementsModal and PackageInfoModal.
+ *
+ * When the status is ACCEPTED, the component automatically navigates
+ * to the active-ride screen either when the timer completes or when
+ * the close button is pressed.
  */
 const BidStatusModal: React.FC<BidStatusModalProps> = ({
   open,
@@ -96,11 +102,13 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
     }
   }, [open, status]);
 
-  // Handle countdown timer for expired and accepted status
+  // Handle countdown timer for expired, accepted, and unsuccessful status
   useEffect(() => {
     if (
       !open ||
-      (status !== BID_STATUS.EXPIRED && status !== BID_STATUS.ACCEPTED)
+      (status !== BID_STATUS.EXPIRED &&
+        status !== BID_STATUS.ACCEPTED &&
+        status !== BID_STATUS.UNSUCCESSFUL)
     )
       return;
 
@@ -121,7 +129,20 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
   useEffect(() => {
     if (!open || countdown !== 0) return;
 
-    if (status === BID_STATUS.EXPIRED || status === BID_STATUS.ACCEPTED) {
+    if (
+      status === BID_STATUS.EXPIRED ||
+      status === BID_STATUS.ACCEPTED ||
+      status === BID_STATUS.UNSUCCESSFUL
+    ) {
+      console.log("status on timer complete in BidStatusModal", status);
+
+      // Navigate to active-ride screen when status is ACCEPTED
+      if (status === BID_STATUS.ACCEPTED) {
+        console.log("navigating to active-ride screen in BidStatusModal");
+        router.replace("/(screens)/active-ride");
+      }
+
+      // Call onTimerComplete after navigation for ACCEPTED status
       onTimerComplete();
     }
   }, [countdown, open, status, onTimerComplete]);
@@ -138,14 +159,21 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
   // Handle close button press
   const handleClose = useCallback(() => {
     onClose();
-  }, [onClose]);
+
+    console.log("status on Close in BidStatusModal", status);
+    // Navigate to active-ride screen when status is ACCEPTED
+    if (status === BID_STATUS.ACCEPTED) {
+      console.log("navigating to active-ride screen in BidStatusModal");
+      router.replace("/(screens)/active-ride");
+    }
+  }, [onClose, status]);
 
   return (
     <Modal
       visible={open}
       transparent
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor }]}>
@@ -159,7 +187,7 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
               {statusData?.TITLE}
             </Typography>
             <View style={styles.placeholder} />
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>

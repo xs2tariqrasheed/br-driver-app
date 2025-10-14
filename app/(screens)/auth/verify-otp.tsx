@@ -300,7 +300,7 @@ export default function VerifyOtpScreen() {
       await setAuth({
         ...currentAuth,
         user: {
-          id: "d-4", //data?.user?.id,
+          id: "d-1", //data?.user?.id,
           name: data?.user?.name,
           type: DRIVER_TYPES.INDEPENDENT_OPERATOR,
         },

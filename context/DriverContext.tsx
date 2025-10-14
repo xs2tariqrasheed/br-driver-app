@@ -5,6 +5,7 @@ import {
   LOCAL_JOB_STATUS,
   NotificationType,
   RETRIEVAL_ID_STORAGE_KEY,
+  RIDE_STATE_STORAGE_KEY,
   TRIP_ID_STORAGE_KEY,
   TRIP_OFFER_ACTIONS,
   type LocalJobStatus,
@@ -57,6 +58,7 @@ export type DriverObject = {
   hiddenLiveOffers?: HiddenLiveOffer[];
   retrievalId?: string | null;
   tripId?: string | null;
+  rideState?: string | null;
   // Extendable for future driver data
   [key: string]: unknown;
 } | null;
@@ -134,6 +136,13 @@ type DriverContextValue = [
     loading: boolean;
   }>;
   removeTripId: () => Promise<void>;
+  // Ride state functions
+  setRideState: (rideState: string) => Promise<void>;
+  getRideState: () => Promise<{
+    rideState: string | null;
+    loading: boolean;
+  }>;
+  removeRideState: () => Promise<void>;
 };
 
 const DriverContext = createContext<DriverContextValue | undefined>(undefined);
@@ -653,9 +662,8 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const storedRetrievalId = await getStorageItem(RETRIEVAL_ID_STORAGE_KEY);
-      const retrievalId = storedRetrievalId
-        ? JSON.parse(storedRetrievalId)
-        : null;
+      // Retrieval ID is stored as a plain string, not JSON
+      const retrievalId = storedRetrievalId || null;
 
       log(`Retrieved retrieval ID from AsyncStorage: ${retrievalId}`);
 
@@ -672,6 +680,15 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       return { retrievalId, loading: false };
     } catch (error) {
       log(`Error getting retrieval ID from AsyncStorage:`, error);
+      // If there's a JSON parse error, try to clear the corrupted data
+      if (error instanceof SyntaxError && error.message.includes("JSON")) {
+        log("Detected JSON parse error, clearing corrupted retrieval ID data");
+        try {
+          await removeStorageItem(RETRIEVAL_ID_STORAGE_KEY);
+        } catch (clearError) {
+          log("Error clearing corrupted retrieval ID data:", clearError);
+        }
+      }
       return { retrievalId: null, loading: false };
     }
   }, [state.driver, setDriver, log]);
@@ -682,7 +699,8 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const storedTripId = await getStorageItem(TRIP_ID_STORAGE_KEY);
-      const tripId = storedTripId ? JSON.parse(storedTripId) : null;
+      // Trip ID is stored as a plain string, not JSON
+      const tripId = storedTripId || null;
 
       log(`Retrieved trip ID from AsyncStorage: ${tripId}`);
 
@@ -699,6 +717,15 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       return { tripId, loading: false };
     } catch (error) {
       log(`Error getting trip ID from AsyncStorage:`, error);
+      // If there's a JSON parse error, try to clear the corrupted data
+      if (error instanceof SyntaxError && error.message.includes("JSON")) {
+        log("Detected JSON parse error, clearing corrupted trip ID data");
+        try {
+          await removeStorageItem(TRIP_ID_STORAGE_KEY);
+        } catch (clearError) {
+          log("Error clearing corrupted trip ID data:", clearError);
+        }
+      }
       return { tripId: null, loading: false };
     }
   }, [state.driver, setDriver, log]);
@@ -749,6 +776,76 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.driver, setDriver, log]);
 
+  // Ride state functions
+  const setRideState = useCallback(
+    async (rideState: string) => {
+      log("Setting ride state in context and AsyncStorage:", rideState);
+
+      // Update driver context
+      if (state.driver) {
+        const updatedDriver = {
+          ...state.driver,
+          rideState,
+        };
+        await setDriver(updatedDriver);
+      }
+
+      // Save to AsyncStorage
+      try {
+        await setStorageItem(RIDE_STATE_STORAGE_KEY, JSON.stringify(rideState));
+        log("Ride state saved to AsyncStorage:", rideState);
+      } catch (error) {
+        log(`Error saving ride state to AsyncStorage:`, error);
+        throw error;
+      }
+    },
+    [state.driver, setDriver, log]
+  );
+
+  const getRideState = useCallback(async () => {
+    log("Getting ride state from AsyncStorage");
+
+    try {
+      const storedRideState = await getStorageItem(RIDE_STATE_STORAGE_KEY);
+      const rideState = storedRideState ? JSON.parse(storedRideState) : null;
+
+      log(`Retrieved ride state from AsyncStorage: ${rideState}`);
+
+      return {
+        rideState,
+        loading: false,
+      };
+    } catch (error) {
+      log("Error getting ride state from AsyncStorage:", error);
+      return {
+        rideState: null,
+        loading: false,
+      };
+    }
+  }, []);
+
+  const removeRideState = useCallback(async () => {
+    log("Removing ride state from context and AsyncStorage");
+
+    // Update driver context
+    if (state.driver) {
+      const updatedDriver = {
+        ...state.driver,
+        rideState: null,
+      };
+      await setDriver(updatedDriver);
+    }
+
+    // Remove from AsyncStorage
+    try {
+      await removeStorageItem(RIDE_STATE_STORAGE_KEY);
+      log("Ride state removed from AsyncStorage");
+    } catch (error) {
+      log(`Error removing ride state from AsyncStorage:`, error);
+      throw error;
+    }
+  }, [state.driver, setDriver, log]);
+
   const contextValue = useMemo<DriverContextValue>(() => {
     const baseArray: [DriverObject, (value: DriverObject) => Promise<void>] = [
       state.driver,
@@ -775,6 +872,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       setTripId,
       getTripId,
       removeTripId,
+      setRideState,
+      getRideState,
+      removeRideState,
     });
   }, [
     state.driver,
@@ -797,6 +897,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     setTripId,
     getTripId,
     removeTripId,
+    setRideState,
+    getRideState,
+    removeRideState,
   ]);
 
   if (!state.isHydrated) return null;

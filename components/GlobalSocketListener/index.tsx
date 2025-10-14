@@ -252,14 +252,20 @@ export function GlobalSocketListener() {
                 log("❌ Failed to store tripId from accept-response:", e);
               }
             }
-            // Show bid accepted bottom sheet
-            showBidAccepted();
+            // Close all modals first, then show bid accepted modal
+            hideRideOfferModal();
+            closeAllModals();
+            // Small delay to ensure other modals close before showing bid accepted
+            setTimeout(() => {
+              showBidAccepted();
+            }, 500);
             log("✅ Ride offer accepted - showing accepted sheet");
 
             // Set hasAnyActiveOffer to false on successful acceptance
             setHasAnyActiveOffer(false);
           } else {
-            // Show bid unsuccessful bottom sheet
+            // Close all modals first, then show bid unsuccessful modal
+            closeAllModals();
             showBidUnsuccessful();
             log("❌ Ride offer rejected - showing unsuccessful sheet");
 
@@ -317,8 +323,13 @@ export function GlobalSocketListener() {
               }
             }
 
-            // Show bid accepted bottom sheet
-            showBidAccepted();
+            // Close all modals first, then show bid accepted modal
+            hideRideOfferModal();
+            closeAllModals();
+            // Small delay to ensure other modals close before showing bid accepted
+            setTimeout(() => {
+              showBidAccepted();
+            }, 500);
             log("✅ Bid accepted - showing accepted sheet");
 
             // Set hasAnyActiveOffer to false on bid acceptance

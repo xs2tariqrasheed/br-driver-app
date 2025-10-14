@@ -14,7 +14,8 @@
  */
 
 import { textColors } from "@/constants/colors";
-import { ACTIVE_TRIP_ROUTES, API_CLIENT_TYPES } from "@/constants/global";
+import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useFetch } from "@/hooks/useFetch";
@@ -45,8 +46,12 @@ export default function ActiveRideInitializer() {
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
   const [retryCount, setRetryCount] = useState(0);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
   const { setRetrievalId, removeRetrievalId, setTripId, removeTripId } =
     useDriver();
+
+  // Ref to prevent multiple redirects
+  const hasRedirectedRef = useRef(false);
 
   // Call the API to check for active ride
   const { data, loading, error, execute } = useFetch<RetrievalIdResponse>(
@@ -56,22 +61,41 @@ export default function ActiveRideInitializer() {
 
   useEffect(() => {
     if (driverId) {
+      // Reset redirect ref when driverId changes
+      hasRedirectedRef.current = false;
+      setHasTimedOut(false);
       execute();
     }
     // Intentionally exclude `execute` to avoid refetch loops if it's unstable
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [driverId]);
 
+  // Timeout effect to prevent infinite loading
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        setHasTimedOut(true);
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [loading]);
+
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1);
+    // Reset redirect ref and timeout state on retry
+    hasRedirectedRef.current = false;
+    setHasTimedOut(false);
     if (driverId) {
       execute();
     }
   };
 
   useEffect(() => {
-    if (data && !loading) {
+    if (data && !loading && !hasRedirectedRef.current) {
       // Success: We have an active ride, save retrieval ID and trip ID, then redirect
+      hasRedirectedRef.current = true;
+
       const handleSuccess = async () => {
         try {
           // Save retrieval ID to context and AsyncStorage
@@ -103,7 +127,10 @@ export default function ActiveRideInitializer() {
 
       handleSuccess();
     }
-  }, [data, loading, setRetrievalId, setTripId]);
+    // Remove setRetrievalId and setTripId from dependencies to prevent infinite loop
+    // These functions are stable and don't need to be in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, loading]);
 
   // Ensure hook order is stable: handle 404/no-active-ride cleanup in a top-level effect
   const hasCleanedNoActiveRideRef = useRef(false);
@@ -132,14 +159,32 @@ export default function ActiveRideInitializer() {
       }
     };
     cleanupIds();
-  }, [error, removeRetrievalId, removeTripId]);
+    // Remove removeRetrievalId and removeTripId from dependencies to prevent infinite loop
+    // These functions are stable and don't need to be in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   // Loading state
-  if (loading) {
+  if (loading && !hasTimedOut) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={textColors.teal700} />
         <Text style={styles.loadingText}>Checking for active rides...</Text>
+      </View>
+    );
+  }
+
+  // Timeout state
+  if (hasTimedOut && loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Connection Timeout</Text>
+        <Text style={styles.message}>
+          The request is taking longer than expected. Please try again.
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }

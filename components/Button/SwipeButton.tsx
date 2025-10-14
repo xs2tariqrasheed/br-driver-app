@@ -106,8 +106,8 @@ const styles = StyleSheet.create({
     borderColor: textColors.teal900,
   },
   activeRail: {
-    backgroundColor: textColors.black,
-    borderColor: textColors.black,
+    backgroundColor: textColors.teal700,
+    borderColor: textColors.teal700,
   },
   gradientRail: {
     position: "absolute",

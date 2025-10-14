@@ -1,7 +1,6 @@
 import BidStatusModal from "@/components/BidStatusModal";
 import { BID_STATUS } from "@/constants/global";
 import { useModalManager } from "@/context/ModalManagerContext";
-import { router } from "expo-router";
 import {
   createContext,
   ReactNode,
@@ -30,6 +29,7 @@ export function BidAcceptedProvider({ children }: { children: ReactNode }) {
   const { registerModal, unregisterModal } = useModalManager();
 
   const showBidAccepted = () => {
+    console.log("🔔 showBidAccepted called - setting modal visible");
     setIsBidAcceptedVisible(true);
   };
 
@@ -44,15 +44,15 @@ export function BidAcceptedProvider({ children }: { children: ReactNode }) {
   }, [registerModal, unregisterModal, hideBidAccepted]);
 
   const onTimerComplete = () => {
-    // Hide modal and redirect to active-ride screen
+    console.log("onTimerComplete in BidAcceptedContext");
+    // Hide modal - navigation is handled in BidStatusModal component
     hideBidAccepted();
-    router.push("/(screens)/active-ride");
   };
 
   const onClose = () => {
-    // Hide modal and redirect to active-ride screen
+    console.log("onClose in BidAcceptedContext");
+    // Hide modal - navigation is handled in BidStatusModal component
     hideBidAccepted();
-    router.push("/(screens)/active-ride");
   };
 
   const contextValue: BidAcceptedContextType = {

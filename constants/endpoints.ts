@@ -46,3 +46,9 @@ export const APP_ENDPOINTS = {
   /** Get app content */
   content: "/settings-service/content",
 } as const;
+
+// Active Trip API Routes
+export const ACTIVE_TRIP_ROUTES = {
+  RETRIEVAL_ID: "/api/active-trips/retrieval-id",
+  DRIVER_ACTION: "/api/active-trips/driver-action",
+} as const;

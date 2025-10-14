@@ -262,6 +262,35 @@ export default function HomeScreen() {
     ? require("@/assets/images/red-bell-icon.png")
     : require("@/assets/images/black-bell-icon.png");
 
+  // Calculate dynamic badge dimensions based on count
+  const getBadgeDimensions = (count: number) => {
+    const displayCount = count > 99 ? "99+" : count.toString();
+    const textLength = displayCount.length;
+
+    // Base dimensions for single digit
+    let minWidth = 16;
+    let height = 16;
+
+    // Adjust for different count ranges
+    if (textLength === 1) {
+      // Single digit (1-9)
+      minWidth = 16;
+      height = 16;
+    } else if (textLength === 2) {
+      // Double digit (10-99)
+      minWidth = 22;
+      height = 16;
+    } else if (textLength === 3) {
+      // Triple digit (100+ or 99+)
+      minWidth = 24;
+      height = 16;
+    }
+
+    return { minWidth, height };
+  };
+
+  const badgeDimensions = getBadgeDimensions(unreadCount);
+
   return (
     <PermissionGate>
       <SafeAreaView style={styles.container}>
@@ -281,7 +310,15 @@ export default function HomeScreen() {
                 resizeMode="contain"
               />
               {hasUnreadNotifications && unreadCount > 0 && (
-                <View style={styles.notificationBadge}>
+                <View
+                  style={[
+                    styles.notificationBadge,
+                    {
+                      minWidth: badgeDimensions.minWidth,
+                      height: badgeDimensions.height,
+                    },
+                  ]}
+                >
                   <Typography
                     type="labelSmall"
                     weight="bold"
@@ -653,8 +690,6 @@ const styles = StyleSheet.create({
     left: 18,
     backgroundColor: textColors.red500,
     borderRadius: 10,
-    minWidth: 20,
-    height: 16,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
