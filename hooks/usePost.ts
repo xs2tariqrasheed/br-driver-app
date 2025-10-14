@@ -4,11 +4,14 @@
  * Caller: Components/screens that need to create/update resources via POST
  * Purpose: Provide reusable POST request functionality with state management
  * Input/Output:
- *   - Input: endpoint - string API endpoint path (e.g., "/qr/code"), clientType - optional "auth" or "me" for specific endpoints
+ *   - Input: endpoint - string API endpoint path (e.g., "/qr/code"), clientType - optional "auth", "me", "auction", "settings", or "active-trip" for specific endpoints
  *   - Output: State (data, loading, error) and an `execute` function to perform the POST
  * Description: Uses the configured axios client based on clientType parameter:
  *             - "auth": Uses authApiClient for authentication endpoints (login, registration, etc.)
  *             - "me": Uses meApiClient for user profile endpoints with auth token and auth base URL
+ *             - "auction": Uses auctionApiClient for auction/trip offer endpoints
+ *             - "settings": Uses settingsApiClient for settings service endpoints
+ *             - "active-trip": Uses activeTripApiClient for active trip service endpoints
  *             - default: Uses apiClient for regular API endpoints with auth token injection
  *             Both clients include appropriate interceptors and error handling.
  * Expected Outcome: Consistent POST handling across the app with proper
@@ -16,10 +19,12 @@
  */
 
 import {
+  activeTripApiClient,
   apiClient,
   auctionApiClient,
   authApiClient,
   meApiClient,
+  settingsApiClient,
   type ApiResponse,
 } from "@/config/apiConfig";
 import { API_CLIENT_TYPES } from "@/constants/global";
@@ -54,7 +59,8 @@ export const usePost = <T = any, B = any>(
    *   - Output: Promise resolving to response data
    * Description: Executes a POST request to the specified endpoint with optional
    *             body and query parameters. Uses authApiClient for "auth" clientType, meApiClient for "me" clientType,
-   *             otherwise uses apiClient. Manages loading and error states.
+   *             auctionApiClient for "auction" clientType, settingsApiClient for "settings" clientType,
+   *             activeTripApiClient for "active-trip" clientType, otherwise uses apiClient. Manages loading and error states.
    */
   const execute = useCallback(
     async (body?: B, params?: Record<string, any>): Promise<T> => {
@@ -69,6 +75,10 @@ export const usePost = <T = any, B = any>(
             ? meApiClient
             : clientType === API_CLIENT_TYPES.AUCTION
             ? auctionApiClient
+            : clientType === API_CLIENT_TYPES.SETTINGS
+            ? settingsApiClient
+            : clientType === API_CLIENT_TYPES.ACTIVE_TRIP
+            ? activeTripApiClient
             : apiClient;
         const logPrefix =
           clientType === API_CLIENT_TYPES.AUTH
@@ -77,6 +87,10 @@ export const usePost = <T = any, B = any>(
             ? "[usePost-Me]"
             : clientType === API_CLIENT_TYPES.AUCTION
             ? "[usePost-Auction]"
+            : clientType === API_CLIENT_TYPES.SETTINGS
+            ? "[usePost-Settings]"
+            : clientType === API_CLIENT_TYPES.ACTIVE_TRIP
+            ? "[usePost-ActiveTrip]"
             : "[usePost]";
 
         const response = await client.post<ApiResponse<T>>(endpoint, body, {
@@ -104,6 +118,10 @@ export const usePost = <T = any, B = any>(
             ? "[usePost-Me]"
             : clientType === API_CLIENT_TYPES.AUCTION
             ? "[usePost-Auction]"
+            : clientType === API_CLIENT_TYPES.SETTINGS
+            ? "[usePost-Settings]"
+            : clientType === API_CLIENT_TYPES.ACTIVE_TRIP
+            ? "[usePost-ActiveTrip]"
             : "[usePost]";
         log(`${logPrefix} ❌ Error`, {
           endpoint,

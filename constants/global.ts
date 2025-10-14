@@ -8,6 +8,10 @@ export const TOKEN_KEY = "@token";
 export const AUTH_STORAGE_KEY = "@auth";
 // Driver status storage key
 export const DRIVER_STORAGE_KEY = "@driver";
+// Retrieval ID storage key
+export const RETRIEVAL_ID_STORAGE_KEY = "@retrieval_id";
+// Trip ID storage key
+export const TRIP_ID_STORAGE_KEY = "@trip_id";
 
 // Driver status display labels (used in UI)
 export const DRIVER_STATUS = {
@@ -315,6 +319,7 @@ export const API_CLIENT_TYPES = {
   ME: "me",
   AUCTION: "auction",
   SETTINGS: "settings",
+  ACTIVE_TRIP: "active-trip",
   DEFAULT: "default",
 } as const;
 
@@ -323,7 +328,7 @@ export type ApiClientType =
 
 export const SOCKET_EVENTS = {
   NEW_OFFER: "trip-offer",
-  ACCEPTED_RESPONSE: "accepted-response",
+  ACCEPTED_RESPONSE: "accept-response",
   BID_RESPONSE: "bid-response",
   EXPIRED_OFFER: "expired-offer",
 } as const;
@@ -333,6 +338,14 @@ export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
 export const SOCKET = {
   OFFERS_SERVER_URL:
     process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.100.160:3002",
+  ACTIVE_TRIP_SERVER_URL:
+    process.env.EXPO_PUBLIC_ACTIVE_TRIP_SERVER_URL ||
+    "http://192.168.100.160:3003",
+} as const;
+
+// Active Trip API Routes
+export const ACTIVE_TRIP_ROUTES = {
+  RETRIEVAL_ID: "/api/active-trips/retrieval-id",
 } as const;
 
 export const TRIP_OFFER_ACTIONS = {

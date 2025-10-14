@@ -29,6 +29,7 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   Linking,
   Image as RNImage,
   SafeAreaView,
@@ -41,7 +42,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const [auth] = useAuth();
   const [driver, setDriver] = useDriver();
-  const { notifications } = useDriver();
+  const { notifications, getRetrievalId } = useDriver();
   const { hasAnyActiveOffer, setHasAnyActiveOffer } = useRideOffer();
   const [settings, setSettings] = useSettings();
   const { connectSocket, disconnectSocket } = useSocket({
@@ -194,9 +195,26 @@ export default function HomeScreen() {
       return;
     }
 
-    // If going offline, call the API first
+    // If going offline, check for active ride first
     if (isGoingOffline) {
       try {
+        // Check if driver has an active ride
+        const { retrievalId } = await getRetrievalId();
+        if (retrievalId) {
+          Alert.alert(
+            "Active Ride Detected",
+            "You have an active ride that needs to be completed. Please first cancel the active ride or mark it as completed before going offline.",
+            [
+              {
+                text: "OK",
+                style: "default",
+              },
+            ],
+            { cancelable: true }
+          );
+          return; // Prevent going offline
+        }
+
         log("[HomeScreen] Marking driver as offline via API");
         await deleteOnlineLocation();
 

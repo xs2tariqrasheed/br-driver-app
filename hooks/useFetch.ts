@@ -4,13 +4,14 @@
  * Caller: Components/screens needing to fetch data from API endpoints
  * Purpose: Provide reusable GET request functionality with state management
  * Input/Output:
- *   - Input: endpoint - string API endpoint path (e.g., "/qr/code"), clientType - optional "auth", "me", "auction", or "settings" for specific endpoints
+ *   - Input: endpoint - string API endpoint path (e.g., "/qr/code"), clientType - optional "auth", "me", "auction", "settings", or "active-trip" for specific endpoints
  *   - Output: State (data, loading, error) and an `execute` function to perform the GET
  * Description: Uses the configured axios client based on clientType parameter:
  *             - "auth": Uses authApiClient for authentication endpoints (login, registration, etc.)
  *             - "me": Uses meApiClient for user profile endpoints with auth token and auth base URL
  *             - "auction": Uses auctionApiClient for auction/trip offer endpoints
  *             - "settings": Uses settingsApiClient for settings service endpoints
+ *             - "active-trip": Uses activeTripApiClient for active trip service endpoints
  *             - default: Uses apiClient for regular API endpoints with auth token injection
  *             Both clients include appropriate interceptors and error handling.
  * Expected Outcome: Consistent GET request handling across the app with proper
@@ -18,6 +19,7 @@
  */
 
 import {
+  activeTripApiClient,
   apiClient,
   auctionApiClient,
   authApiClient,
@@ -44,12 +46,12 @@ export interface ApiState<T = any> {
  * Caller: Components requiring data fetching functionality
  * Purpose: Manages GET request state and execution
  * Input/Output:
- *   - Input: `endpoint` - string API endpoint path, `clientType` - optional "auth", "me", "auction", or "settings" for specific endpoints
+ *   - Input: `endpoint` - string API endpoint path, `clientType` - optional "auth", "me", "auction", "settings", or "active-trip" for specific endpoints
  *   - Output: `{ data, loading, error, execute }`
  * Description: Manages the state of a GET request including loading, errors, and data.
  *             `execute` can be called with optional query params to trigger the request.
  *             Uses appropriate client based on clientType: authApiClient for "auth", meApiClient for "me",
- *             auctionApiClient for "auction", settingsApiClient for "settings", otherwise uses apiClient.
+ *             auctionApiClient for "auction", settingsApiClient for "settings", activeTripApiClient for "active-trip", otherwise uses apiClient.
  *             Responses shaped as `{ data: T }` or raw `T` are both supported.
  * Expected Outcome: Clean interface for GET requests with proper state handling.
  */
@@ -71,7 +73,7 @@ export const useFetch = <T = any>(endpoint: string, clientType?: string) => {
    * Description: Executes a GET request to the specified endpoint with optional
    *             query parameters. Uses appropriate client based on clientType: authApiClient for "auth",
    *             meApiClient for "me", auctionApiClient for "auction", settingsApiClient for "settings",
-   *             otherwise uses apiClient. Manages loading and error states.
+   *             activeTripApiClient for "active-trip", otherwise uses apiClient. Manages loading and error states.
    * Expected Outcome: Successful data fetch with updated state, or error
    *                   handling with appropriate error state updates.
    */
@@ -90,6 +92,8 @@ export const useFetch = <T = any>(endpoint: string, clientType?: string) => {
             ? auctionApiClient
             : clientType === API_CLIENT_TYPES.SETTINGS
             ? settingsApiClient
+            : clientType === API_CLIENT_TYPES.ACTIVE_TRIP
+            ? activeTripApiClient
             : apiClient;
         const logPrefix =
           clientType === API_CLIENT_TYPES.AUTH
@@ -100,6 +104,8 @@ export const useFetch = <T = any>(endpoint: string, clientType?: string) => {
             ? "[useFetch-Auction]"
             : clientType === API_CLIENT_TYPES.SETTINGS
             ? "[useFetch-Settings]"
+            : clientType === API_CLIENT_TYPES.ACTIVE_TRIP
+            ? "[useFetch-ActiveTrip]"
             : "[useFetch]";
 
         const response = await client.get<ApiResponse<T>>(endpoint, {
@@ -128,6 +134,8 @@ export const useFetch = <T = any>(endpoint: string, clientType?: string) => {
             ? "[useFetch-Auction]"
             : clientType === API_CLIENT_TYPES.SETTINGS
             ? "[useFetch-Settings]"
+            : clientType === API_CLIENT_TYPES.ACTIVE_TRIP
+            ? "[useFetch-ActiveTrip]"
             : "[useFetch]";
         log(`${logPrefix} ❌ Error`, { endpoint, error: errorMessage });
         setState({

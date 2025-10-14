@@ -87,6 +87,7 @@ export default function MoreScreen() {
   const log = logger();
   const [auth, setAuth] = useAuth();
   const [driver, setDriver] = useDriver();
+  const { removeRetrievalId, removeTripId } = useDriver();
   const [, setSettings] = useSettings();
   const [logoutSheetOpen, setLogoutSheetOpen] = useState(false);
   const [deleteProfileSheetOpen, setDeleteProfileSheetOpen] = useState(false);
@@ -108,6 +109,24 @@ export default function MoreScreen() {
         log("[MoreScreen] Error marking driver offline:", error);
         // Continue with logout/delete even if API call fails
       }
+    }
+
+    // Remove retrieval ID from context and AsyncStorage
+    try {
+      await removeRetrievalId();
+      log("[MoreScreen] Retrieval ID removed successfully");
+    } catch (error) {
+      log("[MoreScreen] Error removing retrieval ID:", error);
+      // Continue with logout/delete even if retrieval ID removal fails
+    }
+
+    // Remove trip ID from context and AsyncStorage
+    try {
+      await removeTripId();
+      log("[MoreScreen] Trip ID removed successfully");
+    } catch (error) {
+      log("[MoreScreen] Error removing trip ID:", error);
+      // Continue with logout/delete even if trip ID removal fails
     }
 
     // Disconnect socket

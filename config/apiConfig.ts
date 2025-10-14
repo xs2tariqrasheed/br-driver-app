@@ -633,11 +633,140 @@ const createSettingsApiClient = (): AxiosInstance => {
   return client;
 };
 
+/**
+ * Create Active Trip API Client Function
+ *
+ * Caller: Active trip-related API utility functions and hooks
+ * Purpose: Provide specialized axios configuration for active trip service endpoints
+ * Input/Output:
+ *   - Input: None (uses Expo public environment variables for active trip service configuration)
+ *   - Output: Configured AxiosInstance with active trip-specific interceptors
+ * Description: Creates axios instance specifically for active trip service endpoints with base URL,
+ *             default headers, and interceptors. Includes request logging and comprehensive
+ *             error handling for active trip-specific scenarios. Reads the auth token from
+ *             AsyncStorage and attaches it to the Authorization header.
+ * Expected Outcome: Consistent active trip API client configuration with proper error
+ *                   handling for active trip-related operations.
+ */
+const createActiveTripApiClient = (): AxiosInstance => {
+  const API_CONFIG = {
+    BASE_URL:
+      process.env.EXPO_PUBLIC_ACTIVE_TRIP_SERVER_URL ||
+      "http://192.168.100.160:3003",
+    HEADERS: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+  };
+  const client = axios.create({
+    baseURL: API_CONFIG.BASE_URL,
+    headers: API_CONFIG.HEADERS,
+  });
+
+  /**
+   * Request Interceptor
+   *
+   * Caller: Axios interceptor system
+   * Purpose: Log requests and add authentication headers for active trip service
+   * Input/Output:
+   *   - Input: Axios request config
+   *   - Output: Modified request config or rejected promise
+   * Description: Logs outgoing active trip requests (dev-only via logger) and reads the auth token
+   *             from AsyncStorage (key: "@token"), adding it to the Authorization header.
+   *             Handles request-level errors.
+   * Expected Outcome: Request logging for debugging and proper error handling.
+   */
+  client.interceptors.request.use(
+    async (config) => {
+      log(
+        `🚀 Active Trip API Request: ${config.method?.toUpperCase()} ${
+          config.url
+        }`
+      );
+      const dynamicBaseUrl = config.baseURL;
+      log(`🚀 Active Trip Dynamic Base URL: ${dynamicBaseUrl}`);
+      const data = await getStorageItem(AUTH_STORAGE_KEY);
+      const token = data ? JSON.parse(data).token : null;
+      if (token) {
+        config.headers = config.headers || {};
+        (config.headers as Record<string, string>)[
+          "Authorization"
+        ] = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => {
+      log("❌ Active Trip Request Error:", error);
+      return Promise.reject(error);
+    }
+  );
+
+  /**
+   * Response Interceptor
+   *
+   * Caller: Axios interceptor system
+   * Purpose: Handle active trip-specific response scenarios and errors
+   * Input/Output:
+   *   - Input: Axios response or error
+   *   - Output: Response or rejected promise with active trip-specific error message
+   * Description: Logs successful active trip responses (dev-only) and handles active trip-specific
+   *             error scenarios including trip status errors, validation errors, and server errors.
+   *             Provides user-friendly error messages for active trip operations.
+   * Expected Outcome: Consistent active trip error handling with user-friendly messages
+   *                   for active trip-related operations.
+   */
+  client.interceptors.response.use(
+    (response: AxiosResponse) => {
+      // Log successful response for debugging (remove in production)
+      log(
+        `✅ Active Trip API Response: ${response.status} ${response.config.url}`
+      );
+      return response;
+    },
+    (error: AxiosError) => {
+      // Handle active trip-specific error scenarios
+      let errorMessage: string = "An unexpected error occurred";
+
+      if (error.code === "ECONNABORTED") {
+        errorMessage = "Request timed out";
+      } else if (error.response?.status === 401) {
+        errorMessage = "Authentication required. Please log in again.";
+      } else if (error.response?.status === 403) {
+        errorMessage =
+          "Access denied. You do not have permission for this active trip action.";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Active trip resource not found";
+      } else if (error.response?.status === 422) {
+        errorMessage =
+          "Invalid active trip data. Please check your input and try again.";
+      } else if (error.response?.status && error.response.status >= 500) {
+        errorMessage = "Active trip service error. Please try again later.";
+      } else if (
+        error.response?.data &&
+        typeof error.response.data === "object"
+      ) {
+        // Check for 'error' field first (backend format), then 'message' field
+        if ("error" in error.response.data) {
+          errorMessage = (error.response.data as { error: string }).error;
+        } else if ("message" in error.response.data) {
+          errorMessage = (error.response.data as { message: string }).message;
+        }
+      }
+
+      log("❌ Active Trip API Error:", errorMessage);
+      return Promise.reject(new Error(errorMessage));
+    }
+  );
+
+  return client;
+};
+
 // Create the main API clients instance
 export const apiClient = createApiClient();
 export const authApiClient = createAuthApiClient();
 export const meApiClient = createMeApiClient();
 export const auctionApiClient = createAuctionApiClient();
 export const settingsApiClient = createSettingsApiClient();
+export const activeTripApiClient = createActiveTripApiClient();
 
 export { axios };

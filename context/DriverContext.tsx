@@ -4,6 +4,8 @@ import {
   DRIVER_STORAGE_KEY,
   LOCAL_JOB_STATUS,
   NotificationType,
+  RETRIEVAL_ID_STORAGE_KEY,
+  TRIP_ID_STORAGE_KEY,
   TRIP_OFFER_ACTIONS,
   type LocalJobStatus,
 } from "@/constants/global";
@@ -53,6 +55,8 @@ export type DriverObject = {
   notifications?: NotificationItem[];
   readNotificationIds?: string[];
   hiddenLiveOffers?: HiddenLiveOffer[];
+  retrievalId?: string | null;
+  tripId?: string | null;
   // Extendable for future driver data
   [key: string]: unknown;
 } | null;
@@ -116,6 +120,20 @@ type DriverContextValue = [
   skipLiveOffer: (offerId: string) => Promise<void>;
   getLiveOfferStatus: (offerId: string) => HiddenLiveOffer | undefined;
   unhideLiveOffer: (offerId: string) => Promise<void>;
+  // Retrieval ID functions
+  setRetrievalId: (retrievalId: string) => Promise<void>;
+  getRetrievalId: () => Promise<{
+    retrievalId: string | null;
+    loading: boolean;
+  }>;
+  removeRetrievalId: () => Promise<void>;
+  // Trip ID functions
+  setTripId: (tripId: string) => Promise<void>;
+  getTripId: () => Promise<{
+    tripId: string | null;
+    loading: boolean;
+  }>;
+  removeTripId: () => Promise<void>;
 };
 
 const DriverContext = createContext<DriverContextValue | undefined>(undefined);
@@ -571,6 +589,166 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     [state.driver, setDriver]
   );
 
+  // Set retrieval ID (stores in both context and AsyncStorage)
+  const setRetrievalId = useCallback(
+    async (retrievalId: string) => {
+      if (!state.driver) {
+        log("Cannot set retrieval ID: No driver data available");
+        return;
+      }
+
+      log(`Setting retrieval ID: ${retrievalId}`);
+
+      // Update driver context
+      const updatedDriver = {
+        ...state.driver,
+        retrievalId: retrievalId,
+      };
+      await setDriver(updatedDriver);
+
+      // Store in AsyncStorage separately for easy access
+      try {
+        await setStorageItem(RETRIEVAL_ID_STORAGE_KEY, retrievalId);
+        log(`Retrieval ID ${retrievalId} stored in AsyncStorage`);
+      } catch (error) {
+        log(`Error storing retrieval ID in AsyncStorage:`, error);
+        throw error;
+      }
+    },
+    [state.driver, setDriver, log]
+  );
+
+  // Set trip ID (stores in both context and AsyncStorage)
+  const setTripId = useCallback(
+    async (tripId: string) => {
+      if (!state.driver) {
+        log("Cannot set trip ID: No driver data available");
+        return;
+      }
+
+      log(`Setting trip ID: ${tripId}`);
+
+      // Update driver context
+      const updatedDriver = {
+        ...state.driver,
+        tripId: tripId,
+      };
+      await setDriver(updatedDriver);
+
+      // Store in AsyncStorage separately for easy access
+      try {
+        await setStorageItem(TRIP_ID_STORAGE_KEY, tripId);
+        log(`Trip ID ${tripId} stored in AsyncStorage`);
+      } catch (error) {
+        log(`Error storing trip ID in AsyncStorage:`, error);
+        throw error;
+      }
+    },
+    [state.driver, setDriver, log]
+  );
+
+  // Get retrieval ID (retrieves from AsyncStorage and sets in context)
+  const getRetrievalId = useCallback(async () => {
+    log("Getting retrieval ID from AsyncStorage");
+
+    try {
+      const storedRetrievalId = await getStorageItem(RETRIEVAL_ID_STORAGE_KEY);
+      const retrievalId = storedRetrievalId
+        ? JSON.parse(storedRetrievalId)
+        : null;
+
+      log(`Retrieved retrieval ID from AsyncStorage: ${retrievalId}`);
+
+      // Update context if driver exists and ID is different
+      if (state.driver && state.driver.retrievalId !== retrievalId) {
+        const updatedDriver = {
+          ...state.driver,
+          retrievalId: retrievalId,
+        };
+        await setDriver(updatedDriver);
+        log("Updated driver context with retrieval ID from AsyncStorage");
+      }
+
+      return { retrievalId, loading: false };
+    } catch (error) {
+      log(`Error getting retrieval ID from AsyncStorage:`, error);
+      return { retrievalId: null, loading: false };
+    }
+  }, [state.driver, setDriver, log]);
+
+  // Get trip ID (retrieves from AsyncStorage and sets in context)
+  const getTripId = useCallback(async () => {
+    log("Getting trip ID from AsyncStorage");
+
+    try {
+      const storedTripId = await getStorageItem(TRIP_ID_STORAGE_KEY);
+      const tripId = storedTripId ? JSON.parse(storedTripId) : null;
+
+      log(`Retrieved trip ID from AsyncStorage: ${tripId}`);
+
+      // Update context if driver exists and ID is different
+      if (state.driver && state.driver.tripId !== tripId) {
+        const updatedDriver = {
+          ...state.driver,
+          tripId: tripId,
+        };
+        await setDriver(updatedDriver);
+        log("Updated driver context with trip ID from AsyncStorage");
+      }
+
+      return { tripId, loading: false };
+    } catch (error) {
+      log(`Error getting trip ID from AsyncStorage:`, error);
+      return { tripId: null, loading: false };
+    }
+  }, [state.driver, setDriver, log]);
+
+  // Remove retrieval ID (removes from both context and AsyncStorage)
+  const removeRetrievalId = useCallback(async () => {
+    log("Removing retrieval ID from context and AsyncStorage");
+
+    // Update driver context
+    if (state.driver) {
+      const updatedDriver = {
+        ...state.driver,
+        retrievalId: null,
+      };
+      await setDriver(updatedDriver);
+    }
+
+    // Remove from AsyncStorage
+    try {
+      await removeStorageItem(RETRIEVAL_ID_STORAGE_KEY);
+      log("Retrieval ID removed from AsyncStorage");
+    } catch (error) {
+      log(`Error removing retrieval ID from AsyncStorage:`, error);
+      throw error;
+    }
+  }, [state.driver, setDriver, log]);
+
+  // Remove trip ID (removes from both context and AsyncStorage)
+  const removeTripId = useCallback(async () => {
+    log("Removing trip ID from context and AsyncStorage");
+
+    // Update driver context
+    if (state.driver) {
+      const updatedDriver = {
+        ...state.driver,
+        tripId: null,
+      };
+      await setDriver(updatedDriver);
+    }
+
+    // Remove from AsyncStorage
+    try {
+      await removeStorageItem(TRIP_ID_STORAGE_KEY);
+      log("Trip ID removed from AsyncStorage");
+    } catch (error) {
+      log(`Error removing trip ID from AsyncStorage:`, error);
+      throw error;
+    }
+  }, [state.driver, setDriver, log]);
+
   const contextValue = useMemo<DriverContextValue>(() => {
     const baseArray: [DriverObject, (value: DriverObject) => Promise<void>] = [
       state.driver,
@@ -591,6 +769,12 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       skipLiveOffer,
       getLiveOfferStatus,
       unhideLiveOffer,
+      setRetrievalId,
+      getRetrievalId,
+      removeRetrievalId,
+      setTripId,
+      getTripId,
+      removeTripId,
     });
   }, [
     state.driver,
@@ -607,6 +791,12 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     skipLiveOffer,
     getLiveOfferStatus,
     unhideLiveOffer,
+    setRetrievalId,
+    getRetrievalId,
+    removeRetrievalId,
+    setTripId,
+    getTripId,
+    removeTripId,
   ]);
 
   if (!state.isHydrated) return null;

@@ -46,6 +46,7 @@ export default function VerifyOtpScreen() {
   const { context } = useLocalSearchParams<{ context?: string }>();
   const [currentAuth, setAuth] = useAuth();
   const [driver, setDriver] = useDriver();
+  const { removeRetrievalId, removeTripId } = useDriver();
   const [otp, setOtp] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [verified, setVerified] = useState<boolean>(false);
@@ -99,6 +100,24 @@ export default function VerifyOtpScreen() {
           log("[VerifyOtpScreen] Error marking driver offline:", error);
           // Continue with delete even if API call fails
         }
+      }
+
+      // Remove retrieval ID from context and AsyncStorage
+      try {
+        await removeRetrievalId();
+        log("[VerifyOtpScreen] Retrieval ID removed successfully");
+      } catch (error) {
+        log("[VerifyOtpScreen] Error removing retrieval ID:", error);
+        // Continue with delete even if retrieval ID removal fails
+      }
+
+      // Remove trip ID from context and AsyncStorage
+      try {
+        await removeTripId();
+        log("[VerifyOtpScreen] Trip ID removed successfully");
+      } catch (error) {
+        log("[VerifyOtpScreen] Error removing trip ID:", error);
+        // Continue with delete even if trip ID removal fails
       }
 
       // Disconnect socket
@@ -281,7 +300,7 @@ export default function VerifyOtpScreen() {
       await setAuth({
         ...currentAuth,
         user: {
-          id: data?.user?.id,
+          id: "d-4", //data?.user?.id,
           name: data?.user?.name,
           type: DRIVER_TYPES.INDEPENDENT_OPERATOR,
         },

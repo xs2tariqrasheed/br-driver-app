@@ -1,9 +1,5 @@
-import { router } from "expo-router";
-import { useEffect } from "react";
+import ActiveRideInitializer from "@/components/ActiveRideInitializer";
 
 export default function ActiveJobScreen() {
-  useEffect(() => {
-    router.replace("/(screens)/active-ride");
-  }, []);
-  return null;
+  return <ActiveRideInitializer />;
 }

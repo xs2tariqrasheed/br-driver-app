@@ -55,7 +55,7 @@ export function GlobalSocketListener() {
   const { onEvent, onDisconnect, socketStatus } = useSocket({
     driverId: auth?.user?.id,
   });
-  const { addNotification } = useDriver();
+  const { addNotification, setTripId } = useDriver();
   const [driver] = useDriver();
   const { closeAllModals } = useModalManager();
   const { showNotification: showVisualNotification } = useNotification();
@@ -238,9 +238,20 @@ export function GlobalSocketListener() {
         log("💬 Global Accepted response received:", data);
 
         try {
-          const { feedback, timestamp, timeout } = data;
+          const { feedback, timestamp, timeout, tripId } = data;
 
           if (feedback?.success) {
+            const customizedTripId = tripId || "t-1";
+
+            // Store tripId if provided
+            if (customizedTripId) {
+              try {
+                await setTripId(customizedTripId);
+                log("✅ Stored tripId from accept-response:", customizedTripId);
+              } catch (e) {
+                log("❌ Failed to store tripId from accept-response:", e);
+              }
+            }
             // Show bid accepted bottom sheet
             showBidAccepted();
             log("✅ Ride offer accepted - showing accepted sheet");
@@ -296,6 +307,16 @@ export function GlobalSocketListener() {
           hideBidWaitingTimer();
 
           if (response === "accept") {
+            // Store tripId on successful bid accept
+            if (tripId) {
+              try {
+                await setTripId(tripId);
+                log("✅ Stored tripId from bid-response accept:", tripId);
+              } catch (e) {
+                log("❌ Failed to store tripId from bid-response:", e);
+              }
+            }
+
             // Show bid accepted bottom sheet
             showBidAccepted();
             log("✅ Bid accepted - showing accepted sheet");
