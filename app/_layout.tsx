@@ -1,3 +1,4 @@
+import { GlobalActiveTripListener } from "@/components/GlobalActiveTripListener";
 import GlobalRideOfferModal from "@/components/GlobalRideOfferModal";
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
 import NetworkNotification from "@/components/NetworkNotification";
@@ -115,6 +116,8 @@ export default function RootLayout() {
                                               <StatusBar style="auto" />
                                               {/* Global Socket Listener */}
                                               <GlobalSocketListener />
+                                              {/* Global Active Trip Socket Listener */}
+                                              <GlobalActiveTripListener />
                                               {/* Online Location Tracker */}
                                               <OnlineLocationTracker />
                                               {/* Special Requirements Modal */}

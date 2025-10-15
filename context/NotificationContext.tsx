@@ -12,6 +12,8 @@ export interface NotificationData {
   title: string;
   subtitle?: string;
   message: string;
+  modal?: boolean;
+  autoHide?: boolean;
 }
 
 interface NotificationState {

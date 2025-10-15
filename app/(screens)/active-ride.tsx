@@ -5,7 +5,6 @@ import TextArea from "@/components/Form/TextArea";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
 import JobDetails from "@/components/JobDetails";
-import Notification from "@/components/Notification";
 import RideAction from "@/components/RideAction";
 import RideLocations from "@/components/RideLocations";
 import RideMap from "@/components/RideMap";
@@ -20,7 +19,6 @@ import {
   CANCEL_RIDE_REASONS,
   CancelRideReason,
   DRIVER_ACTIONS,
-  NOTIFICATION_TYPES,
   RIDE_HEADER_TITLES,
   RIDE_STATES,
   RIDE_TOGGLE_LABELS,
@@ -33,8 +31,10 @@ import {
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
+import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
 import { useFetch } from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
+import { useSocket } from "@/hooks/useSocket";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -58,6 +58,8 @@ export default function ActiveRideScreen() {
   const {
     getRetrievalId,
     getTripId,
+    setRetrievalId,
+    setTripId,
     setRideState,
     getRideState,
     removeRideState,
@@ -66,6 +68,18 @@ export default function ActiveRideScreen() {
   } = useDriver();
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
+
+  // Active trip socket connection
+  const { connectActiveTripSocket, disconnectActiveTripSocket, socketStatus } =
+    useActiveTripSocket();
+
+  // Offers socket connection (for reconnecting after trip completion)
+  const {
+    connectSocket: connectOffersSocket,
+    disconnectSocket: disconnectOffersSocket,
+  } = useSocket({
+    driverId: driverId,
+  });
 
   const [toggleValue, setToggleValue] = useState<RideToggleLabel>(
     RIDE_TOGGLE_LABELS.MAP
@@ -83,6 +97,7 @@ export default function ActiveRideScreen() {
     RIDE_STATES.EN_ROUTE
   );
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
+  const [isCompletingRide, setIsCompletingRide] = useState<boolean>(false);
 
   // Data fetching state
   const [jobOfferData, setJobOfferData] = useState<any>(null);
@@ -126,6 +141,19 @@ export default function ActiveRideScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Disconnect active trip socket when component unmounts
+      console.log("🔌 Cleaning up active trip socket on unmount");
+      disconnectActiveTripSocket();
+
+      // Reconnect offers socket when leaving active ride screen
+      console.log("🔌 Reconnecting offers socket on unmount");
+      connectOffersSocket();
+    };
+  }, [disconnectActiveTripSocket, connectOffersSocket]);
+
   // Data fetching and transformation logic
   useEffect(() => {
     const loadJobOfferData = async () => {
@@ -142,6 +170,35 @@ export default function ActiveRideScreen() {
           const transformedData = transformServerDataToJobOffer(parsedData);
           setJobOfferData(transformedData);
           setIsLoadingData(false);
+
+          // Connect to active trip socket after data is loaded
+          try {
+            // Store IDs in parallel
+            await Promise.all([
+              setRetrievalId(parsedData?.retrievalId),
+              setTripId(parsedData?.activeTrip?.tripId),
+            ]);
+
+            const fallbackTripId = parsedData?.activeTrip?.tripId;
+            const fallbackRetrievalId = parsedData?.retrievalId;
+
+            if (fallbackRetrievalId && fallbackTripId && driverId) {
+              console.log("🔌 Connecting to active trip socket...");
+
+              // Disconnect offers socket before connecting to active trip socket
+              console.log("🔌 Disconnecting offers socket...");
+              disconnectOffersSocket();
+
+              await connectActiveTripSocket(
+                driverId,
+                fallbackRetrievalId,
+                fallbackTripId
+              );
+              console.log("✅ Active trip socket connected");
+            }
+          } catch (error) {
+            console.error("❌ Failed to connect active trip socket:", error);
+          }
           return;
         }
 
@@ -172,6 +229,47 @@ export default function ActiveRideScreen() {
       const transformedData = transformServerDataToJobOffer(apiData);
       setJobOfferData(transformedData);
       setIsLoadingData(false);
+
+      // Connect to active trip socket after API data is loaded
+      const connectSocket = async () => {
+        try {
+          // Store API data IDs in parallel if they exist
+          if (apiData?.retrievalId || apiData?.activeTrip?.tripId) {
+            await Promise.all([
+              apiData?.retrievalId
+                ? setRetrievalId(apiData.retrievalId)
+                : Promise.resolve(),
+              apiData?.activeTrip?.tripId
+                ? setTripId(apiData.activeTrip.tripId)
+                : Promise.resolve(),
+            ]);
+          }
+
+          const { retrievalId } = await getRetrievalId();
+          const { tripId } = await getTripId();
+
+          const fallbackTripId = apiData?.activeTrip?.tripId || retrievalId;
+          const fallbackRetrievalId = apiData?.retrievalId || tripId;
+
+          if (fallbackRetrievalId && fallbackTripId && driverId) {
+            console.log("🔌 Connecting to active trip socket...");
+
+            // Disconnect offers socket before connecting to active trip socket
+            console.log("🔌 Disconnecting offers socket...");
+            disconnectOffersSocket();
+
+            await connectActiveTripSocket(
+              driverId,
+              fallbackRetrievalId,
+              fallbackTripId
+            );
+            console.log("✅ Active trip socket connected");
+          }
+        } catch (error) {
+          console.error("❌ Failed to connect active trip socket:", error);
+        }
+      };
+      connectSocket();
     }
   }, [apiData, apiLoading, params.activeTripData]);
 
@@ -366,8 +464,6 @@ export default function ActiveRideScreen() {
     }
   };
 
-  // Notification state
-  const [showNotification, setShowNotification] = useState<boolean>(false);
   // Bottom sheet state & handlers
   const [contactCustomerSheetOpen, setContactCustomerSheetOpen] =
     useState<boolean>(false);
@@ -483,7 +579,7 @@ export default function ActiveRideScreen() {
         if (action === DRIVER_ACTIONS.ARRIVED) {
           setIsDriverReachedOnPickup(true);
         } else if (action === DRIVER_ACTIONS.START) {
-          setShowNotification(true);
+          console.log("Ride started");
         } else if (action === DRIVER_ACTIONS.COMPLETED) {
           // Handle ride completion
           console.log("Ride completed, redirecting to feedback screen...");
@@ -504,12 +600,20 @@ export default function ActiveRideScreen() {
     try {
       console.log("Starting ride completion process...");
 
-      // Remove retrieval ID and trip ID
-      await removeRetrievalId();
-      console.log("Removed retrieval ID");
+      // Set completion loading state
+      setIsCompletingRide(true);
 
-      await removeTripId();
-      console.log("Removed trip ID");
+      // Disconnect active trip socket
+      console.log("🔌 Disconnecting active trip socket...");
+      disconnectActiveTripSocket();
+
+      // Reconnect offers socket
+      console.log("🔌 Reconnecting offers socket...");
+      await connectOffersSocket();
+
+      // Remove retrieval ID and trip ID in parallel
+      await Promise.all([removeRetrievalId(), removeTripId()]);
+      console.log("Removed retrieval ID and trip ID");
 
       await removeRideState();
       console.log("Removed ride state");
@@ -519,6 +623,8 @@ export default function ActiveRideScreen() {
       router.replace("/(screens)/feedback");
     } catch (error) {
       console.error("Error handling ride completion:", error);
+      // Reset loading state on error
+      setIsCompletingRide(false);
     }
   };
 
@@ -555,38 +661,52 @@ export default function ActiveRideScreen() {
       icon: "details.png",
       onPress: handleDetails,
       key: "details",
+      disabled: isCompletingRide,
     },
     {
       icon: "make-stop.png",
       onPress: handleStop,
       key: "make-stop",
-      disabled: isActionLoading || currentRideState !== RIDE_STATES.LOADED,
+      disabled:
+        isActionLoading ||
+        currentRideState !== RIDE_STATES.LOADED ||
+        isCompletingRide,
     },
     {
       icon: "add-toll.png",
       onPress: () => console.log("Add Toll"),
       key: "add-toll",
+      disabled: isCompletingRide,
     },
     {
       icon: "circling.png",
       onPress: () => console.log("Circling"),
       key: "circling",
+      disabled: isCompletingRide,
     },
     {
       icon: "cancel-ride.png",
       onPress: handleCancelRide,
       key: "cancel-ride",
+      disabled: isCompletingRide,
     },
     {
       icon: "update-eta.png",
       onPress: handleUpdateETA,
       key: "update-eta",
+      disabled: isCompletingRide,
     },
-    { icon: "sos.png", onPress: handleSos, key: "sos" },
+    {
+      icon: "sos.png",
+      onPress: handleSos,
+      key: "sos",
+      disabled: isCompletingRide,
+    },
     {
       icon: "contact-customer.png",
       onPress: handleContactCustomer,
       key: "contact-customer",
+      disabled: isCompletingRide,
     },
   ];
 
@@ -655,19 +775,39 @@ export default function ActiveRideScreen() {
     }
   };
 
-  const handleConfirmCancel = () => {
-    // Handle cancel ride logic here
-    console.log("Ride cancelled:", {
-      reason: selectedReason,
-      comments: cancelComments,
-    });
-    closeConfirmationModal();
-    closeCancelRideSheet();
-    // Reset state
-    setSelectedReason(null);
-    setCancelComments("");
-    // Navigate to home
-    router.replace("/(tabs)");
+  const handleConfirmCancel = async () => {
+    try {
+      // Handle cancel ride logic here
+      console.log("Ride cancelled:", {
+        reason: selectedReason,
+        comments: cancelComments,
+      });
+
+      // Disconnect active trip socket
+      console.log("🔌 Disconnecting active trip socket...");
+      disconnectActiveTripSocket();
+
+      // Reconnect offers socket
+      console.log("🔌 Reconnecting offers socket...");
+      await connectOffersSocket();
+
+      // Clean up trip data in parallel
+      await Promise.all([
+        removeRetrievalId(),
+        removeTripId(),
+        removeRideState(),
+      ]);
+
+      closeConfirmationModal();
+      closeCancelRideSheet();
+      // Reset state
+      setSelectedReason(null);
+      setCancelComments("");
+      // Navigate to home
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.error("Error handling ride cancellation:", error);
+    }
   };
 
   const handleGoBack = () => {
@@ -732,17 +872,18 @@ export default function ActiveRideScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Notification Component */}
-      <Notification
-        type={NOTIFICATION_TYPES.AUTHORIZATION}
-        title="Blink Ride"
-        subtitle="Authorization"
-        message="Please make a stop as requested by the customer and wait 8 mins you will be paid extra for this stop"
-        visible={showNotification}
-        onDismiss={() => setShowNotification(false)}
-        showDismissButton={true}
-        modal={true}
-      />
+      {/* Completion Loading Overlay */}
+      {isCompletingRide && (
+        <View style={styles.completionOverlay}>
+          <View style={styles.completionLoadingContainer}>
+            <ActivityIndicator size="large" color={textColors.teal700} />
+            <Text style={styles.completionLoadingText}>Completing ride...</Text>
+            <Text style={styles.completionSubText}>
+              Please wait while we process your ride completion
+            </Text>
+          </View>
+        </View>
+      )}
 
       <Header
         title={
@@ -866,39 +1007,39 @@ export default function ActiveRideScreen() {
       {toggleValue === RIDE_TOGGLE_LABELS.MAP && (
         <RideAction
           leftComponent={
-            <TouchableOpacity disabled={isActionLoading}>
+            <TouchableOpacity disabled={isActionLoading || isCompletingRide}>
               <Image
                 source={require("@/assets/images/actions/circling.png")}
                 style={{
                   width: 20,
                   height: 20,
-                  opacity: isActionLoading ? 0.5 : 1,
+                  opacity: isActionLoading || isCompletingRide ? 0.5 : 1,
                 }}
               />
             </TouchableOpacity>
           }
           swipeTitle={
-            isActionLoading
+            isActionLoading || isCompletingRide
               ? "Processing..."
               : SWIPE_BUTTON_TITLES[swipeButtonState]
           }
           onSwipeComplete={() => {
-            if (!isActionLoading) {
+            if (!isActionLoading && !isCompletingRide) {
               handleSwipeComplete();
             }
           }}
-          disabled={isActionLoading}
+          disabled={isActionLoading || isCompletingRide}
           rightComponent={
             <TouchableOpacity
               onPress={handleContactCustomer}
-              disabled={isActionLoading}
+              disabled={isActionLoading || isCompletingRide}
             >
               <Image
                 source={require("@/assets/images/actions/contact-customer.png")}
                 style={{
                   width: 20,
                   height: 20,
-                  opacity: isActionLoading ? 0.5 : 1,
+                  opacity: isActionLoading || isCompletingRide ? 0.5 : 1,
                 }}
               />
             </TouchableOpacity>
@@ -1348,5 +1489,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
+  },
+  completionOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    zIndex: 9999,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  completionLoadingContainer: {
+    backgroundColor: textColors.white,
+    borderRadius: 12,
+    padding: 24,
+    alignItems: "center",
+    minWidth: 280,
+    shadowColor: textColors.black,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  completionLoadingText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: textColors.black,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  completionSubText: {
+    fontSize: 14,
+    color: textColors.grey600,
+    marginTop: 8,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

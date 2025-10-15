@@ -52,7 +52,7 @@ import { showToast } from "../Toast";
 export function GlobalSocketListener() {
   const log = logger();
   const [auth] = useAuth();
-  const { onEvent, onDisconnect, socketStatus } = useSocket({
+  const { onEvent, onDisconnect, socketStatus, disconnectSocket } = useSocket({
     driverId: auth?.user?.id,
   });
   const { addNotification, setTripId } = useDriver();
@@ -241,13 +241,11 @@ export function GlobalSocketListener() {
           const { feedback, timestamp, timeout, tripId } = data;
 
           if (feedback?.success) {
-            const customizedTripId = tripId || "t-1";
-
             // Store tripId if provided
-            if (customizedTripId) {
+            if (tripId) {
               try {
-                await setTripId(customizedTripId);
-                log("✅ Stored tripId from accept-response:", customizedTripId);
+                await setTripId(tripId);
+                log("✅ Stored tripId from accept-response:", tripId);
               } catch (e) {
                 log("❌ Failed to store tripId from accept-response:", e);
               }

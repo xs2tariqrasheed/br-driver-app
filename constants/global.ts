@@ -312,6 +312,7 @@ export const SPEECH_MESSAGES = {
     "Your bid has expired. You can rebid if you're still interested.",
   BID_UNSUCCESSFUL:
     "Your bid was unsuccessful. Don't worry! More ride offers are coming your way.",
+  MAKE_STOP: "You have a stop request",
 } as const;
 
 export type NotificationType =
@@ -337,7 +338,15 @@ export const SOCKET_EVENTS = {
   EXPIRED_OFFER: "expired-offer",
 } as const;
 
+export const ACTIVE_TRIP_SOCKET_EVENTS = {
+  TRIP_STOP_ADDED: "trip-stop-added",
+  NEW_MESSAGE: "new-message",
+  SEND_MESSAGE: "send-message",
+} as const;
+
 export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
+export type ActiveTripSocketEvent =
+  (typeof ACTIVE_TRIP_SOCKET_EVENTS)[keyof typeof ACTIVE_TRIP_SOCKET_EVENTS];
 
 export const SOCKET = {
   OFFERS_SERVER_URL:

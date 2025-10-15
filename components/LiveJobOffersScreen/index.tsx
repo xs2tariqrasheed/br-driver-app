@@ -32,7 +32,7 @@ import { useRideOffer } from "@/context/RideOfferContext";
 import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
 import { logger } from "@/utils/helpers";
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
@@ -86,22 +86,22 @@ export default function LiveJobOffersScreen({
   const [selectedJobForAccept, setSelectedJobForAccept] = useState<any>(null);
   const [selectedJobForBid, setSelectedJobForBid] = useState<any>(null);
 
-  // On mount, check if a retrievalId exists; if yes, redirect to active-ride
-  const redirectedRef = useRef(false);
+  // On mount, check if a retrievalId exists; if yes, show trip in progress state
   useEffect(() => {
     (async () => {
       try {
         const { retrievalId } = await getRetrievalId();
-        if (retrievalId && !redirectedRef.current) {
-          redirectedRef.current = true;
+        if (retrievalId) {
+          console.log("RetrievalId found, showing trip in progress state");
           setIsAnyTripInProgress(true);
         } else {
-          console.log("No retrievalId found");
-          redirectedRef.current = false;
+          console.log("No retrievalId found, showing job offers");
           setIsAnyTripInProgress(false);
         }
-      } catch {
-        // Ignore retrieval errors; proceed with normal flow
+      } catch (error) {
+        console.error("Error checking retrievalId:", error);
+        // On error, assume no trip in progress
+        setIsAnyTripInProgress(false);
       }
     })();
   }, [getRetrievalId]);
