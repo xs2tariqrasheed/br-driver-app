@@ -81,6 +81,8 @@ export default function LiveJobOffersScreen({
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const [hasTimedOut, setHasTimedOut] = useState<boolean>(false);
   const [isETAModalOpen, setIsETAModalOpen] = useState<boolean>(false);
+  const [isAnyTripInProgress, setIsAnyTripInProgress] =
+    useState<boolean>(false);
   const [selectedJobForAccept, setSelectedJobForAccept] = useState<any>(null);
   const [selectedJobForBid, setSelectedJobForBid] = useState<any>(null);
 
@@ -92,10 +94,11 @@ export default function LiveJobOffersScreen({
         const { retrievalId } = await getRetrievalId();
         if (retrievalId && !redirectedRef.current) {
           redirectedRef.current = true;
-          router.replace("/(screens)/active-ride");
+          setIsAnyTripInProgress(true);
         } else {
           console.log("No retrievalId found");
           redirectedRef.current = false;
+          setIsAnyTripInProgress(false);
         }
       } catch {
         // Ignore retrieval errors; proceed with normal flow
@@ -449,6 +452,45 @@ export default function LiveJobOffersScreen({
     );
   };
 
+  // Render trip in progress state
+  const renderTripInProgressState = () => (
+    <View style={styles.tripInProgressContainer}>
+      <Typography
+        type="headingLarge"
+        weight="semibold"
+        style={styles.tripInProgressTitle}
+      >
+        Trip in Progress
+      </Typography>
+      <Typography
+        type="bodyLarge"
+        weight="regular"
+        style={styles.tripInProgressMessage}
+      >
+        You currently have an active trip. Complete your current ride to receive
+        new job offers.
+      </Typography>
+      <Image
+        source={require("@/assets/images/ride-inprogress.gif")}
+        style={styles.tripInProgressIcon}
+        resizeMode="contain"
+      />
+      <TouchableOpacity
+        style={styles.viewActiveRideButton}
+        onPress={() => router.push("/(screens)/active-ride")}
+        activeOpacity={0.7}
+      >
+        <Typography
+          type="bodyLarge"
+          weight="semibold"
+          style={styles.viewActiveRideButtonText}
+        >
+          View Active Ride
+        </Typography>
+      </TouchableOpacity>
+    </View>
+  );
+
   // Render empty state
   const renderEmptyState = () => (
     <View style={styles.emptyStateContainer}>
@@ -544,6 +586,15 @@ export default function LiveJobOffersScreen({
   }, [hasMoreJobs, sortedJobs.length]);
 
   // Error handling is now managed by the BroadcastJobOffersContext
+
+  // Show trip in progress state if driver has an active trip
+  if (isAnyTripInProgress) {
+    return (
+      <View style={[styles.container, style]}>
+        {renderTripInProgressState()}
+      </View>
+    );
+  }
 
   // Show loading state only when there are no broadcast offers yet and timeout hasn't occurred
   if (broadcastOffers.length === 0 && !hasTimedOut) {
@@ -740,5 +791,36 @@ const styles = StyleSheet.create({
   viewMoreIcon: {
     width: 16,
     height: 16,
+  },
+  tripInProgressContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  tripInProgressIcon: {
+    width: "100%",
+    height: 300,
+  },
+  tripInProgressTitle: {
+    color: textColors.black,
+    textAlign: "center",
+  },
+  tripInProgressMessage: {
+    color: textColors.grey600,
+    textAlign: "center",
+    lineHeight: 22,
+    marginTop: 10,
+  },
+  viewActiveRideButton: {
+    marginTop: -26,
+    backgroundColor: textColors.teal600,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  viewActiveRideButtonText: {
+    color: textColors.white,
+    textAlign: "center",
   },
 });
