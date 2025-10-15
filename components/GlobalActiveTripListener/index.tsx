@@ -6,6 +6,7 @@ import {
   NotificationType,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
+import { useChat } from "@/context/ChatContext";
 import { useDriver } from "@/context/DriverContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
@@ -40,6 +41,7 @@ export function GlobalActiveTripListener() {
   const { getRetrievalId, getTripId } = useDriver();
   const [driver] = useDriver();
   const { showNotification: showVisualNotification } = useNotification();
+  const { isOpen: isChatModalOpen } = useChat();
   const { isNetworkSuitableFor, networkQuality } = useNetworkMonitoring();
   const { onActiveTripEvent, onActiveTripDisconnect, socketStatus } =
     useActiveTripSocket();
@@ -161,30 +163,33 @@ export function GlobalActiveTripListener() {
           try {
             const { from, message, ts } = data;
 
-            // Show visual notification for new message
-            showVisualNotification({
-              type: NOTIFICATION_TYPES.INFO,
-              title: "New Message",
-              subtitle: "From Customer",
-              message: message || "You have a new message from the customer.",
-            });
+            // Only show visual notification if chat modal is NOT open
+            if (!isChatModalOpen) {
+              // Show visual notification for new message
+              showVisualNotification({
+                type: NOTIFICATION_TYPES.MESSAGE,
+                title: "New Message",
+                subtitle: "From Customer",
+                message: message || "You have a new message from the customer.",
+              });
 
-            // Add notification to notification center
-            const notification = {
-              id: `new-message-${ts || Date.now()}`,
-              messageTitle: "New Message",
-              messageBody:
-                message || "You have a new message from the customer.",
-              dateTime: formatDateTimestamp(
-                new Date(ts || Date.now()).toISOString()
-              ),
-              messageType: "unread" as const,
-              notificationType: NOTIFICATION_TYPES.INFO as NotificationType,
-            };
+              // Add notification to notification center
+              const notification = {
+                id: `new-message-${ts || Date.now()}`,
+                messageTitle: "New Message",
+                messageBody:
+                  message || "You have a new message from the customer.",
+                dateTime: formatDateTimestamp(
+                  new Date(ts || Date.now()).toISOString()
+                ),
+                messageType: "unread" as const,
+                notificationType: NOTIFICATION_TYPES.INFO as NotificationType,
+              };
 
-            // Note: You might want to add this to a message-specific context or notification system
-            // For now, we'll just log it
-            log("✅ New message notification created:", notification);
+              log("✅ New message notification created:", notification);
+            } else {
+              log("💬 Chat modal is open, skipping visual notification");
+            }
           } catch (error) {
             log("❌ Error processing new message event:", error);
             showToast("Failed to process new message", {

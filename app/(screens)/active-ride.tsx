@@ -9,7 +9,7 @@ import RideAction from "@/components/RideAction";
 import RideLocations from "@/components/RideLocations";
 import RideMap from "@/components/RideMap";
 import { textColors } from "@/constants/colors";
-import { openPhoneDialer, openSMSApp, openWhatsApp } from "@/utils/helpers";
+import { openPhoneDialer, openWhatsApp } from "@/utils/helpers";
 
 import Typography from "@/components/Typography";
 import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
@@ -30,6 +30,7 @@ import {
   VEHICLE_ISSUE_OFFLINE_HOURS,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
+import { useChat } from "@/context/ChatContext";
 import { useDriver } from "@/context/DriverContext";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
 import { useFetch } from "@/hooks/useFetch";
@@ -68,6 +69,7 @@ export default function ActiveRideScreen() {
   } = useDriver();
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
+  const { openChat } = useChat();
 
   // Active trip socket connection
   const { connectActiveTripSocket, disconnectActiveTripSocket, socketStatus } =
@@ -724,9 +726,9 @@ export default function ActiveRideScreen() {
 
   const handleSendSMS = async () => {
     try {
-      await openSMSApp(customerPhone);
+      openChat();
     } catch (error) {
-      // Error handling is done within the helper function
+      console.error("Failed to open chat:", error);
     }
     closeContactCustomerSheet();
   };

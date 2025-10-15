@@ -1,3 +1,4 @@
+import ChatModal from "@/components/ChatModal";
 import { GlobalActiveTripListener } from "@/components/GlobalActiveTripListener";
 import GlobalRideOfferModal from "@/components/GlobalRideOfferModal";
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
@@ -14,6 +15,7 @@ import { BidExpiredProvider } from "@/context/BidExpiredContext";
 import { BidUnsuccessfulProvider } from "@/context/BidUnsuccessfulContext";
 import { BidWaitingTimerProvider } from "@/context/BidWaitingTimerContext";
 import { BroadcastJobOffersProvider } from "@/context/BroadcastJobOffersContext";
+import { ChatProvider } from "@/context/ChatContext";
 import { ContentProvider } from "@/context/ContentContext";
 import { DriverProvider } from "@/context/DriverContext";
 import { ModalManagerProvider } from "@/context/ModalManagerContext";
@@ -69,78 +71,77 @@ export default function RootLayout() {
                   <DriverProvider>
                     <SettingsProvider>
                       <ModalManagerProvider>
-                        <RideOfferProvider>
-                          <SpecialRequirementsProvider>
-                            <PackageInfoProvider>
-                              <BidExpiredProvider>
-                                <BidBottomSheetProvider>
-                                  <BidWaitingTimerProvider>
-                                    <BidAcceptedProvider>
-                                      <BidUnsuccessfulProvider>
-                                        <BroadcastJobOffersProvider>
-                                          <NotificationProvider>
-                                            <ToastProvider>
-                                              <Stack initialRouteName="(screens)/auth">
-                                                <Stack.Screen
-                                                  name="(screens)/auth"
-                                                  options={{
-                                                    headerShown: false,
-                                                  }}
-                                                />
-                                                <Stack.Screen
-                                                  name="(screens)/more"
-                                                  options={{
-                                                    headerShown: false,
-                                                  }}
-                                                />
-                                                <Stack.Screen
-                                                  name="(tabs)"
-                                                  options={{
-                                                    headerShown: false,
-                                                  }}
-                                                />
-                                                <Stack.Screen name="+not-found" />
-                                                <Stack.Screen
-                                                  name="(screens)/notifications"
-                                                  options={{
-                                                    title: "Notifications",
-                                                  }}
-                                                />
-                                                <Stack.Screen
-                                                  name="(screens)/heat-map"
-                                                  options={{
-                                                    headerShown: false,
-                                                  }}
-                                                />
-                                              </Stack>
-                                              <StatusBar style="auto" />
-                                              {/* Global Socket Listener */}
-                                              <GlobalSocketListener />
-                                              {/* Global Active Trip Socket Listener */}
-                                              <GlobalActiveTripListener />
-                                              {/* Online Location Tracker */}
-                                              <OnlineLocationTracker />
-                                              {/* Special Requirements Modal */}
-                                              <SpecialRequirementsModal />
-                                              {/* Package Info Modal */}
-                                              <PackageInfoModal />
-                                              {/* Global Ride Offer Modal */}
-                                              <GlobalRideOfferModal />
-                                              {/* Visual Notification Manager */}
-                                              <NotificationModal />
-                                              {/* Network Status Notification */}
-                                              <NetworkNotification />
-                                            </ToastProvider>
-                                          </NotificationProvider>
-                                        </BroadcastJobOffersProvider>
-                                      </BidUnsuccessfulProvider>
-                                    </BidAcceptedProvider>
-                                  </BidWaitingTimerProvider>
-                                </BidBottomSheetProvider>
-                              </BidExpiredProvider>
-                            </PackageInfoProvider>
-                          </SpecialRequirementsProvider>
-                        </RideOfferProvider>
+                        <ChatProvider>
+                          <RideOfferProvider>
+                            <SpecialRequirementsProvider>
+                              <PackageInfoProvider>
+                                <BidExpiredProvider>
+                                  <BidBottomSheetProvider>
+                                    <BidWaitingTimerProvider>
+                                      <BidAcceptedProvider>
+                                        <BidUnsuccessfulProvider>
+                                          <BroadcastJobOffersProvider>
+                                            <NotificationProvider>
+                                              <ToastProvider>
+                                                <Stack initialRouteName="(screens)/auth">
+                                                  <Stack.Screen
+                                                    name="(screens)/auth"
+                                                    options={{
+                                                      headerShown: false,
+                                                    }}
+                                                  />
+                                                  <Stack.Screen
+                                                    name="(screens)/more"
+                                                    options={{
+                                                      headerShown: false,
+                                                    }}
+                                                  />
+                                                  <Stack.Screen
+                                                    name="(tabs)"
+                                                    options={{
+                                                      headerShown: false,
+                                                    }}
+                                                  />
+                                                  <Stack.Screen name="+not-found" />
+                                                  <Stack.Screen
+                                                    name="(screens)/notifications"
+                                                    options={{
+                                                      title: "Notifications",
+                                                    }}
+                                                  />
+                                                  <Stack.Screen
+                                                    name="(screens)/heat-map"
+                                                    options={{
+                                                      headerShown: false,
+                                                    }}
+                                                  />
+                                                </Stack>
+                                                <StatusBar style="auto" />
+                                                {/* Global Socket Listener */}
+                                                <GlobalSocketListener />
+                                                {/* Global Active Trip Socket Listener */}
+                                                <GlobalActiveTripListener />
+                                                {/* Online Location Tracker */}
+                                                <OnlineLocationTracker />
+                                                {/* Global Modals */}
+                                                <ChatModal />
+                                                <GlobalRideOfferModal />
+                                                <NotificationModal />
+                                                <NetworkNotification />
+                                                <PackageInfoModal />
+                                                <SpecialRequirementsModal />
+                                              </ToastProvider>
+                                            </NotificationProvider>
+                                          </BroadcastJobOffersProvider>
+                                        </BidUnsuccessfulProvider>
+                                      </BidAcceptedProvider>
+                                    </BidWaitingTimerProvider>
+                                  </BidBottomSheetProvider>
+                                </BidExpiredProvider>
+                              </PackageInfoProvider>
+                            </SpecialRequirementsProvider>
+                          </RideOfferProvider>
+                        </ChatProvider>
                       </ModalManagerProvider>
                     </SettingsProvider>
                   </DriverProvider>

@@ -301,6 +301,7 @@ export const NOTIFICATION_TYPES = {
   SUCCESS: "success",
   ERROR: "error",
   SPECIAL_RIDE_OFFER: "special-ride-offer",
+  MESSAGE: "message",
 } as const;
 
 // Speech Messages
@@ -313,6 +314,7 @@ export const SPEECH_MESSAGES = {
   BID_UNSUCCESSFUL:
     "Your bid was unsuccessful. Don't worry! More ride offers are coming your way.",
   MAKE_STOP: "You have a stop request",
+  NEW_MESSAGE: "You have a new blink message",
 } as const;
 
 export type NotificationType =

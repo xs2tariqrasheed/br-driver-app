@@ -38,6 +38,9 @@ const NotificationModal: React.FC = () => {
               case NOTIFICATION_TYPES.AUTHORIZATION:
                 message = SPEECH_MESSAGES.MAKE_STOP;
                 break;
+              case NOTIFICATION_TYPES.MESSAGE:
+                message = SPEECH_MESSAGES.NEW_MESSAGE;
+                break;
               default:
                 message = SPEECH_MESSAGES.NEW_RIDE_OFFER;
             }
