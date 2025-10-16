@@ -29,6 +29,20 @@ export interface RideAddressProps {
   dropoffDistance: number;
   /** Dropoff address (will wrap if long) */
   dropoffAddress: string;
+  /** Type of the ride address */
+  type: "live" | "future";
+  /** Pickup date */
+  pickupDate?: string;
+  /** Scheduled pickup time */
+  scheduledPickupTime?: string;
+  /** Ride time in minutes */
+  rideTime?: number;
+  /** Ride distance in miles */
+  rideDistance?: number;
+  /** Total price for the ride */
+  totalPrice?: number;
+  /** Driver earning amount */
+  driverEarn?: number;
   /** Custom style for the container */
   style?: ViewStyle;
 }
@@ -52,11 +66,18 @@ export interface RideAddressProps {
 export default function RideAddress({
   rideType,
   pickupTime,
+  scheduledPickupTime,
   pickupDistance,
   pickupAddress,
   dropoffTime,
   dropoffDistance,
   dropoffAddress,
+  type = "live",
+  pickupDate,
+  rideTime,
+  rideDistance,
+  totalPrice,
+  driverEarn,
   style,
 }: RideAddressProps) {
   return (
@@ -75,13 +96,27 @@ export default function RideAddress({
       <View style={styles.rightSection}>
         {/* Pickup information */}
         <View>
-          <Typography
-            type="bodySmall"
-            weight="semibold"
-            style={styles.timeDistanceText}
-          >
-            {pickupTime} Mins ({pickupDistance}m) Away
-          </Typography>
+          {type === "future" ? (
+            <Typography
+              type="bodySmall"
+              weight="semibold"
+              style={styles.timeDistanceText}
+            >
+              {`Date: ${pickupDate}`}
+              {"  "}
+              {"  "}
+              {"  "}
+              {`Time: ${scheduledPickupTime} `}
+            </Typography>
+          ) : (
+            <Typography
+              type="bodySmall"
+              weight="semibold"
+              style={styles.timeDistanceText}
+            >
+              {pickupTime} Mins ({pickupDistance}m) Away
+            </Typography>
+          )}
           <Typography
             type="bodyMedium"
             weight="semibold"
@@ -94,13 +129,57 @@ export default function RideAddress({
 
         {/* Dropoff information */}
         <View>
-          <Typography
-            type="bodySmall"
-            weight="semibold"
-            style={styles.timeDistanceText}
-          >
-            {dropoffTime} Mins ({dropoffDistance}m)
-          </Typography>
+          {type === "live" ? (
+            <Typography
+              type="bodySmall"
+              weight="semibold"
+              style={styles.timeDistanceText}
+            >
+              {dropoffTime} Mins ({dropoffDistance}m)
+            </Typography>
+          ) : (
+            <View style={styles.rideInfoContainer}>
+              {/* Ride time with icon */}
+              <View style={styles.iconTextContainer}>
+                <Typography
+                  type="bodyMedium"
+                  weight="medium"
+                  style={styles.infoText}
+                >
+                  {rideTime} Mins
+                </Typography>
+              </View>
+
+              {/* Ride distance with icon */}
+              <View style={styles.iconTextContainer}>
+                <Typography
+                  type="bodyMedium"
+                  weight="medium"
+                  style={styles.infoText}
+                >
+                  {rideDistance}m
+                </Typography>
+              </View>
+
+              {/* Pricing information */}
+              <View style={styles.pricingContainer}>
+                <Typography
+                  type="bodyMedium"
+                  weight="black"
+                  style={styles.totalPrice}
+                >
+                  ${totalPrice}
+                </Typography>
+                <Typography
+                  type="bodyMedium"
+                  weight="regular"
+                  style={styles.driverEarning}
+                >
+                  (${driverEarn})
+                </Typography>
+              </View>
+            </View>
+          )}
           <Typography
             type="bodyMedium"
             weight="semibold"
@@ -146,5 +225,33 @@ const styles = StyleSheet.create({
   addressText: {
     color: "#2A2A2A",
     lineHeight: 20,
+  },
+  rideInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "transparent",
+    marginBottom: 4,
+  },
+  iconTextContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  infoText: {
+    color: "#2A2A2A",
+  },
+  pricingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  totalPrice: {
+    color: "#2A2A2A",
+  },
+  driverEarning: {
+    color: "#2A2A2A",
+    fontSize: 14,
+    fontWeight: "400",
   },
 });

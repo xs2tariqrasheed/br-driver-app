@@ -1,72 +1,55 @@
+/**
+ * @fileoverview AvailabilityConfirmedModal Component - Modal for confirming availability
+ *
+ * This component displays:
+ * - Confirmation message that availability is confirmed
+ * - Instructions about receiving further details
+ * - Done button to close the modal
+ *
+ * Used when driver confirms availability for a future job.
+ */
+
 import { textColors } from "@/constants/colors";
 import React from "react";
 import { Modal, StyleSheet, TouchableOpacity, View } from "react-native";
 import Button from "../Button";
 import Typography from "../Typography";
 
-export interface ConfirmationModalProps {
+export interface AvailabilityConfirmedModalProps {
   /**
    * Whether the modal is open/visible
    * @default false
    */
   open: boolean;
   /**
-   * Title of the confirmation modal
+   * Callback function triggered when the done button is pressed
    */
-  title: string;
-
-  /**
-   * Description of the confirmation modal
-   */
-  description: string;
-  /**
-   * Callback function triggered when the confirm button is pressed
-   */
-  onConfirm: () => void;
-
-  /**
-   * Callback function triggered when the cancel button is pressed
-   */
-  onCancel: () => void;
-  /**
-   * Text for the cancel button
-   */
-  cancelButtonText: string;
-  /**
-   * Text for the confirm button
-   */
-  confirmButtonText: string;
+  onDone: () => void;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+const AvailabilityConfirmedModal: React.FC<AvailabilityConfirmedModalProps> = ({
   open,
-  title,
-  description,
-  onConfirm,
-  onCancel,
-  cancelButtonText,
-  confirmButtonText,
+  onDone,
 }) => {
   return (
     <Modal
       visible={open}
       transparent
       animationType="slide"
-      onRequestClose={onCancel}
+      onRequestClose={onDone}
     >
       <View style={styles.overlay}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
             <Typography
-              type="titleMedium"
+              type="titleLarge"
               weight="semibold"
               style={styles.headerTitle}
-              numberOfLines={0}
             >
-              {title}
+              Availability is confirmed.
             </Typography>
-            <TouchableOpacity style={styles.closeButton} onPress={onCancel}>
+            <TouchableOpacity style={styles.closeButton} onPress={onDone}>
               <Typography
                 type="bodyLarge"
                 weight="semibold"
@@ -84,25 +67,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               weight="regular"
               style={styles.sheetDescriptionText}
             >
-              {description}
+              You'll receive further instructions 2 hours before the job starts.
             </Typography>
 
-            <View style={styles.sheetButtonsRow}>
-              <Button
-                variant="outlined"
-                rounded="half"
-                block="half"
-                onPress={onCancel}
-              >
-                {cancelButtonText}
-              </Button>
-              <Button
-                variant="danger"
-                rounded="half"
-                block="half"
-                onPress={onConfirm}
-              >
-                {confirmButtonText}
+            <View style={styles.sheetFooter}>
+              <Button variant="primary" rounded="half" onPress={onDone}>
+                Done
               </Button>
             </View>
           </View>
@@ -128,7 +98,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -137,20 +107,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 20,
-    backgroundColor: textColors.white,
-    borderWidth: 1,
-    borderColor: textColors.grey100,
+    backgroundColor: textColors.grey100,
     alignItems: "center",
     justifyContent: "center",
   },
   closeButtonText: {
-    color: textColors.black,
+    color: textColors.grey600,
     fontSize: 16,
   },
   headerTitle: {
     color: textColors.black,
     flex: 1,
-    marginRight: 12,
+    textAlign: "center",
   },
   sheetContainer: {
     paddingHorizontal: 20,
@@ -162,11 +130,9 @@ const styles = StyleSheet.create({
     color: textColors.black,
     lineHeight: 22,
   },
-  sheetButtonsRow: {
+  sheetFooter: {
     marginTop: 16,
-    flexDirection: "row",
-    gap: 12,
   },
 });
 
-export default ConfirmationModal;
+export default AvailabilityConfirmedModal;

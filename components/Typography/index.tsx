@@ -40,7 +40,7 @@ export interface TypographyProps extends TextProps {
   type?: TYPOGRAPHY_TYPE;
   weight?: TYPOGRAPHY_WEIGHT;
   variant?: TYPOGRAPHY_COLOR_VARIANT;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   style?: StyleProp<TextStyle>;
 }
 

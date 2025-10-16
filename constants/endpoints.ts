@@ -25,6 +25,8 @@ export const HEATMAP_ENDPOINTS = {
 export const LIVE_JOB_ENDPOINTS = {
   /** Get live job offers */
   getLiveJobs: "/trip-offers",
+  /** Get future job offers */
+  getFutureJobs: "/api/trip-offers/future",
   /** Submit a bid */
   submitBid: "/bids/submit",
   /** Cancel a bid */

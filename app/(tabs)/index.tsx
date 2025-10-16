@@ -3,6 +3,7 @@ import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
 import DriverOffline from "@/components/DriverOffline";
 import Toggle from "@/components/Form/Toggle";
+import FutureJobOffersScreen from "@/components/FutureJobOffersScreen";
 import Header from "@/components/Header";
 import LiveJobOffersScreen from "@/components/LiveJobOffersScreen";
 import PermissionGate from "@/components/PermissionGate";
@@ -74,6 +75,12 @@ export default function HomeScreen() {
 
   // View hidden jobs toggle state
   const [showHiddenJobs, setShowHiddenJobs] = useState<boolean>(false);
+
+  // Active view state for hired drivers (live/future toggle)
+  // Default to "hired" to show HIRED type by default
+  const [activeView, setActiveView] = useState<"live" | "future" | "hired">(
+    "hired"
+  );
 
   // Local loading state for online toggle (includes location fetch time)
   const [isTogglingOnline, setIsTogglingOnline] = useState<boolean>(false);
@@ -292,6 +299,56 @@ export default function HomeScreen() {
 
   const badgeDimensions = getBadgeDimensions(unreadCount);
 
+  // Icon highlighting logic
+  const getIconStyle = (iconKey: string) => {
+    if (iconKey === "live-jobs" && activeView === "live") {
+      return { tintColor: textColors.teal600 };
+    }
+    if (iconKey === "future-jobs" && activeView === "future") {
+      return { tintColor: textColors.teal600 };
+    }
+    // No highlighting for "hired" state (default state)
+    return {};
+  };
+
+  // Handle icon press for hired drivers
+  const handleIconPress = (iconKey: string) => {
+    if (iconKey === "live-jobs") {
+      setActiveView("live");
+      log("Live Jobs pressed - switched to live view");
+    } else if (iconKey === "future-jobs") {
+      if (activeView === "hired" || activeView === "live") {
+        setActiveView("future");
+      } else if (activeView === "future") {
+        setActiveView("hired");
+      }
+      log(
+        `Future Jobs pressed - switched to ${
+          activeView === "hired" || activeView === "live" ? "future" : "hired"
+        } view`
+      );
+    } else {
+      // Handle other icon presses
+      if (iconKey === "view-hidden-jobs") {
+        handleToggleHiddenJobs();
+      } else if (iconKey === "sorting") {
+        openSortSheet();
+      } else if (iconKey === "ride-type") {
+        openRideTypes();
+      } else if (iconKey === "heat-map") {
+        router.push("/(screens)/heat-map" as any);
+      } else if (iconKey === "desired-locations") {
+        router.push("/(screens)/desired-destinations" as any);
+      } else if (iconKey === "settings") {
+        router.push("/(screens)/settings" as any);
+      } else if (iconKey === "jump-portal") {
+        void Linking.openURL(URLS.driverPortal);
+      } else if (iconKey === "mute-notifications") {
+        log("Mute Notifications pressed");
+      }
+    }
+  };
+
   return (
     <PermissionGate>
       <SafeAreaView style={styles.container}>
@@ -357,66 +414,52 @@ export default function HomeScreen() {
                 {
                   key: "ride-type",
                   image: require("@/assets/images/home/ride-type-icon.png"),
-                  onPress: openRideTypes,
                 },
                 {
                   key: "heat-map",
                   image: require("@/assets/images/home/heat-map-icon.png"),
-                  onPress: () => router.push("/(screens)/heat-map" as any),
                 },
                 {
                   key: "desired-locations",
                   image: require("@/assets/images/home/desired-locations-icon.png"),
-                  onPress: () =>
-                    router.push("/(screens)/desired-destinations" as any),
                 },
                 {
                   key: "settings",
                   image: require("@/assets/images/more/settings-icon.png"),
-                  onPress: () => router.push("/(screens)/settings" as any),
                 },
-                // Hide future-jobs for independent operators
+                // Show live-jobs and future-jobs only for hired drivers
                 ...(isIndependentOperator
                   ? []
                   : [
                       {
-                        key: "future-jobs",
-                        image: require("@/assets/images/home/future-jobs-icon.png"),
-                        onPress: () => log("Future Jobs pressed"),
-                      },
-                    ]),
-                // Show live-jobs only for independent operators
-                ...(isIndependentOperator
-                  ? [
-                      {
                         key: "live-jobs",
                         image: require("@/assets/images/home/live-jobs-icon.png"),
-                        onPress: () => log("Live Jobs pressed"),
                       },
-                    ]
-                  : []),
+                      {
+                        key: "future-jobs",
+                        image: require("@/assets/images/home/future-jobs-icon.png"),
+                      },
+                    ]),
                 {
                   key: "jump-portal",
                   image: require("@/assets/images/home/jump-portal-icon.png"),
-                  onPress: () => void Linking.openURL(URLS.driverPortal),
                 },
                 {
                   key: "mute-notifications",
                   image: require("@/assets/images/home/mute-notifications-icon.png"),
-                  onPress: () => log("Mute Notifications pressed"),
                 },
               ].map((item) => (
                 <TouchableOpacity
                   key={item.key}
                   accessibilityRole="button"
-                  onPress={item.onPress}
+                  onPress={() => handleIconPress(item.key)}
                   hitSlop={8}
                   style={styles.iconButton}
                   activeOpacity={0.7}
                 >
                   <RNImage
                     source={item.image}
-                    style={styles.icon}
+                    style={[styles.icon, getIconStyle(item.key)]}
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
@@ -431,25 +474,23 @@ export default function HomeScreen() {
                   image: showHiddenJobs
                     ? require("@/assets/images/home/view-hidden-jobs-active.png")
                     : require("@/assets/images/home/view-hidden-jobs-icon.png"),
-                  onPress: handleToggleHiddenJobs,
                 },
                 {
                   key: "sorting",
                   image: require("@/assets/images/home/sorting-icon.png"),
-                  onPress: openSortSheet,
                 },
               ].map((item) => (
                 <TouchableOpacity
                   key={item.key}
                   accessibilityRole="button"
-                  onPress={item.onPress}
+                  onPress={() => handleIconPress(item.key)}
                   hitSlop={8}
                   style={styles.iconButton}
                   activeOpacity={0.7}
                 >
                   <RNImage
                     source={item.image}
-                    style={styles.icon}
+                    style={[styles.icon, getIconStyle(item.key)]}
                     resizeMode="contain"
                   />
                 </TouchableOpacity>
@@ -461,11 +502,22 @@ export default function HomeScreen() {
           <DriverOffline />
         ) : hasAnyActiveOffer ? (
           <ActiveOfferLoader />
+        ) : !isIndependentOperator && activeView === "future" ? (
+          <FutureJobOffersScreen
+            sortBy={activeSortBy}
+            showHiddenJobs={showHiddenJobs}
+          />
         ) : (
           <LiveJobOffersScreen
             sortBy={activeSortBy}
             showHiddenJobs={showHiddenJobs}
-            type={isIndependentOperator ? OFFER_TYPES.LIVE : OFFER_TYPES.HIRED}
+            type={
+              isIndependentOperator
+                ? OFFER_TYPES.LIVE
+                : activeView === "live"
+                ? OFFER_TYPES.LIVE
+                : OFFER_TYPES.HIRED
+            }
           />
         )}
         {/* Ride Types Bottom Sheet */}

@@ -170,6 +170,10 @@ export type RideType = (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES];
 // API refresh interval for live job offers in milliseconds
 export const LIVE_JOB_REFRESH_INTERVAL_MS = 60000; // 60 seconds
 
+// Future Job Offers
+// API refresh interval for future job offers in milliseconds
+export const FUTURE_JOB_REFRESH_INTERVAL_MS = 300000; // 5 minutes
+
 // Live Job Status types (API status)
 export const LIVE_JOB_STATUS = {
   OFFERED: "offered",
@@ -210,6 +214,7 @@ export const DRIVER_TYPES = {
 export const OFFER_TYPES = {
   LIVE: "live",
   HIRED: "hired",
+  FUTURE: "future",
 } as const;
 
 export type OfferType = (typeof OFFER_TYPES)[keyof typeof OFFER_TYPES];
