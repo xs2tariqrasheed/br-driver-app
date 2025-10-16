@@ -1,4 +1,4 @@
-import { TRIP_OFFER_TYPES } from "@/constants/global";
+import { RIDE_TYPES, TRIP_OFFER_TYPES } from "@/constants/global";
 import { createContext, ReactNode, useContext, useState } from "react";
 
 export interface BroadcastJobOffer {
@@ -23,7 +23,7 @@ export interface BroadcastJobOffer {
   };
 
   // LiveRideOfferItem required fields
-  rideType: "one-way" | "round-trip" | "hourly";
+  rideType: keyof typeof RIDE_TYPES;
   peopleCount: number;
   rating: number;
   hasSpecialRequirements: boolean;

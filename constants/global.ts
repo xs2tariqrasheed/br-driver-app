@@ -206,11 +206,23 @@ export const DRIVER_TYPES = {
   HIRED: "hired",
 } as const;
 
+// Offer Types for UI components
+export const OFFER_TYPES = {
+  LIVE: "live",
+  HIRED: "hired",
+} as const;
+
+export type OfferType = (typeof OFFER_TYPES)[keyof typeof OFFER_TYPES];
+
 // Empty state messages
 export const EMPTY_STATE_MESSAGES = {
   NO_JOBS_TITLE: "No Jobs Available Yet",
   NO_JOBS_MESSAGE:
     "There are no jobs available in your area at this time. Please keep the app open to see the ride offers. Or you can move to another area to see jobs in that area.",
+  NO_HIRED_JOBS_MESSAGE:
+    "There are no jobs assigned to you at the moment. Please keep the app open, new assignments will appear here once available.",
+  NO_FUTURE_JOBS_MESSAGE:
+    "There are no future jobs scheduled for you at this time. New assignments will appear here once the company schedules them.",
 } as const;
 
 // Bid Waiting Timer

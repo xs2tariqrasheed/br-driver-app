@@ -3,6 +3,7 @@ import { showToast } from "@/components/Toast";
 import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import {
   API_CLIENT_TYPES,
+  RIDE_TYPES,
   TRIP_OFFER_ACTIONS,
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
@@ -29,7 +30,7 @@ interface RideOffer {
   bidable: boolean;
 
   // LiveRideOfferItem required fields
-  rideType: "one-way" | "round-trip" | "hourly";
+  rideType: keyof typeof RIDE_TYPES;
   peopleCount: number;
   rating: number;
   hasSpecialRequirements: boolean;

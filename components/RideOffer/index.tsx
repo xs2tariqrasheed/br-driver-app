@@ -15,7 +15,11 @@ import Button from "@/components/Button";
 import Header from "@/components/Header";
 import LiveRideOfferItem from "@/components/LiveRideOfferItem";
 import { colors, textColors } from "@/constants/colors";
-import { LIVE_JOB_STATUS, TRIP_OFFER_TYPES } from "@/constants/global";
+import {
+  LIVE_JOB_STATUS,
+  RIDE_TYPES,
+  TRIP_OFFER_TYPES,
+} from "@/constants/global";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { PackageInfo, usePackageInfo } from "@/context/PackageInfoContext";
@@ -54,7 +58,7 @@ interface RideOffer {
   tripOffer: TripOffer;
   bidable: boolean;
   // LiveRideOfferItem required fields
-  rideType: "one-way" | "round-trip" | "hourly";
+  rideType: keyof typeof RIDE_TYPES;
   peopleCount: number;
   rating: number;
   hasSpecialRequirements: boolean;

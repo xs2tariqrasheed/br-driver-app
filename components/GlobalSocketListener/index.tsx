@@ -1,10 +1,13 @@
 import { useEffect } from "react";
 
 import {
+  BID_STATUS,
+  LIVE_JOB_STATUS,
   NOTIFICATION_TYPES,
   NotificationType,
   SOCKET_EVENTS,
   SPEECH_MESSAGES,
+  TRIP_OFFER_ACTIONS,
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
 import { useSocket } from "@/hooks/useSocket";
@@ -310,7 +313,7 @@ export function GlobalSocketListener() {
           // Hide waiting timer first
           hideBidWaitingTimer();
 
-          if (response === "accept") {
+          if (response === TRIP_OFFER_ACTIONS.ACCEPT) {
             // Store tripId on successful bid accept
             if (tripId) {
               try {
@@ -344,7 +347,10 @@ export function GlobalSocketListener() {
               notificationType: NOTIFICATION_TYPES.SUCCESS,
             };
             await addNotification(notification);
-          } else if (response === "reject" || response === "expired") {
+          } else if (
+            response === LIVE_JOB_STATUS.REJECTED ||
+            response === BID_STATUS.EXPIRED
+          ) {
             // Show BidUnsuccessful modal instead of toast
             showBidUnsuccessful();
             log(`❌ Bid ${response} - showing BidUnsuccessful modal`);
@@ -354,19 +360,21 @@ export function GlobalSocketListener() {
 
             // Add notification
             const message =
-              response === "reject"
+              response === LIVE_JOB_STATUS.REJECTED
                 ? "Your bid was not accepted. Keep looking for other opportunities."
                 : "Your bid has expired. Keep looking for other opportunities.";
 
             const notification = {
               id: `bid-${response}-${Date.now()}`,
               messageTitle:
-                response === "reject" ? "Bid Rejected" : "Bid Expired",
+                response === LIVE_JOB_STATUS.REJECTED
+                  ? "Bid Rejected"
+                  : "Bid Expired",
               messageBody: message,
               dateTime: formatDateTimestamp(timestamp),
               messageType: "unread" as const,
               notificationType:
-                response === "reject"
+                response === LIVE_JOB_STATUS.REJECTED
                   ? NOTIFICATION_TYPES.ERROR
                   : NOTIFICATION_TYPES.WARNING,
             };

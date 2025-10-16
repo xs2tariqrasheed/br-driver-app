@@ -44,8 +44,13 @@ import RideOfferItemHeader from "../RideOfferItemHeader";
 import { showToast } from "../Toast";
 
 import {
+  DRIVER_TYPES,
+  LIVE_JOB_STATUS,
   LOCAL_JOB_STATUS,
+  OFFER_TYPES,
+  RIDE_TYPES,
   type LocalJobStatus,
+  type OfferType,
   type RideType,
 } from "@/constants/global";
 
@@ -110,6 +115,8 @@ export interface LiveRideOfferItemProps {
   onProcessingStart?: (offerId: string) => void;
   /** Callback when this offer finishes processing */
   onProcessingEnd?: () => void;
+  /** Type of the offer */
+  type?: OfferType;
 }
 
 /**
@@ -171,6 +178,7 @@ export default function LiveRideOfferItem({
   processingOfferId = null,
   onProcessingStart,
   onProcessingEnd,
+  type = OFFER_TYPES.LIVE,
 }: LiveRideOfferItemProps) {
   const { skipLiveOffer, hideLiveOffer, getLiveOfferStatus } = useDriver();
   const { updateBroadcastOffer } = useBroadcastJobOffers();
@@ -179,6 +187,7 @@ export default function LiveRideOfferItem({
   const [showHideButton, setShowHideButton] = React.useState(false);
   const [isSkipping, setIsSkipping] = React.useState(false);
   const [isHiding, setIsHiding] = React.useState(false);
+  const [isRejecting, setIsRejecting] = React.useState(false);
 
   // Get the current status of this offer
   const offerStatus = getLiveOfferStatus(id);
@@ -186,13 +195,13 @@ export default function LiveRideOfferItem({
   // Determine button title based on offer status and bidable prop
   const getButtonTitle = () => {
     // Check if the offer itself is expired (from broadcast context) - highest priority
-    if (itemStatus === "expired") {
+    if (itemStatus === LIVE_JOB_STATUS.EXPIRED) {
       console.log(`[LiveRideOfferItem] Job ${id} - showing Expired`);
       return "Expired";
     }
 
     // Check for user actions based on itemStatus (from broadcast context)
-    if (itemStatus === "accepted") {
+    if (itemStatus === LIVE_JOB_STATUS.ACCEPTED) {
       console.log(`[LiveRideOfferItem] Job ${id} - showing Accepted`);
       return "Accepted";
     } else if (itemStatus === "skipped") {
@@ -240,11 +249,11 @@ export default function LiveRideOfferItem({
   // Get background color based on ride type
   const getBackgroundColor = (type: RideType) => {
     switch (type) {
-      case "one-way":
+      case RIDE_TYPES.ONE_WAY:
         return tripTypeColors.oneWay;
-      case "round-trip":
+      case RIDE_TYPES.ROUND_TRIP:
         return tripTypeColors.roundTrip;
-      case "hourly":
+      case RIDE_TYPES.HOURLY:
         return tripTypeColors.hourly;
       default:
         return tripTypeColors.oneWay; // Default to one-way
@@ -285,7 +294,7 @@ export default function LiveRideOfferItem({
         );
 
         // Check if offer is expired before attempting to skip
-        if (itemStatus === "expired") {
+        if (itemStatus === LIVE_JOB_STATUS.EXPIRED) {
           console.log(`[LiveRideOfferItem] Job ${id} is expired, cannot skip`);
           Animated.spring(translateX, {
             toValue: 0,
@@ -370,7 +379,7 @@ export default function LiveRideOfferItem({
   const handleHideOffer = async () => {
     try {
       // Check if offer is expired before attempting to hide
-      if (itemStatus === "expired") {
+      if (itemStatus === LIVE_JOB_STATUS.EXPIRED) {
         console.log(`[LiveRideOfferItem] Job ${id} is expired, cannot hide`);
         setShowHideButton(false);
         return;
@@ -406,6 +415,49 @@ export default function LiveRideOfferItem({
     }
   };
 
+  // Handle hide action
+  const handleRejectButtonClick = async () => {
+    try {
+      // Check if offer is expired before attempting to hide
+      if (itemStatus === LIVE_JOB_STATUS.EXPIRED) {
+        console.log(
+          `[HiredDriverJobOfferItem] Job ${id} is expired, cannot reject`
+        );
+        showToast("Offer is expired and cannot be rejected", {
+          variant: "error",
+          position: "top",
+        });
+        return;
+      }
+
+      setIsRejecting(true);
+      onProcessingStart?.(id); // Notify parent that processing started
+
+      await hideLiveOffer(id);
+
+      // Also update the broadcast offers context status
+      updateBroadcastOffer(id, { status: "hidden" });
+      console.log(
+        `[HiredDriverJobOfferItem] Marked job ${id} as rejected in broadcast context`
+      );
+
+      setIsRejecting(false);
+      onProcessingEnd?.(); // Notify parent that processing ended
+    } catch (error) {
+      console.error("Failed to hide offer:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to hide offer. Please try again.";
+      showToast(errorMessage, {
+        variant: "error",
+        position: "top",
+      });
+      setIsHiding(false);
+      onProcessingEnd?.(); // Notify parent that processing ended
+      // Keep the overlay open so user can retry
+    }
+  };
   // Handle dismiss overlay
   const handleDismissOverlay = () => {
     setShowHideButton(false);
@@ -448,13 +500,23 @@ export default function LiveRideOfferItem({
       <LongPressGestureHandler
         onHandlerStateChange={onLongPressStateChange}
         minDurationMs={500}
-        enabled={!isScrolling && !disabled && processingOfferId === null}
+        enabled={
+          !isScrolling &&
+          !disabled &&
+          processingOfferId === null &&
+          type !== DRIVER_TYPES.HIRED
+        }
       >
         <View>
           <PanGestureHandler
             onGestureEvent={onGestureEvent}
             onHandlerStateChange={onHandlerStateChange}
-            enabled={!isScrolling && !disabled && processingOfferId === null}
+            enabled={
+              !isScrolling &&
+              !disabled &&
+              processingOfferId === null &&
+              type !== DRIVER_TYPES.HIRED
+            }
             // Gesture configuration for horizontal-only left swipes
             // activeOffsetX: Only activate if moved 10px horizontally (left/right)
             // failOffsetY: Fail gesture if moved 15px vertically (allows scrolling)
@@ -510,9 +572,13 @@ export default function LiveRideOfferItem({
                   totalPrice={totalPrice}
                   driverEarn={driverEarn}
                   buttonTitle={getButtonTitle()}
-                  disabled={disabled}
+                  disabled={disabled || isRejecting}
+                  isRejecting={isRejecting}
                   onButtonClick={onButtonClick}
                   hideBidButton={hideBidButton}
+                  hideRejectButton={getButtonTitle() !== "Accept"}
+                  onRejectButtonClick={handleRejectButtonClick}
+                  type={type}
                 />
               </View>
             </Animated.View>

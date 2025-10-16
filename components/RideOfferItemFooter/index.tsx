@@ -10,6 +10,7 @@
  */
 
 import { textColors } from "@/constants/colors";
+import { OFFER_TYPES, type OfferType } from "@/constants/global";
 import { Image } from "expo-image";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import Button from "../Button";
@@ -34,6 +35,14 @@ export interface RideOfferItemFooterProps {
   style?: ViewStyle;
   /** Whether the bid button should be hidden */
   hideBidButton?: boolean;
+  /** Type of the offer */
+  type?: OfferType;
+  /** Callback function for reject button click */
+  onRejectButtonClick?: () => void;
+  /** Whether the reject button is loading */
+  isRejecting?: boolean;
+  /** Whether the reject button should be hidden */
+  hideRejectButton?: boolean;
 }
 
 /**
@@ -61,6 +70,10 @@ export default function RideOfferItemFooter({
   onButtonClick,
   style,
   hideBidButton = false,
+  type = OFFER_TYPES.LIVE,
+  onRejectButtonClick,
+  isRejecting = false,
+  hideRejectButton = false,
 }: RideOfferItemFooterProps) {
   return (
     <View style={[styles.container, style]}>
@@ -91,28 +104,44 @@ export default function RideOfferItemFooter({
         </View>
 
         {/* Pricing information */}
-        <View style={styles.pricingContainer}>
-          <Typography
-            type="bodyMedium"
-            weight="black"
-            style={styles.totalPrice}
-          >
-            ${totalPrice}
-          </Typography>
-          <Typography
-            type="bodyMedium"
-            weight="regular"
-            style={styles.driverEarning}
-          >
-            (${driverEarn})
-          </Typography>
-        </View>
+        {(type === OFFER_TYPES.LIVE || hideRejectButton) && (
+          <View style={styles.pricingContainer}>
+            <Typography
+              type="bodyMedium"
+              weight="black"
+              style={styles.totalPrice}
+            >
+              ${totalPrice}
+            </Typography>
+            <Typography
+              type="bodyMedium"
+              weight="regular"
+              style={styles.driverEarning}
+            >
+              (${driverEarn})
+            </Typography>
+          </View>
+        )}
 
+        {type === OFFER_TYPES.HIRED && !hideRejectButton && (
+          <Button
+            style={styles.rejectButton}
+            block={false}
+            variant="danger"
+            rounded="half"
+            disabled={disabled || isRejecting}
+            loading={isRejecting}
+            onPress={onRejectButtonClick}
+          >
+            Reject
+          </Button>
+        )}
         {/* Bid button */}
         {hideBidButton ? null : (
           <Button
-            style={styles.button}
-            block="half"
+            style={[styles.button]}
+            block={false}
+            variant="primary"
             rounded="half"
             disabled={disabled}
             onPress={onButtonClick}
@@ -165,7 +194,13 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   button: {
-    flex: 1,
     height: 32,
+    minWidth: 80, // Ensure minimum width for usability
+  },
+  rejectButton: {
+    height: 32,
+    minWidth: 80, // Ensure minimum width for usability
+    backgroundColor: textColors.red500,
+    color: textColors.white,
   },
 });

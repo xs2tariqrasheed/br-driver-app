@@ -9,7 +9,7 @@
  * All icons support dynamic height based on parent container height.
  */
 
-import { RideType } from "@/constants/global";
+import { RIDE_TYPES, RideType } from "@/constants/global";
 import { Image, StyleSheet, View, ViewStyle } from "react-native";
 
 export interface RideTypeIconsProps {
@@ -108,11 +108,11 @@ export default function RideTypeIcons({
 
   const renderIcon = () => {
     switch (type) {
-      case "one-way":
+      case RIDE_TYPES.ONE_WAY:
         return renderOneWay();
-      case "round-trip":
+      case RIDE_TYPES.ROUND_TRIP:
         return renderRoundTrip();
-      case "hourly":
+      case RIDE_TYPES.HOURLY:
         return renderHourly();
       default:
         return renderOneWay();

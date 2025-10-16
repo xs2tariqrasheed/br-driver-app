@@ -1,4 +1,4 @@
-import { TRIP_OFFER_TYPES } from "@/constants/global";
+import { RIDE_TYPES, TRIP_OFFER_TYPES } from "@/constants/global";
 
 /**
  * Server socket data structure from terminal output
@@ -41,7 +41,7 @@ export interface FormattedTripOffer {
   // Comprehensive ride details for frontend
   rideDetails: {
     id: string;
-    rideType: "one-way" | "round-trip" | "hourly";
+    rideType: keyof typeof RIDE_TYPES;
     peopleCount: number;
     rating: number;
     hasSpecialRequirements: boolean;
@@ -107,7 +107,7 @@ export interface FormattedTripOffer {
  */
 const DEFAULT_VALUES = {
   // Ride details defaults
-  rideType: "one-way" as const,
+  rideType: RIDE_TYPES.ONE_WAY,
   peopleCount: 2,
   rating: 4.8,
   hasSpecialRequirements: false,
@@ -254,7 +254,7 @@ export function formatSocketDataToTripOffer(
     // Comprehensive ride details
     rideDetails: {
       id: tripOffer.tripId,
-      rideType: DEFAULT_VALUES.rideType,
+      rideType: DEFAULT_VALUES.rideType as keyof typeof RIDE_TYPES,
       peopleCount: DEFAULT_VALUES.peopleCount,
       rating: DEFAULT_VALUES.rating,
       hasSpecialRequirements: DEFAULT_VALUES.hasSpecialRequirements,

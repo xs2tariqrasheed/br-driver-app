@@ -13,6 +13,7 @@ import { DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import {
   DRIVER_STATUS,
   DRIVER_TYPES,
+  OFFER_TYPES,
   PREVIOUS_LOCATION_STORAGE_KEY,
   URLS,
   type DriverStatusLabel,
@@ -464,6 +465,7 @@ export default function HomeScreen() {
           <LiveJobOffersScreen
             sortBy={activeSortBy}
             showHiddenJobs={showHiddenJobs}
+            type={isIndependentOperator ? OFFER_TYPES.LIVE : OFFER_TYPES.HIRED}
           />
         )}
         {/* Ride Types Bottom Sheet */}

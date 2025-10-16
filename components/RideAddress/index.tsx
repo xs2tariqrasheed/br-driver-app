@@ -8,12 +8,11 @@
  * - Proper typography for time/distance (SF Pro Semibold 12) and addresses (SF Pro Semibold 14)
  */
 
+import { RideType } from "@/constants/global";
 import { Image } from "expo-image";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import RideTypeIcons from "../RideTypeIcons";
 import Typography from "../Typography";
-
-export type RideType = "one-way" | "round-trip" | "hourly";
 
 export interface RideAddressProps {
   /** The type of ride to display */
