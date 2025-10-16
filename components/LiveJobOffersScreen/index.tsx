@@ -20,7 +20,9 @@ import { textColors } from "@/constants/colors";
 import {
   EMPTY_STATE_MESSAGES,
   LOCAL_JOB_STATUS,
+  OFFER_TYPES,
   type LocalJobStatus,
+  type OfferType,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
@@ -52,6 +54,7 @@ interface LiveJobOffersScreenProps {
   sortBy?: "time" | "distance";
   isOnline?: boolean;
   showHiddenJobs?: boolean;
+  type?: OfferType;
 }
 
 const log = logger();
@@ -60,6 +63,7 @@ export default function LiveJobOffersScreen({
   style,
   sortBy: externalSortBy = "distance",
   showHiddenJobs,
+  type = OFFER_TYPES.LIVE,
 }: LiveJobOffersScreenProps) {
   const { getLiveOfferStatus, getRetrievalId } = useDriver();
   const [auth] = useAuth();
@@ -506,7 +510,9 @@ export default function LiveJobOffersScreen({
         weight="regular"
         style={styles.emptyStateMessage}
       >
-        {EMPTY_STATE_MESSAGES.NO_JOBS_MESSAGE}
+        {type === OFFER_TYPES.LIVE
+          ? EMPTY_STATE_MESSAGES.NO_JOBS_MESSAGE
+          : EMPTY_STATE_MESSAGES.NO_HIRED_JOBS_MESSAGE}
       </Typography>
     </View>
   );
@@ -644,6 +650,7 @@ export default function LiveJobOffersScreen({
     return (
       <View style={styles.jobItemWrapper}>
         <LiveRideOfferItem
+          type={type}
           id={item.id}
           rideType={item.rideType}
           peopleCount={item.peopleCount}
