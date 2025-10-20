@@ -59,6 +59,7 @@ export interface FormattedTripOffer {
     carType: string;
     created_at: string;
     driverInstructions: string;
+    expiredAt: string | Date | null;
   };
 
   specialRequirements: {
@@ -272,6 +273,7 @@ export function formatSocketDataToTripOffer(
       carType: DEFAULT_VALUES.carType,
       created_at: new Date(tripOffer.timestamp).toISOString(),
       driverInstructions: DEFAULT_VALUES.driverInstructions,
+      expiredAt: new Date(Date.now() + 60 * 1000).toISOString(), // 60 seconds from now
     },
 
     // Special requirements (using defaults for now)
@@ -351,6 +353,7 @@ export function formatSocketDataToRideOffer(
     // Timestamps
     timestamp: serverData.timestamp,
     timeout: serverData.timeout,
+    expiredAt: formattedTripOffer.rideDetails.expiredAt,
   };
 }
 
@@ -411,5 +414,6 @@ export function formatSocketDataToBroadcastOffer(
     // Timestamps
     timestamp: serverData.timestamp,
     timeout: serverData.timeout,
+    expiredAt: formattedTripOffer.rideDetails.expiredAt,
   };
 }

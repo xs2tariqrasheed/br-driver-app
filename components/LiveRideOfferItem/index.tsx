@@ -38,6 +38,7 @@ import {
   State,
 } from "react-native-gesture-handler";
 import Button from "../Button";
+import ProgressTimer from "../ProgressTimer";
 import RideAddress from "../RideAddress";
 import RideOfferItemFooter from "../RideOfferItemFooter";
 import RideOfferItemHeader from "../RideOfferItemHeader";
@@ -53,6 +54,9 @@ import {
   type OfferType,
   type RideType,
 } from "@/constants/global";
+import { useModalManager } from "@/context/ModalManagerContext";
+import { useRideOffer } from "@/context/RideOfferContext";
+import { calculateProgressTimerDuration } from "@/utils/helpers";
 
 export type ItemStatus = LocalJobStatus;
 
@@ -106,7 +110,7 @@ export interface LiveRideOfferItemProps {
   /** Whether the parent list is currently scrolling (disables swipe gestures) */
   isScrolling?: boolean;
   /** Whether the bid button should be hidden */
-  hideBidButton?: boolean;
+  hideActionButton?: boolean;
   /** Whether to remove the flex from the container */
   removeFlex?: boolean;
   /** ID of the offer currently being processed (skip/hide) */
@@ -117,6 +121,8 @@ export interface LiveRideOfferItemProps {
   onProcessingEnd?: () => void;
   /** Type of the offer */
   type?: OfferType;
+  /** ISO string or Date object representing when the offer expires */
+  expiredAt?: string | Date | null;
 }
 
 /**
@@ -145,6 +151,7 @@ export interface LiveRideOfferItemProps {
  *   driverEarn={46}
  *   buttonTitle="Bid"
  *   onButtonClick={() => console.log('Bid pressed')}
+ *   expiredAt="2024-01-15T10:30:00Z"
  * />
  * ```
  */
@@ -173,14 +180,17 @@ export default function LiveRideOfferItem({
   style,
   itemStatus = "offered",
   isScrolling = false,
-  hideBidButton = false,
+  hideActionButton = false,
   removeFlex = false,
   processingOfferId = null,
   onProcessingStart,
   onProcessingEnd,
   type = OFFER_TYPES.LIVE,
+  expiredAt,
 }: LiveRideOfferItemProps) {
   const { skipLiveOffer, hideLiveOffer, getLiveOfferStatus } = useDriver();
+  const { hideRideOfferModal, setHasAnyActiveOffer } = useRideOffer();
+  const { closeAllModals } = useModalManager();
   const { updateBroadcastOffer } = useBroadcastJobOffers();
   const translateX = React.useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get("window").width;
@@ -544,6 +554,30 @@ export default function LiveRideOfferItem({
                   style,
                 ]}
               >
+                {/* Countdown Timer */}
+                {expiredAt && calculateProgressTimerDuration(expiredAt) && (
+                  <View>
+                    <ProgressTimer
+                      duration={calculateProgressTimerDuration(expiredAt)!}
+                      onComplete={() => {
+                        // Update the offer status to expired when timer completes
+                        updateBroadcastOffer(id, {
+                          status: LIVE_JOB_STATUS.EXPIRED,
+                        });
+                        showToast("Offer expired", {
+                          variant: "warning",
+                          position: "top",
+                        });
+                        setHasAnyActiveOffer(false);
+                        closeAllModals();
+                        hideRideOfferModal();
+                      }}
+                      height={4}
+                      isActive={!disabled && processingOfferId === null}
+                    />
+                  </View>
+                )}
+
                 {/* Header Section */}
                 <RideOfferItemHeader
                   peopleCount={peopleCount}
@@ -563,6 +597,7 @@ export default function LiveRideOfferItem({
                   dropoffTime={dropoffTime}
                   dropoffDistance={dropoffDistance}
                   dropoffAddress={dropoffAddress}
+                  type={rideType as any}
                 />
 
                 {/* Footer Section */}
@@ -575,7 +610,7 @@ export default function LiveRideOfferItem({
                   disabled={disabled || isRejecting}
                   isRejecting={isRejecting}
                   onButtonClick={onButtonClick}
-                  hideBidButton={hideBidButton}
+                  hideActionButton={hideActionButton}
                   hideRejectButton={getButtonTitle() !== "Accept"}
                   onRejectButtonClick={handleRejectButtonClick}
                   type={type}
@@ -630,6 +665,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
     padding: 8,
+  },
+  countdownContainer: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   overlay: {
     position: "absolute",

@@ -98,6 +98,8 @@ export interface JobOffer {
   actionButtons?: ActionButton[];
   /** Whether to hide the action bar */
   showActionBar?: boolean;
+  /** ISO string or Date object representing when the offer expires */
+  expiredAt?: string | Date | null;
 }
 
 export interface JobDetailsProps {
@@ -195,6 +197,7 @@ export default function JobDetails({
     fareDetails,
     customerDetails,
     actionButtons = [],
+    expiredAt,
   } = jobOffer;
 
   // Determine if action bar should be shown
@@ -265,6 +268,7 @@ export default function JobDetails({
             }
             hasPackage={hasPackage || false}
             onPressPackage={onPressPackage || (() => {})}
+            bidable={false}
             pickupTime={pickupTime || 0}
             pickupDistance={pickupDistance || 0}
             pickupAddress={pickupAddress || ""}
@@ -275,10 +279,10 @@ export default function JobDetails({
             rideDistance={rideDistance || 0}
             totalPrice={totalPrice || 0}
             driverEarn={driverEarn || 0}
-            buttonTitle={buttonTitle || "Accept"}
             disabled={disabled}
             onButtonClick={onButtonClick || (() => {})}
-            hideBidButton={true}
+            hideActionButton={true}
+            expiredAt={expiredAt}
           />
 
           {/* Divider after Live Ride Item */}

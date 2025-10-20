@@ -356,7 +356,7 @@ export default function RideOfferModal({
                   }}
                   onButtonClick={() => {}}
                   itemStatus={offer?.status as any}
-                  hideBidButton={true}
+                  hideActionButton={true}
                   removeFlex
                   disabled
                 />

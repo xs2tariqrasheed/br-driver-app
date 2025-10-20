@@ -681,6 +681,7 @@ export default function LiveJobOffersScreen({
           processingOfferId={processingOfferId}
           onProcessingStart={(offerId) => setProcessingOfferId(offerId)}
           onProcessingEnd={() => setProcessingOfferId(null)}
+          expiredAt={item.expiredAt}
         />
       </View>
     );

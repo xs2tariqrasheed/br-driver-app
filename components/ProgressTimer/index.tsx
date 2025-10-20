@@ -8,6 +8,8 @@ interface ProgressTimerProps {
   duration: number;
   onComplete: () => void;
   isActive: boolean;
+  height?: number;
+  borderRadius?: number;
 }
 
 /**
@@ -18,6 +20,8 @@ const ProgressTimer: React.FC<ProgressTimerProps> = ({
   duration = BID_WAITING_TIMER_DURATION_MS,
   onComplete,
   isActive,
+  height = 20,
+  borderRadius = 12,
 }) => {
   const [progress, setProgress] = useState(1);
   const [isRunning, setIsRunning] = useState(false);
@@ -80,8 +84,8 @@ const ProgressTimer: React.FC<ProgressTimerProps> = ({
         progress={progress}
         color={[textColors.teal850]}
         unfilledColor={textColors.black}
-        height={20}
-        borderRadius={12}
+        height={height}
+        borderRadius={borderRadius}
         animated={false}
         direction="left-to-right"
       />

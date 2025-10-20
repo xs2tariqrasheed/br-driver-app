@@ -406,7 +406,7 @@ export default function ActiveRideScreen() {
           rideDistance: 4.0,
           totalPrice: defaultFare,
           driverEarn: driverEarn,
-          hideBidButton: true,
+          hideActionButton: true,
           onButtonClick: () => console.log("Accept pressed"),
           driverInstructions: "Please call customer when you arrive",
           fareDetails: [

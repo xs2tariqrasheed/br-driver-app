@@ -1437,3 +1437,27 @@ export const openWhatsApp = async (phoneNumber: string): Promise<void> => {
     throw error;
   }
 };
+
+/**
+ * Calculate the duration in milliseconds for ProgressTimer component
+ * @param expiredAt - ISO string or Date object representing when the offer expires
+ * @returns Duration in milliseconds, or null if expiredAt is invalid
+ */
+export function calculateProgressTimerDuration(
+  expiredAt: string | Date | null | undefined
+): number | null {
+  if (!expiredAt) {
+    return null;
+  }
+
+  const expirationDate = new Date(expiredAt);
+  const now = new Date();
+  const durationMs = expirationDate.getTime() - now.getTime();
+
+  // Return null if already expired or invalid
+  if (durationMs <= 0 || isNaN(durationMs)) {
+    return null;
+  }
+
+  return durationMs;
+}

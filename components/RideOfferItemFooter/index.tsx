@@ -34,7 +34,7 @@ export interface RideOfferItemFooterProps {
   /** Custom style for the container */
   style?: ViewStyle;
   /** Whether the bid button should be hidden */
-  hideBidButton?: boolean;
+  hideActionButton?: boolean;
   /** Type of the offer */
   type?: OfferType;
   /** Callback function for reject button click */
@@ -69,7 +69,7 @@ export default function RideOfferItemFooter({
   disabled = false,
   onButtonClick,
   style,
-  hideBidButton = false,
+  hideActionButton = false,
   type = OFFER_TYPES.LIVE,
   onRejectButtonClick,
   isRejecting = false,
@@ -137,7 +137,7 @@ export default function RideOfferItemFooter({
           </Button>
         )}
         {/* Bid button */}
-        {hideBidButton ? null : (
+        {hideActionButton ? null : (
           <Button
             style={[styles.button]}
             block={false}
