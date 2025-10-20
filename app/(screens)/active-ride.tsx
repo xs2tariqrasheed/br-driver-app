@@ -11,6 +11,7 @@ import RideMap from "@/components/RideMap";
 import { textColors } from "@/constants/colors";
 import { openPhoneDialer, openWhatsApp } from "@/utils/helpers";
 
+import AddTollBottomSheet from "@/components/AddTollBottomSheet";
 import Typography from "@/components/Typography";
 import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
 import {
@@ -477,7 +478,7 @@ export default function ActiveRideScreen() {
   const [confirmationModalOpen, setConfirmationModalOpen] =
     useState<boolean>(false);
   const [updateETASheetOpen, setUpdateETASheetOpen] = useState<boolean>(false);
-
+  const [addTollSheetOpen, setAddTollSheetOpen] = useState<boolean>(false);
   // Cancel ride state
   const [selectedReason, setSelectedReason] = useState<CancelRideReason | null>(
     null
@@ -500,6 +501,9 @@ export default function ActiveRideScreen() {
     setUpdateETASheetOpen(true);
   };
 
+  const handleAddToll = () => {
+    setAddTollSheetOpen(true);
+  };
   const handleDetails = () => {
     setToggleValue(RIDE_TOGGLE_LABELS.DETAILS);
   };
@@ -655,6 +659,10 @@ export default function ActiveRideScreen() {
     setUpdateETASheetOpen(false);
   }, []);
 
+  const closeAddTollSheet = useCallback(() => {
+    setAddTollSheetOpen(false);
+  }, []);
+
   const handleContactCustomer = () => {
     setContactCustomerSheetOpen(true);
   };
@@ -677,7 +685,7 @@ export default function ActiveRideScreen() {
     },
     {
       icon: "add-toll.png",
-      onPress: () => console.log("Add Toll"),
+      onPress: handleAddToll,
       key: "add-toll",
       disabled: isCompletingRide,
     },
@@ -822,6 +830,12 @@ export default function ActiveRideScreen() {
     // Handle ETA update logic here
     console.log("ETA updated:", { eta, note });
     closeUpdateETASheet();
+  };
+
+  // Add Toll handler
+  const handleAddTollSubmit = (tollAmount: number) => {
+    console.log("Toll amount added:", tollAmount);
+    closeAddTollSheet();
   };
 
   // Loading state
@@ -1050,7 +1064,7 @@ export default function ActiveRideScreen() {
         />
       )}
 
-      {/* Forgot Bottom Sheet */}
+      {/* Contact Customer Bottom Sheet */}
       <BottomSheet
         open={contactCustomerSheetOpen}
         onClose={closeContactCustomerSheet}
@@ -1298,6 +1312,19 @@ export default function ActiveRideScreen() {
         description="Let the rider know if your arrival time has changed."
         showNoteSection={true}
         buttonText="Update ETA"
+      />
+
+      {/* Add Toll Bottom Sheet */}
+      <AddTollBottomSheet
+        open={addTollSheetOpen}
+        onClose={closeAddTollSheet}
+        onSubmit={handleAddTollSubmit}
+        snapPoints={["45%"]}
+        initialSnapIndex={0}
+        showHeader={true}
+        backdrop={true}
+        swipeToClose={false}
+        isLoading={false}
       />
     </View>
   );
