@@ -3,12 +3,7 @@ import MapLoading from "@/components/MapLoading";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { GOOGLE_MAPS_API_KEY } from "@/constants/global";
-import {
-  geocodeAddress,
-  getCurrentLocation,
-  LocationCoordinates,
-  logger,
-} from "@/utils/helpers";
+import { geocodeAddress, LocationCoordinates, logger } from "@/utils/helpers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
@@ -310,10 +305,7 @@ export default function RideMap({
     },
   ];
 
-  // Icon sources - use resolveAssetSource for native markers
-  const carIcon = Image.resolveAssetSource(
-    require("@/assets/images/car-icon.png")
-  );
+  // Icon sources
   const pickupIconSource = require("@/assets/images/pickup-icon.png");
   const dropoffIconSource = require("@/assets/images/dropoff-icon.png");
   const wazeIcon = require("@/assets/images/waze-icon.png");
@@ -405,16 +397,33 @@ export default function RideMap({
     origin: LocationCoordinates,
     destination: LocationCoordinates
   ): Promise<LocationCoordinates[]> => {
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${GOOGLE_MAPS_API_KEY}`;
-    const response = await fetch(url);
-    const data = await response.json();
+    try {
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${GOOGLE_MAPS_API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
 
-    if (data.status !== "OK") {
-      throw new Error(`Directions request failed: ${data.status}`);
+      if (data.status !== "OK") {
+        log(`Directions request failed: ${data.status}`);
+        // If directions fail, return a simple straight line between points
+        return [origin, destination];
+      }
+
+      const encoded = data.routes[0].overview_polyline.points;
+      const decoded = decodePolyline(encoded);
+
+      // Limit the number of points to prevent polyline overflow
+      if (decoded.length > 500) {
+        log(`Route has ${decoded.length} points, limiting to 500`);
+        const step = Math.floor(decoded.length / 500);
+        return decoded.filter((_, index) => index % step === 0);
+      }
+
+      return decoded;
+    } catch (error) {
+      log(`Error fetching route: ${error}`);
+      // Return a simple straight line between points
+      return [origin, destination];
     }
-
-    const encoded = data.routes[0].overview_polyline.points;
-    return decodePolyline(encoded);
   };
 
   /**
@@ -425,13 +434,13 @@ export default function RideMap({
       setIsLoading(true);
       setError(null);
 
-      // Get current location
-      const currentLocationRegion = await getCurrentLocation({
-        latitude: 37.78825,
-        longitude: -122.4324,
+      // Use the provided Lahore coordinates
+      const currentLocationRegion = {
+        latitude: 31.3545,
+        longitude: 74.3953,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
-      });
+      };
 
       const current = {
         latitude: currentLocationRegion.latitude,
@@ -447,23 +456,48 @@ export default function RideMap({
       // Geocode pickup address
       const pickup = await geocodeAddress(pickupAddress, GOOGLE_MAPS_API_KEY);
       if (!pickup) {
-        throw new Error(`Could not find pickup location: ${pickupAddress}`);
+        log(
+          `Could not geocode pickup address: ${pickupAddress}, using fallback coordinates`
+        );
+        // Use fallback coordinates for Lahore
+        const fallbackPickup = { latitude: 31.3709, longitude: 74.3648 };
+        setPickupLocation(fallbackPickup);
+      } else {
+        setPickupLocation(pickup);
       }
-      setPickupLocation(pickup);
 
       // Geocode dropoff address
       const dropoff = await geocodeAddress(dropoffAddress, GOOGLE_MAPS_API_KEY);
       if (!dropoff) {
-        throw new Error(`Could not find dropoff location: ${dropoffAddress}`);
+        log(
+          `Could not geocode dropoff address: ${dropoffAddress}, using fallback coordinates`
+        );
+        // Use fallback coordinates for Lahore
+        const fallbackDropoff = { latitude: 31.4244, longitude: 74.3574 };
+        setDropoffLocation(fallbackDropoff);
+      } else {
+        setDropoffLocation(dropoff);
       }
-      setDropoffLocation(dropoff);
+
+      // Get the actual pickup and dropoff locations (either geocoded or fallback)
+      const actualPickup = pickup || {
+        latitude: 31.3709,
+        longitude: 74.3648,
+      };
+      const actualDropoff = dropoff || {
+        latitude: 31.4244,
+        longitude: 74.3574,
+      };
 
       // Fetch routes
-      const pickupRoute = await getRouteCoordinates(current, pickup);
+      const pickupRoute = await getRouteCoordinates(current, actualPickup);
       const interpolatedPickup = interpolateRoute(pickupRoute);
       setPickupInterpolated(interpolatedPickup);
 
-      const dropoffRoute = await getRouteCoordinates(pickup, dropoff);
+      const dropoffRoute = await getRouteCoordinates(
+        actualPickup,
+        actualDropoff
+      );
       const interpolatedDropoff = interpolateRoute(dropoffRoute);
       setDropoffInterpolated(interpolatedDropoff);
 
@@ -600,9 +634,14 @@ export default function RideMap({
     }
 
     const interpolated: LocationCoordinates[] = [];
-    const maxSegmentDistance = 0.00005; // Roughly ~5.5 meters for more points
+    const maxSegmentDistance = 0.0001; // ~11 meters for more frequent updates and smoother path reduction
+    const maxPoints = 1000; // Increased limit for finer interpolation without overflow
 
-    for (let i = 0; i < route.length - 1; i++) {
+    for (
+      let i = 0;
+      i < route.length - 1 && interpolated.length < maxPoints;
+      i++
+    ) {
       const start = route[i];
       const end = route[i + 1];
 
@@ -612,9 +651,15 @@ export default function RideMap({
         end.latitude - start.latitude,
         end.longitude - start.longitude
       );
-      const segments = Math.max(1, Math.floor(distance / maxSegmentDistance));
+      const segments = Math.max(
+        1,
+        Math.min(
+          Math.floor(distance / maxSegmentDistance),
+          Math.floor((maxPoints - interpolated.length) / (route.length - i))
+        )
+      );
 
-      for (let j = 1; j < segments; j++) {
+      for (let j = 1; j < segments && interpolated.length < maxPoints; j++) {
         const ratio = j / segments;
         interpolated.push({
           latitude: start.latitude + (end.latitude - start.latitude) * ratio,
@@ -624,7 +669,10 @@ export default function RideMap({
       }
     }
 
-    interpolated.push(route[route.length - 1]);
+    if (interpolated.length < maxPoints) {
+      interpolated.push(route[route.length - 1]);
+    }
+
     return interpolated;
   };
 
@@ -787,9 +835,14 @@ export default function RideMap({
           anchor={{ x: 0.5, y: 0.5 }}
           rotation={animatedRotation.current}
           flat={true}
-          icon={carIcon}
           zIndex={1000}
-        />
+        >
+          <Image
+            source={require("@/assets/images/3d-car-icon.png")}
+            style={styles.carIcon}
+            resizeMode="contain"
+          />
+        </Marker.Animated>
 
         {/* Pickup location marker */}
         <Marker
@@ -1014,5 +1067,9 @@ const styles = StyleSheet.create({
   calloutText: {
     color: textColors.grey700,
     lineHeight: 18,
+  },
+  carIcon: {
+    width: 65,
+    height: 65,
   },
 });

@@ -13,6 +13,10 @@ export interface ExpirationContexts {
   markBroadcastOfferAsExpired?: (tripId: string) => void;
   hideRideOfferModal?: () => void;
   setHasAnyActiveOffer?: (value: boolean) => Promise<void>;
+  closeAllModals?: () => void;
+  // Context data for offer discovery
+  currentOffer?: any;
+  broadcastOffers?: any[];
 }
 
 export type OfferType = "sequential" | "broadcast";

@@ -573,7 +573,7 @@ export default function LiveRideOfferItem({
                         hideRideOfferModal();
                       }}
                       height={4}
-                      isActive={!disabled && processingOfferId === null}
+                      isActive={true}
                     />
                   </View>
                 )}

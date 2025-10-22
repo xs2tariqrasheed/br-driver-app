@@ -71,8 +71,9 @@ export function GlobalSocketListener() {
     saveTemporaryRide,
     removeTemporaryRide,
     removeTemporaryRidesByTripId,
+    currentOffer,
   } = useRideOffer();
-  const { addBroadcastOffer, markBroadcastOfferAsExpired } =
+  const { addBroadcastOffer, markBroadcastOfferAsExpired, broadcastOffers } =
     useBroadcastJobOffers();
 
   // Bid context hooks
@@ -396,18 +397,17 @@ export function GlobalSocketListener() {
       SOCKET_EVENTS.EXPIRED_OFFER,
       async (data: any) => {
         log("💬 Global Expired offer received:", data);
-        const modifiedData = {
-          ...data,
-          offerType: data?.offerType || TRIP_OFFER_TYPES.BROADCAST,
-        };
         try {
-          // Use the ExpirationService to handle the expiration
-          await expirationService.handleOfferExpiration(modifiedData, {
+          // Use the ExpirationService to handle the expiration with context data
+          await expirationService.handleOfferExpiration(data, {
             markSequentialOfferAsExpired,
             markBroadcastOfferAsExpired,
             hideRideOfferModal,
             setHasAnyActiveOffer,
             closeAllModals,
+            // Pass context data for offer discovery
+            currentOffer: currentOffer,
+            broadcastOffers: broadcastOffers,
           });
 
           // NEW: Remove temporary rides for expired offers

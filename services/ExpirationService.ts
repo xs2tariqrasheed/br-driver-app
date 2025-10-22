@@ -1,5 +1,6 @@
 import { showToast } from "@/components/Toast";
 import { TRIP_OFFER_TYPES } from "@/constants/global";
+import { ExpirationContexts } from "@/types/OfferExpiration";
 import { logger } from "@/utils/helpers";
 
 /**
@@ -21,28 +22,33 @@ export class ExpirationService {
 
   /**
    * Handle offer expiration from server
-   * @param data - Server payload containing tripId and offerType
-   * @param contexts - Object containing context methods for updating offers
+   * @param data - Server payload containing tripId
+   * @param contexts - Object containing context methods and data for updating offers
    */
   public async handleOfferExpiration(
     data: {
       tripId: string;
-      offerType?: "sequential" | "broadcast";
       timestamp?: string;
     },
-    contexts: {
-      markSequentialOfferAsExpired?: (tripId: string) => void;
-      markBroadcastOfferAsExpired?: (tripId: string) => void;
-      hideRideOfferModal?: () => void;
-      setHasAnyActiveOffer?: (value: boolean) => Promise<void>;
-      closeAllModals?: () => void;
-    }
+    contexts: ExpirationContexts
   ): Promise<void> {
     try {
-      const { tripId, offerType, timestamp } = data;
+      const { tripId, timestamp } = data;
+
+      this.log(`⏰ Handling offer expiration for tripId: ${tripId}`);
+
+      // Find the offer by tripId to determine its type
+      const offerInfo = this.findOfferByTripId(tripId, contexts);
+
+      if (!offerInfo) {
+        this.log(
+          `❌ Offer not found for tripId: ${tripId} - skipping expiration`
+        );
+        return;
+      }
 
       this.log(
-        `⏰ Handling offer expiration for tripId: ${tripId}, type: ${offerType}`
+        `🔍 Found offer: ${offerInfo.type} (${offerInfo.context}) for tripId: ${tripId}`
       );
 
       // Show consistent toast message for all expired offers
@@ -51,33 +57,14 @@ export class ExpirationService {
         position: "top",
       });
 
-      // Determine offer type and handle accordingly
-      if (offerType === TRIP_OFFER_TYPES.SEQUENTIAL || !offerType) {
-        // Handle Sequential offer expiration
+      // Handle expiration based on discovered offer type
+      if (offerInfo.type === TRIP_OFFER_TYPES.SEQUENTIAL) {
         this.log(`📱 Handling Sequential offer expiration: ${tripId}`);
-
         if (contexts.markSequentialOfferAsExpired) {
-          // markSequentialOfferAsExpired now handles all modal closing and state updates
           contexts.markSequentialOfferAsExpired(tripId);
         }
-      } else if (offerType === TRIP_OFFER_TYPES.BROADCAST) {
-        // Handle Broadcast offer expiration
+      } else if (offerInfo.type === TRIP_OFFER_TYPES.BROADCAST) {
         this.log(`📡 Handling Broadcast offer expiration: ${tripId}`);
-
-        if (contexts.markBroadcastOfferAsExpired) {
-          contexts.markBroadcastOfferAsExpired(tripId);
-        }
-      } else {
-        // Fallback: try to handle both types
-        this.log(
-          `🔄 Fallback: Handling offer expiration for both types: ${tripId}`
-        );
-
-        if (contexts.markSequentialOfferAsExpired) {
-          // markSequentialOfferAsExpired now handles all modal closing and state updates
-          contexts.markSequentialOfferAsExpired(tripId);
-        }
-
         if (contexts.markBroadcastOfferAsExpired) {
           contexts.markBroadcastOfferAsExpired(tripId);
         }
@@ -111,19 +98,58 @@ export class ExpirationService {
   }
 
   /**
+   * Find offer by tripId across all contexts
+   * @param tripId - The trip ID to search for
+   * @param contexts - Context data containing offers
+   * @returns Offer information or null if not found
+   */
+  private findOfferByTripId(
+    tripId: string,
+    contexts: ExpirationContexts
+  ): { type: string; context: string; offer: any } | null {
+    this.log(`🔍 Searching for offer with tripId: ${tripId}`);
+
+    // 1. Check Sequential offers (RideOfferContext)
+    if (
+      contexts.currentOffer &&
+      contexts.currentOffer.tripOffer?.tripId === tripId
+    ) {
+      this.log(`📱 Found sequential offer for tripId: ${tripId}`);
+      return {
+        type: TRIP_OFFER_TYPES.SEQUENTIAL,
+        context: "rideOffer",
+        offer: contexts.currentOffer,
+      };
+    }
+
+    // 2. Check Broadcast offers (BroadcastJobOffersContext)
+    if (contexts.broadcastOffers) {
+      const broadcastOffer = contexts.broadcastOffers.find(
+        (offer) => offer.tripOffer?.tripId === tripId
+      );
+
+      if (broadcastOffer) {
+        this.log(`📡 Found broadcast offer for tripId: ${tripId}`);
+        return {
+          type: TRIP_OFFER_TYPES.BROADCAST,
+          context: "broadcastJobOffers",
+          offer: broadcastOffer,
+        };
+      }
+    }
+
+    this.log(`❌ No offer found for tripId: ${tripId}`);
+    return null;
+  }
+
+  /**
    * Mark a specific offer as expired by tripId
    * This is a utility method for manual expiration handling
    */
   public markOfferAsExpired(
     tripId: string,
     offerType: "sequential" | "broadcast",
-    contexts: {
-      markSequentialOfferAsExpired?: (tripId: string) => void;
-      markBroadcastOfferAsExpired?: (tripId: string) => void;
-      hideRideOfferModal?: () => void;
-      setHasAnyActiveOffer?: (value: boolean) => Promise<void>;
-      closeAllModals?: () => void;
-    }
+    contexts: ExpirationContexts
   ): void {
     this.log(
       `🔧 Manually marking offer as expired: ${tripId}, type: ${offerType}`

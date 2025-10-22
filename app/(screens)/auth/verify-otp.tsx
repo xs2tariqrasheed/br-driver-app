@@ -300,9 +300,12 @@ export default function VerifyOtpScreen() {
       await setAuth({
         ...currentAuth,
         user: {
-          id: "d-1", //data?.user?.id,
-          name: data?.user?.name,
-          type: DRIVER_TYPES.INDEPENDENT_OPERATOR,
+          id: data?.user?.id,
+          name: data?.user?.name || "John Doe",
+          type:
+            data?.user?.id % 2 === 0
+              ? DRIVER_TYPES.INDEPENDENT_OPERATOR
+              : DRIVER_TYPES.HIRED,
         },
       } as any);
       showToast("Logged in successfully", {

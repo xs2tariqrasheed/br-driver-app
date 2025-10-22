@@ -5,6 +5,7 @@ import InfoTable, { InfoTableDataItem } from "@/components/InfoTable";
 import Logo from "@/components/Logo";
 import Rating from "@/components/Rating";
 import { ThemedView } from "@/components/ThemedView";
+import { useToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { router, Stack } from "expo-router";
@@ -21,6 +22,7 @@ import {
 } from "react-native";
 
 const FeedbackScreen: React.FC = () => {
+  const { showToast } = useToast();
   const [rating, setRating] = useState(0);
   const [comments, setComments] = useState("");
 
@@ -40,6 +42,8 @@ const FeedbackScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    showToast("Feedback submitted successfully!", "success", "top");
+    router.replace("/(tabs)");
     try {
       // TODO: Replace with actual API call
       const response = await fetch("/api/feedback", {
