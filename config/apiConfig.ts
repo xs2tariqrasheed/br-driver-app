@@ -171,8 +171,8 @@ const createApiClient = (): AxiosInstance => {
 const createAuctionApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_OFFERS_SERVER_URL ||
-      "http://192.168.100.160:3002",
+      process.env.EXPO_PUBLIC_BASE_URL ||
+      "https://djh0g1zn5pc6f.cloudfront.net",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -407,8 +407,7 @@ const createAuthApiClient = (): AxiosInstance => {
  */
 const createMeApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL:
-      process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
+    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -654,8 +653,8 @@ const createSettingsApiClient = (): AxiosInstance => {
 const createActiveTripApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_ACTIVE_TRIP_SERVER_URL ||
-      "http://192.168.100.160:3003/active-trips",
+      process.env.EXPO_PUBLIC_BASE_URL ||
+      "https://djh0g1zn5pc6f.cloudfront.net",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",

@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "br-driver-app",
+    "name": "BR Driver",
     "slug": "br-driver-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/splash-icon.png",
     "scheme": "brdriverapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.saadforeaims.brdriverapp",
+      "bundleIdentifier": "com.mujahidforeaims.brdriverapp",
       "infoPlist": {
         "NSFaceIDUsageDescription": "We use Face ID to help you sign in securely.",
         "ITSAppUsesNonExemptEncryption": false,
@@ -23,7 +23,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/splash-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

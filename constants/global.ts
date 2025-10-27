@@ -369,10 +369,9 @@ export type ActiveTripSocketEvent =
 
 export const SOCKET = {
   OFFERS_SERVER_URL:
-    process.env.EXPO_PUBLIC_OFFERS_SERVER_URL || "http://192.168.100.160:3002",
+    process.env.EXPO_PUBLIC_BASE_URL || "https://djh0g1zn5pc6f.cloudfront.net",
   ACTIVE_TRIP_SERVER_URL:
-    process.env.EXPO_PUBLIC_ACTIVE_TRIP_SERVER_URL ||
-    "http://192.168.100.160:3003",
+    process.env.EXPO_PUBLIC_BASE_URL || "https://djh0g1zn5pc6f.cloudfront.net",
 } as const;
 
 export const TRIP_OFFER_ACTIONS = {

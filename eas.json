@@ -1,21 +1,51 @@
 {
   "cli": {
-    "version": ">= 16.17.4",
-    "appVersionSource": "remote"
+    "version": ">= 3.0.0"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "android": {
-        "buildType": "apk"
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "dev"
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "dev"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "EXPO_PUBLIC_BASE_URL": "https://djh0g1zn5pc6f.cloudfront.net",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_NEW": "AIzaSyBOsjnq4_VrV_PdrgsJVmUImv-f5-y7_3M",
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_SHOW_EXAMPLES": "false"
+      }
+    },
+    "production-aab": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_BASE_URL": "https://djh0g1zn5pc6f.cloudfront.net",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_NEW": "AIzaSyBOsjnq4_VrV_PdrgsJVmUImv-f5-y7_3M",
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_SHOW_EXAMPLES": "false"
+      }
     }
   },
   "submit": {
