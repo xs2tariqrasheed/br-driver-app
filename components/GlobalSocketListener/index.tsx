@@ -20,6 +20,7 @@ import { useDriver } from "@/context/DriverContext";
 import { useModalManager } from "@/context/ModalManagerContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useRideOffer } from "@/context/RideOfferContext";
+import { useSettings } from "@/context/SettingsContext";
 import { useNetworkMonitoring } from "@/hooks/useNetworkMonitoring";
 import { expirationService } from "@/services/ExpirationService";
 import { formatDateTimestamp, logger } from "@/utils/helpers";
@@ -54,6 +55,7 @@ import { showToast } from "../Toast";
 export function GlobalSocketListener() {
   const log = logger();
   const [auth] = useAuth();
+  const [settings] = useSettings();
   const { onEvent, onDisconnect, socketStatus, disconnectSocket } = useSocket({
     driverId: auth?.user?.id,
   });
@@ -145,7 +147,15 @@ export function GlobalSocketListener() {
 
             // Use the helper function to format socket data to RideOffer format
             const rideOffer = formatSocketDataToRideOffer(data, auth?.user?.id);
-            await speechManager.speak(SPEECH_MESSAGES.NEW_RIDE_OFFER);
+
+            // Check mute settings before speaking
+            if (
+              !settings.notifications.muteJobOffers &&
+              !settings.notifications.muteAll
+            ) {
+              await speechManager.speak(SPEECH_MESSAGES.NEW_RIDE_OFFER);
+            }
+
             // Add notification to notification center
             const notification = {
               id: `ride-offer-${rideOffer.tripOffer.tripId}-${Date.now()}`,

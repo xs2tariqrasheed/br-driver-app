@@ -6,6 +6,7 @@ import Toggle from "@/components/Form/Toggle";
 import FutureJobOffersScreen from "@/components/FutureJobOffersScreen";
 import Header from "@/components/Header";
 import LiveJobOffersScreen from "@/components/LiveJobOffersScreen";
+import MuteNotificationsSheet from "@/components/MuteNotificationsSheet";
 import PermissionGate from "@/components/PermissionGate";
 import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
@@ -100,6 +101,11 @@ export default function HomeScreen() {
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
   const openRideTypes = () => setSheetOpen(true);
   const closeRideTypes = () => setSheetOpen(false);
+
+  // Mute Notifications bottom sheet state
+  const [muteSheetOpen, setMuteSheetOpen] = useState<boolean>(false);
+  const openMuteSheet = () => setMuteSheetOpen(true);
+  const closeMuteSheet = () => setMuteSheetOpen(false);
 
   // Logger function
   const log = logger();
@@ -344,7 +350,7 @@ export default function HomeScreen() {
       } else if (iconKey === "jump-portal") {
         void Linking.openURL(URLS.driverPortal);
       } else if (iconKey === "mute-notifications") {
-        log("Mute Notifications pressed");
+        openMuteSheet();
       }
     }
   };
@@ -693,6 +699,9 @@ export default function HomeScreen() {
             </View>
           </View>
         </BottomSheet>
+
+        {/* Mute Notifications Bottom Sheet */}
+        <MuteNotificationsSheet open={muteSheetOpen} onClose={closeMuteSheet} />
       </SafeAreaView>
     </PermissionGate>
   );

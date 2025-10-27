@@ -1,5 +1,6 @@
 import { NOTIFICATION_TYPES, SPEECH_MESSAGES } from "@/constants/global";
 import { useNotification } from "@/context/NotificationContext";
+import { useSettings } from "@/context/SettingsContext";
 import { speechManager } from "@/utils/speechManager";
 import React, { useEffect, useRef } from "react";
 import { Animated, Modal, StyleSheet, TouchableOpacity } from "react-native";
@@ -8,6 +9,7 @@ import Notification from "../Notification";
 
 const NotificationModal: React.FC = () => {
   const { isOpen, data, hideNotification } = useNotification();
+  const [settings] = useSettings();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(-200)).current;
   const hasSpokenRef = useRef(false);
@@ -26,6 +28,23 @@ const NotificationModal: React.FC = () => {
         // Only speak if we haven't spoken for this notification yet
         if (!hasSpokenRef.current) {
           hasSpokenRef.current = true;
+
+          // Check mute settings
+          const isJobOfferType =
+            !data.type ||
+            data.type === NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER ||
+            data.type === NOTIFICATION_TYPES.INFO;
+
+          const shouldMuteJobOffer =
+            isJobOfferType &&
+            (settings.notifications.muteJobOffers ||
+              settings.notifications.muteAll);
+          const shouldMuteAll = settings.notifications.muteAll;
+
+          // Determine if we should skip speaking
+          if (shouldMuteAll || shouldMuteJobOffer) {
+            return; // Skip speaking
+          }
 
           let message: string = SPEECH_MESSAGES.NEW_RIDE_OFFER; // Default message
 
@@ -77,7 +96,7 @@ const NotificationModal: React.FC = () => {
         useNativeDriver: true,
       }).start();
     }
-  }, [isOpen, data, slideAnim, hideNotification]);
+  }, [isOpen, data, slideAnim, hideNotification, settings]);
 
   // Handle manual close (when user clicks close button or backdrop)
   const handleClose = () => {

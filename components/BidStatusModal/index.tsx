@@ -20,6 +20,7 @@ import {
   SPEECH_MESSAGES,
   type BidStatus,
 } from "@/constants/global";
+import { useSettings } from "@/context/SettingsContext";
 import { speechManager } from "@/utils/speechManager";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -64,6 +65,7 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
   onTimerComplete,
   onClose,
 }) => {
+  const [settings] = useSettings();
   const [countdown, setCountdown] = useState<number>(
     BID_STATUS_COUNTDOWN_DURATION_SECONDS
   );
@@ -85,7 +87,7 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
 
   // Speak the status message when modal opens
   useEffect(() => {
-    if (open) {
+    if (open && !settings.notifications.muteAll) {
       switch (status) {
         case BID_STATUS.EXPIRED:
           speechManager.speak(SPEECH_MESSAGES.BID_EXPIRED);
@@ -100,7 +102,7 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
           break;
       }
     }
-  }, [open, status]);
+  }, [open, status, settings.notifications.muteAll]);
 
   // Handle countdown timer for expired, accepted, and unsuccessful status
   useEffect(() => {
