@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 
 import {
-  BID_STATUS,
-  LIVE_JOB_STATUS,
   NOTIFICATION_TYPES,
   NotificationType,
   SOCKET_EVENTS,
@@ -14,6 +12,7 @@ import { useSocket } from "@/hooks/useSocket";
 
 import { useAuth } from "@/context/AuthContext";
 import { useBidAccepted } from "@/context/BidAcceptedContext";
+import { useBidExpired } from "@/context/BidExpiredContext";
 import { useBidUnsuccessful } from "@/context/BidUnsuccessfulContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
@@ -73,13 +72,18 @@ export function GlobalSocketListener() {
     removeTemporaryRidesByTripId,
     currentOffer,
   } = useRideOffer();
-  const { addBroadcastOffer, markBroadcastOfferAsExpired, broadcastOffers } =
-    useBroadcastJobOffers();
+  const {
+    addBroadcastOffer,
+    removeBroadcastOffer,
+    markBroadcastOfferAsExpired,
+    broadcastOffers,
+  } = useBroadcastJobOffers();
 
   // Bid context hooks
   const { showBidAccepted } = useBidAccepted();
   const { showBidUnsuccessful } = useBidUnsuccessful();
   const { hideBidWaitingTimer } = useBidWaitingTimer();
+  const { showBidExpired } = useBidExpired();
 
   useEffect(() => {
     if (!driver?.online) {
@@ -257,10 +261,6 @@ export function GlobalSocketListener() {
             // Close all modals first, then show bid accepted modal
             hideRideOfferModal();
             closeAllModals();
-            // Small delay to ensure other modals close before showing bid accepted
-            setTimeout(() => {
-              showBidAccepted();
-            }, 500);
             log("✅ Ride offer accepted - showing accepted sheet");
 
             // Set hasAnyActiveOffer to false on successful acceptance
@@ -309,10 +309,13 @@ export function GlobalSocketListener() {
         log("💬 Global Bid response received:", data);
 
         try {
-          const { response, tripId, timestamp, timeout } = data;
+          const { response, tripId, timestamp, timeout, offerType } = data;
 
           // Hide waiting timer first
           hideBidWaitingTimer();
+
+          // Check if this is a broadcast offer
+          const isBroadcastOffer = offerType === TRIP_OFFER_TYPES.BROADCAST;
 
           if (response === TRIP_OFFER_ACTIONS.ACCEPT) {
             // Store tripId on successful bid accept
@@ -348,38 +351,113 @@ export function GlobalSocketListener() {
               notificationType: NOTIFICATION_TYPES.SUCCESS,
             };
             await addNotification(notification);
-          } else if (
-            response === LIVE_JOB_STATUS.REJECTED ||
-            response === BID_STATUS.EXPIRED
-          ) {
-            // Show BidUnsuccessful modal instead of toast
-            showBidUnsuccessful();
-            log(`❌ Bid ${response} - showing BidUnsuccessful modal`);
+          } else if (response === TRIP_OFFER_ACTIONS.REJECT) {
+            if (isBroadcastOffer) {
+              // For broadcast offers, keep the offer bidable and show a different message
+              log(
+                `❌ Broadcast bid ${response} - keeping offer bidable for rebidding`
+              );
 
-            // Set hasAnyActiveOffer to false on bid rejection/expiry
-            setHasAnyActiveOffer(false);
+              // Don't close modals or change hasAnyActiveOffer for broadcast offers
+              // The offer should remain available for rebidding
+              showBidUnsuccessful();
+              // Add notification with different message for broadcast offers
+              const message =
+                "Your bid was not accepted this time. You can rebid on this offer until it expires.";
 
-            // Add notification
-            const message =
-              response === LIVE_JOB_STATUS.REJECTED
-                ? "Your bid was not accepted. Keep looking for other opportunities."
-                : "Your bid has expired. Keep looking for other opportunities.";
+              const notification = {
+                id: `bid-${response}-${Date.now()}`,
+                messageTitle: "Bid Not Accepted",
+                messageBody: message,
+                dateTime: formatDateTimestamp(timestamp),
+                messageType: "unread" as const,
+                notificationType: NOTIFICATION_TYPES.WARNING,
+              };
+              await addNotification(notification);
+            } else {
+              // For sequential offers, handle as before
+              hideRideOfferModal();
+              closeAllModals();
+              // Small delay to ensure other modals close before showing bid unsuccessful
+              setTimeout(() => {
+                showBidUnsuccessful();
+              }, 500);
+              log(
+                `❌ Sequential bid ${response} - showing BidUnsuccessful modal`
+              );
 
-            const notification = {
-              id: `bid-${response}-${Date.now()}`,
-              messageTitle:
-                response === LIVE_JOB_STATUS.REJECTED
-                  ? "Bid Rejected"
-                  : "Bid Expired",
-              messageBody: message,
-              dateTime: formatDateTimestamp(timestamp),
-              messageType: "unread" as const,
-              notificationType:
-                response === LIVE_JOB_STATUS.REJECTED
-                  ? NOTIFICATION_TYPES.ERROR
-                  : NOTIFICATION_TYPES.WARNING,
-            };
-            await addNotification(notification);
+              // Set hasAnyActiveOffer to false on bid rejection for sequential offers
+              setHasAnyActiveOffer(false);
+
+              // Add notification
+              const message =
+                "Your bid was not accepted. Keep looking for other opportunities.";
+
+              const notification = {
+                id: `bid-${response}-${Date.now()}`,
+                messageTitle: "Bid Rejected",
+                messageBody: message,
+                dateTime: formatDateTimestamp(timestamp),
+                messageType: "unread" as const,
+                notificationType: NOTIFICATION_TYPES.ERROR,
+              };
+              await addNotification(notification);
+            }
+          } else if (response === TRIP_OFFER_ACTIONS.EXPIRE) {
+            if (isBroadcastOffer) {
+              // For broadcast offers, remove from broadcast offers context
+              log(
+                `❌ Broadcast offer ${response} - removing from broadcast offers`
+              );
+
+              // Remove the expired broadcast offer
+              if (tripId) {
+                removeBroadcastOffer(tripId);
+              }
+
+              // Set hasAnyActiveOffer to false on offer expiry
+              setHasAnyActiveOffer(false);
+
+              // Add notification
+              const message =
+                "This broadcast offer has expired. Keep looking for other opportunities.";
+
+              const notification = {
+                id: `bid-${response}-${Date.now()}`,
+                messageTitle: "Offer Expired",
+                messageBody: message,
+                dateTime: formatDateTimestamp(timestamp),
+                messageType: "unread" as const,
+                notificationType: NOTIFICATION_TYPES.WARNING,
+              };
+              await addNotification(notification);
+            } else {
+              // For sequential offers, handle as before
+              hideRideOfferModal();
+              closeAllModals();
+              // Small delay to ensure other modals close before showing bid expired
+              setTimeout(() => {
+                showBidExpired();
+              }, 500);
+              log(`❌ Sequential bid ${response} - showing BidExpired modal`);
+
+              // Set hasAnyActiveOffer to false on bid rejection/expiry
+              setHasAnyActiveOffer(false);
+
+              // Add notification
+              const message =
+                "Your bid has expired. Keep looking for other opportunities.";
+
+              const notification = {
+                id: `bid-${response}-${Date.now()}`,
+                messageTitle: "Bid Expired",
+                messageBody: message,
+                dateTime: formatDateTimestamp(timestamp),
+                messageType: "unread" as const,
+                notificationType: NOTIFICATION_TYPES.WARNING,
+              };
+              await addNotification(notification);
+            }
           }
         } catch (error) {
           log("❌ Error processing bid response:", error);

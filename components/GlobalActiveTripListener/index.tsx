@@ -50,8 +50,8 @@ export function GlobalActiveTripListener() {
     // Check if we have an active trip (retrievalId exists)
     const checkActiveTrip = async () => {
       try {
-        const retrievalId = await getRetrievalId();
-        const tripId = await getTripId();
+        const { retrievalId } = await getRetrievalId();
+        const { tripId } = await getTripId();
 
         if (!retrievalId || !tripId) {
           log(
@@ -59,7 +59,6 @@ export function GlobalActiveTripListener() {
           );
           return false;
         }
-
         return true;
       } catch (error) {
         log("❌ Error checking active trip:", error);

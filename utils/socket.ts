@@ -70,7 +70,7 @@ export const connectSocket = async (): Promise<ReturnType<typeof io>> => {
   socket = io(serverUrl, {
     transports: ["websocket", "polling"], // Prefer websocket, fallback to polling
     autoConnect: true,
-    path: "/socket.io", // Use standard socket.io path since URL already includes service path
+    path: "/auction/socket.io", // Updated path for auction service
     // Mobile-specific optimizations
     timeout: 20000, // 20 seconds timeout for mobile networks
     forceNew: true, // Force new connection

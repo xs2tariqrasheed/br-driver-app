@@ -321,9 +321,9 @@ export default function LiveJobOffersScreen({
         if (result?.success) {
           log("[LiveJobOffersScreen] Bid submitted successfully");
 
-          // Mark the offer as accepted in the context
-          updateBroadcastOffer(jobToUse.id, { status: "accepted" });
-          log(`[LiveJobOffersScreen] Marked job ${jobToUse.id} as accepted`);
+          // For broadcast offers, don't change status to "accepted" immediately
+          // The offer should remain bidable until customer accepts or offer expires
+          // Only close the bid modal and show waiting timer
           setSelectedJobForBid(null);
 
           // Show waiting timer for customer response

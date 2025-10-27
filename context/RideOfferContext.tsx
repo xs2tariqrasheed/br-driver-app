@@ -14,9 +14,14 @@ import { createContext, ReactNode, useContext, useState } from "react";
 
 interface TripOffer {
   tripId: string;
-  pickupLocation: { lat: number; lng: number };
-  dropoffLocation: { lat: number; lng: number };
-  fare: number;
+  customerId: string;
+  pickup: { lat: number; lng: number; address?: string };
+  dropoff: { lat: number; lng: number; address?: string };
+  biddable: boolean;
+  type: "sequential" | "broadcast";
+  fare?: number;
+  timestamp?: number;
+  for?: "io" | "hired"; // temporary field
 }
 
 interface RideOffer {

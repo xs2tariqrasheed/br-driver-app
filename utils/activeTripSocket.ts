@@ -80,7 +80,7 @@ export const connectActiveTripSocket = async (
   activeTripSocket = io(serverUrl, {
     transports: ["websocket", "polling"], // Prefer websocket, fallback to polling
     autoConnect: true,
-    path: "/socket.io", // Use standard socket.io path
+    path: "/active-trips/socket.io", // Updated path for active trips service
     // Mobile-specific optimizations
     timeout: 20000, // 20 seconds timeout for mobile networks
     forceNew: true, // Force new connection

@@ -32,6 +32,7 @@ import {
   VEHICLE_ISSUE_OFFLINE_HOURS,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
+import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useChat } from "@/context/ChatContext";
 import { useDriver } from "@/context/DriverContext";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
@@ -71,6 +72,7 @@ export default function ActiveRideScreen() {
   } = useDriver();
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
+  const { clearAllBroadcastOffers } = useBroadcastJobOffers();
   const { openChat } = useChat();
 
   // Active trip socket connection
@@ -391,18 +393,22 @@ export default function ActiveRideScreen() {
           onPressPackage: () => console.log("Package pressed"),
           pickupTime: 5,
           pickupDistance: 0.8,
-          pickupAddress: generateAddressFromCoordinates(
-            activeTrip.pickup.lat,
-            activeTrip.pickup.lng,
-            "pickup"
-          ),
+          pickupAddress:
+            activeTrip.pickup.address ||
+            generateAddressFromCoordinates(
+              activeTrip.pickup.lat,
+              activeTrip.pickup.lng,
+              "pickup"
+            ),
           dropoffTime: 15,
           dropoffDistance: 3.2,
-          dropoffAddress: generateAddressFromCoordinates(
-            activeTrip.dropoff.lat,
-            activeTrip.dropoff.lng,
-            "dropoff"
-          ),
+          dropoffAddress:
+            activeTrip.dropoff.address ||
+            generateAddressFromCoordinates(
+              activeTrip.dropoff.lat,
+              activeTrip.dropoff.lng,
+              "dropoff"
+            ),
           rideTime: 20,
           rideDistance: 4.0,
           totalPrice: defaultFare,
@@ -625,6 +631,10 @@ export default function ActiveRideScreen() {
       await removeRideState();
       console.log("Removed ride state");
 
+      // Clear all broadcast offers when ride is completed
+      clearAllBroadcastOffers();
+      console.log("Cleared all broadcast offers");
+
       // Redirect to feedback screen
       console.log("Redirecting to feedback screen...");
       router.replace("/(screens)/feedback");
@@ -808,6 +818,10 @@ export default function ActiveRideScreen() {
         removeTripId(),
         removeRideState(),
       ]);
+
+      // Clear all broadcast offers when ride is cancelled
+      clearAllBroadcastOffers();
+      console.log("Cleared all broadcast offers");
 
       closeConfirmationModal();
       closeCancelRideSheet();

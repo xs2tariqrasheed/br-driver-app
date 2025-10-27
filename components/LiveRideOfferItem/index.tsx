@@ -555,28 +555,30 @@ export default function LiveRideOfferItem({
                 ]}
               >
                 {/* Countdown Timer */}
-                {expiredAt && calculateProgressTimerDuration(expiredAt) && (
-                  <View>
-                    <ProgressTimer
-                      duration={calculateProgressTimerDuration(expiredAt)!}
-                      onComplete={() => {
-                        // Update the offer status to expired when timer completes
-                        updateBroadcastOffer(id, {
-                          status: LIVE_JOB_STATUS.EXPIRED,
-                        });
-                        showToast("Offer expired", {
-                          variant: "warning",
-                          position: "top",
-                        });
-                        setHasAnyActiveOffer(false);
-                        closeAllModals();
-                        hideRideOfferModal();
-                      }}
-                      height={4}
-                      isActive={true}
-                    />
-                  </View>
-                )}
+                {itemStatus === LIVE_JOB_STATUS.OFFERED &&
+                  expiredAt &&
+                  calculateProgressTimerDuration(expiredAt) && (
+                    <View>
+                      <ProgressTimer
+                        duration={calculateProgressTimerDuration(expiredAt)!}
+                        onComplete={() => {
+                          // Update the offer status to expired when timer completes
+                          updateBroadcastOffer(id, {
+                            status: LIVE_JOB_STATUS.EXPIRED,
+                          });
+                          showToast("Offer expired", {
+                            variant: "warning",
+                            position: "top",
+                          });
+                          setHasAnyActiveOffer(false);
+                          closeAllModals();
+                          hideRideOfferModal();
+                        }}
+                        height={4}
+                        isActive={true}
+                      />
+                    </View>
+                  )}
 
                 {/* Header Section */}
                 <RideOfferItemHeader
@@ -597,7 +599,7 @@ export default function LiveRideOfferItem({
                   dropoffTime={dropoffTime}
                   dropoffDistance={dropoffDistance}
                   dropoffAddress={dropoffAddress}
-                  type={rideType as any}
+                  type={type as any}
                 />
 
                 {/* Footer Section */}

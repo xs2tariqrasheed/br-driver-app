@@ -380,6 +380,8 @@ export const TRIP_OFFER_ACTIONS = {
   SKIP: "skip",
   HIDE: "hide",
   BID: "bid",
+  REJECT: "reject",
+  EXPIRE: "expire",
 } as const;
 
 // Driver actions for active trips

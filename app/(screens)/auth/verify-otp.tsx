@@ -294,18 +294,39 @@ export default function VerifyOtpScreen() {
     return textColors.black;
   };
 
+  const driverIdMapping = {
+    1: "d-1",
+    2: "d-2",
+    3: "d-3",
+    4: "d-4",
+    5: "d-5",
+  };
+
   const handleCompleteLoginAfterOtp = async (data: any) => {
     log("User data", data);
     if (data?.user) {
+      const userId = Number(data?.user?.id);
+
+      // Validate user ID
+      if (isNaN(userId) || !(userId in driverIdMapping)) {
+        console.error("Invalid user ID:", data?.user?.id);
+        showToast("Invalid user ID received", {
+          variant: "error",
+          position: "top",
+        });
+        return;
+      }
+
       await setAuth({
         ...currentAuth,
         user: {
-          id: data?.user?.id,
+          id: driverIdMapping[userId as keyof typeof driverIdMapping],
           name: data?.user?.name || "John Doe",
           type:
-            data?.user?.id % 2 === 0
+            data?.user?.type === "io" ||
+            data?.user?.type === "independent-operator"
               ? DRIVER_TYPES.INDEPENDENT_OPERATOR
-              : DRIVER_TYPES.HIRED,
+              : DRIVER_TYPES.INDEPENDENT_OPERATOR,
         },
       } as any);
       showToast("Logged in successfully", {

@@ -49,7 +49,9 @@ export interface ApiError {
  */
 const createApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
+    BASE_URL:
+      process.env.EXPO_PUBLIC_BASE_URL ||
+      "https://djh0g1zn5pc6f.cloudfront.net",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -291,7 +293,8 @@ const createAuctionApiClient = (): AxiosInstance => {
 const createAuthApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
+      process.env.EXPO_PUBLIC_BASE_URL ||
+      "https://djh0g1zn5pc6f.cloudfront.net",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -405,7 +408,7 @@ const createAuthApiClient = (): AxiosInstance => {
 const createMeApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
-      process.env.EXPO_PUBLIC_AUTH_BASE_URL || "http://192.168.100.160:3001",
+      process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -652,7 +655,7 @@ const createActiveTripApiClient = (): AxiosInstance => {
   const API_CONFIG = {
     BASE_URL:
       process.env.EXPO_PUBLIC_ACTIVE_TRIP_SERVER_URL ||
-      "http://192.168.100.160:3003",
+      "http://192.168.100.160:3003/active-trips",
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",

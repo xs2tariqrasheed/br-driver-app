@@ -43,9 +43,14 @@ const dropoffIconUrl = Image.resolveAssetSource(
 
 interface TripOffer {
   tripId: string;
-  pickupLocation: { lat: number; lng: number };
-  dropoffLocation: { lat: number; lng: number };
-  fare: number;
+  customerId: string;
+  pickup: { lat: number; lng: number; address?: string };
+  dropoff: { lat: number; lng: number; address?: string };
+  biddable: boolean;
+  type: "sequential" | "broadcast";
+  fare?: number;
+  timestamp?: number;
+  for?: "io" | "hired";
 }
 
 interface RideOffer {
@@ -188,9 +193,9 @@ export default function RideOfferModal({
       };
     }
 
-    const { pickupLocation, dropoffLocation } = offer.tripOffer;
-    const latitudes = [pickupLocation.lat, dropoffLocation.lat];
-    const longitudes = [pickupLocation.lng, dropoffLocation.lng];
+    const { pickup, dropoff } = offer.tripOffer;
+    const latitudes = [pickup.lat, dropoff.lat];
+    const longitudes = [pickup.lng, dropoff.lng];
 
     const minLat = Math.min(...latitudes);
     const maxLat = Math.max(...latitudes);
@@ -295,12 +300,12 @@ export default function RideOfferModal({
                 <MapViewDirections
                   apikey={GOOGLE_MAPS_API_KEY}
                   origin={{
-                    latitude: offer.tripOffer.pickupLocation.lat,
-                    longitude: offer.tripOffer.pickupLocation.lng,
+                    latitude: offer.tripOffer.pickup.lat,
+                    longitude: offer.tripOffer.pickup.lng,
                   }}
                   destination={{
-                    latitude: offer.tripOffer.dropoffLocation.lat,
-                    longitude: offer.tripOffer.dropoffLocation.lng,
+                    latitude: offer.tripOffer.dropoff.lat,
+                    longitude: offer.tripOffer.dropoff.lng,
                   }}
                   strokeWidth={4}
                   strokeColor={textColors.blue600}
@@ -311,8 +316,8 @@ export default function RideOfferModal({
               {offer?.tripOffer && (
                 <Marker
                   coordinate={{
-                    latitude: offer.tripOffer.pickupLocation.lat,
-                    longitude: offer.tripOffer.pickupLocation.lng,
+                    latitude: offer.tripOffer.pickup.lat,
+                    longitude: offer.tripOffer.pickup.lng,
                   }}
                   title="Pickup Location"
                   description={offer.pickupAddress}
@@ -328,8 +333,8 @@ export default function RideOfferModal({
               {offer?.tripOffer && (
                 <Marker
                   coordinate={{
-                    latitude: offer.tripOffer.dropoffLocation.lat,
-                    longitude: offer.tripOffer.dropoffLocation.lng,
+                    latitude: offer.tripOffer.dropoff.lat,
+                    longitude: offer.tripOffer.dropoff.lng,
                   }}
                   title="Dropoff Location"
                   description={offer.dropoffAddress}

@@ -11,7 +11,6 @@ import { textColors } from "@/constants/colors";
 import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -44,38 +43,7 @@ const FeedbackScreen: React.FC = () => {
   const handleSubmit = async () => {
     showToast("Feedback submitted successfully!", "success", "top");
     router.replace("/(tabs)");
-    try {
-      // TODO: Replace with actual API call
-      const response = await fetch("/api/feedback", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          rating,
-          comments,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-
-      if (response.ok) {
-        Alert.alert("Success", "Feedback submitted successfully!", [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(tabs)"),
-          },
-        ]);
-      } else {
-        throw new Error("Failed to submit feedback");
-      }
-    } catch (error) {
-      console.error("Error submitting feedback:", error);
-      Alert.alert("Error", "Failed to submit feedback. Please try again.", [
-        {
-          text: "OK",
-        },
-      ]);
-    }
+    return;
   };
 
   const dismissKeyboard = () => {

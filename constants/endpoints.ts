@@ -24,22 +24,36 @@ export const HEATMAP_ENDPOINTS = {
 
 export const LIVE_JOB_ENDPOINTS = {
   /** Get live job offers */
-  getLiveJobs: "/trip-offers",
+  getLiveJobs: "/auction/trip-offers",
   /** Get future job offers */
-  getFutureJobs: "/api/trip-offers/future",
+  getFutureJobs: "/auction/trip-offers/future",
   /** Submit a bid */
-  submitBid: "/bids/submit",
+  submitBid: "/auction/bids/submit",
   /** Cancel a bid */
-  cancelBid: "/bids/cancel",
+  cancelBid: "/auction/bids/cancel",
   /** Submit driver response to trip offer (bid, rebid, or skip) */
-  driverResponse: "/api/trip-offers/driver-response",
+  driverResponse: "/auction/trip-offers/driver-response",
+  /** Get trip offer details by ID */
+  getTripOffer: "/auction/trip-offers/trip-offer",
+  /** Get trip status by ID */
+  getTripStatus: "/auction/trip-offers/trip-status",
+  /** Get driver state by ID */
+  getDriverState: "/auction/trip-offers/driver-state",
+  /** Customer bid response */
+  customerBidResponse: "/auction/trip-offers/customer-bid-response",
+  /** Publish test offer */
+  publishTest: "/auction/trip-offers/publish-test",
 } as const;
 
 export const DRIVER_ENDPOINTS = {
   /** Mark driver as offline */
-  markOffline: (driverId: string) => `/api/drivers/${driverId}`,
+  markOffline: (driverId: string) => `/online-drivers/drivers/${driverId}`,
   /** Post or update driver's current location while online */
-  postOnlineLocation: (driverId: string) => `/api/drivers/${driverId}/location`,
+  postOnlineLocation: (driverId: string) =>
+    `/online-drivers/drivers/${driverId}/location`,
+  /** Get driver's current location */
+  getOnlineLocation: (driverId: string) =>
+    `/online-drivers/drivers/${driverId}/location`,
 } as const;
 
 export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;
@@ -51,6 +65,7 @@ export const APP_ENDPOINTS = {
 
 // Active Trip API Routes
 export const ACTIVE_TRIP_ROUTES = {
-  RETRIEVAL_ID: "/api/active-trips/retrieval-id",
-  DRIVER_ACTION: "/api/active-trips/driver-action",
+  RETRIEVAL_ID: "/active-trips/active-trips/retrieval-id",
+  DRIVER_ACTION: "/active-trips/active-trips/driver-action",
+  ADD_STOP: "/active-trips/active-trips/add-stop",
 } as const;

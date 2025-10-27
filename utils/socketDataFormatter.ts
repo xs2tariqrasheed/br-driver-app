@@ -1,4 +1,4 @@
-import { RIDE_TYPES, TRIP_OFFER_TYPES } from "@/constants/global";
+import { RIDE_TYPES } from "@/constants/global";
 
 /**
  * Server socket data structure from terminal output
@@ -7,14 +7,15 @@ interface ServerSocketData {
   timeout: number;
   timestamp: string;
   tripOffer: {
-    customerId: string;
-    dropoff: { lat: number; lng: number };
-    fare: number;
-    pickup: { lat: number; lng: number };
-    timestamp: number;
     tripId: string;
-    type: string;
-    biddable?: boolean;
+    customerId: string;
+    pickup: { lat: number; lng: number; address?: string };
+    dropoff: { lat: number; lng: number; address?: string };
+    biddable: boolean;
+    type: "sequential" | "broadcast";
+    fare?: number;
+    timestamp?: number;
+    for?: "io" | "hired"; // temporary field
   };
   type: string;
 }
@@ -215,25 +216,29 @@ export function formatSocketDataToTripOffer(
 ): FormattedTripOffer {
   const { tripOffer, timeout, timestamp } = serverData;
 
-  // Determine offer type
-  const offerType =
-    tripOffer.type === TRIP_OFFER_TYPES.SEQUENTIAL ? "sequential" : "broadcast";
+  // Determine offer type - use the type directly from the backend
+  const offerType = tripOffer.type as "sequential" | "broadcast";
 
-  // Calculate derived values
-  const driverEarn = calculateDriverEarn(tripOffer.fare);
-  const formattedFare = formatFare(tripOffer.fare);
+  // Calculate derived values - handle optional fare
+  const fare = tripOffer.fare || 0;
+  const driverEarn = calculateDriverEarn(fare);
+  const formattedFare = formatFare(fare);
 
-  // Generate addresses from coordinates
-  const pickupAddress = generateAddressFromCoordinates(
-    tripOffer.pickup.lat,
-    tripOffer.pickup.lng,
-    "pickup"
-  );
-  const dropoffAddress = generateAddressFromCoordinates(
-    tripOffer.dropoff.lat,
-    tripOffer.dropoff.lng,
-    "dropoff"
-  );
+  // Use server addresses if available, otherwise generate from coordinates
+  const pickupAddress =
+    tripOffer.pickup.address ||
+    generateAddressFromCoordinates(
+      tripOffer.pickup.lat,
+      tripOffer.pickup.lng,
+      "pickup"
+    );
+  const dropoffAddress =
+    tripOffer.dropoff.address ||
+    generateAddressFromCoordinates(
+      tripOffer.dropoff.lat,
+      tripOffer.dropoff.lng,
+      "dropoff"
+    );
 
   return {
     // Basic trip information from server
@@ -248,8 +253,8 @@ export function formatSocketDataToTripOffer(
       lat: tripOffer.dropoff.lat,
       lng: tripOffer.dropoff.lng,
     },
-    fare: tripOffer.fare,
-    biddable: true, //tripOffer.biddable || false,
+    fare: fare,
+    biddable: tripOffer.biddable,
     type: offerType,
 
     // Comprehensive ride details
@@ -268,12 +273,14 @@ export function formatSocketDataToTripOffer(
       dropoffAddress,
       rideTime: DEFAULT_VALUES.rideTime,
       rideDistance: DEFAULT_VALUES.rideDistance,
-      totalPrice: tripOffer.fare,
+      totalPrice: fare,
       driverEarn,
       carType: DEFAULT_VALUES.carType,
-      created_at: new Date(tripOffer.timestamp).toISOString(),
+      created_at: tripOffer.timestamp
+        ? new Date(tripOffer.timestamp).toISOString()
+        : new Date().toISOString(),
       driverInstructions: DEFAULT_VALUES.driverInstructions,
-      expiredAt: new Date(Date.now() + 60 * 1000).toISOString(), // 60 seconds from now
+      expiredAt: new Date(Date.now() + 40 * 1000).toISOString(), // 40 seconds from now
     },
 
     // Special requirements (using defaults for now)
@@ -316,9 +323,14 @@ export function formatSocketDataToRideOffer(
     // Trip offer details
     tripOffer: {
       tripId: formattedTripOffer.tripId,
-      pickupLocation: formattedTripOffer.pickup,
-      dropoffLocation: formattedTripOffer.dropoff,
+      customerId: formattedTripOffer.customerId,
+      pickup: formattedTripOffer.pickup,
+      dropoff: formattedTripOffer.dropoff,
+      biddable: formattedTripOffer.biddable,
+      type: formattedTripOffer.type,
       fare: formattedTripOffer.fare,
+      timestamp: serverData.tripOffer.timestamp || Date.now(),
+      for: "io" as const, // Default value
     },
 
     // LiveRideOfferItem required fields
@@ -377,9 +389,14 @@ export function formatSocketDataToBroadcastOffer(
     // Trip offer details
     tripOffer: {
       tripId: formattedTripOffer.tripId,
-      pickupLocation: formattedTripOffer.pickup,
-      dropoffLocation: formattedTripOffer.dropoff,
+      customerId: formattedTripOffer.customerId,
+      pickup: formattedTripOffer.pickup,
+      dropoff: formattedTripOffer.dropoff,
+      biddable: formattedTripOffer.biddable,
+      type: formattedTripOffer.type,
       fare: formattedTripOffer.fare,
+      timestamp: serverData.tripOffer.timestamp || Date.now(),
+      for: "io" as const, // Default value
     },
 
     // LiveRideOfferItem required fields
