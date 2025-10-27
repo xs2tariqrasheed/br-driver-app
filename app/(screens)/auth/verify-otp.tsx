@@ -304,24 +304,32 @@ export default function VerifyOtpScreen() {
 
   const handleCompleteLoginAfterOtp = async (data: any) => {
     log("User data", data);
-    if (data?.user) {
-      const userId = Number(data?.user?.id);
+    if (data?.user || currentAuth?.loginId) {
+      // Get the login ID from auth context (set during login)
+      const loginId = currentAuth?.loginId as number | undefined;
 
-      // Validate user ID
-      if (isNaN(userId) || !(userId in driverIdMapping)) {
-        console.error("Invalid user ID:", data?.user?.id);
-        showToast("Invalid user ID received", {
+      // Validate login ID and get corresponding driver ID
+      if (
+        !loginId ||
+        typeof loginId !== "number" ||
+        loginId < 1 ||
+        loginId > 5
+      ) {
+        console.error("Invalid login ID:", loginId);
+        showToast("Invalid login ID received", {
           variant: "error",
           position: "top",
         });
         return;
       }
 
+      const driverId = driverIdMapping[loginId as keyof typeof driverIdMapping];
+
       await setAuth({
         ...currentAuth,
         user: {
-          id: driverIdMapping[userId as keyof typeof driverIdMapping],
-          name: data?.user?.name || "John Doe",
+          id: driverId,
+          name: data?.user?.name || `Driver ${loginId}`,
           type:
             data?.user?.type === "io" ||
             data?.user?.type === "independent-operator"

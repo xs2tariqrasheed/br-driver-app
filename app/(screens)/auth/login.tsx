@@ -35,6 +35,15 @@ type LoginFormValues = {
   password: string;
 };
 
+// Email mapping based on login ID
+const loginIdToEmailMap: Record<number, string> = {
+  1: "one@example.com",
+  2: "two@example.com",
+  3: "three@example.com",
+  4: "four@example.com",
+  5: "five@example.com",
+};
+
 /**
  * Caller: Navigation system (Expo Router) - triggered when user navigates to /auth/login route
  * Page/Screen: Login screen - user authentication entry point
@@ -95,21 +104,31 @@ export default function LoginScreen() {
    */
   const onSubmit = async (data: LoginFormValues) => {
     log("Login submit", data);
-    const apiPaylod = {
-      email: "one@example.com",
-      password: "123456",
+
+    const loginIdNum = Number(data.loginId);
+    const email = loginIdToEmailMap[loginIdNum];
+
+    // Store login ID in state for later use in verify-otp
+    setAuth({ loginId: loginIdNum } as any);
+
+    const apiPayload = {
+      email: email,
+      password: data.password,
     };
+
     try {
-      await submitLogin(apiPaylod);
+      await submitLogin(apiPayload);
     } catch (e) {
-      // Error state handled by hook; show toast as well
       const message = e instanceof Error ? e.message : "Login failed";
       showToast(message, { variant: "error", position: "top" });
     }
   };
 
   const handleLoginSuccess = async (token: string) => {
+    // Preserve the loginId that was set during validation
+    const existingAuth = auth as any;
     await setAuth({
+      ...existingAuth,
       token: token,
     } as any);
     // After login successful login, require OTP verification before granting access
@@ -334,11 +353,15 @@ export default function LoginScreen() {
             <Controller
               control={control}
               name="companyId"
-              rules={{ required: "Company ID is required." }}
+              rules={{
+                required: "Company ID is required",
+                validate: (value: string) =>
+                  value === "0000" || "Invalid Company ID. Must be 0000",
+              }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Company ID"
-                  placeholder="Enter your company ID"
+                  placeholder="Enter your company ID (0000)"
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -351,11 +374,22 @@ export default function LoginScreen() {
             <Controller
               control={control}
               name="loginId"
-              rules={{ required: "Login ID is required." }}
+              rules={{
+                required: "Login ID is required",
+                validate: (value: string) => {
+                  const num = Number(value);
+                  if (isNaN(num)) return "Login ID must be a number";
+                  if (!Number.isInteger(num))
+                    return "Login ID must be a whole number";
+                  if (num < 1 || num > 5)
+                    return "Login ID must be between 1 and 5";
+                  return true;
+                },
+              }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Login ID"
-                  placeholder="Enter your login ID"
+                  placeholder="Enter your login ID (1-5)"
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -369,13 +403,18 @@ export default function LoginScreen() {
               control={control}
               name="password"
               rules={{
-                required: "Password is required.",
-                minLength: { value: 8, message: "Minimum 8 characters." },
+                required: "Password is required",
+                validate: (value: string) => {
+                  if (value.length !== 6)
+                    return "Password must be exactly 6 characters";
+                  if (value !== "123456") return "Invalid password";
+                  return true;
+                },
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Password"
-                  placeholder="Enter your password"
+                  placeholder="Enter your password (123456)"
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
