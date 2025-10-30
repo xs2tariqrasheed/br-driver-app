@@ -14,6 +14,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   TouchableWithoutFeedback,
@@ -85,10 +86,11 @@ const FeedbackScreen: React.FC = () => {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
-      {/* Header */}
-      <Header title="Ride Completed" hideBackIcon={true} />
+    <SafeAreaView style={styles.container}>
+      <ThemedView style={styles.innerContainer}>
+        <Stack.Screen options={{ headerShown: false }} />
+        {/* Header */}
+        <Header title="Ride Completed" hideBackIcon={true} />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
@@ -177,7 +179,8 @@ const FeedbackScreen: React.FC = () => {
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-    </ThemedView>
+      </ThemedView>
+    </SafeAreaView>
   );
 };
 
@@ -185,6 +188,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: textColors.white,
+  },
+  innerContainer: {
+    flex: 1,
   },
   keyboardAvoidingView: {
     flex: 1,

@@ -4,7 +4,7 @@ import { textColors } from "@/constants/colors";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
 
 /**
  * Transform broadcast offer to JobDetails format
@@ -105,17 +105,17 @@ export default function TripDetailsScreen() {
 
   if (!jobOfferData) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Header title="Trip Details" onBackPress={() => router.back()} />
         <View style={styles.emptyContainer}>
           {/* Could add loading or error state here */}
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
     <Stack.Screen options={{ headerShown: false }} />
       <Header title="Trip Details" onBackPress={() => router.back()} />
       <ScrollView
@@ -125,7 +125,7 @@ export default function TripDetailsScreen() {
       >
         <JobDetails jobOffer={jobOfferData} showActionBar={false} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

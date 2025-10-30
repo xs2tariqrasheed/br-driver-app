@@ -1,11 +1,11 @@
 import Examples from "@/components/Examples";
 import Header from "@/components/Header";
 import React from "react";
-import { ScrollView, View } from "react-native";
+import { SafeAreaView, ScrollView, View } from "react-native";
 
 export default function ExamplesTab() {
   return (
-    <View
+    <SafeAreaView
       style={{
         flex: 1,
         padding: 16,
@@ -16,6 +16,6 @@ export default function ExamplesTab() {
         <Header title="Examples" hideBackIcon />
         <Examples />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

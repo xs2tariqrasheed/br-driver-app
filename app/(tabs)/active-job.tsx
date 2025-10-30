@@ -3,7 +3,7 @@ import Header from "@/components/Header";
 import DriverOffline from "@/components/DriverOffline";
 import { useDriver } from "@/context/DriverContext";
 import { useRouter } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { SafeAreaView, StyleSheet, View } from "react-native";
 
 export default function ActiveJobScreen() {
   const [driver] = useDriver();
@@ -14,14 +14,14 @@ export default function ActiveJobScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Header title="Active Job" onBackPress={handleBackPress} />
       {!driver?.online ? (
         <DriverOffline />
       ) : (
         <ActiveRideInitializer />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

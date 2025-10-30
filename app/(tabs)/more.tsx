@@ -4,6 +4,7 @@ import ConfirmationSheet from "@/components/ConfirmationSheet";
 import Header from "@/components/Header";
 import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
+import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
 import { textColors } from "@/constants/colors";
 import { DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import {
@@ -101,6 +102,7 @@ export default function MoreScreen() {
   const [logoutSheetOpen, setLogoutSheetOpen] = useState(false);
   const [deleteProfileSheetOpen, setDeleteProfileSheetOpen] = useState(false);
   const [contactBaseSheetOpen, setContactBaseSheetOpen] = useState(false);
+  const bottomTabOverflow = useBottomTabOverflow();
 
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation } = useDelete(
@@ -324,7 +326,10 @@ export default function MoreScreen() {
           numColumns={2}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.column}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: bottomTabOverflow + 24 },
+          ]}
           ListHeaderComponent={
             <View style={styles.logoRow}>
               <Logo size="Large" />

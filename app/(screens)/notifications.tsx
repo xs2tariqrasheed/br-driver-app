@@ -13,6 +13,7 @@ import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -172,9 +173,10 @@ const NotificationsScreen: React.FC = () => {
   };
 
   return (
-    <ThemedView style={{ flex: 1 }}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <Header
+    <SafeAreaView style={{ flex: 1 }}>
+      <ThemedView style={{ flex: 1 }}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Header
         title="Notifications"
         hideBackIcon={false}
         onBackPress={() => router.back()}
@@ -237,8 +239,9 @@ const NotificationsScreen: React.FC = () => {
         onClose={handleBottomSheetClose}
         notification={selectedNotification}
         onSendReply={handleSendReply}
-      />
-    </ThemedView>
+        />
+      </ThemedView>
+    </SafeAreaView>
   );
 };
 

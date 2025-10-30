@@ -1,6 +1,7 @@
 import Typography from "@/components/Typography";
 import { Tabs, usePathname } from "expo-router";
-import { Image, ImageProps, Platform, StyleSheet, View } from "react-native";
+import { Image, ImageProps, Platform, StyleSheet, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
@@ -11,6 +12,18 @@ const SHOW_EXAMPLES = process.env.EXPO_PUBLIC_SHOW_EXAMPLES === "true";
 export default function TabLayout() {
   const pathname = usePathname();
   const hideTabs = pathname === "/(screens)/active-ride";
+  const insets = useSafeAreaInsets();
+  
+  // Calculate dynamic tab bar height
+  // Base height: 64px for tab items + safe area bottom inset
+  // Minimum height: 64px + 8px padding, Maximum: responsive to screen
+  const baseTabHeight = 64;
+  const minPadding = 8;
+  const tabBarHeight = Math.max(
+    baseTabHeight + minPadding,
+    baseTabHeight + insets.bottom + minPadding
+  );
+
   return (
     <Tabs
       screenOptions={{
@@ -25,9 +38,14 @@ export default function TabLayout() {
             ios: {
               // Use a transparent background on iOS to show the blur effect
               position: "absolute",
-              height: 76,
+              height: tabBarHeight,
+              paddingBottom: Math.max(insets.bottom, minPadding),
             },
-            default: { height: 76, paddingTop: 20 },
+            default: { 
+              height: tabBarHeight,
+              paddingTop: Math.max(insets.top, 8),
+              paddingBottom: Math.max(insets.bottom, minPadding),
+            },
           }),
           hideTabs ? { display: "none" } : null,
         ] as any,
@@ -113,9 +131,17 @@ function TabItem({
   focused: boolean;
   source: ImageProps["source"];
 }) {
+  const { width } = useWindowDimensions();
+  // Make tab item width responsive - smaller on smaller screens
+  const tabItemWidth = Math.min(90, Math.max(70, width * 0.18));
+  
   return (
     <View
-      style={[styles.itemContainer, focused && styles.itemContainerFocused]}
+      style={[
+        styles.itemContainer,
+        { width: tabItemWidth },
+        focused && styles.itemContainerFocused,
+      ]}
     >
       <Image source={source} style={styles.icon} resizeMode="contain" />
       <Typography type="labelLarge" weight="semibold" style={styles.label}>
@@ -127,7 +153,7 @@ function TabItem({
 
 const styles = StyleSheet.create({
   itemContainer: {
-    width: 90,
+    // width is now dynamic based on screen size
     height: 64,
     alignItems: "center",
     justifyContent: "center",

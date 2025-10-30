@@ -18,11 +18,13 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
 
 export default function EarningsScreen() {
   const router = useRouter();
   const { showRideOfferModal } = useRideOffer();
   const { showToast } = useToast();
+  const bottomTabOverflow = useBottomTabOverflow();
 
   const handleBackPress = () => {
     router.push("/(tabs)");
@@ -136,7 +138,10 @@ export default function EarningsScreen() {
     <SafeAreaView style={styles.container}>
       <Header title="Earnings" onBackPress={handleBackPress} />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: bottomTabOverflow + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentContainer}>

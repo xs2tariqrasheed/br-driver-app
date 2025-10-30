@@ -4,6 +4,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -301,15 +302,17 @@ export default function RideOfferModal({
           ]}
         >
           {/* Header */}
-          <View ref={headerRef} onLayout={handleHeaderLayout}>
-            <Header
-              title="Ride Offer"
-              hideBackIcon={false}
-              onBackPress={() => {
-                onClose();
-              }}
-            />
-          </View>
+          <SafeAreaView>
+            <View ref={headerRef} onLayout={handleHeaderLayout}>
+              <Header
+                title="Ride Offer"
+                hideBackIcon={false}
+                onBackPress={() => {
+                  onClose();
+                }}
+              />
+            </View>
+          </SafeAreaView>
 
           {/* Full Screen Map */}
           {mapHeight > 0 && (

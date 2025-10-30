@@ -46,6 +46,7 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -914,20 +915,20 @@ export default function ActiveRideScreen() {
   // Loading state
   if (isLoadingData) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={textColors.teal700} />
           <Text style={styles.loadingText}>Loading trip data...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   // Error state
   if (dataError || !jobOfferData) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <Header
           title="Active Ride"
@@ -958,12 +959,12 @@ export default function ActiveRideScreen() {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Completion Loading Overlay */}
@@ -1415,7 +1416,7 @@ export default function ActiveRideScreen() {
         swipeToClose={false}
         isLoading={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

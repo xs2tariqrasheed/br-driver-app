@@ -11,6 +11,7 @@ import {
   Keyboard,
   Modal,
   Platform,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -394,7 +395,7 @@ const ChatModal: React.FC = () => {
       }}
       statusBarTranslucent={true}
     >
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         {renderHeader()}
 
         <View
@@ -408,7 +409,7 @@ const ChatModal: React.FC = () => {
           {renderMessages()}
           {renderInput()}
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };
