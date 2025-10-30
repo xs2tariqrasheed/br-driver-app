@@ -4,7 +4,6 @@ import {
   Dimensions,
   Image,
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Button from "@/components/Button";
 import Header from "@/components/Header";
@@ -133,6 +133,7 @@ export default function RideOfferModal({
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const mapRef = useRef<MapView>(null);
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [offer, setOffer] = useState<any | null>(null);
   const refStatus = useRef<number>(0);
@@ -289,6 +290,7 @@ export default function RideOfferModal({
   };
 
   return (
+
     <Modal visible={visible} transparent animationType="none">
       <View style={styles.container}>
         {/* Bottom Sheet */}
@@ -302,17 +304,19 @@ export default function RideOfferModal({
           ]}
         >
           {/* Header */}
-          <SafeAreaView>
-            <View ref={headerRef} onLayout={handleHeaderLayout}>
-              <Header
-                title="Ride Offer"
-                hideBackIcon={false}
-                onBackPress={() => {
-                  onClose();
-                }}
-              />
-            </View>
-          </SafeAreaView>
+          <View
+            ref={headerRef}
+            onLayout={handleHeaderLayout}
+            style={{ paddingTop: insets.top }}
+          >
+            <Header
+              title="Ride Offer"
+              hideBackIcon={false}
+              onBackPress={() => {
+                onClose();
+              }}
+            />
+          </View>
 
           {/* Full Screen Map */}
           {mapHeight > 0 && (

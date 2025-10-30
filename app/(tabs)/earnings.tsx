@@ -1,7 +1,8 @@
 import Button from "@/components/Button";
 import Header from "@/components/Header";
-import Typography from "@/components/Typography";
 import { useToast } from "@/components/Toast";
+import Typography from "@/components/Typography";
+import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
 import { textColors } from "@/constants/colors";
 import {
   LIVE_JOB_STATUS,
@@ -18,7 +19,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
 
 export default function EarningsScreen() {
   const router = useRouter();
@@ -163,7 +163,7 @@ export default function EarningsScreen() {
               Open Web Portal
             </Button>
           </View>
-
+{/* 
           <View style={styles.buttonContainer}>
             <Button
               variant="outlined"
@@ -192,7 +192,7 @@ export default function EarningsScreen() {
             >
               Test Toast Message
             </Button>
-          </View>
+          </View> */}
         </View>
       </ScrollView>
     </SafeAreaView>

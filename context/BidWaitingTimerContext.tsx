@@ -68,7 +68,9 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
     }
     onCompleteProgressRef.current = onComplete || null;
     onCancelRef.current = onCancelCallback || null;
-    setIsBidWaitingTimerVisible(true);
+    setTimeout(() => {
+      setIsBidWaitingTimerVisible(true);
+    }, 1000);
   };
 
   const handleCompleteProgress = () => {
@@ -88,6 +90,7 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
 
   const handleCancel = () => {
     // Show confirmation modal instead of directly canceling
+    setIsBidWaitingTimerVisible(false);
     setIsConfirmationModalVisible(true);
   };
 
@@ -109,6 +112,7 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
   const handleCancelConfirmation = () => {
     // Just hide the confirmation modal, don't cancel the timer
     setIsConfirmationModalVisible(false);
+    setIsBidWaitingTimerVisible(true);
   };
 
   const contextValue: BidWaitingTimerContextType = {

@@ -39,7 +39,8 @@ export default function TabLayout() {
               // Use a transparent background on iOS to show the blur effect
               position: "absolute",
               height: tabBarHeight,
-              paddingBottom: Math.max(insets.bottom, minPadding),
+              // paddingBottom: Math.max(insets.bottom, minPadding),
+              paddingTop: 18,
             },
             default: { 
               height: tabBarHeight,
@@ -133,7 +134,7 @@ function TabItem({
 }) {
   const { width } = useWindowDimensions();
   // Make tab item width responsive - smaller on smaller screens
-  const tabItemWidth = Math.min(90, Math.max(70, width * 0.18));
+  const tabItemWidth = Math.min(90, Math.max(90, width * 0.25));
   
   return (
     <View
@@ -143,8 +144,16 @@ function TabItem({
         focused && styles.itemContainerFocused,
       ]}
     >
-      <Image source={source} style={styles.icon} resizeMode="contain" />
-      <Typography type="labelLarge" weight="semibold" style={styles.label}>
+      <Image
+        source={source}
+        style={[styles.icon, focused && styles.iconFocused]}
+        resizeMode="contain"
+      />
+      <Typography
+        type="labelLarge"
+        weight="semibold"
+        style={[styles.label, focused && styles.labelFocused]}
+      >
         {label}
       </Typography>
     </View>
@@ -155,22 +164,31 @@ const styles = StyleSheet.create({
   itemContainer: {
     // width is now dynamic based on screen size
     height: 64,
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderWidth: 0,
-    borderColor: textColors.black,
-    borderRadius: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "transparent",
+    backgroundColor: "transparent",
   },
   itemContainerFocused: {
-    borderWidth: 1,
+    borderColor: textColors.teal500,
+    backgroundColor: textColors.teal0,
   },
   icon: {
     width: 24,
     height: 24,
     tintColor: textColors.black,
   },
+  iconFocused: {
+    tintColor: textColors.teal800,
+  },
   label: {
-    color: textColors.black,
+    color: textColors.grey700,
+  },
+  labelFocused: {
+    color: textColors.teal900,
   },
 });

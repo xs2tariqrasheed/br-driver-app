@@ -96,7 +96,8 @@ export function BidBottomSheetProvider({ children }: { children: ReactNode }) {
               console.log("🔔 Calling submit handler...");
               setIsSubmitting(true);
               try {
-                await submitHandlerRef.current(data);
+                await submitHandlerRef.current(data)
+                hideBidBottomSheet();
               } finally {
                 setIsSubmitting(false);
               }
