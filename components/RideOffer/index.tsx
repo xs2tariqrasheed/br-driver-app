@@ -4,9 +4,11 @@ import {
   Dimensions,
   Image,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
@@ -129,9 +131,33 @@ export default function RideOfferModal({
 }: RideOfferModalProps) {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const mapRef = useRef<MapView>(null);
+  const { height: windowHeight } = useWindowDimensions();
 
   const [offer, setOffer] = useState<any | null>(null);
   const refStatus = useRef<number>(0);
+  const headerRef = useRef<View>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  // Measure header height when it mounts
+  const handleHeaderLayout = (event: any) => {
+    const { height } = event.nativeEvent.layout;
+    if (height > 0) {
+      setHeaderHeight(height);
+    }
+  };
+
+  // Calculate map height dynamically (remaining space after header)
+  const mapHeight = headerHeight > 0 ? windowHeight - headerHeight : windowHeight;
+
+  // Calculate overlay card height based on screen size
+  // For small devices (< 700px), increase the overlay height to ensure buttons are visible
+  const isSmallDevice = windowHeight < 700;
+  const overlayMaxHeight = isSmallDevice 
+    ? windowHeight * 0.75 // 75% for small devices
+    : windowHeight * 0.6; // 60% for larger devices
+  
+  // Minimum height to ensure buttons are always visible (estimated: ~250px for content + buttons)
+  const overlayMinHeight = Math.max(250, windowHeight * 0.35);
 
   // Bid context hooks
   const { showBidBottomSheet } = useBidBottomSheet();
@@ -275,19 +301,22 @@ export default function RideOfferModal({
           ]}
         >
           {/* Header */}
-          <Header
-            title="Ride Offer"
-            hideBackIcon={false}
-            onBackPress={() => {
-              onClose();
-            }}
-          />
+          <View ref={headerRef} onLayout={handleHeaderLayout}>
+            <Header
+              title="Ride Offer"
+              hideBackIcon={false}
+              onBackPress={() => {
+                onClose();
+              }}
+            />
+          </View>
 
           {/* Full Screen Map */}
-          <View style={styles.mapSection}>
+          {mapHeight > 0 && (
+            <View style={[styles.mapSection, { height: mapHeight }]}>
             <MapView
               ref={mapRef}
-              style={styles.map}
+              style={[styles.map, { height: mapHeight }]}
               provider={PROVIDER_GOOGLE}
               initialRegion={region}
               showsUserLocation={false}
@@ -348,90 +377,107 @@ export default function RideOfferModal({
             </MapView>
 
             {/* Overlay Card with Rounded Top Corners */}
-            <View style={styles.overlayCard}>
-              {/* Ride Offer Tile */}
-              <View style={styles.offerSection}>
-                <LiveRideOfferItem
-                  {...offer}
-                  onPressSpecialRequirements={() => {
-                    handleShowSpecialRequirements(offer?.specialRequirements);
-                  }}
-                  onPressPackage={() => {
-                    handleShowPackage(offer?.packageInfo);
-                  }}
-                  onButtonClick={() => {}}
-                  itemStatus={offer?.status as any}
-                  hideActionButton={true}
-                  removeFlex
-                  disabled
-                />
-              </View>
-
-              {/* Action Buttons or Expired UI */}
-              {isOffered && (
-                <View style={styles.buttonContainer}>
-                  <Button
-                    variant="outlined"
-                    block={false}
-                    rounded="half"
-                    style={styles.hideButton}
-                    onPress={onHide}
-                    disabled={shouldDisabled}
-                    loading={isHideLoading}
-                  >
-                    Hide
-                  </Button>
-
-                  <Button
-                    variant="outlined"
-                    block={false}
-                    rounded="half"
-                    style={styles.skipButton}
-                    onPress={onSkipPrice}
-                    disabled={shouldDisabled}
-                    loading={isSkipLoading}
-                  >
-                    Skip Price
-                  </Button>
-
-                  {bidable ? (
-                    <Button
-                      variant="primary"
-                      block={false}
-                      rounded="half"
-                      style={styles.acceptButton}
-                      onPress={handleBidClick}
-                      disabled={shouldDisabled}
-                      loading={isSubmitBidLoading}
-                    >
-                      Bid
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      block={false}
-                      rounded="half"
-                      style={styles.acceptButton}
-                      onPress={onAccept}
-                      disabled={shouldDisabled}
-                    >
-                      Accept
-                    </Button>
-                  )}
+            <View style={[
+              styles.overlayCard,
+              {
+                maxHeight: overlayMaxHeight,
+                minHeight: overlayMinHeight,
+              }
+            ]}>
+              <ScrollView
+                style={styles.overlayScrollView}
+                contentContainerStyle={styles.overlayContent}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+              >
+                {/* Ride Offer Tile */}
+                <View style={styles.offerSection}>
+                  <LiveRideOfferItem
+                    {...offer}
+                    onPressSpecialRequirements={() => {
+                      handleShowSpecialRequirements(offer?.specialRequirements);
+                    }}
+                    onPressPackage={() => {
+                      handleShowPackage(offer?.packageInfo);
+                    }}
+                    onButtonClick={() => {}}
+                    itemStatus={offer?.status as any}
+                    hideActionButton={true}
+                    removeFlex
+                    disabled
+                  />
                 </View>
-              )}
 
-              {isExpired && (
-                <View style={styles.expiredContainer}>
-                  <View style={styles.expiredAlert}>
-                    <Text style={styles.expiredText}>
-                      This offer has expired
-                    </Text>
+                {/* Action Buttons or Expired UI */}
+                {isOffered && (
+                  <View
+                    style={styles.buttonContainer}
+                    onStartShouldSetResponder={() => false}
+                  >
+                    <Button
+                      variant="outlined"
+                      block={false}
+                      rounded="half"
+                      style={styles.hideButton}
+                      onPress={onHide}
+                      disabled={shouldDisabled}
+                      loading={isHideLoading}
+                    >
+                      Hide
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      block={false}
+                      rounded="half"
+                      style={styles.skipButton}
+                      onPress={onSkipPrice}
+                      disabled={shouldDisabled}
+                      loading={isSkipLoading}
+                    >
+                      Skip Price
+                    </Button>
+
+                    {bidable ? (
+                      <Button
+                        variant="primary"
+                        block={false}
+                        rounded="half"
+                        style={styles.acceptButton}
+                        onPress={handleBidClick}
+                        disabled={shouldDisabled}
+                        loading={isSubmitBidLoading}
+                      >
+                        Bid
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        block={false}
+                        rounded="half"
+                        style={styles.acceptButton}
+                        onPress={onAccept}
+                        disabled={shouldDisabled}
+                      >
+                        Accept
+                      </Button>
+                    )}
                   </View>
-                </View>
-              )}
+                )}
+
+                {isExpired && (
+                  <View style={styles.expiredContainer}>
+                    <View style={styles.expiredAlert}>
+                      <Text style={styles.expiredText}>
+                        This offer has expired
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
             </View>
-          </View>
+            </View>
+          )}
         </Animated.View>
       </View>
     </Modal>
@@ -448,17 +494,25 @@ const styles = StyleSheet.create({
 
   bottomSheet: {
     height: screenHeight,
+    width: "100%",
     zIndex: 9999,
     elevation: 9999,
   },
-  // Map Section (Full Screen)
+  // Map Section (Dynamic height based on screen, no padding)
   mapSection: {
-    flex: 1,
     position: "relative",
+    width: "100%",
+    marginTop: 0,
+    marginBottom: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   map: {
     width: "100%",
-    height: "100%",
+    marginTop: 0,
+    marginBottom: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   // Overlay Card
   overlayCard: {
@@ -470,7 +524,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingTop: 10,
-    paddingBottom: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -479,6 +532,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 10,
+  },
+  overlayScrollView: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  overlayContent: {
+    paddingBottom: Math.max(16, Dimensions.get("window").height * 0.02), // Dynamic padding based on screen height
   },
   // Offer Section
   offerSection: {
@@ -492,6 +552,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     alignItems: "center",
+    minHeight: 48, // Ensure buttons have enough space
   },
   hideButton: {
     width: "25%",

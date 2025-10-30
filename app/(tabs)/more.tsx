@@ -120,6 +120,20 @@ export default function MoreScreen() {
       }
     }
 
+    // Update driver context to mark as offline
+    try {
+      if (driver) {
+        await setDriver({
+          ...driver,
+          online: false,
+        });
+        log("[MoreScreen] Driver state updated to offline");
+      }
+    } catch (error) {
+      log("[MoreScreen] Error updating driver state:", error);
+      // Continue with logout even if state update fails
+    }
+
     // Disconnect socket
     try {
       disconnectSocket();

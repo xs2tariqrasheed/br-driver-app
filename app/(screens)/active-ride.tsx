@@ -12,6 +12,7 @@ import { textColors } from "@/constants/colors";
 import { openPhoneDialer, openWhatsApp } from "@/utils/helpers";
 
 import AddTollBottomSheet from "@/components/AddTollBottomSheet";
+import { useToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
 import {
@@ -35,28 +36,29 @@ import { useAuth } from "@/context/AuthContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useChat } from "@/context/ChatContext";
 import { useDriver } from "@/context/DriverContext";
-import { useToast } from "@/components/Toast";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
 import { useFetch } from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { useSocket } from "@/hooks/useSocket";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 export default function ActiveRideScreen() {
-  const labels: [RideToggleLabel, RideToggleLabel] = [
-    RIDE_TOGGLE_LABELS.MAP,
-    RIDE_TOGGLE_LABELS.DETAILS,
-  ];
+  const labels: [RideToggleLabel, RideToggleLabel] = useMemo(
+    () => [RIDE_TOGGLE_LABELS.MAP, RIDE_TOGGLE_LABELS.DETAILS],
+    []
+  );
 
   // Get params from navigation
   const params = useLocalSearchParams();
@@ -100,17 +102,52 @@ export default function ActiveRideScreen() {
     SWIPE_BUTTON_STATES.MARK_ARRIVED
   );
 
+  // Dynamic width for header toggle (Map/Details) similar to Home screen status toggle
+  const { width: screenWidth } = useWindowDimensions();
+  const headerToggleSize = useMemo(() => {
+    // Estimate width needed based on longest label and screen size
+    const longestLabelLength = Math.max(...labels.map((l) => String(l).length));
+    const approxCharWidth = 8; // px per character (approx)
+    const horizontalPadding = 36; // internal padding + margins
+    const knobAllowance = 28; // space for knob/indicator
+    const minWidth = 112;
+    const maxWidth = Math.min(220, Math.round(screenWidth * 0.5));
+    const computedWidth =
+      longestLabelLength * approxCharWidth + horizontalPadding + knobAllowance;
+    const finalWidth = Math.min(maxWidth, Math.max(minWidth, computedWidth));
+    return { width: finalWidth, height: 28 } as const;
+  }, [screenWidth, labels]);
+
   // Ride state management
   const [currentRideState, setCurrentRideState] = useState<string>(
     RIDE_STATES.EN_ROUTE
   );
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
   const [isCompletingRide, setIsCompletingRide] = useState<boolean>(false);
-
-  // Data fetching state
+  const [isMapReady, setIsMapReady] = useState<boolean>(false);
+  // Data fetching state (declared early so it's available for UI gating)
   const [jobOfferData, setJobOfferData] = useState<any>(null);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
   const [dataError, setDataError] = useState<string | null>(null);
+
+  // Swipe button visibility + animation
+  const swipeOpacity = useRef(new Animated.Value(0)).current;
+  const showSwipe = !isActionLoading && !isCompletingRide && isMapReady && !isLoadingData;
+  useEffect(() => {
+    if (showSwipe) {
+      swipeOpacity.setValue(0);
+      Animated.timing(swipeOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      swipeOpacity.stopAnimation();
+      swipeOpacity.setValue(0);
+    }
+  }, [showSwipe, swipeOpacity]);
+
+  // (moved above)
 
   // API call for fetching active trip data when no params
   const {
@@ -593,17 +630,24 @@ export default function ActiveRideScreen() {
         // Handle special cases
         if (action === DRIVER_ACTIONS.ARRIVED) {
           setIsDriverReachedOnPickup(true);
+          showToast("Marked arrived successfully", "success", "top");
         } else if (action === DRIVER_ACTIONS.START) {
           console.log("Ride started");
+          showToast("Ride started", "success", "top");
         } else if (action === DRIVER_ACTIONS.COMPLETED) {
           // Handle ride completion
           console.log("Ride completed, redirecting to feedback screen...");
+          showToast("Ride completed", "success", "top");
           await handleRideCompletion();
+          return;
+        } else if (action === DRIVER_ACTIONS.STOP) {
+          showToast("Ride stopped", "success", "top");
         }
       } else {
         // Show error message or handle failure
         console.error("Failed to submit driver action:", action);
         // You could show a toast or error message here
+        showToast("Action failed. Please try again.", "error", "top");
       }
     } catch (error) {
       console.error("Error in handleSwipeComplete:", error);
@@ -703,7 +747,14 @@ export default function ActiveRideScreen() {
     },
     {
       icon: "circling.png",
-      onPress: () => console.log("Circling"),
+      onPress: () => {
+        console.log("Circling");
+        showToast(
+          "The customer has been notified that you are circling.",
+          "success",
+          "top"
+        );
+      },
       key: "circling",
       disabled: isCompletingRide,
     },
@@ -878,6 +929,10 @@ export default function ActiveRideScreen() {
     return (
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
+        <Header
+          title="Active Ride"
+          onBackPress={() => router.replace("/(tabs)")}
+        />
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Unable to Load Trip Data</Text>
           <Text style={styles.errorMessage}>
@@ -937,13 +992,13 @@ export default function ActiveRideScreen() {
               labels={labels}
               value={toggleValue}
               setValue={handleToggle}
-              size={styles.headerToggleSize}
+              size={headerToggleSize}
             />
           </View>
         }
         onBackPress={() => router.replace("/(tabs)")}
       />
-      <View style={styles.actionBarContainer}>
+      <View style={[styles.actionBarContainer, (!isMapReady || isLoadingData) && { opacity: 0.5 }]}>
         {/* Action Bar */}
         {actionButtons.length > 0 && (
           <ScrollView
@@ -960,7 +1015,7 @@ export default function ActiveRideScreen() {
                   button.disabled && styles.actionButtonDisabled,
                 ]}
                 onPress={button.onPress}
-                disabled={!button.onPress || button.disabled}
+                disabled={!button.onPress || button.disabled || !isMapReady || isLoadingData}
               >
                 <View
                   style={[
@@ -1038,15 +1093,18 @@ export default function ActiveRideScreen() {
               currentRideState as keyof typeof RIDE_HEADER_TITLES
             ] || "En Route"
           }
-          onMapReady={() => console.log("Map ready")}
+          onMapReady={() => {
+            setIsMapReady(true);
+            console.log("Map ready");
+          }}
           onError={(error) => console.error("Map error:", error)}
         />
       </View>
 
-      {toggleValue === RIDE_TOGGLE_LABELS.MAP && (
-        <RideAction
-          leftComponent={
-            <TouchableOpacity disabled={isActionLoading || isCompletingRide}>
+      {toggleValue === RIDE_TOGGLE_LABELS.MAP && showSwipe && (
+        <Animated.View style={{ opacity: swipeOpacity }}>
+          <RideAction
+            leftComponent={
               <Image
                 source={require("@/assets/images/actions/circling.png")}
                 style={{
@@ -1055,24 +1113,28 @@ export default function ActiveRideScreen() {
                   opacity: isActionLoading || isCompletingRide ? 0.5 : 1,
                 }}
               />
-            </TouchableOpacity>
-          }
-          swipeTitle={
-            isActionLoading || isCompletingRide
-              ? "Processing..."
-              : SWIPE_BUTTON_TITLES[swipeButtonState]
-          }
-          onSwipeComplete={() => {
-            if (!isActionLoading && !isCompletingRide) {
-              handleSwipeComplete();
             }
-          }}
-          disabled={isActionLoading || isCompletingRide}
-          rightComponent={
-            <TouchableOpacity
-              onPress={handleContactCustomer}
-              disabled={isActionLoading || isCompletingRide}
-            >
+            swipeTitle={
+              isActionLoading || isCompletingRide
+                ? "Processing..."
+                : SWIPE_BUTTON_TITLES[swipeButtonState]
+            }
+            onSwipeComplete={() => {
+              if (!isActionLoading && !isCompletingRide) {
+                handleSwipeComplete();
+              }
+            }}
+            disabled={isActionLoading || isCompletingRide || !isMapReady || isLoadingData}
+            onLeftPress={() => {
+              console.log("Circling");
+              showToast(
+                "The customer has been notified that you are circling.",
+                "success",
+                "top"
+              );
+            }}
+            onRightPress={handleContactCustomer}
+            rightComponent={
               <Image
                 source={require("@/assets/images/actions/contact-customer.png")}
                 style={{
@@ -1081,9 +1143,9 @@ export default function ActiveRideScreen() {
                   opacity: isActionLoading || isCompletingRide ? 0.5 : 1,
                 }}
               />
-            </TouchableOpacity>
-          }
-        />
+            }
+          />
+        </Animated.View>
       )}
 
       {/* Contact Customer Bottom Sheet */}
@@ -1198,8 +1260,12 @@ export default function ActiveRideScreen() {
       <BottomSheet
         open={cancelRideSheetOpen}
         onClose={closeCancelRideSheet}
-        snapPointsWhenKeyboardVisible={["75%"]}
+        scrollable
+        snapPoints={["45%", "65%"]}
+        snapPointsWhenKeyboardVisible={["85%", "95%"]}
+        swipeToClose={false}
         headerTitle="Cancel Ride"
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.cancelRideContainer}>
           {/* Select Reason Section */}
@@ -1327,8 +1393,9 @@ export default function ActiveRideScreen() {
         open={updateETASheetOpen}
         onClose={closeUpdateETASheet}
         onSubmit={handleUpdateETASubmit}
-        snapPoints={["45%"]}
-        snapPointsWhenKeyboardVisible={["80%"]}
+        snapPoints={["40%", "60%"]}
+        snapPointsWhenKeyboardVisible={["90%", "95%"]}
+        swipeToClose={false}
         variant="update"
         headerTitle="Update ETA"
         description="Let the rider know if your arrival time has changed."
@@ -1413,6 +1480,7 @@ const styles = StyleSheet.create({
   // bottom sheet
   sheetContainer: {
     paddingTop: 12,
+    paddingHorizontal: 12,
     backgroundColor: textColors.white,
     gap: 12,
   },

@@ -7,6 +7,7 @@ import { geocodeAddress, LocationCoordinates, logger } from "@/utils/helpers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  Easing,
   Image,
   Linking,
   Platform,
@@ -126,6 +127,12 @@ export default function RideMap({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [carRotation, setCarRotation] = useState(0);
+  
+  // State to track animated coordinates for iOS compatibility
+  const [animatedCoordinateState, setAnimatedCoordinateState] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   // Testing state
   const [isTesting, setIsTesting] = useState(false);
@@ -321,18 +328,73 @@ export default function RideMap({
     };
   }, [currentLocation]);
 
-  // Memoize animated coordinate object
-  const animatedCoordinate = useMemo(
-    () => ({
+  // Memoize animated coordinate object - Use state for iOS compatibility
+  const animatedCoordinate = useMemo(() => {
+    if (Platform.OS === "ios" && animatedCoordinateState) {
+      return animatedCoordinateState;
+    }
+    return {
       latitude: animatedLatitude.current,
       longitude: animatedLongitude.current,
-    }),
-    []
-  );
+    };
+  }, [animatedCoordinateState]);
+
+  // iOS: Listen to animated value changes and update state (throttled for performance)
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+
+    // Store refs in variables for cleanup
+    const latRef = animatedLatitude.current;
+    const lngRef = animatedLongitude.current;
+    const rotRef = animatedRotation.current;
+
+    let updateTimeout: ReturnType<typeof setTimeout> | null = null;
+    let lastUpdate = 0;
+    const UPDATE_THROTTLE = 50; // Update at most every 50ms for smoother performance
+
+    const updateCoordinateState = () => {
+      const now = Date.now();
+      if (now - lastUpdate < UPDATE_THROTTLE) {
+        if (updateTimeout) clearTimeout(updateTimeout);
+        updateTimeout = setTimeout(() => {
+          const lat = (latRef as any)._value;
+          const lng = (lngRef as any)._value;
+          setAnimatedCoordinateState({ latitude: lat, longitude: lng });
+          lastUpdate = Date.now();
+        }, UPDATE_THROTTLE - (now - lastUpdate));
+        return;
+      }
+      
+      const lat = (latRef as any)._value;
+      const lng = (lngRef as any)._value;
+      setAnimatedCoordinateState({ latitude: lat, longitude: lng });
+      lastUpdate = now;
+    };
+
+    const latListener = latRef.addListener(() => {
+      updateCoordinateState();
+    });
+
+    const lngListener = lngRef.addListener(() => {
+      updateCoordinateState();
+    });
+
+    const rotationListener = rotRef.addListener(({ value }) => {
+      setCarRotation(value);
+    });
+
+    return () => {
+      if (updateTimeout) clearTimeout(updateTimeout);
+      latRef.removeListener(latListener);
+      lngRef.removeListener(lngListener);
+      rotRef.removeListener(rotationListener);
+    };
+  }, []);
 
   // Memoize the initialization to prevent unnecessary re-runs
   const initializeMapMemo = useCallback(async () => {
     await initializeMap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickupAddress, dropoffAddress]);
 
   useEffect(() => {
@@ -340,10 +402,12 @@ export default function RideMap({
 
     return () => {
       // Cleanup animations if testing
-      if (isTesting) {
+      const currentIsTesting = isTesting;
+      if (currentIsTesting) {
         stopTesting();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initializeMapMemo]);
 
   /**
@@ -452,6 +516,14 @@ export default function RideMap({
       animatedLatitude.current.setValue(current.latitude);
       animatedLongitude.current.setValue(current.longitude);
       animatedRotation.current.setValue(0);
+      
+      // Initialize iOS coordinate state
+      if (Platform.OS === "ios") {
+        setAnimatedCoordinateState({
+          latitude: current.latitude,
+          longitude: current.longitude,
+        });
+      }
 
       // Geocode pickup address
       const pickup = await geocodeAddress(pickupAddress, GOOGLE_MAPS_API_KEY);
@@ -709,29 +781,51 @@ export default function RideMap({
     const currentPoint = route[index];
     const nextPoint = route[index + 1];
     const distance = getDistance(currentPoint, nextPoint);
-    const duration = Math.max(300, (distance / SPEED) * 1000); // Min 300ms for smoothness
+    // iOS needs longer duration for smoother movement
+    const baseDuration = Platform.OS === "ios" 
+      ? Math.max(500, (distance / SPEED) * 1000)
+      : Math.max(300, (distance / SPEED) * 1000);
     const bearing = calculateBearing(currentPoint, nextPoint);
+
+    // iOS needs easing for smoother animation
+    const easing = Platform.OS === "ios" 
+      ? Easing.out(Easing.quad)
+      : undefined;
 
     const animations = [
       Animated.timing(animatedLatitude.current, {
         toValue: nextPoint.latitude,
-        duration,
+        duration: baseDuration,
+        easing,
         useNativeDriver: false,
       }),
       Animated.timing(animatedLongitude.current, {
         toValue: nextPoint.longitude,
-        duration,
+        duration: baseDuration,
+        easing,
         useNativeDriver: false,
       }),
       Animated.timing(animatedRotation.current, {
         toValue: bearing,
-        duration: duration * 1.2, // Slightly longer for rotation
+        duration: baseDuration * (Platform.OS === "ios" ? 1.0 : 1.2), // Same duration on iOS for smoother rotation
+        easing: Platform.OS === "ios" 
+          ? Easing.out(Easing.quad)
+          : undefined,
         useNativeDriver: false,
       }),
     ];
 
     Animated.parallel(animations).start(() => {
       setCurrentLocation(nextPoint);
+      
+      // Update iOS coordinate state synchronously for smoother updates
+      if (Platform.OS === "ios") {
+        setAnimatedCoordinateState({
+          latitude: nextPoint.latitude,
+          longitude: nextPoint.longitude,
+        });
+      }
+      
       if (isDropoff) {
         setCurrentDropoffIndex(index + 1);
       } else {
@@ -805,9 +899,12 @@ export default function RideMap({
         {ridePhase === "toPickup" &&
           pickupInterpolated.length > currentPickupIndex && (
             <Polyline
+              key={`pickup-${currentPickupIndex}`}
               coordinates={pickupInterpolated.slice(currentPickupIndex)}
               strokeColor={textColors.blue600}
               strokeWidth={4}
+              lineCap="round"
+              lineJoin="round"
             />
           )}
 
@@ -815,34 +912,61 @@ export default function RideMap({
         {ridePhase === "toPickup"
           ? dropoffInterpolated.length > 0 && (
               <Polyline
+                key="dropoff-full"
                 coordinates={dropoffInterpolated}
                 strokeColor={textColors.green600}
                 strokeWidth={4}
+                lineCap="round"
+                lineJoin="round"
               />
             )
           : dropoffInterpolated.length > currentDropoffIndex && (
               <Polyline
+                key={`dropoff-${currentDropoffIndex}`}
                 coordinates={dropoffInterpolated.slice(currentDropoffIndex)}
                 strokeColor={textColors.green600}
                 strokeWidth={4}
+                lineCap="round"
+                lineJoin="round"
               />
             )}
 
         {/* Current location marker (car) - Use Marker.Animated for smooth movement */}
-        <Marker.Animated
-          ref={markerRef}
-          coordinate={animatedCoordinate}
-          anchor={{ x: 0.5, y: 0.5 }}
-          rotation={animatedRotation.current}
-          flat={true}
-          zIndex={1000}
-        >
-          <Image
-            source={require("@/assets/images/3d-car-icon.png")}
-            style={styles.carIcon}
-            resizeMode="contain"
-          />
-        </Marker.Animated>
+        {Platform.OS === "ios" ? (
+          <Marker
+            ref={markerRef}
+            coordinate={animatedCoordinateState || {
+              latitude: (animatedLatitude.current as any)._value,
+              longitude: (animatedLongitude.current as any)._value,
+            }}
+            anchor={{ x: 0.5, y: 0.5 }}
+            rotation={carRotation}
+            flat={true}
+            zIndex={1000}
+            tracksViewChanges={false}
+          >
+            <Image
+              source={require("@/assets/images/3d-car-icon.png")}
+              style={styles.carIcon}
+              resizeMode="contain"
+            />
+          </Marker>
+        ) : (
+          <Marker.Animated
+            ref={markerRef}
+            coordinate={animatedCoordinate}
+            anchor={{ x: 0.5, y: 0.5 }}
+            rotation={animatedRotation.current}
+            flat={true}
+            zIndex={1000}
+          >
+            <Image
+              source={require("@/assets/images/3d-car-icon.png")}
+              style={styles.carIcon}
+              resizeMode="contain"
+            />
+          </Marker.Animated>
+        )}
 
         {/* Pickup location marker */}
         <Marker

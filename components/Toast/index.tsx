@@ -3,12 +3,12 @@ import { textColors } from "@/constants/colors";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   Image,
-  Modal,
   StyleSheet,
   TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
+import { Portal } from "react-native-portalize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toast } from "toastify-react-native";
 
@@ -77,8 +77,8 @@ const ToastContent: React.FC<ToastContentProps> = ({
   );
 };
 
-// Custom Toast Modal Component
-const ToastModal: React.FC<{
+// Custom Toast Component (rendered via Portal to appear above all modals, non-blocking)
+const ToastDisplay: React.FC<{
   visible: boolean;
   message: string;
   variant: ToastVariant;
@@ -110,18 +110,21 @@ const ToastModal: React.FC<{
     }
   };
 
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onHide}
-    >
-      <View style={[styles.modalOverlay, getPositionStyle()]}>
-        <ToastContent text1={message} variant={variant} hide={onHide} />
+    <Portal>
+      <View
+        style={[styles.toastContainer, getPositionStyle()]}
+        pointerEvents="box-none"
+      >
+        <View pointerEvents="auto">
+          <ToastContent text1={message} variant={variant} hide={onHide} />
+        </View>
       </View>
-    </Modal>
+    </Portal>
   );
 };
 
@@ -168,7 +171,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
-      <ToastModal
+      <ToastDisplay
         visible={toastState.visible}
         message={toastState.message}
         variant={toastState.variant}
@@ -232,13 +235,14 @@ export function showToast(
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  toastContainer: {
     position: "absolute",
     left: 0,
     right: 0,
     alignItems: "center",
     zIndex: 999999,
     elevation: 999999,
+    pointerEvents: "box-none",
   },
   container: {
     width: "90%",
@@ -249,7 +253,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    zIndex: 100000,
+    zIndex: 1000000,
+    elevation: 1000000,
+    pointerEvents: "auto",
   },
   message: {
     flex: 1,

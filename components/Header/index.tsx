@@ -1,7 +1,7 @@
 import React from "react";
 import {
-  Dimensions,
   Image,
+  Platform,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -33,15 +33,16 @@ export const Header: React.FC<HeaderProps> = ({
   leftAccessory,
   rightAccessory,
 }) => {
-  const screenHeight = Dimensions.get("window").height;
-  const verticalPadding = Math.max(12, Math.round(screenHeight * 0.05));
+  // On iOS, SafeAreaView already handles the notch, so we only need 4-6px padding
+  // On Android, use standard padding
+  const paddingTop = Platform.OS === "ios" ? 5 : 12;
 
   return (
     <View
       style={[
         styles.container,
         {
-          paddingVertical: verticalPadding,
+          paddingTop,
           borderBottomColor: textColors.grey100,
         },
       ]}

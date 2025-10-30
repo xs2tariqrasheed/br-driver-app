@@ -273,7 +273,8 @@ export default function LoginScreen() {
           disableDeviceFallback: false,
         });
         if (result?.success) {
-          setSuccessSheetOpen(true);
+          // Skip identity verified sheet for biometric login and go home directly
+          router.replace("/(tabs)");
         }
       } catch (err) {
         const { title, description } = getNotEnabledCopy(method);

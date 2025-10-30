@@ -1,6 +1,6 @@
 import { textColors } from "@/constants/colors";
 import React from "react";
-import { StyleSheet, View, type ViewStyle } from "react-native";
+import { StyleSheet, TouchableOpacity, View, type ViewStyle } from "react-native";
 import { SwipeableButton } from "../Button/SwipeButton";
 
 export interface RideActionProps {
@@ -18,6 +18,10 @@ export interface RideActionProps {
   style?: ViewStyle;
   /** Stick the action bar to bottom of the parent container */
   sticky?: boolean;
+  /** Called when left button is pressed */
+  onLeftPress?: () => void;
+  /** Called when right button is pressed */
+  onRightPress?: () => void;
 }
 
 /**
@@ -33,17 +37,19 @@ const RideAction: React.FC<RideActionProps> = ({
   rightComponent = null,
   style,
   sticky = true,
+  onLeftPress,
+  onRightPress,
 }) => {
   // Render a placeholder to preserve layout and keep the center truly centered
   const Left = (
-    <View style={leftComponent ? styles.sideBox : styles.sideEmpty}>
+    <TouchableOpacity onPress={onLeftPress} disabled={disabled} style={leftComponent ? styles.sideBox : styles.sideEmpty}>
       {leftComponent ?? <View style={styles.sideFiller} />}
-    </View>
+    </TouchableOpacity>
   );
   const Right = (
-    <View style={rightComponent ? styles.sideBox : styles.sideEmpty}>
+    <TouchableOpacity onPress={onRightPress} disabled={disabled} style={rightComponent ? styles.sideBox : styles.sideEmpty}>
       {rightComponent ?? <View style={styles.sideFiller} />}
-    </View>
+    </TouchableOpacity>
   );
 
   return (

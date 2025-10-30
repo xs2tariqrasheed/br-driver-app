@@ -1,13 +1,28 @@
 import Button from "@/components/Button";
 import Header from "@/components/Header";
 import Typography from "@/components/Typography";
+import { useToast } from "@/components/Toast";
 import { textColors } from "@/constants/colors";
-import { URLS } from "@/constants/global";
+import {
+  LIVE_JOB_STATUS,
+  RIDE_TYPES,
+  TRIP_OFFER_TYPES,
+  URLS,
+} from "@/constants/global";
+import { useRideOffer } from "@/context/RideOfferContext";
 import { useRouter } from "expo-router";
-import { Linking, SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 
 export default function EarningsScreen() {
   const router = useRouter();
+  const { showRideOfferModal } = useRideOffer();
+  const { showToast } = useToast();
 
   const handleBackPress = () => {
     router.push("/(tabs)");
@@ -34,7 +49,8 @@ export default function EarningsScreen() {
           },
         },
         dropoff: {
-          address: "18-KM Main Lahore – Kasur Rd، opp. Descon Head Office, Shadab Garden, Lahore",
+          address:
+            "18-KM Main Lahore – Kasur Rd، opp. Descon Head Office, Shadab Garden, Lahore",
           lat: 31.4244,
           lng: 74.3574,
           coordinates: {
@@ -60,6 +76,60 @@ export default function EarningsScreen() {
         activeTripData: JSON.stringify(dummyActiveTripData),
       },
     });
+  };
+
+  const handleOpenRideOfferModal = () => {
+    // Create dummy ride offer data for testing
+    const dummyRideOffer = {
+      id: "test-ride-offer-123",
+      type: TRIP_OFFER_TYPES.SEQUENTIAL,
+      status: LIVE_JOB_STATUS.OFFERED as "offered",
+      tripOffer: {
+        tripId: "test-trip-id-456",
+        customerId: "test-customer-id-789",
+        pickup: {
+          lat: 31.3709,
+          lng: 74.3648,
+          address: "99C7+8WV, Service Road, Kahna Nau, Lahore",
+        },
+        dropoff: {
+          lat: 31.4244,
+          lng: 74.3574,
+          address:
+            "18-KM Main Lahore – Kasur Rd، opp. Descon Head Office, Shadab Garden, Lahore",
+        },
+        biddable: false,
+        type: "sequential" as const,
+        fare: 25.0,
+        timestamp: Date.now(),
+      },
+      bidable: false,
+      rideType: RIDE_TYPES.ONE_WAY,
+      peopleCount: 2,
+      rating: 4.8,
+      hasSpecialRequirements: false,
+      hasPackage: false,
+      pickupTime: 5,
+      pickupDistance: 0.8,
+      pickupAddress: "99C7+8WV, Service Road, Kahna Nau, Lahore",
+      dropoffTime: 15,
+      dropoffDistance: 3.2,
+      dropoffAddress:
+        "18-KM Main Lahore – Kasur Rd، opp. Descon Head Office, Shadab Garden, Lahore",
+      rideTime: 20,
+      rideDistance: 4.0,
+      totalPrice: 25.0,
+      driverEarn: 20.0,
+      buttonTitle: "Accept",
+      timestamp: new Date().toISOString(),
+      timeout: 30000,
+    };
+
+    showRideOfferModal(dummyRideOffer);
+  };
+
+  const handleShowToast = () => {
+    showToast("This is a test toast message!", "success", "top");
   };
 
   return (
@@ -96,6 +166,26 @@ export default function EarningsScreen() {
               onPress={handleOpenActiveRide}
             >
               Test Active Ride Screen
+            </Button>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <Button
+              variant="outlined"
+              rounded="half"
+              onPress={handleOpenRideOfferModal}
+            >
+              Test Ride Offer Modal
+            </Button>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <Button
+              variant="outlined"
+              rounded="half"
+              onPress={handleShowToast}
+            >
+              Test Toast Message
             </Button>
           </View>
         </View>
