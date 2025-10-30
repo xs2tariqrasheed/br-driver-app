@@ -9,81 +9,110 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
-  const isDriver = message.sender === "driver";
-  const isSending = message.status === "sending";
-  const isFailed = message.status === "failed";
+  try {
+    if (!message) {
+      console.warn("MessageBubble: message is null or undefined");
+      return null;
+    }
 
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
+    const isDriver = message.sender === "driver";
+    const isSending = message.status === "sending";
+    const isFailed = message.status === "failed";
 
-  const getStatusIcon = () => {
-    if (isSending) return "⏳";
-    if (isFailed) return "❌";
-    if (isDriver && message.status === "delivered") return "✓";
-    if (isDriver) return "✓";
-    return null;
-  };
+    const formatTime = (timestamp: string) => {
+      try {
+        if (!timestamp) {
+          return "";
+        }
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) {
+          return "";
+        }
+        return date.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+      } catch (error: any) {
+        console.error("Error formatting time:", error);
+        return "";
+      }
+    };
 
-  return (
-    <View
-      style={[
-        styles.container,
-        isDriver ? styles.driverContainer : styles.customerContainer,
-      ]}
-    >
+    const getStatusIcon = () => {
+      try {
+        if (isSending) return "⏳";
+        if (isFailed) return "❌";
+        if (isDriver && message.status === "delivered") return "✓";
+        if (isDriver) return "✓";
+        return null;
+      } catch (error: any) {
+        console.error("Error getting status icon:", error);
+        return null;
+      }
+    };
+
+    const messageText = message.text || "";
+    const messageTimestamp = message.timestamp || new Date().toISOString();
+
+    return (
       <View
         style={[
-          styles.bubble,
-          isDriver ? styles.driverBubble : styles.customerBubble,
-          isFailed && styles.failedBubble,
+          styles.container,
+          isDriver ? styles.driverContainer : styles.customerContainer,
         ]}
       >
-        <Typography
-          type="bodyMedium"
-          weight="regular"
+        <View
           style={[
-            styles.messageText,
-            isDriver ? styles.driverText : styles.customerText,
-            isFailed && styles.failedText,
+            styles.bubble,
+            isDriver ? styles.driverBubble : styles.customerBubble,
+            isFailed && styles.failedBubble,
           ]}
         >
-          {message.text}
-        </Typography>
-
-        <View style={styles.timestampContainer}>
           <Typography
-            type="bodySmall"
+            type="bodyMedium"
             weight="regular"
             style={[
-              styles.timestamp,
-              isDriver ? styles.driverTimestamp : styles.customerTimestamp,
+              styles.messageText,
+              isDriver ? styles.driverText : styles.customerText,
+              isFailed && styles.failedText,
             ]}
           >
-            {formatTime(message.timestamp)}
+            {messageText}
           </Typography>
 
-          {getStatusIcon() && (
+          <View style={styles.timestampContainer}>
             <Typography
               type="bodySmall"
               weight="regular"
               style={[
-                styles.statusIcon,
+                styles.timestamp,
                 isDriver ? styles.driverTimestamp : styles.customerTimestamp,
               ]}
             >
-              {getStatusIcon()}
+              {formatTime(messageTimestamp)}
             </Typography>
-          )}
+
+            {getStatusIcon() && (
+              <Typography
+                type="bodySmall"
+                weight="regular"
+                style={[
+                  styles.statusIcon,
+                  isDriver ? styles.driverTimestamp : styles.customerTimestamp,
+                ]}
+              >
+                {getStatusIcon()}
+              </Typography>
+            )}
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  } catch (error: any) {
+    console.error("Error rendering MessageBubble:", error);
+    return null;
+  }
 };
 
 const styles = StyleSheet.create({

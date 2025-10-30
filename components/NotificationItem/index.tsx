@@ -1,6 +1,7 @@
 import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { formatDateTimestamp } from "@/utils/helpers";
 import { Image } from "expo-image";
 import React from "react";
 import {
@@ -55,6 +56,9 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     onDelete?.(id);
   };
 
+  // Format the dateTime for display
+  const formattedDateTime = formatDateTimestamp(dateTime);
+
   return (
     <TouchableOpacity
       style={[
@@ -97,7 +101,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
         {/* Date Time */}
         <Typography type="bodySmall" weight="regular" style={styles.dateTime}>
-          {dateTime}
+          {formattedDateTime}
         </Typography>
       </View>
 

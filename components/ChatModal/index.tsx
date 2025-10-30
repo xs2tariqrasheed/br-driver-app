@@ -3,6 +3,7 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { useChat } from "@/context/ChatContext";
 import { openPhoneDialer } from "@/utils/helpers";
+import { useToast } from "@/components/Toast";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -36,15 +37,24 @@ const ChatModal: React.FC = () => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+    if (messages && messages.length > 0 && scrollViewRef.current) {
+      try {
+        setTimeout(() => {
+          try {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          } catch (scrollError: any) {
+            console.error("Error scrolling to end:", scrollError);
+          }
+        }, 100);
+      } catch (error: any) {
+        console.error("Error in auto-scroll effect:", error);
+      }
     }
-  }, [messages.length]);
+  }, [messages?.length]);
 
   // Clear input when modal closes
   useEffect(() => {
@@ -56,185 +66,332 @@ const ChatModal: React.FC = () => {
 
   // Handle keyboard events
   useEffect(() => {
-    const keyboardWillShowListener = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
-    );
-    const keyboardWillHideListener = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => {
-        setKeyboardHeight(0);
-      }
-    );
+    let keyboardWillShowListener: any = null;
+    let keyboardWillHideListener: any = null;
+
+    try {
+      const keyboardEventName =
+        Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+      const keyboardHideEventName =
+        Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+      keyboardWillShowListener = Keyboard.addListener(
+        keyboardEventName,
+        (e) => {
+          try {
+            if (e?.endCoordinates?.height) {
+              setKeyboardHeight(e.endCoordinates.height);
+            }
+          } catch (error: any) {
+            console.error("Error handling keyboard show:", error);
+          }
+        }
+      );
+
+      keyboardWillHideListener = Keyboard.addListener(
+        keyboardHideEventName,
+        () => {
+          try {
+            setKeyboardHeight(0);
+          } catch (error: any) {
+            console.error("Error handling keyboard hide:", error);
+          }
+        }
+      );
+    } catch (error: any) {
+      console.error("Error setting up keyboard listeners:", error);
+    }
 
     return () => {
-      keyboardWillShowListener?.remove();
-      keyboardWillHideListener?.remove();
+      try {
+        keyboardWillShowListener?.remove();
+        keyboardWillHideListener?.remove();
+      } catch (error: any) {
+        console.error("Error removing keyboard listeners:", error);
+      }
     };
   }, []);
 
   const handleSend = () => {
-    if (inputText.trim() && !isSending) {
-      sendMessage(inputText);
+    try {
+      if (!inputText.trim() || isSending) {
+        return;
+      }
+
+      if (!sendMessage) {
+        console.error("sendMessage function is not available");
+        showToast("Unable to send message. Please try again.", "error", "top");
+        return;
+      }
+
+      const messageText = inputText.trim();
+      if (messageText.length === 0) {
+        return;
+      }
+
+      sendMessage(messageText);
       setInputText("");
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      showToast(
+        error?.message || "Failed to send message. Please try again.",
+        "error",
+        "top"
+      );
     }
   };
 
   const handlePhoneCall = async () => {
     try {
+      if (!customerInfo?.phone) {
+        showToast("Phone number is not available.", "error", "top");
+        return;
+      }
+
       await openPhoneDialer(customerInfo.phone);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to open phone dialer:", error);
+      showToast(
+        error?.message || "Unable to make phone call. Please try again.",
+        "error",
+        "top"
+      );
     }
   };
 
-  const renderHeader = () => (
-    <Header
-      title={customerInfo.name}
-      onBackPress={closeChat}
-      rightAccessory={
-        <TouchableOpacity
-          style={styles.phoneButton}
-          onPress={handlePhoneCall}
-          hitSlop={8}
-        >
-          <Image
-            source={require("@/assets/images/phone-call.png")}
-            style={styles.phoneIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      }
-    />
-  );
-
-  const renderMessages = () => {
-    if (isLoading) {
+  const renderHeader = () => {
+    try {
+      const customerName = customerInfo?.name || "Customer";
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={textColors.teal700} />
-          <Typography
-            type="bodyMedium"
-            weight="regular"
-            style={styles.loadingText}
-          >
-            Loading messages...
-          </Typography>
-        </View>
+        <Header
+          title={customerName}
+          onBackPress={closeChat}
+          rightAccessory={
+            <TouchableOpacity
+              style={styles.phoneButton}
+              onPress={handlePhoneCall}
+              hitSlop={8}
+            >
+              <Image
+                source={require("@/assets/images/phone-call.png")}
+                style={styles.phoneIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          }
+        />
+      );
+    } catch (error: any) {
+      console.error("Error rendering header:", error);
+      return (
+        <Header
+          title="Chat"
+          onBackPress={closeChat}
+        />
       );
     }
+  };
 
-    if (error) {
+  const renderMessages = () => {
+    try {
+      if (isLoading) {
+        return (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={textColors.teal700} />
+            <Typography
+              type="bodyMedium"
+              weight="regular"
+              style={styles.loadingText}
+            >
+              Loading messages...
+            </Typography>
+          </View>
+        );
+      }
+
+      if (error) {
+        return (
+          <View style={styles.errorContainer}>
+            <Typography type="bodyLarge" weight="medium" style={styles.errorText}>
+              {error || "An error occurred"}
+            </Typography>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                try {
+                  clearError?.();
+                } catch (error: any) {
+                  console.error("Error clearing error:", error);
+                }
+              }}
+            >
+              <Typography
+                type="bodyMedium"
+                weight="semibold"
+                style={styles.retryButtonText}
+              >
+                Retry
+              </Typography>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
+      const safeMessages = Array.isArray(messages) ? messages : [];
+      const customerName = customerInfo?.name || "Customer";
+
+      if (safeMessages.length === 0) {
+        return (
+          <View style={styles.emptyContainer}>
+            <Typography
+              type="bodyLarge"
+              weight="regular"
+              style={styles.emptyText}
+            >
+              No messages yet
+            </Typography>
+            <Typography
+              type="bodyMedium"
+              weight="regular"
+              style={styles.emptySubtext}
+            >
+              Start a conversation with {customerName}
+            </Typography>
+          </View>
+        );
+      }
+
+      return (
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {safeMessages.map((message, index) => {
+            try {
+              if (!message || !message.id) {
+                console.warn("Invalid message at index:", index);
+                return null;
+              }
+              return <MessageBubble key={message.id} message={message} />;
+            } catch (error: any) {
+              console.error(`Error rendering message at index ${index}:`, error);
+              return null;
+            }
+          })}
+        </ScrollView>
+      );
+    } catch (error: any) {
+      console.error("Error rendering messages:", error);
       return (
         <View style={styles.errorContainer}>
           <Typography type="bodyLarge" weight="medium" style={styles.errorText}>
-            {error}
+            Unable to load messages. Please try again.
           </Typography>
-          <TouchableOpacity style={styles.retryButton} onPress={clearError}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              try {
+                if (closeChat) {
+                  closeChat();
+                }
+              } catch (error: any) {
+                console.error("Error closing chat:", error);
+              }
+            }}
+          >
             <Typography
               type="bodyMedium"
               weight="semibold"
               style={styles.retryButtonText}
             >
-              Retry
+              Close
             </Typography>
           </TouchableOpacity>
         </View>
       );
     }
-
-    if (messages.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Typography
-            type="bodyLarge"
-            weight="regular"
-            style={styles.emptyText}
-          >
-            No messages yet
-          </Typography>
-          <Typography
-            type="bodyMedium"
-            weight="regular"
-            style={styles.emptySubtext}
-          >
-            Start a conversation with {customerInfo.name}
-          </Typography>
-        </View>
-      );
-    }
-
-    return (
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
-      </ScrollView>
-    );
   };
 
-  const renderInput = () => (
-    <View
-      style={[
-        styles.inputContainer,
-        {
-          paddingBottom: keyboardHeight > 0 ? 12 : insets.bottom + 12,
-        },
-      ]}
-    >
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Type here"
-          placeholderTextColor={textColors.grey500}
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          maxLength={500}
-          editable={!isSending}
-          returnKeyType="done"
-          onSubmitEditing={handleSend}
-          blurOnSubmit={false}
-        />
-        <TouchableOpacity
+  const renderInput = () => {
+    try {
+      return (
+        <View
           style={[
-            styles.sendButton,
-            (!inputText.trim() || isSending) && styles.sendButtonDisabled,
+            styles.inputContainer,
+            {
+              paddingBottom: keyboardHeight > 0 ? 12 : (insets?.bottom || 0) + 12,
+            },
           ]}
-          onPress={handleSend}
-          disabled={!inputText.trim() || isSending}
         >
-          {isSending ? (
-            <ActivityIndicator size="small" color={textColors.white} />
-          ) : (
-            <Image
-              source={require("@/assets/images/black-arrow-right.png")}
-              style={[
-                styles.sendIcon,
-                (!inputText.trim() || isSending) && styles.sendIconDisabled,
-              ]}
-              resizeMode="contain"
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Type here"
+              placeholderTextColor={textColors.grey500}
+              value={inputText || ""}
+              onChangeText={(text) => {
+                try {
+                  setInputText(text);
+                } catch (error: any) {
+                  console.error("Error updating input text:", error);
+                }
+              }}
+              multiline
+              maxLength={500}
+              editable={!isSending}
+              returnKeyType="done"
+              onSubmitEditing={handleSend}
+              blurOnSubmit={false}
             />
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!inputText?.trim() || isSending) && styles.sendButtonDisabled,
+              ]}
+              onPress={handleSend}
+              disabled={!inputText?.trim() || isSending}
+            >
+              {isSending ? (
+                <ActivityIndicator size="small" color={textColors.white} />
+              ) : (
+                <Image
+                  source={require("@/assets/images/black-arrow-right.png")}
+                  style={[
+                    styles.sendIcon,
+                    (!inputText?.trim() || isSending) && styles.sendIconDisabled,
+                  ]}
+                  resizeMode="contain"
+                />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    } catch (error: any) {
+      console.error("Error rendering input:", error);
+      return null;
+    }
+  };
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <Modal
       visible={isOpen}
       animationType="slide"
       presentationStyle="fullScreen"
-      onRequestClose={closeChat}
+      onRequestClose={() => {
+        try {
+          closeChat?.();
+        } catch (error: any) {
+          console.error("Error closing chat:", error);
+        }
+      }}
       statusBarTranslucent={true}
     >
       <View style={styles.container}>

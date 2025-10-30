@@ -144,10 +144,10 @@ export default function HeatMap({
 
   // Current map region state - defines the visible area of the map
   const [region, setRegion] = useState<Region>({
-    latitude: 37.78825, // Default to San Francisco coordinates
-    longitude: -122.4324,
-    latitudeDelta: 0.0922, // Zoom level (smaller values = more zoomed in)
-    longitudeDelta: 0.0421,
+    latitude: 40.7128, // Default to New York coordinates
+    longitude: -74.0060,
+    latitudeDelta: 0.3, // Zoom level to show NYC area (smaller values = more zoomed in)
+    longitudeDelta: 0.3,
   });
 
   // User's current location state
@@ -186,10 +186,10 @@ export default function HeatMap({
     try {
       // Define fallback region in case location access fails
       const fallbackRegion = {
-        latitude: 37.78825, // San Francisco as fallback
-        longitude: -122.4324,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
+        latitude: 40.7128, // New York as fallback
+        longitude: -74.0060,
+        latitudeDelta: 0.3,
+        longitudeDelta: 0.3,
       };
 
       // Attempt to get current location using helper function

@@ -95,6 +95,7 @@ export default function DesiredDestinationsMapScreen() {
           value={address}
           onChangeText={setAddress}
           placeholder="Enter a location or address"
+          showSoftInputOnFocus={false}
         />
         <Button
           rounded="half"

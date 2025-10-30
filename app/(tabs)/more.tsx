@@ -6,12 +6,22 @@ import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { DRIVER_ENDPOINTS } from "@/constants/endpoints";
-import { CONTACT_BASE, URLS } from "@/constants/global";
+import {
+  CONTACT_BASE,
+  DRIVER_STORAGE_KEY,
+  NOTIFICATIONS_BACKUP_STORAGE_KEY,
+  URLS,
+} from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
-import { DEFAULT_SETTINGS, useSettings } from "@/context/SettingsContext";
+import { SETTINGS_STORAGE_KEY } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
-import { clearStorage, logger } from "@/utils/helpers";
+import {
+  clearStorageSelectively,
+  getStorageItem,
+  logger,
+  setStorageItem,
+} from "@/utils/helpers";
 import { disconnectSocket } from "@/utils/socket";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -88,7 +98,6 @@ export default function MoreScreen() {
   const [auth, setAuth] = useAuth();
   const [driver, setDriver] = useDriver();
   const { removeRetrievalId, removeTripId } = useDriver();
-  const [, setSettings] = useSettings();
   const [logoutSheetOpen, setLogoutSheetOpen] = useState(false);
   const [deleteProfileSheetOpen, setDeleteProfileSheetOpen] = useState(false);
   const [contactBaseSheetOpen, setContactBaseSheetOpen] = useState(false);
@@ -97,6 +106,29 @@ export default function MoreScreen() {
   const { execute: deleteOnlineLocation } = useDelete(
     DRIVER_ENDPOINTS.markOffline(auth?.user?.id || "")
   );
+
+  const handleLogout = async () => {
+    // Mark driver as offline via API
+    if (driver?.online) {
+      try {
+        log("[MoreScreen] Marking driver as offline via API");
+        await deleteOnlineLocation();
+        log("[MoreScreen] Driver successfully marked as offline");
+      } catch (error) {
+        log("[MoreScreen] Error marking driver offline:", error);
+        // Continue with logout even if API call fails
+      }
+    }
+
+    // Disconnect socket
+    try {
+      disconnectSocket();
+      log("[MoreScreen] Socket disconnected successfully");
+    } catch (err) {
+      log("[MoreScreen] Error disconnecting socket:", err);
+      // Continue with logout even if socket disconnect fails
+    }
+  };
 
   const handleDataDelete = async () => {
     // Call offline API if driver is online
@@ -138,13 +170,56 @@ export default function MoreScreen() {
       // Continue with logout/delete even if socket disconnect fails
     }
 
-    // Clear storage and reset contexts
+    // Extract and backup notifications before clearing storage
     try {
-      await clearStorage();
-    } catch {}
+      const driverData = await getStorageItem(DRIVER_STORAGE_KEY);
+      if (driverData) {
+        try {
+          const parsed = JSON.parse(driverData);
+          const notificationsBackup = {
+            notifications: parsed.notifications || [],
+            readNotificationIds: parsed.readNotificationIds || [],
+          };
+          await setStorageItem(
+            NOTIFICATIONS_BACKUP_STORAGE_KEY,
+            JSON.stringify(notificationsBackup)
+          );
+          log(
+            "[MoreScreen] Notifications backed up successfully:",
+            notificationsBackup.notifications.length,
+            "notifications"
+          );
+        } catch (parseError) {
+          log(
+            "[MoreScreen] Error parsing driver data for notifications backup:",
+            parseError
+          );
+          // Continue without backup if parsing fails
+        }
+      } else {
+        log("[MoreScreen] No driver data found, skipping notifications backup");
+      }
+    } catch (error) {
+      log("[MoreScreen] Error backing up notifications:", error);
+      // Continue with logout even if backup fails
+    }
+
+    // Clear storage selectively, preserving settings and notifications backup
+    try {
+      await clearStorageSelectively([
+        SETTINGS_STORAGE_KEY,
+        NOTIFICATIONS_BACKUP_STORAGE_KEY,
+      ]);
+      log("[MoreScreen] Storage cleared selectively, settings and notifications preserved");
+    } catch (error) {
+      log("[MoreScreen] Error clearing storage selectively:", error);
+      // Continue with logout even if storage clearing fails
+    }
+
+    // Reset contexts (settings will be preserved in storage)
     await setAuth(null);
     await setDriver(null);
-    await setSettings(DEFAULT_SETTINGS);
+    // Note: Settings are preserved in storage, so we don't reset them here
   };
 
   const handleShareApp = async () => {
@@ -168,11 +243,20 @@ export default function MoreScreen() {
     if (item.key === "delete-profile") {
       return {
         ...item,
-        onClick: () => setDeleteProfileSheetOpen(true),
+        onClick: () => {
+          console.log("[MoreScreen] Delete profile clicked");
+          setDeleteProfileSheetOpen(true);
+        },
       };
     }
     if (item.key === "logout") {
-      return { ...item, onClick: () => setLogoutSheetOpen(true) };
+      return {
+        ...item,
+        onClick: () => {
+          console.log("[MoreScreen] Logout clicked");
+          setLogoutSheetOpen(true);
+        },
+      };
     }
     if (item.key === "contact-base") {
       return {
@@ -206,6 +290,7 @@ export default function MoreScreen() {
       activeOpacity={0.8}
       style={styles.card}
       onPress={item.onClick}
+      disabled={!item.onClick}
     >
       <Image source={item.icon} style={styles.icon} />
       <Typography type="bodyLarge" weight="bold" style={styles.cardTitle}>
@@ -241,7 +326,7 @@ export default function MoreScreen() {
         confirmButtonText="Yes, Logout"
         onCancel={() => setLogoutSheetOpen(false)}
         onConfirm={() => {
-          handleDataDelete();
+          handleLogout();
           setLogoutSheetOpen(false);
           router.replace("/(screens)/auth/login");
         }}

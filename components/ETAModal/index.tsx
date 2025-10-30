@@ -36,8 +36,16 @@ const ETAModal: React.FC<ETAModalProps> = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View
+          style={styles.container}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Typography
@@ -101,7 +109,7 @@ const ETAModal: React.FC<ETAModalProps> = ({
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -130,17 +138,19 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E5E7EB",
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    backgroundColor: textColors.grey100,
+    backgroundColor: textColors.white,
+    borderWidth: 2,
+    borderColor: textColors.black,
     alignItems: "center",
     justifyContent: "center",
   },
   closeButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     color: textColors.black,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   headerTitle: {
     color: textColors.black,
@@ -155,17 +165,15 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   etaSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 24,
+    flexDirection: "column",
+    gap: 0,
+    marginVertical: 16,
   },
   etaSectionTitle: {
-    flex: 1,
     color: textColors.black,
   },
   etaCounterContainer: {
-    flex: 1,
+    width: "100%",
   },
   submitSection: {
     marginTop: 8,

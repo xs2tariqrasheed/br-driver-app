@@ -35,6 +35,12 @@ export class ExpirationService {
     try {
       const { tripId, timestamp } = data;
 
+      // Skip expiration for demo offers
+      if (tripId.startsWith("demo-")) {
+        this.log(`⏰ Skipping expiration for demo offer: ${tripId}`);
+        return;
+      }
+
       this.log(`⏰ Handling offer expiration for tripId: ${tripId}`);
 
       // Find the offer by tripId to determine its type

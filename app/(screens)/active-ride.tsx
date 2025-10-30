@@ -35,6 +35,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useChat } from "@/context/ChatContext";
 import { useDriver } from "@/context/DriverContext";
+import { useToast } from "@/components/Toast";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
 import { useFetch } from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
@@ -74,6 +75,7 @@ export default function ActiveRideScreen() {
   const driverId = auth?.user?.id;
   const { clearAllBroadcastOffers } = useBroadcastJobOffers();
   const { openChat } = useChat();
+  const { showToast } = useToast();
 
   // Active trip socket connection
   const { connectActiveTripSocket, disconnectActiveTripSocket, socketStatus } =
@@ -745,11 +747,17 @@ export default function ActiveRideScreen() {
 
   const handleSendSMS = async () => {
     try {
-      openChat();
-    } catch (error) {
+      closeContactCustomerSheet();
+      // Wait a bit for the bottom sheet to close before opening chat
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await openChat();
+    } catch (error: any) {
       console.error("Failed to open chat:", error);
+      // Show error message to user
+      const errorMessage =
+        error?.message || "Failed to open chat. Please try again.";
+      showToast(errorMessage, "error", "top");
     }
-    closeContactCustomerSheet();
   };
 
   const handleWhatsApp = async () => {

@@ -38,8 +38,16 @@ const PackageInfoModal: React.FC = () => {
       animationType="slide"
       onRequestClose={closePackageInfo}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={closePackageInfo}
+      >
+        <View
+          style={styles.container}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Typography
@@ -112,7 +120,7 @@ const PackageInfoModal: React.FC = () => {
             </Button>
           </ScrollView>
         </View>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -143,17 +151,19 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E5E7EB",
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    backgroundColor: textColors.grey100,
+    backgroundColor: textColors.white,
+    borderWidth: 2,
+    borderColor: textColors.black,
     alignItems: "center",
     justifyContent: "center",
   },
   closeButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     color: textColors.black,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   headerTitle: {
     color: textColors.black,

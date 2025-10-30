@@ -2,7 +2,7 @@ import { textColors } from "@/constants/colors";
 import { useBidExpired } from "@/context/BidExpiredContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import React, { useCallback } from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Button from "../Button";
 import ProgressTimer from "../ProgressTimer";
 import Typography from "../Typography";
@@ -58,9 +58,19 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
       transparent
       animationType="slide"
       onRequestClose={onCancel}
+      presentationStyle={Platform.OS === "ios" ? "overFullScreen" : undefined}
+      statusBarTranslucent={Platform.OS === "android"}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onCancel}
+      >
+        <View
+          style={styles.container}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Typography
@@ -108,7 +118,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -118,8 +128,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
-    zIndex: 10001,
-    elevation: 10001,
+    ...(Platform.OS === "ios" ? {} : { zIndex: 10001, elevation: 10001 }),
   },
   container: {
     backgroundColor: textColors.white,
@@ -137,17 +146,19 @@ const styles = StyleSheet.create({
     borderBottomColor: textColors.grey100,
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    backgroundColor: textColors.grey100,
+    backgroundColor: textColors.white,
+    borderWidth: 2,
+    borderColor: textColors.black,
     alignItems: "center",
     justifyContent: "center",
   },
   closeButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     color: textColors.black,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   headerTitle: {
     color: textColors.black,

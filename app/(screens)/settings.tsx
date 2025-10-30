@@ -135,36 +135,34 @@ export default function SettingsScreen() {
 
         <Divider />
 
-        <View style={styles.rowSpaceBetween}>
-          <Typography
-            type="bodyLarge"
-            weight="semibold"
-            style={styles.textBlack16}
-          >
-            Auto-Bid on Ride Offers
-          </Typography>
-          <Toggle
-            variant="switch"
-            value={autoBidEnabled}
-            setValue={(next: boolean) => {
-              setAutoBidEnabled(next);
-              if (!next) setStrategy(null);
-            }}
-            size={{ width: 42, height: 24 }}
-          />
-        </View>
-
-        {autoBidEnabled ? (
-          <View style={styles.autoBidBlock}>
+        <View style={styles.section}>
+          <View style={styles.rowSpaceBetween}>
             <Typography
-              type="bodyMedium"
-              weight="regular"
+              type="titleExtraLarge"
+              weight="semibold"
               style={styles.textBlack}
             >
-              Automatically bid on rides using your preferred pricing strategy.
-              Choose how your bid compares to the customer’s base price.
+              Auto-Bid on Ride Offers
             </Typography>
-
+            <Toggle
+              variant="switch"
+              value={autoBidEnabled}
+              setValue={(next: boolean) => {
+                setAutoBidEnabled(next);
+                if (!next) setStrategy(null);
+              }}
+              size={{ width: 42, height: 24 }}
+            />
+          </View>
+          <Typography
+            type="bodyMedium"
+            weight="regular"
+            style={styles.textBlack}
+          >
+            Automatically bid on rides using your preferred pricing strategy.
+            Choose how your bid compares to the customer's base price.
+          </Typography>
+          {autoBidEnabled ? (
             <TouchableOpacity
               accessibilityRole="button"
               onPress={openSheet}
@@ -183,8 +181,8 @@ export default function SettingsScreen() {
                 style={styles.icon24}
               />
             </TouchableOpacity>
-          </View>
-        ) : null}
+          ) : null}
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -272,7 +270,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  autoBidBlock: { gap: 8 },
   dropdown: {
     height: 48,
     width: "100%",

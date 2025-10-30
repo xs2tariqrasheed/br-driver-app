@@ -13,6 +13,7 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import {
+  CAR_TYPE,
   DRIVER_STATUS,
   DRIVER_TYPES,
   OFFER_TYPES,
@@ -21,7 +22,10 @@ import {
   type DriverStatusLabel,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
-import { useDriver } from "@/context/DriverContext";
+import {
+  createDemoNotifications,
+  useDriver,
+} from "@/context/DriverContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
@@ -30,9 +34,10 @@ import { useSocket } from "@/hooks/useSocket";
 import { logger, removeStorageItem, setStorageItem } from "@/utils/helpers";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Dimensions,
   Linking,
   Image as RNImage,
   SafeAreaView,
@@ -45,7 +50,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const [auth] = useAuth();
   const [driver, setDriver] = useDriver();
-  const { notifications, getRetrievalId } = useDriver();
+  const { notifications, getRetrievalId, addNotifications } = useDriver();
   const { hasAnyActiveOffer, setHasAnyActiveOffer } = useRideOffer();
   const [settings, setSettings] = useSettings();
   const { connectSocket, disconnectSocket } = useSocket({
@@ -69,6 +74,43 @@ export default function HomeScreen() {
     DRIVER_STATUS.OFFLINE,
     DRIVER_STATUS.ONLINE,
   ];
+
+  // Calculate dynamic toggle size based on screen width and label text
+  const toggleSize = useMemo(() => {
+    const screenWidth = Dimensions.get("window").width;
+    // Get the longer label text (OFFLINE = 7 chars, ONLINE = 6 chars)
+    const maxLabelLength = Math.max(
+      DRIVER_STATUS.OFFLINE.length,
+      DRIVER_STATUS.ONLINE.length
+    );
+    
+    // Font size is 12px (from Toggle component: fontSize: 12)
+    // Average character width is approximately 7-8px for 12px font
+    // Add extra padding for spacing: 16px padding per side + gap between labels
+    const charWidth = 7.5; // Average character width at 12px font size
+    const horizontalPadding = 32; // 16px per side
+    const labelGap = 8; // Gap between the two labels
+    const baseWidth = maxLabelLength * charWidth + horizontalPadding + labelGap;
+    
+    // Minimum width ensures readability and proper spacing
+    const minWidth = 120; // Slightly larger than original to ensure text fits
+    // Maximum width: don't exceed 40% of screen width (leaves room for header elements)
+    const maxWidth = Math.min(screenWidth * 0.4, 200);
+    
+    // For smaller screens (< 375px), increase width by 25% to ensure text doesn't get cut off
+    const isSmallScreen = screenWidth < 375;
+    const width = isSmallScreen 
+      ? Math.max(baseWidth * 1.25, minWidth)
+      : Math.max(baseWidth, minWidth);
+    
+    // Clamp width between min and max
+    const finalWidth = Math.min(Math.max(width, minWidth), maxWidth);
+    
+    return {
+      width: finalWidth,
+      height: 28, // Keep height consistent with original design
+    };
+  }, []);
 
   // Check if user is an independent operator
   const isIndependentOperator =
@@ -109,6 +151,37 @@ export default function HomeScreen() {
 
   // Logger function
   const log = logger();
+  const demoNotificationsInitialized = useRef(false);
+
+  // Initialize demo notifications on mount
+  useEffect(() => {
+    // Skip if already initialized
+    if (demoNotificationsInitialized.current) {
+      return;
+    }
+
+    const initializeDemoNotifications = async () => {
+      // Check if demo notifications already exist
+      const hasDemoNotifications = notifications.some((notification) =>
+        notification.id.startsWith("demo-notification-")
+      );
+
+      if (!hasDemoNotifications) {
+        log("[HomeScreen] Initializing demo notifications");
+        const demoNotifications = createDemoNotifications();
+        await addNotifications(demoNotifications);
+        demoNotificationsInitialized.current = true;
+        log(
+          `[HomeScreen] Added ${demoNotifications.length} demo notifications`
+        );
+      } else {
+        demoNotificationsInitialized.current = true;
+      }
+    };
+
+    initializeDemoNotifications();
+  }, [notifications, addNotifications, log]);
+
   const [economy, setEconomy] = useState<boolean>(
     settings.ridePreferences.rideTypes.economy
   );
@@ -121,6 +194,69 @@ export default function HomeScreen() {
   const [luxury, setLuxury] = useState<boolean>(
     settings.ridePreferences.rideTypes.luxury
   );
+
+  // Determine which ride types are enabled based on car type
+  const getRideTypeDisabled = useMemo(() => {
+    const carType = driver?.carType;
+    
+    if (!carType) {
+      // If no car type, allow all (fallback)
+      return {
+        economy: false,
+        sedan: false,
+        suv: false,
+        luxury: false,
+      };
+    }
+
+    // Luxury: all enabled
+    if (carType === CAR_TYPE.LUXURY) {
+      return {
+        economy: false,
+        sedan: false,
+        suv: false,
+        luxury: false,
+      };
+    }
+
+    // Sedan: only Sedan and Economy enabled
+    if (carType === CAR_TYPE.SEDAN) {
+      return {
+        economy: false,
+        sedan: false,
+        suv: true,
+        luxury: true,
+      };
+    }
+
+    // SUV: SUV, Sedan, and Economy enabled
+    if (carType === CAR_TYPE.SUV) {
+      return {
+        economy: false,
+        sedan: false,
+        suv: false,
+        luxury: true,
+      };
+    }
+
+    // Economy: only Economy enabled
+    if (carType === CAR_TYPE.ECONOMY) {
+      return {
+        economy: false,
+        sedan: true,
+        suv: true,
+        luxury: true,
+      };
+    }
+
+    // Default: allow all
+    return {
+      economy: false,
+      sedan: false,
+      suv: false,
+      luxury: false,
+    };
+  }, [driver?.carType]);
 
   const handleSaveRideTypes = async () => {
     await setSettings({
@@ -401,7 +537,7 @@ export default function HomeScreen() {
                 labels={labels}
                 value={statusValue}
                 setValue={handleDriverStatusToggle}
-                size={styles.headerToggleSize}
+                size={toggleSize}
                 disabled={
                   offlineLoading || onlineLocationLoading || isTogglingOnline
                 }
@@ -531,7 +667,7 @@ export default function HomeScreen() {
           open={sheetOpen}
           onClose={closeRideTypes}
           snapPoints={["35%"]}
-          headerTitle="Choose Your Ride Type"
+          headerTitle="Choose Your Offer Type"
         >
           <View style={styles.sheetContainer}>
             <View style={styles.sheetGroup}>
@@ -548,6 +684,7 @@ export default function HomeScreen() {
                   value={economy}
                   setValue={setEconomy}
                   size={styles.toggleSmall}
+                  disabled={getRideTypeDisabled.economy}
                 />
               </View>
               <View style={styles.sheetRow}>
@@ -563,6 +700,7 @@ export default function HomeScreen() {
                   value={sedan}
                   setValue={setSedan}
                   size={styles.toggleSmall}
+                  disabled={getRideTypeDisabled.sedan}
                 />
               </View>
               <View style={styles.sheetRow}>
@@ -578,6 +716,7 @@ export default function HomeScreen() {
                   value={suv}
                   setValue={setSuv}
                   size={styles.toggleSmall}
+                  disabled={getRideTypeDisabled.suv}
                 />
               </View>
               <View style={styles.sheetRow}>
@@ -593,6 +732,7 @@ export default function HomeScreen() {
                   value={luxury}
                   setValue={setLuxury}
                   size={styles.toggleSmall}
+                  disabled={getRideTypeDisabled.luxury}
                 />
               </View>
             </View>
@@ -725,14 +865,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconButton: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
   icon: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
   },
 
   bellButton: {

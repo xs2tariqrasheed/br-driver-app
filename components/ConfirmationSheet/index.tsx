@@ -56,6 +56,7 @@ const ConfirmationSheet: React.FC<ConfirmationSheetProps> = ({
       showHeader={false}
       backdrop={true}
       swipeToClose={false}
+      onClose={onCancel}
     >
       <View style={styles.sheetContainer}>
         <Typography

@@ -226,7 +226,9 @@ export default function DesiredDestinationsScreen() {
 
       {/* Add Destination Bottom Sheet */}
       <BottomSheet
-        snapPointsWhenKeyboardVisible={["58%", "90%"]}
+        scrollable
+        snapPoints={["35%", "50%"]}
+        snapPointsWhenKeyboardVisible={["75%", "95%"]}
         open={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
         headerTitle={

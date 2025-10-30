@@ -54,8 +54,16 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       animationType="slide"
       onRequestClose={onCancel}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onCancel}
+      >
+        <View
+          style={styles.container}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Typography
@@ -107,7 +115,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -134,18 +142,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 20,
     backgroundColor: textColors.white,
-    borderWidth: 1,
-    borderColor: textColors.grey100,
+    borderWidth: 2,
+    borderColor: textColors.black,
     alignItems: "center",
     justifyContent: "center",
   },
   closeButtonText: {
     color: textColors.black,
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: "700",
   },
   headerTitle: {
     color: textColors.black,

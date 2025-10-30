@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 
+import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 
@@ -55,13 +56,15 @@ export const Header: React.FC<HeaderProps> = ({
             accessibilityLabel="Go back"
             onPress={onBackPress}
             hitSlop={8}
-            style={styles.iconButton}
+            style={styles.backButtonContainer}
+            activeOpacity={0.7}
           >
             <Image
               source={require("@/assets/images/back-arrow.png")}
               style={styles.backIcon}
               resizeMode="contain"
             />
+            <Logo size="Small" style={styles.logo} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -98,15 +101,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     maxWidth: "20%",
   },
-  iconButton: {
-    width: ICON_TOUCH_SIZE,
-    // height: ICON_TOUCH_SIZE,
+  backButtonContainer: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    minWidth: ICON_TOUCH_SIZE,
   },
   backIcon: {
     width: 24,
     height: 24,
+  },
+  logo: {
+    marginLeft: 0,
   },
   titleWrap: {
     flex: 1,

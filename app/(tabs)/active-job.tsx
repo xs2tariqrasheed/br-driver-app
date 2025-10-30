@@ -1,15 +1,33 @@
 import ActiveRideInitializer from "@/components/ActiveRideInitializer";
+import Header from "@/components/Header";
 import DriverOffline from "@/components/DriverOffline";
 import { useDriver } from "@/context/DriverContext";
+import { useRouter } from "expo-router";
+import { StyleSheet, View } from "react-native";
 
 export default function ActiveJobScreen() {
   const [driver] = useDriver();
+  const router = useRouter();
 
-  // Show DriverOffline component when driver is offline
-  if (!driver?.online) {
-    return <DriverOffline />;
-  }
+  const handleBackPress = () => {
+    router.push("/(tabs)");
+  };
 
-  // Show ActiveRideInitializer when driver is online
-  return <ActiveRideInitializer />;
+  return (
+    <View style={styles.container}>
+      <Header title="Active Job" onBackPress={handleBackPress} />
+      {!driver?.online ? (
+        <DriverOffline />
+      ) : (
+        <ActiveRideInitializer />
+      )}
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+});

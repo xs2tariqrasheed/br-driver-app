@@ -83,7 +83,8 @@ export default function VerifyOtpScreen() {
 
   // Handles granting app access after a successful OTP verification for login
   const completeLoginAfterOtp = async () => {
-    await execute();
+    handleCompleteLoginAfterOtp({})
+    // await execute();
     log("Current user", userData);
   };
 
@@ -302,6 +303,15 @@ export default function VerifyOtpScreen() {
     5: "d-5",
   };
 
+  // Car type mapping based on login ID
+  const carTypeMapping = {
+    1: "luxury", // Luxury - can select all types
+    2: "sedan", // Sedan - can select Sedan and Economy
+    3: "suv", // SUV - can select SUV, Sedan, and Economy
+    4: "economy", // Economy - can only select Economy
+    5: "luxury", // Luxury - can select all types
+  };
+
   const handleCompleteLoginAfterOtp = async (data: any) => {
     log("User data", data);
     if (data?.user || currentAuth?.loginId) {
@@ -324,6 +334,7 @@ export default function VerifyOtpScreen() {
       }
 
       const driverId = driverIdMapping[loginId as keyof typeof driverIdMapping];
+      const carType = carTypeMapping[loginId as keyof typeof carTypeMapping];
 
       await setAuth({
         ...currentAuth,
@@ -337,6 +348,13 @@ export default function VerifyOtpScreen() {
               : DRIVER_TYPES.INDEPENDENT_OPERATOR,
         },
       } as any);
+
+      // Set car type in driver context
+      await setDriver({
+        ...(driver ?? { online: false }),
+        carType: carType,
+        online: driver?.online ?? false,
+      });
       showToast("Logged in successfully", {
         variant: "success",
         position: "top",

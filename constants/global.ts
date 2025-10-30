@@ -14,12 +14,24 @@ export const RETRIEVAL_ID_STORAGE_KEY = "@retrieval_id";
 export const TRIP_ID_STORAGE_KEY = "@trip_id";
 // Ride state storage key
 export const RIDE_STATE_STORAGE_KEY = "@ride_state";
+// Notifications backup storage key (used during logout to preserve notifications)
+export const NOTIFICATIONS_BACKUP_STORAGE_KEY = "@notifications_backup";
 
 // Driver status display labels (used in UI)
 export const DRIVER_STATUS = {
   ONLINE: "Online",
   OFFLINE: "Offline",
 } as const;
+
+// Car types
+export const CAR_TYPE = {
+  ECONOMY: "economy",
+  SEDAN: "sedan",
+  SUV: "suv",
+  LUXURY: "luxury",
+} as const;
+
+export type CarType = (typeof CAR_TYPE)[keyof typeof CAR_TYPE];
 
 // Driver status display labels (used in UI)
 export const RIDE_TOGGLE_LABELS = {

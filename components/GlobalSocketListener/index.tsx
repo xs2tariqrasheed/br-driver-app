@@ -111,10 +111,6 @@ export function GlobalSocketListener() {
     const disconnectCleanup = onDisconnect(async (reason: string) => {
       log("🔌 Socket disconnected:", reason);
       log("Socket disconnected:", reason);
-      showToast("Connection lost - You may miss new ride offers", {
-        variant: "warning",
-        position: "top",
-      });
     });
     cleanupFunctions.push(disconnectCleanup);
 
@@ -415,6 +411,14 @@ export function GlobalSocketListener() {
             }
           } else if (response === TRIP_OFFER_ACTIONS.EXPIRE) {
             if (isBroadcastOffer) {
+              // Skip removal for demo offers
+              if (tripId && tripId.startsWith("demo-")) {
+                log(
+                  `❌ Skipping expiration removal for demo offer: ${tripId}`
+                );
+                return;
+              }
+
               // For broadcast offers, remove from broadcast offers context
               log(
                 `❌ Broadcast offer ${response} - removing from broadcast offers`

@@ -38,6 +38,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
+  Pressable,
+  RefreshControl,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -67,8 +69,12 @@ export default function LiveJobOffersScreen({
 }: LiveJobOffersScreenProps) {
   const { getLiveOfferStatus, getRetrievalId } = useDriver();
   const [auth] = useAuth();
-  const { broadcastOffers, updateBroadcastOffer, clearAllBroadcastOffers } =
-    useBroadcastJobOffers();
+  const {
+    broadcastOffers,
+    updateBroadcastOffer,
+    clearAllBroadcastOffers,
+    resetDemoOffers,
+  } = useBroadcastJobOffers();
   const {
     showRideOfferModal,
     submitETA,
@@ -312,6 +318,19 @@ export default function LiveJobOffersScreen({
           return;
         }
 
+        // Skip API call for demo offers
+        if (jobToUse.id?.startsWith("demo-") || jobToUse.tripOffer?.tripId?.startsWith("demo-")) {
+          log("[LiveJobOffersScreen] Demo offer detected - skipping API call for bid");
+          showToast("Demo offer: Bid submitted locally (no API call)", {
+            variant: "success",
+            position: "top",
+          });
+          setSelectedJobForBid(null);
+          showBidWaitingTimer();
+          log("[LiveJobOffersScreen] Showing bid waiting timer for demo offer");
+          return;
+        }
+
         // Call the submit bid API with the selected bid amount and tripId
         const result = await submitBidForBroadcastOffer(
           jobToUse.tripOffer.tripId,
@@ -358,6 +377,28 @@ export default function LiveJobOffersScreen({
         return;
       }
 
+      // Skip API call for demo offers
+      if (selectedJobForAccept.id?.startsWith("demo-") || selectedJobForAccept.tripOffer?.tripId?.startsWith("demo-")) {
+        log("[LiveJobOffersScreen] Demo offer detected - skipping API call for ETA");
+        showToast("Demo offer: Ride accepted locally (no API call)", {
+          variant: "success",
+          position: "top",
+        });
+
+        // Mark the offer as accepted in the context
+        updateBroadcastOffer(selectedJobForAccept.id, { status: "accepted" });
+        log(
+          `[LiveJobOffersScreen] Marked demo job ${selectedJobForAccept.id} as accepted`
+        );
+
+        // Close the ETA modal
+        setIsETAModalOpen(false);
+        setSelectedJobForAccept(null);
+
+        // Don't redirect for demo offers - just show success message
+        return;
+      }
+
       try {
         log(
           `[LiveJobOffersScreen] Submitting ETA for job: ${selectedJobForAccept.id}`,
@@ -399,7 +440,7 @@ export default function LiveJobOffersScreen({
         });
       }
     },
-    [selectedJobForAccept, submitETA]
+    [selectedJobForAccept, submitETA, updateBroadcastOffer]
   );
 
   // Handle "View +X More" click
@@ -419,14 +460,69 @@ export default function LiveJobOffersScreen({
     log("[LiveJobOffersScreen] Scrolling ended - swipe gestures enabled");
   }, []);
 
-  const handleShowSpecialRequirements = (data: any) => {
-    // Open the special requirements modal (overlay on top of ride offer modal)
-    openSpecialRequirements(data);
+  // Handle pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    log("[LiveJobOffersScreen] Pull-to-refresh triggered");
+    try {
+      // Reset demo offers to default state
+      if (resetDemoOffers) {
+        await resetDemoOffers();
+        log("[LiveJobOffersScreen] Demo offers reset successfully");
+      } else {
+        // Fallback: clear all and let context re-initialize
+        clearAllBroadcastOffers();
+        log("[LiveJobOffersScreen] Cleared all offers - will re-initialize");
+      }
+    } catch (error) {
+      log("[LiveJobOffersScreen] Error refreshing offers:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [resetDemoOffers, clearAllBroadcastOffers, log]);
+
+  const handleShowSpecialRequirements = (data: any, offerId?: string) => {
+    // Check if this is a demo offer and data is missing
+    if (offerId?.startsWith("demo-") && !data) {
+      // Provide dummy special requirements data for demo offers
+      const dummyData = {
+        totalPassengers: 2,
+        bags: 3,
+        pets: true,
+        wheelchair: false,
+        childSeat: {
+          infant: 0,
+          toddler: 1,
+          booster: 0,
+        },
+        armedDriver: false,
+        driverLanguage: "English",
+      };
+      openSpecialRequirements(dummyData);
+    } else {
+      // Open the special requirements modal with provided data
+      openSpecialRequirements(data || {});
+    }
   };
 
-  const handleShowPackage = (data: any) => {
-    // Open the package info modal (overlay on top of ride offer modal)
-    openPackageInfo(data);
+  const handleShowPackage = (data: any, offerId?: string) => {
+    // Check if this is a demo offer and data is missing
+    if (offerId?.startsWith("demo-") && !data) {
+      // Provide dummy package info data for demo offers
+      const dummyData = {
+        numberOfPackages: 2,
+        weight: "5.5 Kg",
+        phoneNumber: "+1 (555) 123-4567",
+        recipientName: "John Doe",
+        instructions:
+          "Please handle with care. Deliver to the front door. Ring the doorbell twice.",
+      };
+      openPackageInfo(dummyData);
+    } else {
+      // Open the package info modal with provided data
+      openPackageInfo(data || {});
+    }
   };
 
   // Render "View +X More" indicator
@@ -647,8 +743,26 @@ export default function LiveJobOffersScreen({
       isDisabled = true;
     }
 
+    // Handle item press to navigate to trip details
+    // Only navigate if not disabled and not pressing the button area
+    const handleItemPress = () => {
+      if (!isDisabled) {
+        router.push({
+          pathname: "/(screens)/trip-details",
+          params: { offerId: item.id },
+        });
+      }
+    };
+
     return (
-      <View style={styles.jobItemWrapper}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.jobItemWrapper,
+          pressed && !isDisabled && styles.jobItemPressed,
+        ]}
+        onPress={handleItemPress}
+        disabled={isDisabled}
+      >
         <LiveRideOfferItem
           type={type}
           id={item.id}
@@ -657,10 +771,10 @@ export default function LiveJobOffersScreen({
           rating={item.rating}
           hasSpecialRequirements={item.hasSpecialRequirements}
           onPressSpecialRequirements={() => {
-            handleShowSpecialRequirements(item?.specialRequirements);
+            handleShowSpecialRequirements(item?.specialRequirements, item.id);
           }}
           onPressPackage={() => {
-            handleShowPackage(item?.packageInfo);
+            handleShowPackage(item?.packageInfo, item.id);
           }}
           hasPackage={item.hasPackage}
           bidable={item.bidable}
@@ -683,7 +797,7 @@ export default function LiveJobOffersScreen({
           onProcessingEnd={() => setProcessingOfferId(null)}
           expiredAt={item.expiredAt}
         />
-      </View>
+      </Pressable>
     );
   };
 
@@ -702,6 +816,9 @@ export default function LiveJobOffersScreen({
           onScrollBeginDrag={handleScrollBeginDrag}
           onScrollEndDrag={handleScrollEndDrag}
           onMomentumScrollEnd={handleScrollEndDrag}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
 
@@ -729,6 +846,9 @@ const styles = StyleSheet.create({
   },
   jobItemWrapper: {
     marginBottom: 16,
+  },
+  jobItemPressed: {
+    opacity: 0.9,
   },
   emptyStateContainer: {
     flex: 1,

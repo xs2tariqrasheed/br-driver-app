@@ -95,8 +95,16 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View
+          style={styles.container}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Typography
@@ -272,7 +280,10 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
             </View>
 
             {/* Submit Button */}
-            <View style={styles.submitSection}>
+            <View 
+              style={styles.submitSection}
+              onStartShouldSetResponder={() => false}
+            >
               <Button
                 variant="primary"
                 rounded="half"
@@ -285,7 +296,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -326,17 +337,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    backgroundColor: textColors.grey100,
+    backgroundColor: textColors.white,
+    borderWidth: 2,
+    borderColor: textColors.black,
     alignItems: "center",
     justifyContent: "center",
   },
   closeButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     color: textColors.black,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   headerTitle: {
     color: textColors.black,
@@ -396,20 +409,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   etaCounterContainer: {
-    flex: 1,
+    width: "100%",
   },
   etaSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    gap: 0,
     marginBottom: 24,
   },
   sectionTitle: {
     color: textColors.black,
   },
   etaSectionTitle: {
-    flex: 1,
-    marginTop: 16,
     color: textColors.black,
   },
   boostSection: {

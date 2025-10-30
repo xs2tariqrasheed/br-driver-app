@@ -6,7 +6,7 @@ import BottomSheet, {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import React, { useEffect, useRef, useState } from "react";
-import { Image, Keyboard, StyleSheet, View, ViewProps } from "react-native";
+import { Image, Keyboard, Platform, StyleSheet, View, ViewProps } from "react-native";
 import { Portal } from "react-native-portalize";
 import { logger } from "../../utils/helpers";
 import { IconButton } from "../Button";
@@ -154,7 +154,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
       appearsOnIndex={0}
       opacity={0.7}
       enableTouchThrough={true}
-      pressBehavior="none"
+      pressBehavior="close"
     />
   );
 
@@ -166,15 +166,35 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
 
   // Keyboard event listeners
   useEffect(() => {
+    const keyboardEventName =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const keyboardHideEventName =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
     const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
+      keyboardEventName,
       () => {
         log("keyboardDidShow");
         setIsKeyboardVisible(true);
+        // Snap to highest index when keyboard appears (with small delay for iOS)
+        setTimeout(() => {
+          if (
+            bottomSheetRef.current &&
+            snapPointsWhenKeyboardVisible &&
+            snapPointsWhenKeyboardVisible.length > 0
+          ) {
+            const maxIndex = snapPointsWhenKeyboardVisible.length - 1;
+            try {
+              bottomSheetRef.current.snapToIndex(maxIndex);
+            } catch (error) {
+              log("Error snapping to index:", error);
+            }
+          }
+        }, Platform.OS === "ios" ? 100 : 0);
       }
     );
     const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
+      keyboardHideEventName,
       () => {
         log("keyboardDidHide");
         setIsKeyboardVisible(false);
@@ -185,7 +205,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
       keyboardDidShowListener?.remove();
       keyboardDidHideListener?.remove();
     };
-  }, []);
+  }, [snapPointsWhenKeyboardVisible]);
 
   // Conditionally render based on open prop
   if (!open) {
@@ -223,7 +243,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
           icon={
             <Image
               source={require("@/assets/images/black-cross.png")}
-              style={[styles.icon24, disabledClose && styles.icon24Disabled]}
+              style={[styles.icon28, disabledClose && styles.icon28Disabled]}
             />
           }
           onPress={disabledClose ? undefined : close}
@@ -253,6 +273,9 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
         enablePanDownToClose={swipeToClose}
         enableContentPanningGesture={swipeToClose}
         enableHandlePanningGesture={swipeToClose}
+        android_keyboardInputMode="adjustResize"
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
         backdropComponent={
           typeof backdrop === "function"
             ? backdrop
@@ -335,17 +358,21 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
-  icon24: { width: 24, height: 24, resizeMode: "contain" },
+  icon28: { width: 28, height: 28, resizeMode: "contain" },
   sheetTitle: { fontSize: 21, color: textColors.black },
   sheetRoot: {
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
-  icon24Disabled: {
+  icon28Disabled: {
     opacity: 0.3,
   },
   iconButton: {
     backgroundColor: textColors.white,
+    borderWidth: 2,
+    borderColor: textColors.black,
+    width: 40,
+    height: 40,
   },
   handleComponent: {
     height: 12,

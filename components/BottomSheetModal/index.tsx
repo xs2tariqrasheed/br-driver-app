@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, StyleSheet, View } from "react-native";
+import { Modal, StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface BottomSheetModalProps {
   visible: boolean;
@@ -25,9 +25,19 @@ export default function BottomSheetModal({
       animationType="none"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>{children}</View>
-      </View>
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View
+          style={styles.container}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e) => e.stopPropagation()}
+        >
+          {children}
+        </View>
+      </TouchableOpacity>
     </Modal>
   );
 }

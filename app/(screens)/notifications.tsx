@@ -33,7 +33,7 @@ const NotificationsScreen: React.FC = () => {
   const [selectedNotification, setSelectedNotification] =
     useState<NotificationItemType | null>(null);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>("All");
+  const [activeTab, setActiveTab] = useState<TabType>("Unread");
   // Sample notifications are now initialized in DriverContext
 
   const handleNotificationPress = async (notificationId: string) => {

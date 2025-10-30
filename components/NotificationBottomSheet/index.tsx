@@ -6,6 +6,7 @@ import { textColors } from "@/constants/colors";
 import { NOTIFICATION_TYPES } from "@/constants/global";
 import { NotificationItem } from "@/context/DriverContext";
 import { useRideOffer } from "@/context/RideOfferContext";
+import { formatDateTimestamp } from "@/utils/helpers";
 import React, { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
@@ -34,6 +35,9 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   const rideOffer = notification?.id ? getTemporaryRide(notification.id) : null;
 
   if (!notification) return null;
+
+  // Format the dateTime for display
+  const formattedDateTime = formatDateTimestamp(notification.dateTime);
 
   const handleSendReply = () => {
     if (!replyText.trim()) {
@@ -82,7 +86,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
       <View style={styles.container}>
         {/* Date and Time */}
         <Typography type="bodySmall" weight="regular" style={styles.dateTime}>
-          {notification.dateTime}
+          {formattedDateTime}
         </Typography>
 
         {/* Message Body */}

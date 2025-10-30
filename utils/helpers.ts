@@ -93,6 +93,41 @@ export const clearStorage = async (): Promise<void> => {
 };
 
 /**
+ * Clears AsyncStorage selectively, preserving specified keys.
+ *
+ * @param {string[]} keysToPreserve - Array of storage keys to preserve during clearing.
+ * @returns {Promise<void>} Resolves when storage is cleared (except preserved keys).
+ *
+ * @example
+ * ```typescript
+ * // Clear all storage except settings and notifications backup
+ * await clearStorageSelectively(['@settings', '@notifications_backup']);
+ * ```
+ */
+export const clearStorageSelectively = async (
+  keysToPreserve: string[] = []
+): Promise<void> => {
+  try {
+    // Get all storage keys
+    const allKeys = await getAllStorageKeys();
+
+    // Filter out keys to preserve
+    const keysToRemove = allKeys.filter(
+      (key) => !keysToPreserve.includes(key)
+    );
+
+    // Remove keys in batch if there are any to remove
+    if (keysToRemove.length > 0) {
+      await AsyncStorage.multiRemove(keysToRemove);
+    }
+  } catch (error) {
+    console.error("Error clearing storage selectively:", error);
+    // Re-throw to allow caller to handle
+    throw error;
+  }
+};
+
+/**
  * Returns all existing keys in AsyncStorage.
  *
  * @returns {Promise<readonly string[]>} An array of keys.

@@ -164,27 +164,83 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [state.isOpen, onActiveTripEvent]);
 
   const openChat = useCallback(async () => {
-    console.log("💬 Opening chat modal");
-
-    setState((prev) => ({
-      ...prev,
-      isOpen: true,
-      isLoading: true,
-      error: null,
-    }));
-
-    // Fetch message history
     try {
-      await fetchMessageHistory();
-    } catch (error) {
-      console.error("❌ Failed to fetch message history:", error);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: "Failed to load message history",
-      }));
+      console.log("💬 Opening chat modal");
+
+      // Validate customer info before proceeding
+      if (!state.customerInfo?.phone || !state.customerInfo?.name) {
+        throw new Error("Customer information is missing. Cannot open chat.");
+      }
+
+      // Set state first to open modal - wrap in try-catch for safety
+      try {
+        setState((prev) => ({
+          ...prev,
+          isOpen: true,
+          isLoading: true,
+          error: null,
+        }));
+      } catch (stateError: any) {
+        console.error("❌ Error setting state:", stateError);
+        throw new Error("Failed to initialize chat modal");
+      }
+
+      // Fetch message history - wrap in try-catch to prevent crashes
+      try {
+        // Only fetch if we have a valid phone number
+        if (state.customerInfo.phone && fetchMessageHistory) {
+          await fetchMessageHistory();
+        } else {
+          // If no phone, just open empty chat
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            messages: [],
+          }));
+        }
+      } catch (error: any) {
+        console.error("❌ Failed to fetch message history:", error);
+        // Update state with error, but keep modal open so user can still send messages
+        try {
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error:
+              error?.message ||
+              "Failed to load message history. You can still send messages.",
+            messages: [], // Start with empty messages
+          }));
+        } catch (stateError: any) {
+          console.error("❌ Error updating state with error:", stateError);
+          // If we can't update state, close modal
+          setState((prev) => ({
+            ...prev,
+            isOpen: false,
+            isLoading: false,
+            error: null,
+          }));
+          throw new Error("Failed to handle error state");
+        }
+      }
+    } catch (error: any) {
+      console.error("❌ Critical error opening chat modal:", error);
+      // If critical error, close modal and reset state safely
+      try {
+        setState((prev) => ({
+          ...prev,
+          isOpen: false,
+          isLoading: false,
+          error: null,
+        }));
+      } catch (stateError: any) {
+        console.error("❌ Error resetting state:", stateError);
+      }
+      // Re-throw so caller can handle it
+      throw new Error(
+        error?.message || "Failed to open chat. Please try again."
+      );
     }
-  }, [fetchMessageHistory]);
+  }, [fetchMessageHistory, state.customerInfo]);
 
   const closeChat = useCallback(() => {
     console.log("💬 Closing chat modal");

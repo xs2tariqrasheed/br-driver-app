@@ -40,23 +40,23 @@ export default function HeatMapScreen() {
   // Dummy heatmap data for now - will be replaced with real API call
   const dummyHeatmapData: HeatmapDataPoint[] = [
     {
-      // Bahria Town
-      lat: 31.3675,
-      lng: 74.1862,
+      // JFK Airport - High demand
+      lat: 40.6413,
+      lng: -73.7781,
       weight: 0.9,
       demandLevel: "high",
     },
     {
-      // Modal Town
-      lat: 31.4697,
-      lng: 74.2728,
+      // LaGuardia Airport - Medium demand
+      lat: 40.7769,
+      lng: -73.8740,
       weight: 0.7,
       demandLevel: "medium",
     },
     {
-      // Ichhra
-      lat: 31.5313,
-      lng: 74.3183,
+      // Manhattan - Low demand
+      lat: 40.7831,
+      lng: -73.9712,
       weight: 0.3,
       demandLevel: "low",
     },

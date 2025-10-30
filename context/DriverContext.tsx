@@ -3,7 +3,9 @@ import {
   API_CLIENT_TYPES,
   DRIVER_STORAGE_KEY,
   LOCAL_JOB_STATUS,
+  NOTIFICATION_TYPES,
   NotificationType,
+  NOTIFICATIONS_BACKUP_STORAGE_KEY,
   RETRIEVAL_ID_STORAGE_KEY,
   RIDE_STATE_STORAGE_KEY,
   TRIP_ID_STORAGE_KEY,
@@ -52,6 +54,7 @@ export type HiddenLiveOffer = {
 
 export type DriverObject = {
   online: boolean;
+  carType?: string; // Car type: "economy" | "sedan" | "suv" | "luxury"
   desiredDestinations?: DesiredDestination[];
   notifications?: NotificationItem[];
   readNotificationIds?: string[];
@@ -147,6 +150,66 @@ type DriverContextValue = [
 
 const DriverContext = createContext<DriverContextValue | undefined>(undefined);
 
+/**
+ * Create demo notifications for demonstration purposes
+ * These notifications have different types and content
+ */
+export function createDemoNotifications(): NotificationItem[] {
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  return [
+    {
+      id: "demo-notification-1",
+      messageTitle: "Special Ride Offer Available",
+      messageBody: "A new premium ride offer is available near your location. Tap to view details and accept.",
+      dateTime: oneHourAgo.toISOString(),
+      messageType: "unread" as const, // Will be computed based on readNotificationIds
+      notificationType: NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER,
+      isSpecial: true,
+    },
+    {
+      id: "demo-notification-2",
+      messageTitle: "Authorization Required",
+      messageBody: "Please make a stop as requested by the customer and wait 8 mins. You will be paid extra for this stop.",
+      dateTime: twoHoursAgo.toISOString(),
+      messageType: "unread" as const, // Will be computed based on readNotificationIds
+      notificationType: NOTIFICATION_TYPES.AUTHORIZATION,
+      isSpecial: false,
+    },
+    {
+      id: "demo-notification-3",
+      messageTitle: "System Update",
+      messageBody: "Your driver app has been updated with new features. Please restart the app to apply changes.",
+      dateTime: threeHoursAgo.toISOString(),
+      messageType: "unread" as const, // Will be computed based on readNotificationIds
+      notificationType: NOTIFICATION_TYPES.INFO,
+      isSpecial: false,
+    },
+    {
+      id: "demo-notification-4",
+      messageTitle: "Ride Completed Successfully",
+      messageBody: "Your ride with customer John Doe has been completed. Payment of $45.50 has been processed.",
+      dateTime: oneDayAgo.toISOString(),
+      messageType: "unread" as const, // Will be computed based on readNotificationIds
+      notificationType: NOTIFICATION_TYPES.SUCCESS,
+      isSpecial: false,
+    },
+    {
+      id: "demo-notification-5",
+      messageTitle: "New Message Received",
+      messageBody: "You have received a new message from customer. Tap to view and reply.",
+      dateTime: oneHourAgo.toISOString(),
+      messageType: "unread" as const, // Will be computed based on readNotificationIds
+      notificationType: NOTIFICATION_TYPES.MESSAGE,
+      isSpecial: false,
+    },
+  ];
+}
+
 export function DriverProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(driverReducer, initialState);
   const [auth] = useAuth();
@@ -165,8 +228,46 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
+        // Check for notifications backup first (from logout)
+        const notificationsBackupRaw = await getStorageItem(
+          NOTIFICATIONS_BACKUP_STORAGE_KEY
+        );
+        let notificationsBackup: {
+          notifications: any[];
+          readNotificationIds: string[];
+        } | null = null;
+
+        if (notificationsBackupRaw) {
+          try {
+            notificationsBackup = JSON.parse(notificationsBackupRaw);
+            log(
+              "Found notifications backup:",
+              notificationsBackup.notifications.length,
+              "notifications"
+            );
+          } catch (parseError) {
+            log("Error parsing notifications backup:", parseError);
+            // Clear corrupted backup
+            await removeStorageItem(NOTIFICATIONS_BACKUP_STORAGE_KEY);
+          }
+        }
+
         const raw = await getStorageItem(DRIVER_STORAGE_KEY);
         let parsed: DriverObject = raw ? JSON.parse(raw) : null;
+
+        // Restore notifications from backup if they exist and driver exists
+        if (notificationsBackup && parsed) {
+          parsed = {
+            ...parsed,
+            notifications: notificationsBackup.notifications,
+            readNotificationIds: notificationsBackup.readNotificationIds,
+          };
+          // Save restored notifications to driver storage
+          await setStorageItem(DRIVER_STORAGE_KEY, JSON.stringify(parsed));
+          // Remove backup after successful restoration
+          await removeStorageItem(NOTIFICATIONS_BACKUP_STORAGE_KEY);
+          log("Notifications restored from backup and backup cleared");
+        }
 
         // Filter out expired destinations if they exist
         if (
@@ -446,6 +547,50 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     async (offerId: string) => {
       if (!state.driver) return;
 
+      // Handle demo offers locally without API call
+      if (offerId.startsWith("demo-")) {
+        log(`[DriverContext] Hiding demo offer ${offerId} - local only, skipping API`);
+
+        // Update local state only
+        const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+        const existingOffer = currentHiddenOffers.find(
+          (offer) => offer.id === offerId
+        );
+
+        if (existingOffer) {
+          // Update existing offer status to hidden
+          const updatedOffers = currentHiddenOffers.map((offer) =>
+            offer.id === offerId
+              ? {
+                  ...offer,
+                  status: LOCAL_JOB_STATUS.HIDDEN,
+                  timestamp: Date.now(),
+                }
+              : offer
+          );
+
+          const updatedDriver = {
+            ...state.driver,
+            hiddenLiveOffers: updatedOffers,
+          };
+          await setDriver(updatedDriver);
+        } else {
+          // Add new hidden offer
+          const newHiddenOffer: HiddenLiveOffer = {
+            id: offerId,
+            status: LOCAL_JOB_STATUS.HIDDEN,
+            timestamp: Date.now(),
+          };
+
+          const updatedDriver = {
+            ...state.driver,
+            hiddenLiveOffers: [...currentHiddenOffers, newHiddenOffer],
+          };
+          await setDriver(updatedDriver);
+        }
+        return;
+      }
+
       try {
         log(`[DriverContext] Hiding offer ${offerId} - calling API`);
 
@@ -510,6 +655,50 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   const skipLiveOffer = useCallback(
     async (offerId: string) => {
       if (!state.driver) return;
+
+      // Handle demo offers locally without API call
+      if (offerId.startsWith("demo-")) {
+        log(`[DriverContext] Skipping demo offer ${offerId} - local only, skipping API`);
+
+        // Update local state only
+        const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+        const existingOffer = currentHiddenOffers.find(
+          (offer) => offer.id === offerId
+        );
+
+        if (existingOffer) {
+          // Update existing offer status to skipped
+          const updatedOffers = currentHiddenOffers.map((offer) =>
+            offer.id === offerId
+              ? {
+                  ...offer,
+                  status: LOCAL_JOB_STATUS.SKIPPED,
+                  timestamp: Date.now(),
+                }
+              : offer
+          );
+
+          const updatedDriver = {
+            ...state.driver,
+            hiddenLiveOffers: updatedOffers,
+          };
+          await setDriver(updatedDriver);
+        } else {
+          // Add new skipped offer
+          const newSkippedOffer: HiddenLiveOffer = {
+            id: offerId,
+            status: LOCAL_JOB_STATUS.SKIPPED,
+            timestamp: Date.now(),
+          };
+
+          const updatedDriver = {
+            ...state.driver,
+            hiddenLiveOffers: [...currentHiddenOffers, newSkippedOffer],
+          };
+          await setDriver(updatedDriver);
+        }
+        return;
+      }
 
       try {
         log(`[DriverContext] Skipping offer ${offerId} - calling API`);

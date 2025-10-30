@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { router, Stack } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -19,11 +19,15 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const FeedbackScreen: React.FC = () => {
   const { showToast } = useToast();
   const [rating, setRating] = useState(0);
   const [comments, setComments] = useState("");
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   // Dummy fare data as per the screenshot
   const fareItems: InfoTableDataItem[] = [
@@ -34,6 +38,36 @@ const FeedbackScreen: React.FC = () => {
     { label: "Extra Wait Time", value: "$05.00" },
     { label: "Additional Stops", value: "$10.00" },
   ];
+
+  // Handle keyboard events
+  useEffect(() => {
+    const keyboardEventName =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const keyboardHideEventName =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const keyboardWillShowListener = Keyboard.addListener(
+      keyboardEventName,
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        // Scroll to comments section when keyboard appears
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+    const keyboardWillHideListener = Keyboard.addListener(
+      keyboardHideEventName,
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShowListener?.remove();
+      keyboardWillHideListener?.remove();
+    };
+  }, []);
 
   const handleSkip = () => {
     // Navigate to home screen
@@ -58,12 +92,19 @@ const FeedbackScreen: React.FC = () => {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === "ios" ? "padding" : "padding"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
       >
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <ScrollView
-            contentContainerStyle={styles.scrollContent}
+            ref={scrollViewRef}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingBottom:
+                  keyboardHeight > 0 ? keyboardHeight + 20 : insets.bottom + 100,
+              },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -152,7 +193,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 10,
     paddingVertical: 20,
-    paddingBottom: 100, // Extra padding for keyboard
   },
   header: {
     alignItems: "center",

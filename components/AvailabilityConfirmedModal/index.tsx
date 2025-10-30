@@ -38,8 +38,16 @@ const AvailabilityConfirmedModal: React.FC<AvailabilityConfirmedModalProps> = ({
       animationType="slide"
       onRequestClose={onDone}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onDone}
+      >
+        <View
+          style={styles.container}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Typography
@@ -77,7 +85,7 @@ const AvailabilityConfirmedModal: React.FC<AvailabilityConfirmedModalProps> = ({
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -104,16 +112,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 20,
     backgroundColor: textColors.grey100,
+    borderWidth: 2,
+    borderColor: textColors.black,
     alignItems: "center",
     justifyContent: "center",
   },
   closeButtonText: {
-    color: textColors.grey600,
-    fontSize: 16,
+    color: textColors.black,
+    fontSize: 18,
+    fontWeight: "700",
   },
   headerTitle: {
     color: textColors.black,

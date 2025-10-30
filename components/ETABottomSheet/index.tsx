@@ -177,22 +177,18 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   etaSectionDefault: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    gap: 16,
   },
   etaSectionUpdate: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    gap: 16,
   },
   etaSectionTitle: {
-    marginTop: 16,
     color: textColors.black,
   },
   etaCounterContainer: {
-    width: "50%",
+    width: "100%",
   },
   updateCounter: {
     flexDirection: "row",
