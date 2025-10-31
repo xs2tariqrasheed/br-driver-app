@@ -95,7 +95,7 @@ export interface FutureJobOfferItemProps {
  *   pickupAddress="Pascal Ave N & N Terrace AR. Roseville 69 Main Street"
  *   dropoffTime={240}
  *   dropoffDistance={15.2}
- *   dropoffAddress="3272 Gale Ave Long Island City NY 11101"
+ *   dropoffAddress="36-01 37th St, Long Island City, NY 11101, USA"
  *   rideTime={60}
  *   rideDistance={12.7}
  *   totalPrice={195}

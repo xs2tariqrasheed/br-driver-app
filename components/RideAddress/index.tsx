@@ -59,7 +59,7 @@ export interface RideAddressProps {
  *   pickupAddress="Pascal Ave N & N Terrace AR. Roseville\n69 Main Street"
  *   dropoffTime={24}
  *   dropoffDistance={3.4}
- *   dropoffAddress="3272 Gale Ave Long Island City NY 11101"
+ *   dropoffAddress="36-01 37th St, Long Island City, NY 11101, USA"
  * />
  * ```
  */

@@ -24,18 +24,18 @@ import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
 import React from "react";
 import {
-  Animated,
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  ViewStyle,
+    Animated,
+    Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from "react-native";
 import {
-  LongPressGestureHandler,
-  PanGestureHandler,
-  State,
+    LongPressGestureHandler,
+    PanGestureHandler,
+    State,
 } from "react-native-gesture-handler";
 import Button from "../Button";
 import ProgressTimer from "../ProgressTimer";
@@ -45,14 +45,14 @@ import RideOfferItemHeader from "../RideOfferItemHeader";
 import { showToast } from "../Toast";
 
 import {
-  DRIVER_TYPES,
-  LIVE_JOB_STATUS,
-  LOCAL_JOB_STATUS,
-  OFFER_TYPES,
-  RIDE_TYPES,
-  type LocalJobStatus,
-  type OfferType,
-  type RideType,
+    DRIVER_TYPES,
+    LIVE_JOB_STATUS,
+    LOCAL_JOB_STATUS,
+    OFFER_TYPES,
+    RIDE_TYPES,
+    type LocalJobStatus,
+    type OfferType,
+    type RideType,
 } from "@/constants/global";
 import { useModalManager } from "@/context/ModalManagerContext";
 import { useRideOffer } from "@/context/RideOfferContext";
@@ -144,7 +144,7 @@ export interface LiveRideOfferItemProps {
  *   pickupAddress="Pascal Ave N & N Terrace AR. Roseville\n69 Main Street"
  *   dropoffTime={24}
  *   dropoffDistance={3.4}
- *   dropoffAddress="3272 Gale Ave Long Island City NY 11101"
+ *   dropoffAddress="36-01 37th St, Long Island City, NY 11101, USA"
  *   rideTime={49}
  *   rideDistance={23.4}
  *   totalPrice={55}

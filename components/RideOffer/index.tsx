@@ -108,6 +108,7 @@ interface RideOfferModalProps {
   onHide?: () => void;
   isSkipLoading?: boolean;
   isHideLoading?: boolean;
+  asScreen?: boolean; // render without RN Modal for screen-based presentation
 }
 
 /**
@@ -130,6 +131,7 @@ export default function RideOfferModal({
   onHide,
   isSkipLoading = false,
   isHideLoading = false,
+  asScreen = false,
 }: RideOfferModalProps) {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const mapRef = useRef<MapView>(null);
@@ -164,7 +166,6 @@ export default function RideOfferModal({
 
   // Bid context hooks
   const { showBidBottomSheet } = useBidBottomSheet();
-  const { requestClose } = useModalManager();
   const { showBidWaitingTimer } = useBidWaitingTimer();
   const { submitBid, setHasAnyActiveOffer, isSubmitBidLoading } =
     useRideOffer();
@@ -258,10 +259,8 @@ export default function RideOfferModal({
 
   // Handle bid button click for bidable offers
   const handleBidClick = () => {
-    // On iOS we cannot stack RN Modals; swap RideOffer → BidBottomSheet
+    // As a screen, keep Ride Offer visible and open the Bid sheet on top
     const bidData = buildMockBidData();
-    try { requestClose("rideOfferModal"); } catch {}
-    onClose(); // Close the RideOffer modal before opening bid sheet
     showBidBottomSheet(bidData, handleBidSubmitted);
   };
 
@@ -292,204 +291,211 @@ export default function RideOfferModal({
     openPackageInfo(data);
   };
 
-  return (
-
-    <Modal visible={visible} transparent animationType="none">
-      <View style={styles.container}>
-        {/* Bottom Sheet */}
-        <Animated.View
-          style={[
-            styles.bottomSheet,
-            {
-              backgroundColor: colors.background,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+  const Content = (
+    <View style={styles.container}>
+      {/* Bottom Sheet */}
+      <Animated.View
+        style={[
+          styles.bottomSheet,
+          {
+            backgroundColor: colors.background,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Header */}
+        <View
+          ref={headerRef}
+          onLayout={handleHeaderLayout}
+          style={{ paddingTop: insets.top }}
         >
-          {/* Header */}
-          <View
-            ref={headerRef}
-            onLayout={handleHeaderLayout}
-            style={{ paddingTop: insets.top }}
+          <Header
+            title="Ride Offer"
+            hideBackIcon={false}
+            onBackPress={() => {
+              onClose();
+            }}
+          />
+        </View>
+
+        {/* Full Screen Map */}
+        {mapHeight > 0 && (
+          <View style={[styles.mapSection, { height: mapHeight }]}>
+          <MapView
+            ref={mapRef}
+            style={[styles.map, { height: mapHeight }]}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={region}
+            showsUserLocation={false}
+            showsMyLocationButton={false}
+            showsCompass={false}
+            showsScale={false}
           >
-            <Header
-              title="Ride Offer"
-              hideBackIcon={false}
-              onBackPress={() => {
-                onClose();
-              }}
-            />
-          </View>
+            {/* Route */}
+            {offer?.tripOffer && GOOGLE_MAPS_API_KEY && (
+              <MapViewDirections
+                apikey={GOOGLE_MAPS_API_KEY}
+                origin={{
+                  latitude: offer.tripOffer.pickup.lat,
+                  longitude: offer.tripOffer.pickup.lng,
+                }}
+                destination={{
+                  latitude: offer.tripOffer.dropoff.lat,
+                  longitude: offer.tripOffer.dropoff.lng,
+                }}
+                strokeWidth={4}
+                strokeColor={textColors.blue600}
+              />
+            )}
 
-          {/* Full Screen Map */}
-          {mapHeight > 0 && (
-            <View style={[styles.mapSection, { height: mapHeight }]}>
-            <MapView
-              ref={mapRef}
-              style={[styles.map, { height: mapHeight }]}
-              provider={PROVIDER_GOOGLE}
-              initialRegion={region}
-              showsUserLocation={false}
-              showsMyLocationButton={false}
-              showsCompass={false}
-              showsScale={false}
+            {/* Pickup Marker */}
+            {offer?.tripOffer && (
+              <Marker
+                coordinate={{
+                  latitude: offer.tripOffer.pickup.lat,
+                  longitude: offer.tripOffer.pickup.lng,
+                }}
+                title="Pickup Location"
+                description={offer.pickupAddress}
+                icon={{
+                  uri: pickupIconUrl,
+                  width: 30,
+                  height: 60,
+                }}
+              />
+            )}
+
+            {/* Dropoff Marker */}
+            {offer?.tripOffer && (
+              <Marker
+                coordinate={{
+                  latitude: offer.tripOffer.dropoff.lat,
+                  longitude: offer.tripOffer.dropoff.lng,
+                }}
+                title="Dropoff Location"
+                description={offer.dropoffAddress}
+                icon={{
+                  uri: dropoffIconUrl,
+                  width: 30,
+                  height: 60,
+                }}
+              />
+            )}
+          </MapView>
+
+          {/* Overlay Card with Rounded Top Corners */}
+          <View style={[
+            styles.overlayCard,
+            {
+              maxHeight: overlayMaxHeight,
+              minHeight: overlayMinHeight,
+            }
+          ]}>
+            <ScrollView
+              style={styles.overlayScrollView}
+              contentContainerStyle={styles.overlayContent}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
             >
-              {/* Route */}
-              {offer?.tripOffer && GOOGLE_MAPS_API_KEY && (
-                <MapViewDirections
-                  apikey={GOOGLE_MAPS_API_KEY}
-                  origin={{
-                    latitude: offer.tripOffer.pickup.lat,
-                    longitude: offer.tripOffer.pickup.lng,
+              {/* Ride Offer Tile */}
+              <View style={styles.offerSection}>
+                <LiveRideOfferItem
+                  {...offer}
+                  onPressSpecialRequirements={() => {
+                    handleShowSpecialRequirements(offer?.specialRequirements);
                   }}
-                  destination={{
-                    latitude: offer.tripOffer.dropoff.lat,
-                    longitude: offer.tripOffer.dropoff.lng,
+                  onPressPackage={() => {
+                    handleShowPackage(offer?.packageInfo);
                   }}
-                  strokeWidth={4}
-                  strokeColor={textColors.blue600}
+                  onButtonClick={() => {}}
+                  itemStatus={offer?.status as any}
+                  hideActionButton={true}
+                  removeFlex
+                  disabled
                 />
-              )}
+              </View>
 
-              {/* Pickup Marker */}
-              {offer?.tripOffer && (
-                <Marker
-                  coordinate={{
-                    latitude: offer.tripOffer.pickup.lat,
-                    longitude: offer.tripOffer.pickup.lng,
-                  }}
-                  title="Pickup Location"
-                  description={offer.pickupAddress}
-                  icon={{
-                    uri: pickupIconUrl,
-                    width: 30,
-                    height: 60,
-                  }}
-                />
-              )}
-
-              {/* Dropoff Marker */}
-              {offer?.tripOffer && (
-                <Marker
-                  coordinate={{
-                    latitude: offer.tripOffer.dropoff.lat,
-                    longitude: offer.tripOffer.dropoff.lng,
-                  }}
-                  title="Dropoff Location"
-                  description={offer.dropoffAddress}
-                  icon={{
-                    uri: dropoffIconUrl,
-                    width: 30,
-                    height: 60,
-                  }}
-                />
-              )}
-            </MapView>
-
-            {/* Overlay Card with Rounded Top Corners */}
-            <View style={[
-              styles.overlayCard,
-              {
-                maxHeight: overlayMaxHeight,
-                minHeight: overlayMinHeight,
-              }
-            ]}>
-              <ScrollView
-                style={styles.overlayScrollView}
-                contentContainerStyle={styles.overlayContent}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled={true}
-              >
-                {/* Ride Offer Tile */}
-                <View style={styles.offerSection}>
-                  <LiveRideOfferItem
-                    {...offer}
-                    onPressSpecialRequirements={() => {
-                      handleShowSpecialRequirements(offer?.specialRequirements);
-                    }}
-                    onPressPackage={() => {
-                      handleShowPackage(offer?.packageInfo);
-                    }}
-                    onButtonClick={() => {}}
-                    itemStatus={offer?.status as any}
-                    hideActionButton={true}
-                    removeFlex
-                    disabled
-                  />
-                </View>
-
-                {/* Action Buttons or Expired UI */}
-                {isOffered && (
-                  <View
-                    style={styles.buttonContainer}
-                    onStartShouldSetResponder={() => false}
+              {/* Action Buttons or Expired UI */}
+              {isOffered && (
+                <View
+                  style={styles.buttonContainer}
+                  onStartShouldSetResponder={() => false}
+                >
+                  <Button
+                    variant="outlined"
+                    block={false}
+                    rounded="half"
+                    style={styles.hideButton}
+                    onPress={onHide}
+                    disabled={shouldDisabled}
+                    loading={isHideLoading}
                   >
+                    Hide
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    block={false}
+                    rounded="half"
+                    style={styles.skipButton}
+                    onPress={onSkipPrice}
+                    disabled={shouldDisabled}
+                    loading={isSkipLoading}
+                  >
+                    Skip Price
+                  </Button>
+
+                  {bidable ? (
                     <Button
-                      variant="outlined"
+                      variant="primary"
                       block={false}
                       rounded="half"
-                      style={styles.hideButton}
-                      onPress={onHide}
+                      style={styles.acceptButton}
+                      onPress={handleBidClick}
                       disabled={shouldDisabled}
-                      loading={isHideLoading}
+                      loading={isSubmitBidLoading}
                     >
-                      Hide
+                      Bid
                     </Button>
-
+                  ) : (
                     <Button
-                      variant="outlined"
+                      variant="primary"
                       block={false}
                       rounded="half"
-                      style={styles.skipButton}
-                      onPress={onSkipPrice}
+                      style={styles.acceptButton}
+                      onPress={onAccept}
                       disabled={shouldDisabled}
-                      loading={isSkipLoading}
                     >
-                      Skip Price
+                      Accept
                     </Button>
+                  )}
+                </View>
+              )}
 
-                    {bidable ? (
-                      <Button
-                        variant="primary"
-                        block={false}
-                        rounded="half"
-                        style={styles.acceptButton}
-                        onPress={handleBidClick}
-                        disabled={shouldDisabled}
-                        loading={isSubmitBidLoading}
-                      >
-                        Bid
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="primary"
-                        block={false}
-                        rounded="half"
-                        style={styles.acceptButton}
-                        onPress={onAccept}
-                        disabled={shouldDisabled}
-                      >
-                        Accept
-                      </Button>
-                    )}
+              {isExpired && (
+                <View style={styles.expiredContainer}>
+                  <View style={styles.expiredAlert}>
+                    <Text style={styles.expiredText}>
+                      This offer has expired
+                    </Text>
                   </View>
-                )}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+          </View>
+        )}
+      </Animated.View>
+    </View>
+  );
 
-                {isExpired && (
-                  <View style={styles.expiredContainer}>
-                    <View style={styles.expiredAlert}>
-                      <Text style={styles.expiredText}>
-                        This offer has expired
-                      </Text>
-                    </View>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-            </View>
-          )}
-        </Animated.View>
-      </View>
+  if (asScreen) {
+    return Content;
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      {Content}
     </Modal>
   );
 }

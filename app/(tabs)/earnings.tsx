@@ -25,7 +25,7 @@ import {
 export default function EarningsScreen() {
   const router = useRouter();
   const { showRideOfferModal } = useRideOffer();
-  const { requestOpen } = useModalManager();
+  useModalManager();
   const { showNotification } = useNotification();
   const { showToast } = useToast();
   const bottomTabOverflow = useBottomTabOverflow();
@@ -130,9 +130,7 @@ export default function EarningsScreen() {
       timestamp: new Date().toISOString(),
       timeout: 30000,
     };
-    requestOpen({ name: "rideOfferModal", priority: 7, group: "rideOfferFlow" })
-      .then(() => showRideOfferModal(dummyRideOffer))
-      .catch(() => {});
+    showRideOfferModal(dummyRideOffer);
   };
 
   const handleOpenRideOfferBid = () => {
@@ -182,9 +180,7 @@ export default function EarningsScreen() {
       timeout: 30000,
     };
 
-    requestOpen({ name: "rideOfferModal", priority: 7, group: "rideOfferFlow" })
-      .then(() => showRideOfferModal(dummyRideOffer))
-      .catch(() => {});
+    showRideOfferModal(dummyRideOffer);
   };
 
   const handleShowToast = () => {

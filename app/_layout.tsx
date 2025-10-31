@@ -123,6 +123,13 @@ export default function RootLayout() {
                                                         presentation: "fullScreenModal",
                                                       }}
                                                     />
+                                                    <Stack.Screen
+                                                      name="(screens)/ride-offer"
+                                                      options={{
+                                                        headerShown: false,
+                                                        presentation: "fullScreenModal",
+                                                      }}
+                                                    />
                                                   </Stack>
                                                   <StatusBar style="auto" />
                                                   {/* Global Socket Listener */}
@@ -132,7 +139,6 @@ export default function RootLayout() {
                                                   {/* Online Location Tracker */}
                                                   <OnlineLocationTracker />
                                                   {/* Global Modals */}
-                                                  <GlobalRideOfferModal />
                                                   <NotificationModal />
                                                   <NetworkNotification />
                                                   <PackageInfoModal />

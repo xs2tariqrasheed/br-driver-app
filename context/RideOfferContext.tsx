@@ -159,6 +159,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     setCurrentOffer(offer);
     setModalCallbacks(callbacks || null);
     setIsRideOfferModalVisible(true);
+    try {
+      router.push("/(screens)/ride-offer");
+    } catch {}
   };
 
   /**
@@ -169,6 +172,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     setIsRideOfferModalVisible(false);
     setCurrentOffer(null);
     setModalCallbacks(null);
+    try {
+      router.back();
+    } catch {}
   };
 
   /**

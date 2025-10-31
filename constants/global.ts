@@ -87,7 +87,7 @@ export const SKELETON_DEFAULT_DURATION_MS = 1200;
 // Contact Base info used in More → Contact Base bottom sheet
 // Centralized so content and assets are easy to update later
 export const CONTACT_BASE = {
-  address: "3272 Gale Ave Long Island City, NY 11101",
+  address: "36-01 37th St, Long Island City, NY 11101, USA",
   // Primary dispatcher number used by the Call Dispatcher button
   dispatcherPhone: "000-000-0000",
   // Listed numbers

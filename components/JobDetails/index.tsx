@@ -20,12 +20,12 @@
 import { textColors } from "@/constants/colors";
 import { ACTION_ICON_SOURCE_MAP, type RideType } from "@/constants/global";
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  ViewStyle,
+    Image,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from "react-native";
 import Divider from "../Divider";
 import InfoTable, { type InfoTableDataItem } from "../InfoTable";
@@ -132,7 +132,7 @@ export interface JobDetailsProps {
  *     pickupAddress: "Pascal Ave N & N Terrace AR. Roseville\n69 Main Street",
  *     dropoffTime: 24,
  *     dropoffDistance: 3.4,
- *     dropoffAddress: "3272 Gale Ave Long Island City NY 11101",
+ *     dropoffAddress: "36-01 37th St, Long Island City, NY 11101, USA",
  *     rideTime: 49,
  *     rideDistance: 23.4,
  *     totalPrice: 55,

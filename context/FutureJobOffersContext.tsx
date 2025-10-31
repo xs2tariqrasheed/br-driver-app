@@ -13,11 +13,11 @@
 
 import { logger } from "@/utils/helpers";
 import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
 } from "react";
 
 // Types
@@ -83,7 +83,7 @@ const DUMMY_FUTURE_OFFERS: FutureJobOffer[] = [
     pickupAddress: "Pascal Ave N & N Terrace AR. Roseville 69 Main Street",
     dropoffTime: 240, // 4 hours from now
     dropoffDistance: 15.2,
-    dropoffAddress: "3272 Gale Ave Long Island City NY 11101",
+    dropoffAddress: "36-01 37th St, Long Island City, NY 11101, USA",
     rideTime: 60, // 1 hour
     rideDistance: 12.7,
     totalPrice: 195,
