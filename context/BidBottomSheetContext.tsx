@@ -35,6 +35,7 @@ interface BidBottomSheetContextType {
   ) => void;
   hideBidBottomSheet: () => void;
   setSubmitting: (loading: boolean) => void;
+  reopenLastBidBottomSheet: () => void;
 }
 
 const BidBottomSheetContext = createContext<
@@ -46,13 +47,16 @@ export function BidBottomSheetProvider({ children }: { children: ReactNode }) {
   const [bidData, setBidData] = useState<BidData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitHandlerRef = useRef<((data: any) => void) | null>(null);
-  const { registerModal, unregisterModal } = useModalManager();
+  const lastBidDataRef = useRef<BidData | null>(null);
+  const lastSubmitHandlerRef = useRef<((data: any) => void) | null>(null);
+  const { registerModal, unregisterModal, requestOpen, requestClose } = useModalManager();
 
   const hideBidBottomSheet = () => {
     setIsBidBottomSheetVisible(false);
     setBidData(null);
     setIsSubmitting(false);
     submitHandlerRef.current = null;
+    requestClose("bidBottomSheet");
   };
 
   // Register modal with ModalManager
@@ -66,8 +70,22 @@ export function BidBottomSheetProvider({ children }: { children: ReactNode }) {
     console.log("🔔 Submit handler received:", typeof onSubmit);
     setBidData(data);
     submitHandlerRef.current = onSubmit;
+    lastBidDataRef.current = data;
+    lastSubmitHandlerRef.current = onSubmit;
     console.log("🔔 Submit handler stored");
-    setIsBidBottomSheetVisible(true);
+    requestOpen({ name: "bidBottomSheet", priority: 9, group: "bidFlow" })
+      .then(() => setIsBidBottomSheetVisible(true))
+      .catch(() => setIsBidBottomSheetVisible(false));
+  };
+
+  const reopenLastBidBottomSheet = () => {
+    if (lastBidDataRef.current && lastSubmitHandlerRef.current) {
+      setBidData(lastBidDataRef.current);
+      submitHandlerRef.current = lastSubmitHandlerRef.current;
+      requestOpen({ name: "bidBottomSheet", priority: 9, group: "bidFlow" })
+        .then(() => setIsBidBottomSheetVisible(true))
+        .catch(() => setIsBidBottomSheetVisible(false));
+    }
   };
 
   const setSubmitting = (loading: boolean) => {
@@ -82,6 +100,7 @@ export function BidBottomSheetProvider({ children }: { children: ReactNode }) {
     showBidBottomSheet,
     hideBidBottomSheet,
     setSubmitting,
+    reopenLastBidBottomSheet,
   };
 
   return (

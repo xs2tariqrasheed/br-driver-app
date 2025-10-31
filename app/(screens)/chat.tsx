@@ -3,14 +3,12 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { useChat } from "@/context/ChatContext";
 import { openPhoneDialer } from "@/utils/helpers";
-import { useModalManager } from "@/context/ModalManagerContext";
 import { useToast } from "@/components/Toast";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
   Keyboard,
-  Modal,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -20,9 +18,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MessageBubble from "./MessageBubble";
+import MessageBubble from "@/components/ChatModal/MessageBubble";
 
-const ChatModal: React.FC = () => {
+export default function ChatScreen() {
   const {
     isOpen,
     messages,
@@ -40,17 +38,7 @@ const ChatModal: React.FC = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
-  const { registerModal, unregisterModal } = useModalManager();
 
-  // Register with Modal Manager for centralized control
-  useEffect(() => {
-    if (closeChat) {
-      registerModal("chat", () => closeChat());
-    }
-    return () => unregisterModal("chat");
-  }, [registerModal, unregisterModal, closeChat]);
-
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messages && messages.length > 0 && scrollViewRef.current) {
       try {
@@ -67,7 +55,6 @@ const ChatModal: React.FC = () => {
     }
   }, [messages?.length]);
 
-  // Clear input when modal closes
   useEffect(() => {
     if (!isOpen) {
       setInputText("");
@@ -75,7 +62,6 @@ const ChatModal: React.FC = () => {
     }
   }, [isOpen]);
 
-  // Handle keyboard events
   useEffect(() => {
     let keyboardWillShowListener: any = null;
     let keyboardWillHideListener: any = null;
@@ -387,42 +373,23 @@ const ChatModal: React.FC = () => {
     }
   };
 
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <Modal
-      visible={isOpen}
-      animationType="slide"
-      presentationStyle="fullScreen"
-      onRequestClose={() => {
-        try {
-          closeChat?.();
-        } catch (error: any) {
-          console.error("Error closing chat:", error);
-        }
-      }}
-      statusBarTranslucent={true}
-    >
-      <SafeAreaView style={styles.container}>
-        {renderHeader()}
-
-        <View
-          style={[
-            styles.content,
-            {
-              marginBottom: keyboardHeight > 0 ? keyboardHeight : 0,
-            },
-          ]}
-        >
-          {renderMessages()}
-          {renderInput()}
-        </View>
-      </SafeAreaView>
-    </Modal>
+    <SafeAreaView style={styles.container}>
+      {renderHeader()}
+      <View
+        style={[
+          styles.content,
+          {
+            marginBottom: keyboardHeight > 0 ? keyboardHeight : 0,
+          },
+        ]}
+      >
+        {renderMessages()}
+        {renderInput()}
+      </View>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -541,4 +508,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChatModal;
+

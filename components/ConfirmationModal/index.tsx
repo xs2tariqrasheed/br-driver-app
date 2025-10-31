@@ -36,6 +36,8 @@ export interface ConfirmationModalProps {
    * Text for the confirm button
    */
   confirmButtonText: string;
+  /** Optional to reduce accidental double taps */
+  disabled?: boolean;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -46,6 +48,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   onCancel,
   cancelButtonText,
   confirmButtonText,
+  disabled = false,
 }) => {
   return (
     <Modal
@@ -100,7 +103,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 variant="outlined"
                 rounded="half"
                 block="half"
-                onPress={onCancel}
+              onPress={disabled ? () => {} : onCancel}
+              disabled={disabled}
               >
                 {cancelButtonText}
               </Button>
@@ -108,7 +112,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 variant="danger"
                 rounded="half"
                 block="half"
-                onPress={onConfirm}
+              onPress={disabled ? () => {} : onConfirm}
+              disabled={disabled}
               >
                 {confirmButtonText}
               </Button>

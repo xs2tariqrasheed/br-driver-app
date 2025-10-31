@@ -28,6 +28,11 @@ export interface BidWaitingTimerModalProps {
    * @default false
    */
   open?: boolean;
+
+  /** Inline confirmation mode without closing the modal */
+  isConfirming?: boolean;
+  onKeepWaiting?: () => void;
+  onConfirmCancel?: () => void;
 }
 
 /**
@@ -42,6 +47,9 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
   onCancel,
   onCompleteProgress,
   open = false,
+  isConfirming = false,
+  onKeepWaiting,
+  onConfirmCancel,
 }) => {
   const { showBidExpired } = useBidExpired();
   const { hideBidWaitingTimer } = useBidWaitingTimer();
@@ -78,10 +86,10 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
               weight="semibold"
               style={styles.headerTitle}
             >
-              Waiting for Customer
+              {isConfirming ? "Cancel Bid" : "Waiting for Customer"}
             </Typography>
             <View style={styles.placeholder} />
-            <TouchableOpacity style={styles.closeButton} onPress={onCancel}>
+            <TouchableOpacity style={styles.closeButton} onPress={isConfirming ? (onKeepWaiting || onCancel) : onCancel}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -94,7 +102,9 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
               weight="regular"
               style={styles.description}
             >
-              Your bid has been sent. Please wait while the customer reviews it.
+              {isConfirming
+                ? "Are you sure you want to cancel this bid? This action cannot be undone."
+                : "Your bid has been sent. Please wait while the customer reviews it."}
             </Typography>
 
             {/* Progress Bar */}
@@ -106,16 +116,40 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
               />
             </View>
 
-            {/* Cancel Button */}
-            <View style={styles.buttonContainer}>
-              <Button
-                variant="outlined"
-                onPress={onCancel}
-                style={styles.cancelButton}
-              >
-                Cancel
-              </Button>
-            </View>
+            {/* Action Buttons */}
+            {isConfirming ? (
+              <View style={styles.actionRow}> 
+                <View style={styles.actionCol}>
+                  <Button
+                    variant="outlined"
+                    rounded="half"
+                    onPress={onKeepWaiting}
+                    style={styles.cancelButton}
+                  >
+                    Keep Waiting
+                  </Button>
+                </View>
+                <View style={[styles.actionCol, styles.actionColSpacing]}>
+                  <Button
+                    variant="danger"
+                    rounded="half"
+                    onPress={onConfirmCancel}
+                  >
+                    Cancel Bid
+                  </Button>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.buttonContainer}>
+                <Button
+                  variant="outlined"
+                  onPress={onCancel}
+                  style={styles.cancelButton}
+                >
+                  Cancel
+                </Button>
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -183,6 +217,17 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: "100%",
+  },
+  actionRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  actionCol: {
+    flex: 1,
+  },
+  actionColSpacing: {
+    marginLeft: 12,
   },
   cancelButton: {
     backgroundColor: textColors.white,

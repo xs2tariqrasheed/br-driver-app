@@ -3,9 +3,11 @@ import { useNotification } from "@/context/NotificationContext";
 import { useSettings } from "@/context/SettingsContext";
 import { speechManager } from "@/utils/speechManager";
 import React, { useEffect, useRef } from "react";
-import { Animated, Modal, StyleSheet, TouchableOpacity } from "react-native";
+import { Animated, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Notification from "../Notification";
+import { useModalManager } from "@/context/ModalManagerContext";
+import { Portal } from "react-native-portalize";
 
 const NotificationModal: React.FC = () => {
   const { isOpen, data, hideNotification } = useNotification();
@@ -13,6 +15,13 @@ const NotificationModal: React.FC = () => {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(-200)).current;
   const hasSpokenRef = useRef(false);
+  const { registerModal, unregisterModal } = useModalManager();
+
+  // Register with Modal Manager so it can be closed centrally
+  useEffect(() => {
+    registerModal("notification", () => hideNotification());
+    return () => unregisterModal("notification");
+  }, [registerModal, unregisterModal, hideNotification]);
 
   useEffect(() => {
     if (isOpen && data) {
@@ -120,56 +129,54 @@ const NotificationModal: React.FC = () => {
   // If the notification should be displayed as a modal, let the Notification component handle it
   if (data.modal) {
     return (
-      <Notification
-        type={data.type}
-        title={data.title}
-        subtitle={data.subtitle}
-        message={data.message}
-        visible={isOpen}
-        onDismiss={handleClose}
-        onBackdropPress={handleClose}
-        showDismissButton={true}
-        modal={true}
-      />
+      <Portal>
+        <Notification
+          type={data.type}
+          title={data.title}
+          subtitle={data.subtitle}
+          message={data.message}
+          visible={isOpen}
+          onDismiss={handleClose}
+          onBackdropPress={handleClose}
+          showDismissButton={true}
+          modal={true}
+        />
+      </Portal>
     );
   }
 
   // Regular notification (slide down from top)
   return (
-    <Modal
-      visible={isOpen}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={handleClose}
-    >
-      <TouchableOpacity
-        style={styles.backdrop}
-        activeOpacity={1}
-        onPress={handleClose}
-      >
-        <Animated.View
-          style={[
-            styles.container,
-            {
-              top: insets.top + 10,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+    isOpen ? (
+      <Portal>
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={handleClose}
         >
-          <Notification
-            type={data.type}
-            title={data.title}
-            subtitle={data.subtitle}
-            message={data.message}
-            visible={true}
-            onDismiss={handleClose}
-            showDismissButton={true}
-            modal={false}
-          />
-        </Animated.View>
-      </TouchableOpacity>
-    </Modal>
+          <Animated.View
+            style={[
+              styles.container,
+              {
+                top: insets.top + 10,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <Notification
+              type={data.type}
+              title={data.title}
+              subtitle={data.subtitle}
+              message={data.message}
+              visible={true}
+              onDismiss={handleClose}
+              showDismissButton={true}
+              modal={false}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+      </Portal>
+    ) : null
   );
 };
 

@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useReducer,
 } from "react";
+import { useModalManager } from "@/context/ModalManagerContext";
 
 // Types
 export type SpecialRequirements = {
@@ -76,14 +77,18 @@ export function SpecialRequirementsProvider({
     specialRequirementsReducer,
     initialState
   );
+  const { requestOpen, requestClose } = useModalManager();
 
   const openSpecialRequirements = useCallback((data: SpecialRequirements) => {
     console.log("🔍 SpecialRequirementsContext: Opening with data:", data);
-    dispatch({ type: "OPEN", payload: data });
+    requestOpen({ name: "specialRequirements", priority: 6, group: "rideOfferFlow" })
+      .then(() => dispatch({ type: "OPEN", payload: data }))
+      .catch(() => {});
   }, []);
 
   const closeSpecialRequirements = useCallback(() => {
     dispatch({ type: "CLOSE" });
+    requestClose("specialRequirements");
   }, []);
 
   const contextValue = useMemo<SpecialRequirementsContextValue>(

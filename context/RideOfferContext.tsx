@@ -222,7 +222,13 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("❌ Error in skip price callback:", error);
-      // Don't hide modal on error - let the callback handle error display
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg?.toLowerCase().includes("expired")) {
+        // Close modal and reset active offer state on expired trips
+        try { hideRideOfferModal(); } catch {}
+        try { await setHasAnyActiveOffer(false); } catch {}
+      }
+      // Otherwise let the UI show error
     } finally {
       setIsSkipLoading(false);
     }
@@ -251,7 +257,13 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("❌ Error in hide callback:", error);
-      // Don't hide modal on error - let the callback handle error display
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg?.toLowerCase().includes("expired")) {
+        // Close modal and reset active offer state on expired trips
+        try { hideRideOfferModal(); } catch {}
+        try { await setHasAnyActiveOffer(false); } catch {}
+      }
+      // Otherwise let the UI show error
     } finally {
       setIsHideLoading(false);
     }
@@ -371,10 +383,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         error instanceof Error
           ? error.message
           : "Failed to skip ride offer price. Please try again.";
-      showToast(errorMessage, {
-        variant: "error",
-        position: "top",
-      });
+      showToast(errorMessage, { variant: "error", position: "top" });
+      if (errorMessage?.toLowerCase().includes("expired")) {
+        try { hideRideOfferModal(); } catch {}
+        try { await setHasAnyActiveOffer(false); } catch {}
+      }
     }
   };
 
@@ -422,10 +435,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         error instanceof Error
           ? error.message
           : "Failed to hide ride offer. Please try again.";
-      showToast(errorMessage, {
-        variant: "error",
-        position: "top",
-      });
+      showToast(errorMessage, { variant: "error", position: "top" });
+      if (errorMessage?.toLowerCase().includes("expired")) {
+        try { hideRideOfferModal(); } catch {}
+        try { await setHasAnyActiveOffer(false); } catch {}
+      }
     }
   };
 

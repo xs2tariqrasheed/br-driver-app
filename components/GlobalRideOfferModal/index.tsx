@@ -1,4 +1,6 @@
+import React, { useEffect } from "react";
 import { useRideOffer } from "@/context/RideOfferContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import RideOfferModal from "../RideOffer";
 
 /**
@@ -18,6 +20,13 @@ export default function GlobalRideOfferModal() {
     isSkipLoading,
     isHideLoading,
   } = useRideOffer();
+  const { registerModal, unregisterModal } = useModalManager();
+
+  // Register with Modal Manager for centralized control
+  useEffect(() => {
+    registerModal("rideOfferModal", () => hideRideOfferModal());
+    return () => unregisterModal("rideOfferModal");
+  }, [registerModal, unregisterModal, hideRideOfferModal]);
 
   return (
     <RideOfferModal

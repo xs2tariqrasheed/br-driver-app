@@ -1,4 +1,3 @@
-import ChatModal from "@/components/ChatModal";
 import { GlobalActiveTripListener } from "@/components/GlobalActiveTripListener";
 import GlobalRideOfferModal from "@/components/GlobalRideOfferModal";
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
@@ -117,6 +116,13 @@ export default function RootLayout() {
                                                         headerShown: false,
                                                       }}
                                                     />
+                                                    <Stack.Screen
+                                                      name="(screens)/chat"
+                                                      options={{
+                                                        headerShown: false,
+                                                        presentation: "fullScreenModal",
+                                                      }}
+                                                    />
                                                   </Stack>
                                                   <StatusBar style="auto" />
                                                   {/* Global Socket Listener */}
@@ -126,7 +132,6 @@ export default function RootLayout() {
                                                   {/* Online Location Tracker */}
                                                   <OnlineLocationTracker />
                                                   {/* Global Modals */}
-                                                  <ChatModal />
                                                   <GlobalRideOfferModal />
                                                   <NotificationModal />
                                                   <NetworkNotification />

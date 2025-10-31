@@ -1,5 +1,5 @@
 import Button from "@/components/Button";
-import Header from "@/components/Header";
+import { Header } from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
@@ -10,6 +10,8 @@ import {
   TRIP_OFFER_TYPES,
   URLS,
 } from "@/constants/global";
+import { useModalManager } from "@/context/ModalManagerContext";
+import { useNotification } from "@/context/NotificationContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { useRouter } from "expo-router";
 import {
@@ -23,6 +25,8 @@ import {
 export default function EarningsScreen() {
   const router = useRouter();
   const { showRideOfferModal } = useRideOffer();
+  const { requestOpen } = useModalManager();
+  const { showNotification } = useNotification();
   const { showToast } = useToast();
   const bottomTabOverflow = useBottomTabOverflow();
 
@@ -80,8 +84,8 @@ export default function EarningsScreen() {
     });
   };
 
-  const handleOpenRideOfferModal = () => {
-    // Create dummy ride offer data for testing
+  const handleOpenRideOfferAccept = () => {
+    // Create dummy ride offer (Accept flow)
     const dummyRideOffer = {
       id: "test-ride-offer-123",
       type: TRIP_OFFER_TYPES.SEQUENTIAL,
@@ -106,7 +110,7 @@ export default function EarningsScreen() {
         timestamp: Date.now(),
       },
       bidable: false,
-      rideType: RIDE_TYPES.ONE_WAY,
+      rideType: "ONE_WAY" as keyof typeof RIDE_TYPES,
       peopleCount: 2,
       rating: 4.8,
       hasSpecialRequirements: false,
@@ -126,12 +130,76 @@ export default function EarningsScreen() {
       timestamp: new Date().toISOString(),
       timeout: 30000,
     };
+    requestOpen({ name: "rideOfferModal", priority: 7, group: "rideOfferFlow" })
+      .then(() => showRideOfferModal(dummyRideOffer))
+      .catch(() => {});
+  };
 
-    showRideOfferModal(dummyRideOffer);
+  const handleOpenRideOfferBid = () => {
+    // Create dummy ride offer (Bid flow)
+    const dummyRideOffer = {
+      id: "test-ride-offer-bid-123",
+      type: TRIP_OFFER_TYPES.SEQUENTIAL,
+      status: LIVE_JOB_STATUS.OFFERED as "offered",
+      tripOffer: {
+        tripId: "test-trip-id-bid-456",
+        customerId: "test-customer-id-bid-789",
+        pickup: {
+          lat: 31.3709,
+          lng: 74.3648,
+          address: "99C7+8WV, Service Road, Kahna Nau, Lahore",
+        },
+        dropoff: {
+          lat: 31.4244,
+          lng: 74.3574,
+          address:
+            "18-KM Main Lahore – Kasur Rd، opp. Descon Head Office, Shadab Garden, Lahore",
+        },
+        biddable: true,
+        type: "sequential" as const,
+        fare: 25.0,
+        timestamp: Date.now(),
+      },
+      bidable: true,
+      rideType: "ONE_WAY" as keyof typeof RIDE_TYPES,
+      peopleCount: 2,
+      rating: 4.8,
+      hasSpecialRequirements: false,
+      hasPackage: false,
+      pickupTime: 5,
+      pickupDistance: 0.8,
+      pickupAddress: "99C7+8WV, Service Road, Kahna Nau, Lahore",
+      dropoffTime: 15,
+      dropoffDistance: 3.2,
+      dropoffAddress:
+        "18-KM Main Lahore – Kasur Rd، opp. Descon Head Office, Shadab Garden, Lahore",
+      rideTime: 20,
+      rideDistance: 4.0,
+      totalPrice: 25.0,
+      driverEarn: 20.0,
+      buttonTitle: "Bid",
+      timestamp: new Date().toISOString(),
+      timeout: 30000,
+    };
+
+    requestOpen({ name: "rideOfferModal", priority: 7, group: "rideOfferFlow" })
+      .then(() => showRideOfferModal(dummyRideOffer))
+      .catch(() => {});
   };
 
   const handleShowToast = () => {
     showToast("This is a test toast message!", "success", "top");
+  };
+
+  const handleShowNotification = () => {
+    showNotification({
+      type: "INFO" as any,
+      title: "Test Notification",
+      subtitle: "This is a portal-based overlay",
+      message: "Hello from Earnings screen",
+      modal: false,
+      autoHide: true,
+    });
   };
 
   return (
@@ -163,7 +231,7 @@ export default function EarningsScreen() {
               Open Web Portal
             </Button>
           </View>
-{/* 
+
           <View style={styles.buttonContainer}>
             <Button
               variant="outlined"
@@ -178,9 +246,19 @@ export default function EarningsScreen() {
             <Button
               variant="outlined"
               rounded="half"
-              onPress={handleOpenRideOfferModal}
+              onPress={handleOpenRideOfferAccept}
             >
-              Test Ride Offer Modal
+              Test Ride Offer (Accept)
+            </Button>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <Button
+              variant="outlined"
+              rounded="half"
+              onPress={handleOpenRideOfferBid}
+            >
+              Test Ride Offer (Bid)
             </Button>
           </View>
 
@@ -192,7 +270,17 @@ export default function EarningsScreen() {
             >
               Test Toast Message
             </Button>
-          </View> */}
+          </View> 
+
+          <View style={styles.buttonContainer}>
+            <Button
+              variant="outlined"
+              rounded="half"
+              onPress={handleShowNotification}
+            >
+              Test Notification
+            </Button>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

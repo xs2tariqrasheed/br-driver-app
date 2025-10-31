@@ -24,6 +24,7 @@ import {
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { PackageInfo, usePackageInfo } from "@/context/PackageInfoContext";
 import { useRideOffer } from "@/context/RideOfferContext";
@@ -163,6 +164,7 @@ export default function RideOfferModal({
 
   // Bid context hooks
   const { showBidBottomSheet } = useBidBottomSheet();
+  const { requestClose } = useModalManager();
   const { showBidWaitingTimer } = useBidWaitingTimer();
   const { submitBid, setHasAnyActiveOffer, isSubmitBidLoading } =
     useRideOffer();
@@ -256,9 +258,10 @@ export default function RideOfferModal({
 
   // Handle bid button click for bidable offers
   const handleBidClick = () => {
-    // Keep the ride offer modal open and show bid modal as overlay
-    // Build mock bid data and show bid bottom sheet with submission callback
+    // On iOS we cannot stack RN Modals; swap RideOffer → BidBottomSheet
     const bidData = buildMockBidData();
+    try { requestClose("rideOfferModal"); } catch {}
+    onClose(); // Close the RideOffer modal before opening bid sheet
     showBidBottomSheet(bidData, handleBidSubmitted);
   };
 

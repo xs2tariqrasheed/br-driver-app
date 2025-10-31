@@ -1321,8 +1321,27 @@ export function formatExpirationTime(expiredAt: string): string {
  * @param timestamp - ISO timestamp string
  * @returns string - Formatted date string (MM/DD/YYYY hh:mm A)
  */
-export const formatDateTimestamp = (timestamp: string): string => {
-  return dayjs(timestamp).format("MM/DD/YYYY hh:mm A");
+export const formatDateTimestamp = (timestamp: string | number | null | undefined): string => {
+  try {
+    if (timestamp == null) return dayjs().format("MM/DD/YYYY hh:mm A");
+    // Support numeric epoch seconds or milliseconds
+    if (typeof timestamp === "number") {
+      const ms = timestamp < 1e12 ? timestamp * 1000 : timestamp; // seconds -> ms
+      return dayjs(ms).format("MM/DD/YYYY hh:mm A");
+    }
+    // String case: try parse numeric, else treat as ISO
+    const trimmed = String(timestamp).trim();
+    if (!trimmed) return dayjs().format("MM/DD/YYYY hh:mm A");
+    if (/^\d+$/.test(trimmed)) {
+      const num = Number(trimmed);
+      const ms = num < 1e12 ? num * 1000 : num;
+      return dayjs(ms).format("MM/DD/YYYY hh:mm A");
+    }
+    const d = dayjs(trimmed);
+    return d.isValid() ? d.format("MM/DD/YYYY hh:mm A") : dayjs().format("MM/DD/YYYY hh:mm A");
+  } catch {
+    return dayjs().format("MM/DD/YYYY hh:mm A");
+  }
 };
 
 // =============================================================================

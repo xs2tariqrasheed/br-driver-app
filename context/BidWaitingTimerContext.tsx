@@ -1,9 +1,9 @@
 import BidWaitingTimerModal from "@/components/BidWaitingTimerModal";
-import ConfirmationModal from "@/components/ConfirmationModal";
 import { BID_WAITING_TIMER_DURATION_MS } from "@/constants/global";
 import { useBidExpired } from "@/context/BidExpiredContext";
 import { useModalManager } from "@/context/ModalManagerContext";
 import { useRideOffer } from "@/context/RideOfferContext";
+import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
 import {
   createContext,
   ReactNode,
@@ -11,12 +11,15 @@ import {
   useEffect,
   useRef,
   useState,
+  useCallback,
 } from "react";
 
 interface BidWaitingTimerContextType {
   // State
   isBidWaitingTimerVisible: boolean;
   progressDuration: number;
+  isTimerActive: boolean;
+  isConfirming: boolean;
 
   // Actions
   showBidWaitingTimer: (
@@ -26,6 +29,7 @@ interface BidWaitingTimerContextType {
     onCancel?: () => void
   ) => void;
   hideBidWaitingTimer: () => void;
+  cancelTimer: () => void;
 }
 
 const BidWaitingTimerContext = createContext<
@@ -35,68 +39,91 @@ const BidWaitingTimerContext = createContext<
 export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
   const [isBidWaitingTimerVisible, setIsBidWaitingTimerVisible] =
     useState(false);
-  const [isConfirmationModalVisible, setIsConfirmationModalVisible] =
-    useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [progressDuration, setProgressDuration] = useState(
     BID_WAITING_TIMER_DURATION_MS
   );
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const startTimestampRef = useRef<number | null>(null);
+  const durationRef = useRef<number>(BID_WAITING_TIMER_DURATION_MS);
+  const isTransitioningRef = useRef<boolean>(false);
   const onCompleteProgressRef = useRef<(() => void) | null>(null);
   const onCancelRef = useRef<(() => void) | null>(null);
   const { setHasAnyActiveOffer } = useRideOffer();
+  const { reopenLastBidBottomSheet } = useBidBottomSheet();
   const { showBidExpired } = useBidExpired();
-  const { registerModal, unregisterModal } = useModalManager();
+  const showBidExpiredRef = useRef(showBidExpired);
+  useEffect(() => {
+    showBidExpiredRef.current = showBidExpired;
+  }, [showBidExpired]);
+  const { registerModal, unregisterModal, requestOpen, requestClose } = useModalManager();
 
-  const hideBidWaitingTimer = () => {
+  const hideBidWaitingTimer = useCallback(() => {
     setIsBidWaitingTimerVisible(false);
+    setIsConfirming(false);
     onCompleteProgressRef.current = null;
     onCancelRef.current = null;
-  };
+  }, []);
 
   // Register modal with ModalManager
   useEffect(() => {
     registerModal("bidWaitingTimer", hideBidWaitingTimer);
     return () => unregisterModal("bidWaitingTimer");
   }, [registerModal, unregisterModal, hideBidWaitingTimer]);
+
+  // Compute remaining ms without causing provider re-renders
+  const getRemainingMs = () => {
+    if (!startTimestampRef.current) return durationRef.current;
+    const elapsed = Date.now() - startTimestampRef.current;
+    return Math.max(durationRef.current - elapsed, 0);
+  };
   const showBidWaitingTimer = (
     offer?: any,
     duration?: number,
     onComplete?: () => void,
     onCancelCallback?: () => void
   ) => {
-    if (duration) {
-      setProgressDuration(duration);
-    }
+    const dur = duration || BID_WAITING_TIMER_DURATION_MS;
+    setProgressDuration(dur);
+    durationRef.current = dur;
     onCompleteProgressRef.current = onComplete || null;
     onCancelRef.current = onCancelCallback || null;
-    setTimeout(() => {
-      setIsBidWaitingTimerVisible(true);
-    }, 1000);
+    startTimestampRef.current = Date.now();
+    setIsTimerActive(true);
+    // Gate opening via orchestrator (bidFlow group)
+    requestOpen({ name: "bidWaitingTimer", priority: 10, group: "bidFlow" })
+      .then(() => {
+        setIsBidWaitingTimerVisible(true);
+      })
+      .catch(() => {
+        setIsBidWaitingTimerVisible(false);
+      });
   };
 
   const handleCompleteProgress = () => {
-    // Close confirmation modal if it's open when progress completes
-    if (isConfirmationModalVisible) {
-      setIsConfirmationModalVisible(false);
-    }
-
+    // Exit confirming mode if active and proceed to default completion
+    if (isConfirming) setIsConfirming(false);
     if (onCompleteProgressRef.current) {
       onCompleteProgressRef.current();
     } else {
       // Default behavior
-      showBidExpired();
+      showBidExpiredRef.current();
       hideBidWaitingTimer();
     }
   };
 
   const handleCancel = () => {
-    // Show confirmation modal instead of directly canceling
-    setIsBidWaitingTimerVisible(false);
-    setIsConfirmationModalVisible(true);
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setIsConfirming(true);
+    // No modal switch, just swap content
+    isTransitioningRef.current = false;
   };
 
   const handleConfirmCancel = async () => {
-    // Hide confirmation modal
-    setIsConfirmationModalVisible(false);
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setIsConfirming(false);
 
     if (onCancelRef.current) {
       onCancelRef.current();
@@ -107,19 +134,36 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
 
     // Set hasAnyActiveOffer to false when bid is cancelled
     await setHasAnyActiveOffer(false);
+    setIsTimerActive(false);
+    startTimestampRef.current = null;
+    // Allow next modal in bidFlow (re-open bid sheet)
+    try {
+      requestClose("bidWaitingTimer");
+    } catch {}
+    reopenLastBidBottomSheet();
+    isTransitioningRef.current = false;
   };
 
   const handleCancelConfirmation = () => {
-    // Just hide the confirmation modal, don't cancel the timer
-    setIsConfirmationModalVisible(false);
-    setIsBidWaitingTimerVisible(true);
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setIsConfirming(false);
+    isTransitioningRef.current = false;
+  };
+
+  const cancelTimer = () => {
+    setIsTimerActive(false);
+    startTimestampRef.current = null;
   };
 
   const contextValue: BidWaitingTimerContextType = {
     isBidWaitingTimerVisible,
     progressDuration,
+    isTimerActive,
+    isConfirming,
     showBidWaitingTimer,
     hideBidWaitingTimer,
+    cancelTimer,
   };
 
   return (
@@ -128,19 +172,12 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
       {/* Global BidWaitingTimer Modal */}
       <BidWaitingTimerModal
         open={isBidWaitingTimerVisible}
-        progressDuration={progressDuration}
+        progressDuration={getRemainingMs() || progressDuration}
         onCompleteProgress={handleCompleteProgress}
         onCancel={handleCancel}
-      />
-      {/* Confirmation Modal for Cancel Action */}
-      <ConfirmationModal
-        open={isConfirmationModalVisible}
-        title="Cancel Bid"
-        description="Are you sure you want to cancel this bid? This action cannot be undone."
-        onConfirm={handleConfirmCancel}
-        onCancel={handleCancelConfirmation}
-        cancelButtonText="Keep Waiting"
-        confirmButtonText="Cancel Bid"
+        isConfirming={isConfirming}
+        onKeepWaiting={handleCancelConfirmation}
+        onConfirmCancel={handleConfirmCancel}
       />
     </BidWaitingTimerContext.Provider>
   );

@@ -71,6 +71,7 @@ interface BroadcastJobOffersContextType {
     updates: Partial<BroadcastJobOffer>
   ) => void;
   clearAllBroadcastOffers: () => void;
+  clearNonDemoBroadcastOffers: () => void;
   getBroadcastOffer: (offerId: string) => BroadcastJobOffer | undefined;
   markBroadcastOfferAsExpired: (tripId: string) => void;
   resetDemoOffers: () => Promise<void>;
@@ -409,6 +410,12 @@ export function BroadcastJobOffersProvider({
     setBroadcastOffers([]);
   };
 
+  // Clear only non-demo broadcast offers, keep demo offers intact
+  const clearNonDemoBroadcastOffers = () => {
+    console.log(`[BroadcastJobOffersContext] Clearing non-demo broadcast offers`);
+    setBroadcastOffers((prev) => prev.filter((offer) => offer.id.startsWith("demo-")));
+  };
+
   // Get a specific broadcast offer
   const getBroadcastOffer = (offerId: string) => {
     return broadcastOffers.find((offer) => offer.id === offerId);
@@ -509,6 +516,7 @@ export function BroadcastJobOffersProvider({
     removeBroadcastOffer,
     updateBroadcastOffer,
     clearAllBroadcastOffers,
+    clearNonDemoBroadcastOffers,
     getBroadcastOffer,
     markBroadcastOfferAsExpired,
     resetDemoOffers,

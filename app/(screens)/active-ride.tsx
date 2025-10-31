@@ -76,7 +76,7 @@ export default function ActiveRideScreen() {
   } = useDriver();
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
-  const { clearAllBroadcastOffers } = useBroadcastJobOffers();
+  const { clearNonDemoBroadcastOffers } = useBroadcastJobOffers();
   const { openChat } = useChat();
   const { showToast } = useToast();
 
@@ -678,9 +678,9 @@ export default function ActiveRideScreen() {
       await removeRideState();
       console.log("Removed ride state");
 
-      // Clear all broadcast offers when ride is completed
-      clearAllBroadcastOffers();
-      console.log("Cleared all broadcast offers");
+      // Clear only non-demo broadcast offers when ride is completed
+      clearNonDemoBroadcastOffers();
+      console.log("Cleared non-demo broadcast offers");
 
       // Redirect to feedback screen
       console.log("Redirecting to feedback screen...");
@@ -879,9 +879,9 @@ export default function ActiveRideScreen() {
         removeRideState(),
       ]);
 
-      // Clear all broadcast offers when ride is cancelled
-      clearAllBroadcastOffers();
-      console.log("Cleared all broadcast offers");
+      // Clear only non-demo broadcast offers when ride is cancelled
+      clearNonDemoBroadcastOffers();
+      console.log("Cleared non-demo broadcast offers");
 
       closeConfirmationModal();
       closeCancelRideSheet();

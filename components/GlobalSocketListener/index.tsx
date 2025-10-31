@@ -312,7 +312,7 @@ export function GlobalSocketListener() {
     const bidResponseCleanup = onEvent(
       SOCKET_EVENTS.BID_RESPONSE,
       async (data: any) => {
-        log("💬 Global Bid response received:", data);
+        console.log("💬 Global Bid response received:", JSON.stringify(data, null, 2));
 
         try {
           const { response, tripId, timestamp, timeout, offerType } = data;
@@ -340,7 +340,7 @@ export function GlobalSocketListener() {
             // Small delay to ensure other modals close before showing bid accepted
             setTimeout(() => {
               showBidAccepted();
-            }, 500);
+            }, 1000);
             log("✅ Bid accepted - showing accepted sheet");
 
             // Set hasAnyActiveOffer to false on bid acceptance
@@ -387,7 +387,7 @@ export function GlobalSocketListener() {
               // Small delay to ensure other modals close before showing bid unsuccessful
               setTimeout(() => {
                 showBidUnsuccessful();
-              }, 500);
+              }, 1000);
               log(
                 `❌ Sequential bid ${response} - showing BidUnsuccessful modal`
               );
@@ -452,7 +452,7 @@ export function GlobalSocketListener() {
               // Small delay to ensure other modals close before showing bid expired
               setTimeout(() => {
                 showBidExpired();
-              }, 500);
+              }, 1000);
               log(`❌ Sequential bid ${response} - showing BidExpired modal`);
 
               // Set hasAnyActiveOffer to false on bid rejection/expiry

@@ -2,6 +2,7 @@ import Button from "@/components/Button";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { usePackageInfo } from "@/context/PackageInfoContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import React from "react";
 import {
   Dimensions,
@@ -20,6 +21,13 @@ const { height: screenHeight } = Dimensions.get("window");
 
 const PackageInfoModal: React.FC = () => {
   const { isOpen, data, closePackageInfo } = usePackageInfo();
+  const { registerModal, unregisterModal } = useModalManager();
+
+  // Register with Modal Manager
+  React.useEffect(() => {
+    registerModal("packageInfo", () => closePackageInfo());
+    return () => unregisterModal("packageInfo");
+  }, [registerModal, unregisterModal, closePackageInfo]);
 
   if (!data) return null;
 

@@ -5,6 +5,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useModalManager } from "@/context/ModalManagerContext";
+import { router } from "expo-router";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
 import { useFetch } from "@/hooks/useFetch";
 import React, {
@@ -86,11 +87,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     API_CLIENT_TYPES.ACTIVE_TRIP
   );
 
-  // Register modal with ModalManager
+  // No RN Modal registration needed when using a screen, but keep a central close entry
   useEffect(() => {
-    registerModal("chatModal", closeChat);
-    return () => unregisterModal("chatModal");
-  }, [registerModal, unregisterModal]);
+    registerModal("chatScreen", closeChat);
+    return () => unregisterModal("chatScreen");
+  }, [registerModal, unregisterModal, closeChat]);
 
   // Handle message history fetch
   useEffect(() => {
@@ -180,6 +181,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           isLoading: true,
           error: null,
         }));
+        // Navigate to chat screen (full-screen modal presentation)
+        router.push("/(screens)/chat");
       } catch (stateError: any) {
         console.error("❌ Error setting state:", stateError);
         throw new Error("Failed to initialize chat modal");
@@ -253,6 +256,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       isSending: false,
       error: null,
     }));
+    try {
+      router.back();
+    } catch {}
   }, []);
 
   const sendMessage = useCallback(

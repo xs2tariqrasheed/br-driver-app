@@ -3,6 +3,7 @@ import Divider from "@/components/Divider";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import React from "react";
 import {
   Dimensions,
@@ -23,6 +24,13 @@ const { height: screenHeight } = Dimensions.get("window");
 
 const SpecialRequirementsModal: React.FC = () => {
   const { isOpen, data, closeSpecialRequirements } = useSpecialRequirements();
+  const { registerModal, unregisterModal } = useModalManager();
+
+  // Register with Modal Manager
+  React.useEffect(() => {
+    registerModal("specialRequirements", () => closeSpecialRequirements());
+    return () => unregisterModal("specialRequirements");
+  }, [registerModal, unregisterModal, closeSpecialRequirements]);
 
   if (!data) return null;
 

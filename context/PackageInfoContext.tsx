@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useReducer,
 } from "react";
+import { useModalManager } from "@/context/ModalManagerContext";
 
 // Types
 export type PackageInfo = {
@@ -67,14 +68,18 @@ export function PackageInfoProvider({
   children: React.ReactNode;
 }) {
   const [state, dispatch] = useReducer(packageInfoReducer, initialState);
+  const { requestOpen, requestClose } = useModalManager();
 
   const openPackageInfo = useCallback((data: PackageInfo) => {
     console.log("📦 PackageInfoContext: Opening with data:", data);
-    dispatch({ type: "OPEN", payload: data });
+    requestOpen({ name: "packageInfo", priority: 6, group: "rideOfferFlow" })
+      .then(() => dispatch({ type: "OPEN", payload: data }))
+      .catch(() => {});
   }, []);
 
   const closePackageInfo = useCallback(() => {
     dispatch({ type: "CLOSE" });
+    requestClose("packageInfo");
   }, []);
 
   const contextValue = useMemo<PackageInfoContextValue>(
