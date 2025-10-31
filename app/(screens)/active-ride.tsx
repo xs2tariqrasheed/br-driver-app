@@ -912,6 +912,52 @@ export default function ActiveRideScreen() {
     closeAddTollSheet();
   };
 
+  // Extract coordinates from API data or params
+  const mapCoordinates = useMemo(() => {
+    let pickupCoords: { lat: number; lng: number } | undefined;
+    let dropoffCoords: { lat: number; lng: number } | undefined;
+
+    if (apiData?.activeTrip?.pickup) {
+      pickupCoords = {
+        lat: apiData.activeTrip.pickup.lat,
+        lng: apiData.activeTrip.pickup.lng,
+      };
+    } else if (params.activeTripData) {
+      try {
+        const parsedData = JSON.parse(params.activeTripData as string);
+        if (parsedData?.activeTrip?.pickup) {
+          pickupCoords = {
+            lat: parsedData.activeTrip.pickup.lat,
+            lng: parsedData.activeTrip.pickup.lng,
+          };
+        }
+      } catch (e) {
+        console.error("Error parsing activeTripData for pickup:", e);
+      }
+    }
+
+    if (apiData?.activeTrip?.dropoff) {
+      dropoffCoords = {
+        lat: apiData.activeTrip.dropoff.lat,
+        lng: apiData.activeTrip.dropoff.lng,
+      };
+    } else if (params.activeTripData) {
+      try {
+        const parsedData = JSON.parse(params.activeTripData as string);
+        if (parsedData?.activeTrip?.dropoff) {
+          dropoffCoords = {
+            lat: parsedData.activeTrip.dropoff.lat,
+            lng: parsedData.activeTrip.dropoff.lng,
+          };
+        }
+      } catch (e) {
+        console.error("Error parsing activeTripData for dropoff:", e);
+      }
+    }
+
+    return { pickupCoords, dropoffCoords };
+  }, [apiData, params.activeTripData]);
+
   // Loading state
   if (isLoadingData) {
     return (
@@ -1087,6 +1133,8 @@ export default function ActiveRideScreen() {
         <RideMap
           pickupAddress={jobOfferData?.pickupAddress || "Loading address..."}
           dropoffAddress={jobOfferData?.dropoffAddress || "Loading address..."}
+          pickupCoordinates={mapCoordinates.pickupCoords}
+          dropoffCoordinates={mapCoordinates.dropoffCoords}
           eta={isDriverReachedOnPickup ? "" : "10 mins"}
           showWazeButton={true}
           rideStatus={

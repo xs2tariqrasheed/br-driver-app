@@ -4,6 +4,7 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { GOOGLE_MAPS_API_KEY } from "@/constants/global";
 import { geocodeAddress, LocationCoordinates, logger } from "@/utils/helpers";
+import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
@@ -34,6 +35,14 @@ interface RideMapProps {
    * The dropoff address as a string
    */
   dropoffAddress: string;
+  /**
+   * Optional pickup coordinates from API (takes precedence over geocoding)
+   */
+  pickupCoordinates?: { lat: number; lng: number };
+  /**
+   * Optional dropoff coordinates from API (takes precedence over geocoding)
+   */
+  dropoffCoordinates?: { lat: number; lng: number };
   /**
    * Current ride status to display in the status tag
    */
@@ -82,6 +91,8 @@ interface RideMapProps {
 export default function RideMap({
   pickupAddress,
   dropoffAddress,
+  pickupCoordinates,
+  dropoffCoordinates,
   rideStatus = "En Route",
   eta = "",
   showWazeButton = false,
@@ -395,7 +406,7 @@ export default function RideMap({
   const initializeMapMemo = useCallback(async () => {
     await initializeMap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickupAddress, dropoffAddress]);
+  }, [pickupAddress, dropoffAddress, pickupCoordinates, dropoffCoordinates]);
 
   useEffect(() => {
     initializeMapMemo();
@@ -498,18 +509,31 @@ export default function RideMap({
       setIsLoading(true);
       setError(null);
 
-      // Use the provided Lahore coordinates
-      const currentLocationRegion = {
-        latitude: 31.3545,
-        longitude: 74.3953,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      };
+      // Get device's current location
+      let current: LocationCoordinates;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          throw new Error("Location permission not granted");
+        }
 
-      const current = {
-        latitude: currentLocationRegion.latitude,
-        longitude: currentLocationRegion.longitude,
-      };
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        current = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        };
+        log(`Device location obtained: ${current.latitude}, ${current.longitude}`);
+      } catch (locationError) {
+        log(`Error getting device location: ${locationError}, using fallback`);
+        // Fallback to Lahore coordinates if location fails
+        current = {
+          latitude: 31.3545,
+          longitude: 74.3953,
+        };
+      }
+
       setCurrentLocation(current);
 
       // Initialize animated values
@@ -525,41 +549,49 @@ export default function RideMap({
         });
       }
 
-      // Geocode pickup address
-      const pickup = await geocodeAddress(pickupAddress, GOOGLE_MAPS_API_KEY);
-      if (!pickup) {
-        log(
-          `Could not geocode pickup address: ${pickupAddress}, using fallback coordinates`
-        );
-        // Use fallback coordinates for Lahore
-        const fallbackPickup = { latitude: 31.3709, longitude: 74.3648 };
-        setPickupLocation(fallbackPickup);
+      // Use API coordinates if provided, otherwise geocode the address
+      let pickup: LocationCoordinates | null = null;
+      if (pickupCoordinates) {
+        pickup = {
+          latitude: pickupCoordinates.lat,
+          longitude: pickupCoordinates.lng,
+        };
+        log(`Using API pickup coordinates: ${pickup.latitude}, ${pickup.longitude}`);
       } else {
-        setPickupLocation(pickup);
+        pickup = await geocodeAddress(pickupAddress, GOOGLE_MAPS_API_KEY);
+        if (!pickup) {
+          log(
+            `Could not geocode pickup address: ${pickupAddress}, using fallback coordinates`
+          );
+          // Use fallback coordinates for Lahore
+          pickup = { latitude: 31.3709, longitude: 74.3648 };
+        }
       }
+      setPickupLocation(pickup);
 
-      // Geocode dropoff address
-      const dropoff = await geocodeAddress(dropoffAddress, GOOGLE_MAPS_API_KEY);
-      if (!dropoff) {
-        log(
-          `Could not geocode dropoff address: ${dropoffAddress}, using fallback coordinates`
-        );
-        // Use fallback coordinates for Lahore
-        const fallbackDropoff = { latitude: 31.4244, longitude: 74.3574 };
-        setDropoffLocation(fallbackDropoff);
+      // Use API coordinates if provided, otherwise geocode the address
+      let dropoff: LocationCoordinates | null = null;
+      if (dropoffCoordinates) {
+        dropoff = {
+          latitude: dropoffCoordinates.lat,
+          longitude: dropoffCoordinates.lng,
+        };
+        log(`Using API dropoff coordinates: ${dropoff.latitude}, ${dropoff.longitude}`);
       } else {
-        setDropoffLocation(dropoff);
+        dropoff = await geocodeAddress(dropoffAddress, GOOGLE_MAPS_API_KEY);
+        if (!dropoff) {
+          log(
+            `Could not geocode dropoff address: ${dropoffAddress}, using fallback coordinates`
+          );
+          // Use fallback coordinates for Lahore
+          dropoff = { latitude: 31.4244, longitude: 74.3574 };
+        }
       }
+      setDropoffLocation(dropoff);
 
-      // Get the actual pickup and dropoff locations (either geocoded or fallback)
-      const actualPickup = pickup || {
-        latitude: 31.3709,
-        longitude: 74.3648,
-      };
-      const actualDropoff = dropoff || {
-        latitude: 31.4244,
-        longitude: 74.3574,
-      };
+      // Get the actual pickup and dropoff locations
+      const actualPickup = pickup;
+      const actualDropoff = dropoff;
 
       // Fetch routes
       const pickupRoute = await getRouteCoordinates(current, actualPickup);

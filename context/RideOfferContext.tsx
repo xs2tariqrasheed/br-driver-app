@@ -9,7 +9,7 @@ import {
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { usePost } from "@/hooks/usePost";
-import { router, usePathname } from "expo-router";
+import { router } from "expo-router";
 import { createContext, ReactNode, useContext, useState } from "react";
 
 interface TripOffer {
@@ -111,7 +111,6 @@ const RideOfferContext = createContext<RideOfferContextType | undefined>(
 
 export function RideOfferProvider({ children }: { children: ReactNode }) {
   const [auth] = useAuth();
-  const pathname = usePathname();
 
   const driverId = auth?.user?.id;
   const [isRideOfferModalVisible, setIsRideOfferModalVisible] = useState(false);
@@ -173,8 +172,18 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     setCurrentOffer(null);
     setModalCallbacks(null);
     try {
-      router.back();
-    } catch {}
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        // If no previous screen, navigate to home tabs
+        router.replace("/(tabs)");
+      }
+    } catch {
+      // Fallback to home if navigation fails
+      try {
+        router.replace("/(tabs)");
+      } catch {}
+    }
   };
 
   /**

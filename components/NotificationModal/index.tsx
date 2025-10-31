@@ -1,13 +1,13 @@
 import { NOTIFICATION_TYPES, SPEECH_MESSAGES } from "@/constants/global";
+import { useModalManager } from "@/context/ModalManagerContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useSettings } from "@/context/SettingsContext";
 import { speechManager } from "@/utils/speechManager";
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, TouchableOpacity } from "react-native";
+import { Portal } from "react-native-portalize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Notification from "../Notification";
-import { useModalManager } from "@/context/ModalManagerContext";
-import { Portal } from "react-native-portalize";
 
 const NotificationModal: React.FC = () => {
   const { isOpen, data, hideNotification } = useNotification();

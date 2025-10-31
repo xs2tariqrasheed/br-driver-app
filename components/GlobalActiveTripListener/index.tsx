@@ -5,13 +5,13 @@ import {
   NOTIFICATION_TYPES,
   NotificationType,
 } from "@/constants/global";
-import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
 import { useDriver } from "@/context/DriverContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
 import { useNetworkMonitoring } from "@/hooks/useNetworkMonitoring";
 import { formatDateTimestamp, logger } from "@/utils/helpers";
+import { usePathname } from "expo-router";
 import { showToast } from "../Toast";
 
 /**
@@ -37,7 +37,6 @@ import { showToast } from "../Toast";
  */
 export function GlobalActiveTripListener() {
   const log = logger();
-  const [auth] = useAuth();
   const { getRetrievalId, getTripId } = useDriver();
   const [driver] = useDriver();
   const { showNotification: showVisualNotification } = useNotification();
@@ -45,6 +44,10 @@ export function GlobalActiveTripListener() {
   const { isNetworkSuitableFor, networkQuality } = useNetworkMonitoring();
   const { onActiveTripEvent, onActiveTripDisconnect, socketStatus } =
     useActiveTripSocket();
+  const pathname = usePathname();
+  
+  // Check if driver is on chat screen
+  const isOnChatScreen = pathname === "/(screens)/chat";
 
   useEffect(() => {
     // Check if we have an active trip (retrievalId exists)
@@ -160,10 +163,10 @@ export function GlobalActiveTripListener() {
           log("💬 New message event received:", data);
 
           try {
-            const { from, message, ts } = data;
+            const { message, ts } = data;
 
-            // Only show visual notification if chat modal is NOT open
-            if (!isChatModalOpen) {
+            // Only show visual notification if chat screen/modal is NOT open
+            if (!isChatModalOpen && !isOnChatScreen) {
               // Show visual notification for new message
               showVisualNotification({
                 type: NOTIFICATION_TYPES.MESSAGE,
@@ -187,7 +190,7 @@ export function GlobalActiveTripListener() {
 
               log("✅ New message notification created:", notification);
             } else {
-              log("💬 Chat modal is open, skipping visual notification");
+              log("💬 Chat screen/modal is open, skipping visual notification");
             }
           } catch (error) {
             log("❌ Error processing new message event:", error);
@@ -238,6 +241,8 @@ export function GlobalActiveTripListener() {
     getRetrievalId,
     getTripId,
     showVisualNotification,
+    isChatModalOpen,
+    isOnChatScreen,
     log,
   ]);
 

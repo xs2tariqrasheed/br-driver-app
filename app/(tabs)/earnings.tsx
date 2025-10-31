@@ -227,7 +227,7 @@ export default function EarningsScreen() {
               Open Web Portal
             </Button>
           </View>
-
+{/* 
           <View style={styles.buttonContainer}>
             <Button
               variant="outlined"
@@ -276,7 +276,7 @@ export default function EarningsScreen() {
             >
               Test Notification
             </Button>
-          </View>
+          </View> */}
         </View>
       </ScrollView>
     </SafeAreaView>

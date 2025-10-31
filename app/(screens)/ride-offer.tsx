@@ -1,8 +1,8 @@
-import React, { useEffect } from "react";
-import { SafeAreaView } from "react-native";
-import { Stack, router } from "expo-router";
 import RideOffer from "@/components/RideOffer";
 import { useRideOffer } from "@/context/RideOfferContext";
+import { Stack, router } from "expo-router";
+import { useEffect } from "react";
+import { SafeAreaView } from "react-native";
 
 export default function RideOfferScreen() {
   const {
@@ -18,8 +18,18 @@ export default function RideOfferScreen() {
   useEffect(() => {
     if (!currentOffer) {
       try {
-        router.back();
-      } catch {}
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          // If no previous screen, navigate to home tabs
+          router.replace("/(tabs)");
+        }
+      } catch (error) {
+        // Fallback to home if navigation fails
+        try {
+          router.replace("/(tabs)");
+        } catch {}
+      }
     }
   }, [currentOffer]);
 

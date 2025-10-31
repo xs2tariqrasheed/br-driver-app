@@ -67,7 +67,8 @@ export default function LiveJobOffersScreen({
   showHiddenJobs,
   type = OFFER_TYPES.LIVE,
 }: LiveJobOffersScreenProps) {
-  const { getLiveOfferStatus, getRetrievalId } = useDriver();
+  const [driver] = useDriver();
+  const { getLiveOfferStatus } = useDriver();
   const [auth] = useAuth();
   const {
     broadcastOffers,
@@ -96,25 +97,11 @@ export default function LiveJobOffersScreen({
   const [selectedJobForAccept, setSelectedJobForAccept] = useState<any>(null);
   const [selectedJobForBid, setSelectedJobForBid] = useState<any>(null);
 
-  // On mount, check if a retrievalId exists; if yes, show trip in progress state
+  // Reactively track trip-in-progress based on driver context changes
   useEffect(() => {
-    (async () => {
-      try {
-        const { retrievalId } = await getRetrievalId();
-        if (retrievalId) {
-          console.log("RetrievalId found, showing trip in progress state");
-          setIsAnyTripInProgress(true);
-        } else {
-          console.log("No retrievalId found, showing job offers");
-          setIsAnyTripInProgress(false);
-        }
-      } catch (error) {
-        console.error("Error checking retrievalId:", error);
-        // On error, assume no trip in progress
-        setIsAnyTripInProgress(false);
-      }
-    })();
-  }, [getRetrievalId]);
+    const hasActiveTrip = !!driver?.retrievalId && !!driver?.tripId;
+    setIsAnyTripInProgress(hasActiveTrip);
+  }, [driver?.retrievalId, driver?.tripId]);
 
   // Track which offer is being processed (skip/hide operation)
   const [processingOfferId, setProcessingOfferId] = useState<string | null>(

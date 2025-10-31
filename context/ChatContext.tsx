@@ -257,8 +257,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       error: null,
     }));
     try {
-      router.back();
-    } catch {}
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        // If no previous screen, navigate to home tabs
+        router.replace("/(tabs)");
+      }
+    } catch (error) {
+      // Fallback to home if navigation fails
+      try {
+        router.replace("/(tabs)");
+      } catch {}
+    }
   }, []);
 
   const sendMessage = useCallback(
