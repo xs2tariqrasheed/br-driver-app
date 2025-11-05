@@ -295,7 +295,7 @@ export default function MoreScreen() {
     if (item.key === "inbox") {
       return {
         ...item,
-        onClick: () => router.push("/(screens)/notifications"),
+        onClick: () => router.push("/(tabs)/notifications"),
       };
     }
     return item;

@@ -9,9 +9,22 @@ import { textColors } from "@/constants/colors";
 
 const SHOW_EXAMPLES = process.env.EXPO_PUBLIC_SHOW_EXAMPLES === "true";
 
+// Only hide tabs on active ride related screens
+const TAB_HIDDEN_PATHS = [
+  "/(screens)/active-ride",
+  "/(screens)/chat",
+  "/(screens)/ride-offer",
+  "/(screens)/trip-details",
+  "/(screens)/feedback",
+];
+
 export default function TabLayout() {
   const pathname = usePathname();
-  const hideTabs = pathname === "/(screens)/active-ride";
+  // Hide tabs only on active ride related screens
+  // Show tabs on all other screens including notifications, settings, desired-destinations, etc.
+  const hideTabs = TAB_HIDDEN_PATHS.some((route) =>
+    pathname?.startsWith(route)
+  );
   const insets = useSafeAreaInsets();
   
   // Calculate dynamic tab bar height
@@ -117,6 +130,37 @@ export default function TabLayout() {
               source={require("@/assets/images/more-icon.png")}
             />
           ),
+        }}
+      />
+      {/* Stack screens accessible within tabs - hidden from tab bar */}
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: null, // Hide from tab bar but accessible via navigation
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          href: null, // Hide from tab bar but accessible via navigation
+        }}
+      />
+      <Tabs.Screen
+        name="desired-destinations"
+        options={{
+          href: null, // Hide from tab bar but accessible via navigation
+        }}
+      />
+      <Tabs.Screen
+        name="desired-destinations-map"
+        options={{
+          href: null, // Hide from tab bar but accessible via navigation
+        }}
+      />
+      <Tabs.Screen
+        name="heat-map"
+        options={{
+          href: null, // Hide from tab bar but accessible via navigation
         }}
       />
     </Tabs>

@@ -478,11 +478,11 @@ export default function HomeScreen() {
       } else if (iconKey === "ride-type") {
         openRideTypes();
       } else if (iconKey === "heat-map") {
-        router.push("/(screens)/heat-map" as any);
+        router.push("/(tabs)/heat-map" as any);
       } else if (iconKey === "desired-locations") {
-        router.push("/(screens)/desired-destinations" as any);
+        router.push("/(tabs)/desired-destinations" as any);
       } else if (iconKey === "settings") {
-        router.push("/(screens)/settings" as any);
+        router.push("/(tabs)/settings" as any);
       } else if (iconKey === "jump-portal") {
         void Linking.openURL(URLS.driverPortal);
       } else if (iconKey === "mute-notifications") {
@@ -500,7 +500,7 @@ export default function HomeScreen() {
           leftAccessory={
             <TouchableOpacity
               accessibilityRole="button"
-              onPress={() => router.push("/notifications" as any)}
+              onPress={() => router.push("/(tabs)/notifications" as any)}
               hitSlop={8}
               style={styles.bellButton}
             >

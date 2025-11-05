@@ -240,7 +240,7 @@ export default function DesiredDestinationsScreen() {
             style={styles.selectMapRow}
             onPress={() => {
               setIsSheetOpen(false);
-              router.push("/(screens)/desired-destinations-map" as any);
+              router.push("/(tabs)/desired-destinations-map" as any);
             }}
           >
             <Typography
