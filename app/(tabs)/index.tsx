@@ -87,21 +87,21 @@ export default function HomeScreen() {
     // Font size is 12px (from Toggle component: fontSize: 12)
     // Average character width is approximately 7-8px for 12px font
     // Add extra padding for spacing: 16px padding per side + gap between labels
-    const charWidth = 7.5; // Average character width at 12px font size
-    const horizontalPadding = 32; // 16px per side
-    const labelGap = 8; // Gap between the two labels
+    const charWidth = 8; // Increased from 7.5 to account for wider characters
+    const horizontalPadding = 40; // Increased from 32 to 40 for better spacing
+    const labelGap = 12; // Increased from 8 to 12 for better separation
     const baseWidth = maxLabelLength * charWidth + horizontalPadding + labelGap;
     
-    // Minimum width ensures readability and proper spacing
-    const minWidth = 120; // Slightly larger than original to ensure text fits
-    // Maximum width: don't exceed 40% of screen width (leaves room for header elements)
-    const maxWidth = Math.min(screenWidth * 0.4, 200);
+    // Minimum width ensures readability - increased for small devices
+    const minWidth = screenWidth < 375 ? 140 : 130; // Higher min for small screens
+    // Maximum width: don't exceed 45% of screen width (leaves room for header elements)
+    const maxWidth = Math.min(screenWidth * 0.45, 220);
     
-    // For smaller screens (< 375px), increase width by 25% to ensure text doesn't get cut off
+    // For smaller screens (< 375px), add extra padding to ensure text doesn't get cut off
     const isSmallScreen = screenWidth < 375;
     const width = isSmallScreen 
-      ? Math.max(baseWidth * 1.25, minWidth)
-      : Math.max(baseWidth, minWidth);
+      ? Math.max(baseWidth * 1.4, minWidth) // Increased multiplier from 1.25 to 1.4
+      : Math.max(baseWidth * 1.15, minWidth); // Slight increase for all screens
     
     // Clamp width between min and max
     const finalWidth = Math.min(Math.max(width, minWidth), maxWidth);

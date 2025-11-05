@@ -108,13 +108,19 @@ export default function ActiveRideScreen() {
   const headerToggleSize = useMemo(() => {
     // Estimate width needed based on longest label and screen size
     const longestLabelLength = Math.max(...labels.map((l) => String(l).length));
-    const approxCharWidth = 8; // px per character (approx)
-    const horizontalPadding = 36; // internal padding + margins
-    const knobAllowance = 28; // space for knob/indicator
-    const minWidth = 112;
-    const maxWidth = Math.min(220, Math.round(screenWidth * 0.5));
-    const computedWidth =
+    const approxCharWidth = 8.5; // Increased from 8 to account for wider characters
+    const horizontalPadding = 44; // Increased from 36 to 44 for better spacing
+    const knobAllowance = 32; // Increased from 28 to 32 for better knob space
+    // Increased min width for small devices to ensure full text visibility
+    const minWidth = screenWidth < 375 ? 140 : 130; // Higher min for small screens
+    const maxWidth = Math.min(240, Math.round(screenWidth * 0.5)); // Slightly increased max
+    const baseWidth =
       longestLabelLength * approxCharWidth + horizontalPadding + knobAllowance;
+    // For small screens, add extra padding
+    const isSmallScreen = screenWidth < 375;
+    const computedWidth = isSmallScreen 
+      ? baseWidth * 1.3 // Add 30% more width for small screens
+      : baseWidth * 1.15; // Add 15% more width for all screens
     const finalWidth = Math.min(maxWidth, Math.max(minWidth, computedWidth));
     return { width: finalWidth, height: 28 } as const;
   }, [screenWidth, labels]);
