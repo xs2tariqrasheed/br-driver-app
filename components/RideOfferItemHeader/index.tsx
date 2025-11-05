@@ -12,6 +12,7 @@
  */
 
 import { textColors } from "@/constants/colors";
+import { CAR_TYPE, type CarType } from "@/constants/global";
 import { Image } from "expo-image";
 import { StyleSheet, TouchableOpacity, View, ViewStyle } from "react-native";
 import Typography from "../Typography";
@@ -29,6 +30,8 @@ export interface RideOfferItemHeaderProps {
   hasPackage: boolean;
   /** Callback function for package icon press */
   onPressPackage: () => void;
+  /** Car type for the ride */
+  carType?: CarType | string;
   /** Custom style for the container */
   style?: ViewStyle;
 }
@@ -55,8 +58,13 @@ export default function RideOfferItemHeader({
   onPressSpecialRequirements,
   hasPackage,
   onPressPackage,
+  carType = CAR_TYPE.SUV,
   style,
 }: RideOfferItemHeaderProps) {
+  // Capitalize car type for display (e.g., "sedan" -> "SEDAN", "economy" -> "ECONOMY")
+  const displayCarType = carType
+    ? carType.toUpperCase()
+    : "SUV";
   return (
     <View style={[styles.container, style]}>
       {/* User count with icon */}
@@ -115,7 +123,7 @@ export default function RideOfferItemHeader({
 
       {/* Car type */}
       <Typography type="bodyMedium" weight="black" style={styles.carTypeText}>
-        SUV
+        {displayCarType}
       </Typography>
     </View>
   );
@@ -125,7 +133,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 40, // Fixed gap between icons
     backgroundColor: "transparent",
   },
   iconTextContainer: {
@@ -146,5 +154,6 @@ const styles = StyleSheet.create({
   },
   carTypeText: {
     color: textColors.black,
+    marginLeft: "auto", // Push car type to the right side
   },
 });

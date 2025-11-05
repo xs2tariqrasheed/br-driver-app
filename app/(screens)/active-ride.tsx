@@ -1225,7 +1225,7 @@ export default function ActiveRideScreen() {
               onPress: handleCallCustomer,
             },
             {
-              label: "Send SMS",
+              label: "Chat",
               iconUrl: require("@/assets/images/sms.png"),
               onPress: handleSendSMS,
             },

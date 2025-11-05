@@ -147,6 +147,8 @@ export default function RideMap({
 
   // Testing state
   const [isTesting, setIsTesting] = useState(false);
+  const testingRef = useRef(false);
+  const initialLocationRef = useRef<LocationCoordinates | null>(null);
 
   // Speed for realistic movement
   const SPEED = 15; // meters per second
@@ -413,9 +415,12 @@ export default function RideMap({
 
     return () => {
       // Cleanup animations if testing
-      const currentIsTesting = isTesting;
-      if (currentIsTesting) {
-        stopTesting();
+      if (testingRef.current) {
+        testingRef.current = false;
+        setIsTesting(false);
+        animatedLatitude.current.stopAnimation();
+        animatedLongitude.current.stopAnimation();
+        animatedRotation.current.stopAnimation();
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -535,6 +540,9 @@ export default function RideMap({
       }
 
       setCurrentLocation(current);
+
+      // Store initial location for reset functionality
+      initialLocationRef.current = { ...current };
 
       // Initialize animated values
       animatedLatitude.current.setValue(current.latitude);
@@ -788,13 +796,21 @@ export default function RideMap({
     route: LocationCoordinates[],
     isDropoff: boolean = false
   ) => {
+    // Check if testing was stopped
+    if (!testingRef.current) {
+      return;
+    }
+
     if (index >= route.length - 1) {
+      if (!testingRef.current) {
+        return;
+      }
       setCurrentLocation(route[route.length - 1]);
       if (!isDropoff) {
         // Chain to dropoff route if available
         setRidePhase("toDropoff");
         const dropoffRoute = dropoffInterpolated;
-        if (dropoffRoute.length > 1) {
+        if (dropoffRoute.length > 1 && testingRef.current) {
           const initialBearing = calculateBearing(
             dropoffRoute[0],
             dropoffRoute[1]
@@ -806,7 +822,15 @@ export default function RideMap({
           return;
         }
       }
-      setIsTesting(false);
+      if (testingRef.current) {
+        setIsTesting(false);
+        testingRef.current = false;
+      }
+      return;
+    }
+
+    // Double check before starting animation
+    if (!testingRef.current) {
       return;
     }
 
@@ -848,6 +872,11 @@ export default function RideMap({
     ];
 
     Animated.parallel(animations).start(() => {
+      // Check if testing was stopped during animation
+      if (!testingRef.current) {
+        return;
+      }
+
       setCurrentLocation(nextPoint);
       
       // Update iOS coordinate state synchronously for smoother updates
@@ -873,8 +902,16 @@ export default function RideMap({
   const startTesting = () => {
     if (pickupInterpolated.length === 0) return;
 
+    // Store initial location for reset
+    if (currentLocation) {
+      initialLocationRef.current = { ...currentLocation };
+    }
+
+    testingRef.current = true;
     setIsTesting(true);
     setCurrentPickupIndex(0);
+    setCurrentDropoffIndex(0);
+    setRidePhase("toPickup");
 
     const route = pickupInterpolated;
     if (route.length < 2) return;
@@ -884,12 +921,50 @@ export default function RideMap({
   };
 
   const stopTesting = () => {
+    // Stop the testing flag first
+    testingRef.current = false;
     setIsTesting(false);
 
     // Stop any ongoing animations
     animatedLatitude.current.stopAnimation();
     animatedLongitude.current.stopAnimation();
     animatedRotation.current.stopAnimation();
+
+    // Reset to initial location if available
+    if (initialLocationRef.current) {
+      const initialLoc = initialLocationRef.current;
+      setCurrentLocation(initialLoc);
+      
+      // Reset animated values
+      animatedLatitude.current.setValue(initialLoc.latitude);
+      animatedLongitude.current.setValue(initialLoc.longitude);
+      
+      // Update iOS coordinate state
+      if (Platform.OS === "ios") {
+        setAnimatedCoordinateState({
+          latitude: initialLoc.latitude,
+          longitude: initialLoc.longitude,
+        });
+      }
+
+      // Reset route indices
+      setCurrentPickupIndex(0);
+      setCurrentDropoffIndex(0);
+      setRidePhase("toPickup");
+
+      // Reset rotation to initial bearing if route exists
+      if (pickupInterpolated.length >= 2) {
+        const initialBearing = calculateBearing(
+          pickupInterpolated[0],
+          pickupInterpolated[1]
+        );
+        animatedRotation.current.setValue(initialBearing);
+        setCarRotation(initialBearing);
+      } else {
+        animatedRotation.current.setValue(0);
+        setCarRotation(0);
+      }
+    }
   };
 
   if (isLoading) {
@@ -927,12 +1002,16 @@ export default function RideMap({
         showsCompass={true}
         showsScale={false}
       >
-        {/* Pickup route - reducing during toPickup phase */}
+        {/* Pickup route - reducing during toPickup phase, removing covered path */}
         {ridePhase === "toPickup" &&
-          pickupInterpolated.length > currentPickupIndex && (
+          pickupInterpolated.length > currentPickupIndex &&
+          currentLocation && (
             <Polyline
               key={`pickup-${currentPickupIndex}`}
-              coordinates={pickupInterpolated.slice(currentPickupIndex)}
+              coordinates={[
+                currentLocation, // Start from current car position
+                ...pickupInterpolated.slice(currentPickupIndex + 1), // Remaining route
+              ]}
               strokeColor={textColors.blue600}
               strokeWidth={4}
               lineCap="round"
@@ -952,10 +1031,14 @@ export default function RideMap({
                 lineJoin="round"
               />
             )
-          : dropoffInterpolated.length > currentDropoffIndex && (
+          : dropoffInterpolated.length > currentDropoffIndex &&
+            currentLocation && (
               <Polyline
                 key={`dropoff-${currentDropoffIndex}`}
-                coordinates={dropoffInterpolated.slice(currentDropoffIndex)}
+                coordinates={[
+                  currentLocation, // Start from current car position
+                  ...dropoffInterpolated.slice(currentDropoffIndex + 1), // Remaining route
+                ]}
                 strokeColor={textColors.green600}
                 strokeWidth={4}
                 lineCap="round"
@@ -1088,7 +1171,7 @@ export default function RideMap({
           style={styles.testingButton}
           disabled={pickupInterpolated.length === 0}
         >
-          {isTesting ? "Stop Testing" : "Start Testing"}
+          {isTesting ? "Stop Simulation" : "Start Simulation"}
         </Button>
       </View>
     </View>

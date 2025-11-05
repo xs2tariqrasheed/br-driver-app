@@ -783,6 +783,7 @@ export default function LiveJobOffersScreen({
           onProcessingStart={(offerId) => setProcessingOfferId(offerId)}
           onProcessingEnd={() => setProcessingOfferId(null)}
           expiredAt={item.expiredAt}
+          carType={item.carType}
         />
       </Pressable>
     );

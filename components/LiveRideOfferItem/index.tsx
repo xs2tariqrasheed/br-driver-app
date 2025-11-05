@@ -24,18 +24,18 @@ import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useDriver } from "@/context/DriverContext";
 import React from "react";
 import {
-    Animated,
-    Dimensions,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    ViewStyle,
+  Animated,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
 } from "react-native";
 import {
-    LongPressGestureHandler,
-    PanGestureHandler,
-    State,
+  LongPressGestureHandler,
+  PanGestureHandler,
+  State,
 } from "react-native-gesture-handler";
 import Button from "../Button";
 import ProgressTimer from "../ProgressTimer";
@@ -45,14 +45,16 @@ import RideOfferItemHeader from "../RideOfferItemHeader";
 import { showToast } from "../Toast";
 
 import {
-    DRIVER_TYPES,
-    LIVE_JOB_STATUS,
-    LOCAL_JOB_STATUS,
-    OFFER_TYPES,
-    RIDE_TYPES,
-    type LocalJobStatus,
-    type OfferType,
-    type RideType,
+  CAR_TYPE,
+  DRIVER_TYPES,
+  LIVE_JOB_STATUS,
+  LOCAL_JOB_STATUS,
+  OFFER_TYPES,
+  RIDE_TYPES,
+  type CarType,
+  type LocalJobStatus,
+  type OfferType,
+  type RideType,
 } from "@/constants/global";
 import { useModalManager } from "@/context/ModalManagerContext";
 import { useRideOffer } from "@/context/RideOfferContext";
@@ -123,6 +125,8 @@ export interface LiveRideOfferItemProps {
   type?: OfferType;
   /** ISO string or Date object representing when the offer expires */
   expiredAt?: string | Date | null;
+  /** Car type for the ride */
+  carType?: CarType | string;
 }
 
 /**
@@ -187,6 +191,7 @@ export default function LiveRideOfferItem({
   onProcessingEnd,
   type = OFFER_TYPES.LIVE,
   expiredAt,
+  carType = CAR_TYPE.SUV,
 }: LiveRideOfferItemProps) {
   const { skipLiveOffer, hideLiveOffer, getLiveOfferStatus } = useDriver();
   const { hideRideOfferModal, setHasAnyActiveOffer } = useRideOffer();
@@ -588,6 +593,7 @@ export default function LiveRideOfferItem({
                   onPressSpecialRequirements={onPressSpecialRequirements}
                   hasPackage={hasPackage}
                   onPressPackage={onPressPackage}
+                  carType={carType}
                 />
 
                 {/* Address/Route Section */}
@@ -661,7 +667,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: textColors.white,
     flexDirection: "column",
-    gap: 12,
+    gap: 8, // Reduced from 12 to 8
     borderWidth: 1,
     borderColor: textColors.grey300,
     borderRadius: 12,

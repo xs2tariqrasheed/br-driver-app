@@ -84,7 +84,7 @@ export default function RideAddress({
     <View style={[styles.container, style]}>
       {/* Left side with RideTypeIcons and right arrow */}
       <View style={styles.leftSection}>
-        <RideTypeIcons type={rideType} height={80} width={28} />
+        <RideTypeIcons type={rideType} height={60} width={28} />
         <Image
           source={require("@/assets/images/arrow-right.png")}
           style={styles.rightArrow}
@@ -168,14 +168,14 @@ export default function RideAddress({
                   weight="black"
                   style={styles.totalPrice}
                 >
-                  ${totalPrice}
+                  ${Math.round(totalPrice || 0)}
                 </Typography>
                 <Typography
                   type="bodyMedium"
                   weight="regular"
                   style={styles.driverEarning}
                 >
-                  (${driverEarn})
+                  (${Math.round(driverEarn || 0)})
                 </Typography>
               </View>
             </View>
@@ -214,24 +214,24 @@ const styles = StyleSheet.create({
   rightSection: {
     flex: 1,
     justifyContent: "space-between",
-    minHeight: 80,
-    gap: 24,
+    minHeight: 60, // Reduced from 80 to 60
+    gap: 12, // Reduced from 24 to 12
     marginLeft: 6,
   },
   timeDistanceText: {
     color: "#2A2A2A",
-    marginBottom: 4,
+    marginBottom: 2, // Reduced from 4 to 2
   },
   addressText: {
     color: "#2A2A2A",
-    lineHeight: 20,
+    lineHeight: 18, // Reduced from 20 to 18
   },
   rideInfoContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "transparent",
-    marginBottom: 4,
+    marginBottom: 2, // Reduced from 4 to 2
   },
   iconTextContainer: {
     flexDirection: "row",

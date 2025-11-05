@@ -100,6 +100,8 @@ export interface JobOffer {
   showActionBar?: boolean;
   /** ISO string or Date object representing when the offer expires */
   expiredAt?: string | Date | null;
+  /** Car type for the ride */
+  carType?: string;
 }
 
 export interface JobDetailsProps {
@@ -198,6 +200,7 @@ export default function JobDetails({
     customerDetails,
     actionButtons = [],
     expiredAt,
+    carType,
   } = jobOffer;
 
   // Determine if action bar should be shown
@@ -283,6 +286,7 @@ export default function JobDetails({
             onButtonClick={onButtonClick || (() => {})}
             hideActionButton={true}
             expiredAt={expiredAt}
+            carType={carType}
           />
 
           {/* Divider after Live Ride Item */}

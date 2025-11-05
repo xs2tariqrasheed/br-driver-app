@@ -143,6 +143,14 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                 </Typography>
               </View>
             </View>
+            {/* Adjust Price Heading */}
+            <Typography
+              type="bodyLarge"
+              weight="semibold"
+              style={styles.sectionHeading}
+            >
+              Adjust Price
+            </Typography>
             {/* Suggested Bid Buttons */}
             <View style={styles.suggestedBidsContainer}>
               {systemSuggestedBids.map((suggestedBid) => (
@@ -210,6 +218,8 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                 formatLabel={(value) => `${value} mins`}
               />
             </View>
+
+            <Divider marginBottom={20} marginTop={-1} />
 
             {/* Boost Section */}
             <View style={styles.boostSection}>
@@ -418,6 +428,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: textColors.black,
+  },
+  sectionHeading: {
+    color: textColors.black,
+    marginBottom: 12,
   },
   etaSectionTitle: {
     color: textColors.black,

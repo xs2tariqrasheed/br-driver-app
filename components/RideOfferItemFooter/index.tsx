@@ -78,47 +78,52 @@ export default function RideOfferItemFooter({
   return (
     <View style={[styles.container, style]}>
       {/* Left side with ride information */}
-      <View style={styles.leftSection}>
-        {/* Ride time with icon */}
-        <View style={styles.iconTextContainer}>
+      <View
+        style={[
+          styles.leftSection,
+          { width: hideActionButton ? "100%" : "auto" },
+        ]}
+      >
+        {/* Ride time with icon (vertical stack) */}
+        <View style={styles.iconTextVerticalContainer}>
           <Image
             source={require("@/assets/images/ride-time-icon.png")}
             style={styles.icon}
             contentFit="contain"
           />
-          <Typography type="bodyMedium" weight="medium" style={styles.infoText}>
+          <Typography type="bodySmall" weight="medium" style={styles.infoText}>
             {rideTime} Mins
           </Typography>
         </View>
 
-        {/* Ride distance with icon */}
-        <View style={styles.iconTextContainer}>
+        {/* Ride distance with icon (vertical stack) */}
+        <View style={styles.iconTextVerticalContainer}>
           <Image
             source={require("@/assets/images/ride-distance-icon.png")}
             style={styles.icon}
             contentFit="contain"
           />
-          <Typography type="bodyMedium" weight="medium" style={styles.infoText}>
+          <Typography type="bodySmall" weight="medium" style={styles.infoText}>
             {rideDistance}m
           </Typography>
         </View>
 
-        {/* Pricing information */}
+        {/* Pricing information (vertical stack) */}
         {(type === OFFER_TYPES.LIVE || hideRejectButton) && (
-          <View style={styles.pricingContainer}>
+          <View style={styles.pricingVerticalContainer}>
             <Typography
               type="bodyMedium"
               weight="black"
               style={styles.totalPrice}
             >
-              ${totalPrice}
+              ${Math.round(totalPrice)}
             </Typography>
             <Typography
-              type="bodyMedium"
+              type="bodySmall"
               weight="regular"
               style={styles.driverEarning}
             >
-              (${driverEarn})
+              (${Math.round(driverEarn)})
             </Typography>
           </View>
         )}
@@ -136,20 +141,20 @@ export default function RideOfferItemFooter({
             Reject
           </Button>
         )}
-        {/* Bid button */}
-        {hideActionButton ? null : (
-          <Button
-            style={[styles.button]}
-            block={false}
-            variant="primary"
-            rounded="half"
-            disabled={disabled}
-            onPress={onButtonClick}
-          >
-            {buttonTitle}
-          </Button>
-        )}
       </View>
+      {/* Bid button - moved outside leftSection for maximum space */}
+      {hideActionButton ? null : (
+        <Button
+          style={[styles.button]}
+          block
+          variant="primary"
+          rounded="half"
+          disabled={disabled}
+          onPress={onButtonClick}
+        >
+          {buttonTitle}
+        </Button>
+      )}
     </View>
   );
 }
@@ -160,18 +165,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "transparent",
+    marginTop: 4,
+    gap: 6, // Reduced gap between info sections and button
   },
   leftSection: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 16,
+    gap: 28, // Reduced from 16 to 12
   },
   iconTextContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  iconTextVerticalContainer: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2, // Reduced gap between icon and text
   },
   icon: {
     width: 20,
@@ -185,6 +196,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
+  pricingVerticalContainer: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 1, // Minimal gap between total price and driver earning
+  },
   totalPrice: {
     color: textColors.black,
   },
@@ -194,8 +210,10 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   button: {
-    height: 32,
+    height: 36,
     minWidth: 80, // Ensure minimum width for usability
+    flex: 1, // Allow button to take maximum available space
+    maxWidth: "46%", // Limit maximum width to prevent it from being too wide
   },
   rejectButton: {
     height: 32,

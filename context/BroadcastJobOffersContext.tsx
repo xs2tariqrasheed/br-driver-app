@@ -1,4 +1,4 @@
-import { RIDE_TYPES, TRIP_OFFER_TYPES } from "@/constants/global";
+import { CAR_TYPE, RIDE_TYPES, TRIP_OFFER_TYPES, type CarType } from "@/constants/global";
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
 
 export interface BroadcastJobOffer {
@@ -33,6 +33,7 @@ export interface BroadcastJobOffer {
   rating: number;
   hasSpecialRequirements: boolean;
   hasPackage: boolean;
+  carType?: CarType | string;
 
   // Pickup details
   pickupTime: number;
@@ -110,6 +111,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       rating: 4.8,
       hasSpecialRequirements: true,
       hasPackage: false,
+      carType: CAR_TYPE.SEDAN,
       pickupTime: 8,
       pickupDistance: 2.5,
       pickupAddress: "123 Main St, New York, NY",
@@ -118,8 +120,8 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       dropoffAddress: "456 Broadway, New York, NY",
       rideTime: 20,
       rideDistance: 9.8,
-      totalPrice: 45.50,
-      driverEarn: 38.20,
+      totalPrice: 46,
+      driverEarn: 38,
       buttonTitle: "Bid",
       timestamp: baseTimestamp,
       timeout: 300000,
@@ -146,6 +148,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       rating: 4.5,
       hasSpecialRequirements: false,
       hasPackage: true,
+      carType: CAR_TYPE.ECONOMY,
       pickupTime: 5,
       pickupDistance: 1.2,  
       pickupAddress: "789 5th Ave, New York, NY",
@@ -182,6 +185,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       rating: 4.9,
       hasSpecialRequirements: false,
       hasPackage: false,
+      carType: CAR_TYPE.SUV,
       pickupTime: 12,
       pickupDistance: 3.8,
       pickupAddress: "555 Times Square, New York, NY",
@@ -191,7 +195,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       rideTime: 60,
       rideDistance: 25.0,
       totalPrice: 65,
-      driverEarn: 54.60,
+      driverEarn: 55,
       buttonTitle: "Bid",
       timestamp: baseTimestamp,
       timeout: 300000,
@@ -218,6 +222,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       rating: 4.7,
       hasSpecialRequirements: true,
       hasPackage: true,
+      carType: CAR_TYPE.LUXURY,
       pickupTime: 6,
       pickupDistance: 1.5,
       pickupAddress: "100 Wall St, New York, NY",
@@ -226,7 +231,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       dropoffAddress: "200 Greenwich St, New York, NY",
       rideTime: 12,
       rideDistance: 3.7,
-    totalPrice: 22.5,
+      totalPrice: 23,
       driverEarn: 18,
       buttonTitle: "Accept",
       timestamp: baseTimestamp,
@@ -254,6 +259,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       rating: 4.6,
       hasSpecialRequirements: false,
       hasPackage: false,
+      carType: CAR_TYPE.SEDAN,
       pickupTime: 10,
       pickupDistance: 2.1,
       pickupAddress: "300 Central Park West, New York, NY",
@@ -290,6 +296,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       rating: 4.4,
       hasSpecialRequirements: false,
       hasPackage: false,
+      carType: CAR_TYPE.ECONOMY,
       pickupTime: 7,
       pickupDistance: 1.8,
       pickupAddress: "700 Park Ave, New York, NY",
