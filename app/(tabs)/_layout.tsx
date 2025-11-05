@@ -177,8 +177,11 @@ function TabItem({
   source: ImageProps["source"];
 }) {
   const { width } = useWindowDimensions();
-  // Make tab item width responsive - smaller on smaller screens
-  const tabItemWidth = Math.min(90, Math.max(90, width * 0.25));
+  // Make tab item width responsive - ensure "Active Job" fits on small screens
+  // For small screens (< 375px), use wider width to accommodate longer labels
+  const isSmallScreen = width < 375;
+  const baseWidth = isSmallScreen ? 95 : 90; // Slightly wider for small screens
+  const tabItemWidth = Math.min(baseWidth, Math.max(baseWidth, width * 0.25));
   
   return (
     <View
@@ -197,6 +200,7 @@ function TabItem({
         type="labelLarge"
         weight="semibold"
         style={[styles.label, focused && styles.labelFocused]}
+        numberOfLines={1}
       >
         {label}
       </Typography>
@@ -231,8 +235,12 @@ const styles = StyleSheet.create({
   },
   label: {
     color: textColors.grey700,
+    textAlign: "center",
+    flexShrink: 0, // Prevent text from shrinking
   },
   labelFocused: {
     color: textColors.teal900,
+    textAlign: "center",
+    flexShrink: 0, // Prevent text from shrinking
   },
 });
