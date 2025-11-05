@@ -16,6 +16,9 @@ const TAB_HIDDEN_PATHS = [
   "/(screens)/ride-offer",
   "/(screens)/trip-details",
   "/(screens)/feedback",
+  "/(screens)/desired-destinations-map",
+  "/(tabs)/desired-destinations-map",
+  "/desired-destinations-map", // Add path without group prefix
 ];
 
 export default function TabLayout() {
@@ -24,7 +27,7 @@ export default function TabLayout() {
   // Show tabs on all other screens including notifications, settings, desired-destinations, etc.
   const hideTabs = TAB_HIDDEN_PATHS.some((route) =>
     pathname?.startsWith(route)
-  );
+  ) || pathname?.includes("desired-destinations-map");
   const insets = useSafeAreaInsets();
   
   // Calculate dynamic tab bar height

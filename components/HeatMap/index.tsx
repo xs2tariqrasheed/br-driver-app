@@ -15,6 +15,7 @@ import MapView, {
   PROVIDER_GOOGLE,
   Region,
 } from "react-native-maps";
+import MapLoading from "../MapLoading";
 import Typography from "../Typography";
 
 /**
@@ -260,13 +261,7 @@ export default function HeatMap({
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Typography type="bodyMedium" style={styles.loadingText}>
-          Loading heat map...
-        </Typography>
-      </View>
-    );
+    return <MapLoading isLoading={isLoading} />;
   }
 
   return (
@@ -333,15 +328,6 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: textColors.grey100,
-  },
-  loadingText: {
-    color: textColors.grey600,
   },
   etaLabel: {
     backgroundColor: "rgba(0, 0, 0, 0.7)",

@@ -1,4 +1,3 @@
-import { textColors } from "@/constants/colors";
 import { GOOGLE_MAPS_API_KEY } from "@/constants/global";
 import {
   generateMapHTML,
@@ -13,7 +12,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
-import Typography from "../Typography";
+import MapLoading from "../MapLoading";
 
 /**
  * Props for the CustomMap component
@@ -80,9 +79,6 @@ export default function CustomMap({
     longitudeDelta: 0.0421,
   });
 
-  // Currently selected location coordinates
-  const [selectedLocation, setSelectedLocation] =
-    useState<LocationCoordinates | null>(null);
 
   // User's current location state
   const [userLocation, setUserLocation] = useState<LocationCoordinates | null>(null);
@@ -149,9 +145,6 @@ export default function CustomMap({
    * @param longitude - The longitude coordinate of the pressed location
    */
   const handleMapPress = async (latitude: number, longitude: number) => {
-    // Update local state with selected coordinates
-    setSelectedLocation({ latitude, longitude });
-
     try {
       // Convert coordinates to human-readable address using helper function
       const address = await reverseGeocode(
@@ -180,13 +173,7 @@ export default function CustomMap({
   }, [userLocation]);
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Typography type="bodyMedium" style={styles.loadingText}>
-          Loading map...
-        </Typography>
-      </View>
-    );
+    return <MapLoading isLoading={isLoading} />;
   }
 
   return (
@@ -226,14 +213,5 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: textColors.grey100,
-  },
-  loadingText: {
-    color: textColors.grey600,
   },
 });

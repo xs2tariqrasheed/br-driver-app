@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import HeatMap from "@/components/HeatMap";
+import MapLoading from "@/components/MapLoading";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { HEATMAP_REFRESH_INTERVAL_MS } from "@/constants/global";
@@ -153,11 +154,7 @@ export default function HeatMapScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <Header title="Heat Map" onBackPress={handleGoBack} />
-        <View style={styles.loadingContainer}>
-          <Typography type="bodyLarge" style={styles.loadingText}>
-            Loading heat map...
-          </Typography>
-        </View>
+        <MapLoading isLoading={isLoading} />
       </SafeAreaView>
     );
   }
@@ -212,16 +209,6 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: textColors.grey100,
-  },
-  loadingText: {
-    color: textColors.grey600,
-    textAlign: "center",
   },
   errorContainer: {
     flex: 1,
