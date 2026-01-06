@@ -60,7 +60,7 @@ export default function TabLayout() {
             },
             default: { 
               height: tabBarHeight,
-              paddingTop: Math.max(insets.top, 8),
+              paddingTop: Platform.OS === "android" ? 16 : Math.max(insets.top, 8),
               paddingBottom: Math.max(insets.bottom, minPadding),
             },
           }),

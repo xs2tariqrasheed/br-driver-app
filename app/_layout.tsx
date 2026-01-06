@@ -1,5 +1,4 @@
 import { GlobalActiveTripListener } from "@/components/GlobalActiveTripListener";
-import GlobalRideOfferModal from "@/components/GlobalRideOfferModal";
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
 import NetworkNotification from "@/components/NetworkNotification";
 import NotificationModal from "@/components/NotificationModal";
@@ -31,6 +30,7 @@ import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Host } from "react-native-portalize";
 import "react-native-reanimated";
@@ -84,7 +84,17 @@ export default function RootLayout() {
                                             <FutureJobOffersProvider>
                                               <NotificationProvider>
                                                 <ToastProvider>
-                                                  <Stack initialRouteName="(screens)/auth">
+                                                  <Stack
+                                                    initialRouteName="(screens)/auth"
+                                                    screenOptions={{
+                                                      contentStyle:
+                                                        Platform.OS === "android"
+                                                          ? {
+                                                              paddingTop: 24,
+                                                            }
+                                                          : undefined,
+                                                    }}
+                                                  >
                                                     <Stack.Screen
                                                       name="(screens)/auth"
                                                       options={{
