@@ -7,6 +7,7 @@ export interface BroadcastJobOffer {
   type: (typeof TRIP_OFFER_TYPES)[keyof typeof TRIP_OFFER_TYPES];
   status:
     | "offered"
+    | "bidding"
     | "accepted"
     | "rejected"
     | "expired"
@@ -25,6 +26,9 @@ export interface BroadcastJobOffer {
     fare?: number;
     timestamp?: number;
     for?: "io" | "hired";
+    tripType?: "ONE_WAY" | "ROUND_TRIP" | "HOURLY";
+    tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE";
+    serviceType?: "ECONOMY_LITE" | "ECONOMY" | "SEDAN" | "SUV";
   };
 
   // LiveRideOfferItem required fields

@@ -46,6 +46,7 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -113,7 +114,7 @@ export default function ActiveRideScreen() {
     const knobAllowance = 32; // Increased from 28 to 32 for better knob space
     // Increased min width for small devices to ensure full text visibility
     const minWidth = screenWidth < 375 ? 140 : 130; // Higher min for small screens
-    const maxWidth = Math.min(240, Math.round(screenWidth * 0.5)); // Slightly increased max
+    const maxWidth = Math.min(240, Math.round(screenWidth * (Platform.OS === "android" ? 0.3 : 0.5))); // Slightly increased max
     const baseWidth =
       longestLabelLength * approxCharWidth + horizontalPadding + knobAllowance;
     // For small screens, add extra padding

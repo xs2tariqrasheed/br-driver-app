@@ -196,7 +196,7 @@ export default function LiveRideOfferItem({
   const { skipLiveOffer, hideLiveOffer, getLiveOfferStatus } = useDriver();
   const { hideRideOfferModal, setHasAnyActiveOffer } = useRideOffer();
   const { closeAllModals } = useModalManager();
-  const { updateBroadcastOffer } = useBroadcastJobOffers();
+  const { updateBroadcastOffer, getBroadcastOffer } = useBroadcastJobOffers();
   const translateX = React.useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get("window").width;
   const [showHideButton, setShowHideButton] = React.useState(false);
@@ -219,6 +219,9 @@ export default function LiveRideOfferItem({
     if (itemStatus === LIVE_JOB_STATUS.ACCEPTED) {
       console.log(`[LiveRideOfferItem] Job ${id} - showing Accepted`);
       return "Accepted";
+    } else if (itemStatus === "bidding") {
+      console.log(`[LiveRideOfferItem] Job ${id} - showing Waiting for Customer`);
+      return "Waiting...";
     } else if (itemStatus === "skipped") {
       console.log(`[LiveRideOfferItem] Job ${id} - showing Skipped`);
       return "Skipped";
@@ -559,7 +562,7 @@ export default function LiveRideOfferItem({
                   style,
                 ]}
               >
-                {/* Countdown Timer */}
+                {/* Countdown Timer - Only show and run if offer is still in "offered" state */}
                 {itemStatus === LIVE_JOB_STATUS.OFFERED &&
                   expiredAt &&
                   calculateProgressTimerDuration(expiredAt) && (
@@ -567,20 +570,30 @@ export default function LiveRideOfferItem({
                       <ProgressTimer
                         duration={calculateProgressTimerDuration(expiredAt)!}
                         onComplete={() => {
-                          // Update the offer status to expired when timer completes
-                          updateBroadcastOffer(id, {
-                            status: LIVE_JOB_STATUS.EXPIRED,
-                          });
-                          showToast("Offer expired", {
-                            variant: "warning",
-                            position: "top",
-                          });
-                          setHasAnyActiveOffer(false);
-                          closeAllModals();
-                          hideRideOfferModal();
+                          // Only expire if offer is still in "offered" state
+                          // If driver has performed any action (bid, accept, etc.), status would have changed
+                          const currentOffer = getBroadcastOffer(id);
+                          if (currentOffer && currentOffer.status === LIVE_JOB_STATUS.OFFERED) {
+                            // Update the offer status to expired when timer completes
+                            updateBroadcastOffer(id, {
+                              status: LIVE_JOB_STATUS.EXPIRED,
+                            });
+                            showToast("Offer expired", {
+                              variant: "warning",
+                              position: "top",
+                            });
+                            setHasAnyActiveOffer(false);
+                            closeAllModals();
+                            hideRideOfferModal();
+                          } else {
+                            // Offer status has changed (driver performed action), don't expire
+                            console.log(
+                              `[LiveRideOfferItem] Skipping expiration for ${id} - status changed to: ${currentOffer?.status}`
+                            );
+                          }
                         }}
                         height={4}
-                        isActive={true}
+                        isActive={itemStatus === LIVE_JOB_STATUS.OFFERED}
                       />
                     </View>
                   )}

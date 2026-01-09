@@ -31,17 +31,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 
 type LoginFormValues = {
   companyId: string;
-  loginId: string;
+  loginId: string; // UI label is "Login ID" but value is emailOrPhone
   password: string;
-};
-
-// Email mapping based on login ID
-const loginIdToEmailMap: Record<number, string> = {
-  1: "one@example.com",
-  2: "two@example.com",
-  3: "three@example.com",
-  4: "four@example.com",
-  5: "five@example.com",
 };
 
 /**
@@ -52,18 +43,19 @@ const loginIdToEmailMap: Record<number, string> = {
  *   - Input: None (initializes internal state via react-hook-form)
  *   - Output: JSX tree rendering the login UI; dispatches submit via onSubmit handler
  * Description:
- *   - Initializes a controlled form with validation for company ID, login ID, and password
+ *   - Initializes a controlled form with validation for email/phone and password
  *   - Renders header, logo, descriptive copy, and inputs using design system components
- *   - Submits validated credentials using handleSubmit(onSubmit)
+ *   - Submits validated credentials to backend API using DB request format (jHeader, jMetaData, jData)
  *   - Exposes recovery and quick-auth shortcuts (biometrics placeholders) and a "Forgot" bottom sheet
  * Expected Outcome:
  *   - Users can enter credentials, see validation feedback, and trigger sign-in
  *   - Bottom sheet opens/closes smoothly; UI adapts to keyboard on iOS and Android
+ *   - Successful login navigates to OTP verification screen
  */
 /**
  * Renders the Login screen.
- * - Initializes and validates the login form
- * - Submits credentials to the auth API
+ * - Initializes and validates the login form (email/phone and password)
+ * - Submits credentials to the auth API with proper DB request format
  * - Provides bottom sheets for forgotten credentials and biometric prompts
  */
 export default function LoginScreen() {
@@ -92,11 +84,13 @@ export default function LoginScreen() {
   /**
    * Handles validated form submission.
    * Params:
-   *   - data: LoginFormValues containing companyId, loginId, password (validated by react-hook-form)
+   *   - data: LoginFormValues containing loginId (emailOrPhone) and password (validated by react-hook-form)
    * Side-effects:
-   *   - Currently logs payload; replace with authentication request and navigation on success
+   *   - Sends authentication request to backend API
+   *   - Navigates to OTP verification on success
    * Error handling:
    *   - Validation errors surfaced by react-hook-form via `errors`
+   *   - API errors displayed via toast notifications
    */
   /**
    * Submits the login form when validation passes.
@@ -105,14 +99,12 @@ export default function LoginScreen() {
   const onSubmit = async (data: LoginFormValues) => {
     log("Login submit", data);
 
-    const loginIdNum = Number(data.loginId);
-    const email = loginIdToEmailMap[loginIdNum];
-
-    // Store login ID in state for later use in verify-otp
-    setAuth({ loginId: loginIdNum } as any);
-
+    // Note: loginId field in UI represents emailOrPhone behind the scenes
+    // The request interceptor in apiConfig.ts automatically transforms
+    // this legacy format (email/password) to DB format (jHeader, jMetaData, jData)
+    // The backend accepts both formats, but DB format is preferred
     const apiPayload = {
-      email: email,
+      email: data.loginId.trim(), // loginId is actually emailOrPhone
       password: data.password,
     };
 
@@ -124,17 +116,21 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLoginSuccess = async (token: string) => {
-    // Preserve the loginId that was set during validation
+  const handleLoginSuccess = async (loginResponse: any) => {
+    // Store only token temporarily, user data will be set after OTP verification
     const existingAuth = auth as any;
     await setAuth({
       ...existingAuth,
-      token: token,
+      token: loginResponse.token,
     } as any);
     // After login successful login, require OTP verification before granting access
+    // Pass login response data to verify-otp screen
     router.push({
       pathname: "/(screens)/auth/verify-otp",
-      params: { context: "login" },
+      params: { 
+        context: "login",
+        loginData: JSON.stringify(loginResponse),
+      },
     });
   };
 
@@ -145,7 +141,7 @@ export default function LoginScreen() {
   useEffect(() => {
     console.log("Login data", loginData);
     if (loginData?.token) {
-      handleLoginSuccess(loginData?.token);
+      handleLoginSuccess(loginData);
     }
 
     if (submitError) {
@@ -356,13 +352,11 @@ export default function LoginScreen() {
               name="companyId"
               rules={{
                 required: "Company ID is required",
-                validate: (value: string) =>
-                  value === "0000" || "Invalid Company ID. Must be 0000",
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Company ID"
-                  placeholder="Enter your company ID (0000)"
+                  placeholder="Enter your company ID"
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -378,23 +372,33 @@ export default function LoginScreen() {
               rules={{
                 required: "Login ID is required",
                 validate: (value: string) => {
-                  const num = Number(value);
-                  if (isNaN(num)) return "Login ID must be a number";
-                  if (!Number.isInteger(num))
-                    return "Login ID must be a whole number";
-                  if (num < 1 || num > 5)
-                    return "Login ID must be between 1 and 5";
-                  return true;
+                  const trimmed = value.trim();
+                  if (!trimmed) return "Login ID is required";
+                  
+                  // Login ID can be email or phone number
+                  // Check if it's an email
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  // Check if it's a phone number (basic validation - digits, may have +, spaces, dashes, parentheses)
+                  const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
+                  
+                  if (emailRegex.test(trimmed) || phoneRegex.test(trimmed.replace(/[\s\-\(\)]/g, ''))) {
+                    return true;
+                  }
+                  
+                  return "Please enter a valid email address or phone number";
                 },
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Login ID"
-                  placeholder="Enter your login ID (1-5)"
+                  placeholder="Enter your email or phone number"
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
                   name="loginId"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   errors={errors as any}
                 />
               )}
@@ -405,17 +409,15 @@ export default function LoginScreen() {
               name="password"
               rules={{
                 required: "Password is required",
-                validate: (value: string) => {
-                  if (value.length !== 6)
-                    return "Password must be exactly 6 characters";
-                  if (value !== "123456") return "Invalid password";
-                  return true;
+                minLength: {
+                  value: 6,
+                  message: "Password must be at least 6 characters",
                 },
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Password"
-                  placeholder="Enter your password (123456)"
+                  placeholder="Enter your password"
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}

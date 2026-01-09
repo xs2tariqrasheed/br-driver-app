@@ -14,7 +14,7 @@
  *                   mobile network conditions and connection recovery.
  */
 
-import { SOCKET } from "@/constants/global";
+import { getServiceUrl } from "@/config/urlResolver";
 import io from "socket.io-client";
 
 let socket: ReturnType<typeof io> | null = null;
@@ -56,7 +56,12 @@ const attachStoredHandlers = () => {
  * ```
  */
 export const connectSocket = async (): Promise<ReturnType<typeof io>> => {
-  const serverUrl = SOCKET.OFFERS_SERVER_URL;
+  // Dynamically resolve URL based on IS_TESTING flag
+  const serverUrl = getServiceUrl(
+    "offers-socket",
+    process.env.EXPO_PUBLIC_BASE_URL,
+    "https://djh0g1zn5pc6f.cloudfront.net"
+  );
   console.log("🔌 Connecting to offers socket server:", serverUrl);
 
   // Disconnect existing socket if any

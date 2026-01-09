@@ -17,7 +17,10 @@
 
 import { AUTH_STORAGE_KEY } from "@/constants/global";
 import { getStorageItem, logger } from "@/utils/helpers";
-import axios, { AxiosError, AxiosInstance, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { getServiceUrl } from "./urlResolver";
+import { buildLoginRequest } from "@/utils/requestBuilder";
+import type { DbRequestJson, DbResponse } from "@/types/dbRequest";
 const log = logger();
 
 export interface ApiResponse<T = any> {
@@ -49,9 +52,11 @@ export interface ApiError {
  */
 const createApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL:
-      process.env.EXPO_PUBLIC_BASE_URL ||
-      "https://djh0g1zn5pc6f.cloudfront.net",
+    BASE_URL: getServiceUrl(
+      "online-drivers",
+      process.env.EXPO_PUBLIC_BASE_URL,
+      "https://djh0g1zn5pc6f.cloudfront.net"
+    ),
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -170,9 +175,11 @@ const createApiClient = (): AxiosInstance => {
  */
 const createAuctionApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL:
-      process.env.EXPO_PUBLIC_BASE_URL ||
-      "https://djh0g1zn5pc6f.cloudfront.net",
+    BASE_URL: getServiceUrl(
+      "auction",
+      process.env.EXPO_PUBLIC_BASE_URL,
+      "https://djh0g1zn5pc6f.cloudfront.net"
+    ),
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -292,9 +299,11 @@ const createAuctionApiClient = (): AxiosInstance => {
  */
 const createAuthApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL:
-      process.env.EXPO_PUBLIC_BASE_URL ||
-      "https://djh0g1zn5pc6f.cloudfront.net",
+    BASE_URL: getServiceUrl(
+      "auth",
+      process.env.EXPO_PUBLIC_BASE_URL,
+      "https://djh0g1zn5pc6f.cloudfront.net"
+    ),
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -309,18 +318,38 @@ const createAuthApiClient = (): AxiosInstance => {
    * Request Interceptor
    *
    * Caller: Axios interceptor system
-   * Purpose: Log authentication requests (no auth token needed for login flows)
+   * Purpose: Log authentication requests and transform to DB format if needed
    * Input/Output:
    *   - Input: Axios request config
    *   - Output: Modified request config or rejected promise
    * Description: Logs outgoing authentication requests (dev-only via logger).
+   *             Transforms requests to DB format (jHeader, jMetaData, jData) for
+   *             endpoints that require it (e.g., /auth/signin).
    *             Note: Does NOT add Authorization headers as this client is used
    *             for login/registration flows where authentication tokens don't exist yet.
-   * Expected Outcome: Request logging for debugging authentication flows.
+   * Expected Outcome: Request logging and DB format transformation for authentication flows.
    */
   client.interceptors.request.use(
-    async (config) => {
+    async (config: InternalAxiosRequestConfig) => {
       log(`🚀 Auth API Request: ${config.method?.toUpperCase()} ${config.url}`);
+      
+      // Check if this endpoint needs DB request format transformation
+      if (shouldTransformToDbFormat(config.url || "", config.method || "")) {
+        try {
+          const transformed = await transformRequestToDbFormat(
+            config.data,
+            config.url || ""
+          );
+          if (transformed) {
+            config.data = transformed;
+            log("✅ Request transformed to DB format");
+          }
+        } catch (error) {
+          log("⚠️ Error transforming request to DB format:", error);
+          // Continue with original request if transformation fails
+        }
+      }
+      
       return config;
     },
     (error) => {
@@ -339,7 +368,8 @@ const createAuthApiClient = (): AxiosInstance => {
    *   - Output: Response or rejected promise with auth-specific error message
    * Description: Logs successful auth responses (dev-only) and handles authentication-specific
    *             error scenarios including invalid credentials, account locked, email not verified,
-   *             and server errors. Provides user-friendly error messages for auth flows.
+   *             and server errors. Also handles DB response format (extracts jData, validates responseCode).
+   *             Provides user-friendly error messages for auth flows.
    * Expected Outcome: Consistent authentication error handling with user-friendly messages
    *                   for login, registration, and password reset flows.
    */
@@ -347,7 +377,10 @@ const createAuthApiClient = (): AxiosInstance => {
     (response: AxiosResponse) => {
       // Log successful response for debugging (remove in production)
       log(`✅ Auth API Response: ${response.status} ${response.config.url}`);
-      return response;
+      
+      // Handle DB response format if present
+      const transformedResponse = transformDbResponse(response);
+      return transformedResponse;
     },
     (error: AxiosError) => {
       // Handle authentication-specific error scenarios
@@ -407,7 +440,11 @@ const createAuthApiClient = (): AxiosInstance => {
  */
 const createMeApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.100.160:3000",
+    BASE_URL: getServiceUrl(
+      "me",
+      process.env.EXPO_PUBLIC_BASE_URL,
+      "http://192.168.100.160:3000"
+    ),
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -526,9 +563,11 @@ const createMeApiClient = (): AxiosInstance => {
  */
 const createSettingsApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL:
-      process.env.EXPO_PUBLIC_SETTINGS_BASE_URL ||
-      "http://192.168.100.160:3003",
+    BASE_URL: getServiceUrl(
+      "settings",
+      process.env.EXPO_PUBLIC_SETTINGS_BASE_URL,
+      "http://192.168.100.160:3003"
+    ),
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -652,9 +691,11 @@ const createSettingsApiClient = (): AxiosInstance => {
  */
 const createActiveTripApiClient = (): AxiosInstance => {
   const API_CONFIG = {
-    BASE_URL:
-      process.env.EXPO_PUBLIC_BASE_URL ||
-      "https://djh0g1zn5pc6f.cloudfront.net",
+    BASE_URL: getServiceUrl(
+      "active-trip",
+      process.env.EXPO_PUBLIC_BASE_URL,
+      "https://djh0g1zn5pc6f.cloudfront.net"
+    ),
     HEADERS: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -764,6 +805,122 @@ const createActiveTripApiClient = (): AxiosInstance => {
 };
 
 // Create the main API clients instance
+/**
+ * Helper function to determine if a request should be transformed to DB format
+ * 
+ * @param url - Request URL
+ * @param method - HTTP method
+ * @returns true if request should be transformed
+ */
+function shouldTransformToDbFormat(url: string, method: string): boolean {
+  // Transform POST requests to auth endpoints that need DB format
+  if (method.toUpperCase() === "POST") {
+    // Login endpoint needs DB format
+    if (url.includes("/auth/signin")) {
+      return true;
+    }
+    // Add other endpoints that need DB format here
+  }
+  return false;
+}
+
+/**
+ * Transforms a request body to DB format (jHeader, jMetaData, jData)
+ * 
+ * @param data - Original request body
+ * @param url - Request URL
+ * @returns Transformed request body in DB format, or null if transformation not needed
+ */
+async function transformRequestToDbFormat(
+  data: any,
+  url: string
+): Promise<DbRequestJson | null> {
+  // Skip if already in DB format
+  if (data && typeof data === "object" && "jHeader" in data && "jData" in data) {
+    return null; // Already transformed
+  }
+
+  // Transform login request
+  if (url.includes("/auth/signin")) {
+    // Check if it's a legacy format (email/password at root)
+    if (data && typeof data === "object" && ("email" in data || "password" in data)) {
+      const email = data.email || "";
+      const password = data.password || "";
+      
+      if (email && password) {
+        return await buildLoginRequest({
+          emailOrPhone: email,
+          password: password,
+        });
+      }
+    }
+    // If data is already in DB format or doesn't match legacy format, return null
+  }
+
+  return null;
+}
+
+/**
+ * Transforms DB response format to a consistent structure
+ * Handles nested response structure and validates responseCode
+ * 
+ * @param response - Axios response
+ * @returns Transformed response
+ */
+function transformDbResponse(response: AxiosResponse): AxiosResponse {
+  try {
+    const data = response.data;
+
+    // Check if response has nested structure: { success: true, data: { jHeader, jData, jMetaData } }
+    if (data && typeof data === "object" && "success" in data && "data" in data) {
+      const dbResponse = data.data as DbResponse;
+      
+      // Validate responseCode (0 = success, others = error)
+      if (dbResponse?.jHeader?.responseCode !== undefined) {
+        const responseCode = dbResponse.jHeader.responseCode;
+        if (responseCode !== "0" && responseCode !== 0) {
+          const errorMessage = dbResponse.jHeader.message || "Database operation failed";
+          log(`⚠️ DB Response error: ${errorMessage} (responseCode: ${responseCode})`);
+          // Note: We don't throw here - let the error handler process it
+          // The backend may still return 200 with error in responseCode
+        }
+      }
+
+      // For auth endpoints, extract token and user from jData if present
+      if (response.config.url?.includes("/auth/signin")) {
+        // Backend auth service returns { token, user, status, message } directly
+        // So we don't need to extract from jData for auth endpoints
+        // The response structure is already handled by the backend
+        return response;
+      }
+
+      // For other endpoints, return the nested data structure
+      return response;
+    }
+
+    // Check if response has direct DB format: { jHeader, jData, jMetaData }
+    if (data && typeof data === "object" && "jHeader" in data) {
+      const dbResponse = data as DbResponse;
+      
+      // Validate responseCode
+      if (dbResponse.jHeader?.responseCode !== undefined) {
+        const responseCode = dbResponse.jHeader.responseCode;
+        if (responseCode !== "0" && responseCode !== 0) {
+          const errorMessage = dbResponse.jHeader.message || "Database operation failed";
+          log(`⚠️ DB Response error: ${errorMessage} (responseCode: ${responseCode})`);
+        }
+      }
+
+      return response;
+    }
+
+    return response;
+  } catch (error) {
+    log("Error transforming DB response:", error);
+    return response;
+  }
+}
+
 export const apiClient = createApiClient();
 export const authApiClient = createAuthApiClient();
 export const meApiClient = createMeApiClient();

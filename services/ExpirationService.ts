@@ -57,6 +57,16 @@ export class ExpirationService {
         `🔍 Found offer: ${offerInfo.type} (${offerInfo.context}) for tripId: ${tripId}`
       );
 
+      // Check if offer status has changed (driver performed action)
+      // Only expire if offer is still in "offered" state
+      const offerStatus = offerInfo.offer?.status;
+      if (offerStatus && offerStatus !== "offered") {
+        this.log(
+          `⏸️ Skipping expiration for tripId: ${tripId} - offer status is "${offerStatus}" (driver has performed action)`
+        );
+        return;
+      }
+
       // Show consistent toast message for all expired offers
       showToast("Ride offer expired!", {
         variant: "warning",

@@ -2,6 +2,12 @@
 import { ImageSourcePropType } from "react-native";
 import { bidStatusColors } from "./colors";
 
+// Testing Mode Configuration
+// Set to true to route all API services and socket connections to testing URLs
+// Set to false to use production environment variables or deployed URLs
+// WARNING: Default is false for production safety
+export const IS_TESTING = true;
+
 // Token helpers bound to the app's chosen token key
 export const TOKEN_KEY = "@token";
 // Global auth object storage key
@@ -41,6 +47,8 @@ export const RIDE_TOGGLE_LABELS = {
 
 // Previous location storage key (used for online location posting)
 export const PREVIOUS_LOCATION_STORAGE_KEY = "@previous_location";
+// Offer timeout (in milliseconds) - matches backend OFFER_TIMEOUT
+export const OFFER_TIMEOUT = 20000; // 20 seconds
 // Threshold in meters before re-posting location
 export const MENTIONED_DISTANCE = 10;
 // Interval (ms) for posting driver's online location
@@ -379,12 +387,22 @@ export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
 export type ActiveTripSocketEvent =
   (typeof ACTIVE_TRIP_SOCKET_EVENTS)[keyof typeof ACTIVE_TRIP_SOCKET_EVENTS];
 
+// Socket server URLs - dynamically resolved based on IS_TESTING flag
+// Note: Using getter functions to avoid circular dependency with urlResolver
+// The actual URL resolution happens in utils/socket.ts and utils/activeTripSocket.ts
+// This constant is kept for backward compatibility but URLs are resolved at connection time
 export const SOCKET = {
-  OFFERS_SERVER_URL:
-    process.env.EXPO_PUBLIC_BASE_URL || "https://djh0g1zn5pc6f.cloudfront.net",
-  ACTIVE_TRIP_SERVER_URL:
-    process.env.EXPO_PUBLIC_BASE_URL || "https://djh0g1zn5pc6f.cloudfront.net",
-} as const;
+  get OFFERS_SERVER_URL(): string {
+    return IS_TESTING
+      ? SERVICES_TESTING_URLS["offers-socket"]
+      : process.env.EXPO_PUBLIC_BASE_URL || "https://djh0g1zn5pc6f.cloudfront.net";
+  },
+  get ACTIVE_TRIP_SERVER_URL(): string {
+    return IS_TESTING
+      ? SERVICES_TESTING_URLS["active-trip-socket"]
+      : process.env.EXPO_PUBLIC_BASE_URL || "https://djh0g1zn5pc6f.cloudfront.net";
+  },
+};
 
 export const TRIP_OFFER_ACTIONS = {
   ACCEPT: "accept",
@@ -458,3 +476,41 @@ export const NETWORK_MONITORING = {
 
 export type NetworkQuality =
   (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];
+
+// Testing purpose constant for all the services
+// When IS_TESTING is true, these URLs will be used instead of environment variables
+// All URLs should include the http:// protocol prefix for local testing
+export const SERVICES_TESTING_URLS = {
+  "auth": "http://192.168.1.6:3001",
+  "auction": "http://192.168.1.6:3002",
+  "online-drivers": "http://192.168.1.6:3003",
+  "settings": "http://192.168.1.6:3004",
+  "active-trip": "http://192.168.1.6:3005",
+  "me": "http://192.168.1.6:3001", // Shares with auth service
+  "offers-socket": "http://192.168.1.6:3002", // Shares with auction service
+  "active-trip-socket": "http://192.168.1.6:3005", // Shares with active-trip service
+} as const;
+
+// DB Request Format Constants
+// Default access token and key (fallback values, should be updated after login if backend provides)
+export const DEFAULT_ACCESS_TOKEN =
+  "fad9017e31bd0927a6bc42996df9e22708b736112f3ef801fd30d7213c146a03";
+export const DEFAULT_ACCESS_KEY =
+  "0f5aac120ac2746e8548dcdb565b06d9772248b51ab669f45c08dc51a4291f16";
+
+// API Version (matches backend APIVersion)
+export const API_VERSION = "1.0.1";
+
+// Client Version (from app.json version)
+export const CLIENT_VERSION = "1.0.0";
+
+// DB Action Codes
+// Common action codes used across the app for database operations
+export const DB_ACTION_CODES = {
+  // Driver actions
+  DRV_S_LOGIN_DRIVER: "DRV.S.LOGIN_DRIVER",
+  // Add more action codes as needed
+} as const;
+
+export type DbActionCode =
+  (typeof DB_ACTION_CODES)[keyof typeof DB_ACTION_CODES];

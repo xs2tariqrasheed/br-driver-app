@@ -13,7 +13,7 @@
  *                   mobile network conditions and connection recovery.
  */
 
-import { SOCKET } from "@/constants/global";
+import { getServiceUrl } from "@/config/urlResolver";
 import io from "socket.io-client";
 
 let activeTripSocket: ReturnType<typeof io> | null = null;
@@ -63,7 +63,12 @@ export const connectActiveTripSocket = async (
   retrievalId: string,
   tripId: string
 ): Promise<ReturnType<typeof io>> => {
-  const serverUrl = SOCKET.ACTIVE_TRIP_SERVER_URL;
+  // Dynamically resolve URL based on IS_TESTING flag
+  const serverUrl = getServiceUrl(
+    "active-trip-socket",
+    process.env.EXPO_PUBLIC_BASE_URL,
+    "https://djh0g1zn5pc6f.cloudfront.net"
+  );
   console.log("🔌 Connecting to active trip socket server:", serverUrl);
   console.log("🔌 Driver ID:", driverId);
   console.log("🔌 Retrieval ID:", retrievalId);

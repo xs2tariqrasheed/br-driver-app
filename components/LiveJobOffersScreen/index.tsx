@@ -151,12 +151,12 @@ export default function LiveJobOffersScreen({
         `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (including hidden/skipped/expired)`
       );
     } else {
-      // Show only active offers (offered or accepted)
+      // Show only active offers (offered, bidding, or accepted)
       filtered = broadcastOffers.filter(
-        (offer) => offer.status === "offered" || offer.status === "accepted"
+        (offer) => offer.status === "offered" || offer.status === "bidding" || offer.status === "accepted"
       );
       log(
-        `[LiveJobOffersScreen] Showing ${filtered.length} active offers (offered/accepted only) out of ${broadcastOffers.length} total`
+        `[LiveJobOffersScreen] Showing ${filtered.length} active offers (offered/bidding/accepted only) out of ${broadcastOffers.length} total`
       );
     }
 
@@ -245,6 +245,13 @@ export default function LiveJobOffersScreen({
       // Check if job is expired (but still allow interaction for debugging)
       const now = new Date();
       const isExpired = job.status === "expired";
+      const isBidding = job.status === "bidding";
+
+      if (isBidding) {
+        log(`[LiveJobOffersScreen] Job ${jobId} is already in bidding state, waiting for customer`);
+        showToast("Waiting for customer response...", { variant: "warning", position: "top" });
+        return;
+      }
 
       if (isExpired) {
         log(
@@ -326,6 +333,13 @@ export default function LiveJobOffersScreen({
 
         if (result?.success) {
           log("[LiveJobOffersScreen] Bid submitted successfully");
+
+          // Update offer status to "bidding" to prevent expiration
+          // This ensures the offer won't expire while waiting for customer response
+          updateBroadcastOffer(jobToUse.tripOffer.tripId, {
+            status: "bidding" as any, // Set status to bidding to prevent expiration
+          });
+          log("[LiveJobOffersScreen] Updated offer status to 'bidding' to prevent expiration");
 
           // For broadcast offers, don't change status to "accepted" immediately
           // The offer should remain bidable until customer accepts or offer expires

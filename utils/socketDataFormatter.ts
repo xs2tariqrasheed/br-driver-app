@@ -1,4 +1,4 @@
-import { RIDE_TYPES } from "@/constants/global";
+import { CAR_TYPE, OFFER_TIMEOUT, RIDE_TYPES } from "@/constants/global";
 
 /**
  * Server socket data structure from terminal output
@@ -15,7 +15,10 @@ interface ServerSocketData {
     type: "sequential" | "broadcast";
     fare?: number;
     timestamp?: number;
-    for?: "io" | "hired"; // temporary field
+    for?: "io" | "hired";
+    tripType?: "ONE_WAY" | "ROUND_TRIP" | "HOURLY";
+    tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE";
+    serviceType?: "ECONOMY_LITE" | "ECONOMY" | "SEDAN" | "SUV";
   };
   type: string;
 }
@@ -42,7 +45,7 @@ export interface FormattedTripOffer {
   // Comprehensive ride details for frontend
   rideDetails: {
     id: string;
-    rideType: keyof typeof RIDE_TYPES;
+    rideType: (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES]; // Value type: "one-way" | "round-trip" | "hourly"
     peopleCount: number;
     rating: number;
     hasSpecialRequirements: boolean;
@@ -204,6 +207,89 @@ function generateAddressFromCoordinates(
 }
 
 /**
+ * Maps backend tripType to frontend RIDE_TYPES values
+ */
+function mapTripType(
+  backendTripType?: "ONE_WAY" | "ROUND_TRIP" | "HOURLY"
+): (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES] {
+  if (!backendTripType) {
+    return DEFAULT_VALUES.rideType;
+  }
+
+  // Map backend enum values to frontend RIDE_TYPES values (not keys)
+  // Component expects: "one-way" | "round-trip" | "hourly"
+  const mapping: Record<
+    "ONE_WAY" | "ROUND_TRIP" | "HOURLY",
+    (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES]
+  > = {
+    ONE_WAY: RIDE_TYPES.ONE_WAY, // "one-way"
+    ROUND_TRIP: RIDE_TYPES.ROUND_TRIP, // "round-trip"
+    HOURLY: RIDE_TYPES.HOURLY, // "hourly"
+  };
+
+  return mapping[backendTripType] || DEFAULT_VALUES.rideType;
+}
+
+/**
+ * Maps backend serviceType to frontend CAR_TYPE
+ * Handles case-insensitive matching for flexibility
+ */
+function mapServiceType(
+  backendServiceType?: "ECONOMY_LITE" | "ECONOMY" | "SEDAN" | "SUV" | string
+): string {
+  if (!backendServiceType) {
+    return DEFAULT_VALUES.carType;
+  }
+
+  // Normalize to uppercase for case-insensitive matching
+  const normalized = backendServiceType.toUpperCase().trim();
+
+  const mapping: Record<string, string> = {
+    ECONOMY_LITE: CAR_TYPE.ECONOMY, // Map ECONOMY_LITE to ECONOMY
+    ECONOMY: CAR_TYPE.ECONOMY,
+    SEDAN: CAR_TYPE.SEDAN,
+    SUV: CAR_TYPE.SUV,
+  };
+
+  return mapping[normalized] || DEFAULT_VALUES.carType;
+}
+
+/**
+ * Determines if trip has package based on tripCategory
+ * Handles case-insensitive matching
+ */
+function hasPackageFromCategory(
+  tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE" | string
+): boolean {
+  if (!tripCategory) {
+    return false;
+  }
+
+  // Normalize to uppercase for case-insensitive matching
+  const normalized = tripCategory.toUpperCase().trim();
+  return normalized === "FOOD" || normalized === "PACKAGE";
+}
+
+/**
+ * Determines if trip has special requirements based on tripCategory
+ * Special requirements might be needed for FOOD or PACKAGE deliveries
+ */
+function hasSpecialRequirementsFromCategory(
+  tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE" | string
+): boolean {
+  if (!tripCategory) {
+    return DEFAULT_VALUES.hasSpecialRequirements;
+  }
+
+  // Normalize to uppercase for case-insensitive matching
+  const normalized = tripCategory.toUpperCase().trim();
+  
+  // FOOD and PACKAGE deliveries might have special requirements
+  // You can adjust this logic based on your business rules
+  return normalized === "FOOD" || normalized === "PACKAGE";
+}
+
+/**
  * Formats server socket data to frontend data structure
  *
  * @param serverData - Raw data from server socket
@@ -240,6 +326,25 @@ export function formatSocketDataToTripOffer(
       "dropoff"
     );
 
+  // Map backend fields to frontend values
+  const rideType = mapTripType(tripOffer.tripType);
+  const carType = mapServiceType(tripOffer.serviceType);
+  const hasPackage = hasPackageFromCategory(tripOffer.tripCategory);
+  const hasSpecialRequirements = hasSpecialRequirementsFromCategory(tripOffer.tripCategory);
+
+  // Debug logging
+  console.log("[formatSocketDataToTripOffer] Backend data:", {
+    tripType: tripOffer.tripType,
+    serviceType: tripOffer.serviceType,
+    tripCategory: tripOffer.tripCategory,
+  });
+  console.log("[formatSocketDataToTripOffer] Mapped values:", {
+    rideType,
+    carType,
+    hasPackage,
+    hasSpecialRequirements,
+  });
+
   return {
     // Basic trip information from server
     tripId: tripOffer.tripId,
@@ -260,11 +365,11 @@ export function formatSocketDataToTripOffer(
     // Comprehensive ride details
     rideDetails: {
       id: tripOffer.tripId,
-      rideType: DEFAULT_VALUES.rideType as keyof typeof RIDE_TYPES,
+      rideType: rideType,
       peopleCount: DEFAULT_VALUES.peopleCount,
       rating: DEFAULT_VALUES.rating,
-      hasSpecialRequirements: DEFAULT_VALUES.hasSpecialRequirements,
-      hasPackage: DEFAULT_VALUES.hasPackage,
+      hasSpecialRequirements: hasSpecialRequirements,
+      hasPackage: hasPackage,
       pickupTime: DEFAULT_VALUES.pickupTime,
       pickupDistance: DEFAULT_VALUES.pickupDistance,
       pickupAddress,
@@ -275,12 +380,12 @@ export function formatSocketDataToTripOffer(
       rideDistance: DEFAULT_VALUES.rideDistance,
       totalPrice: fare,
       driverEarn,
-      carType: DEFAULT_VALUES.carType,
+      carType: carType,
       created_at: tripOffer.timestamp
         ? new Date(tripOffer.timestamp).toISOString()
         : new Date().toISOString(),
       driverInstructions: DEFAULT_VALUES.driverInstructions,
-      expiredAt: new Date(Date.now() + 40 * 1000).toISOString(), // 40 seconds from now
+      expiredAt: new Date(Date.now() + OFFER_TIMEOUT).toISOString(), // 20 seconds from now (matches backend)
     },
 
     // Special requirements (using defaults for now)
@@ -330,7 +435,10 @@ export function formatSocketDataToRideOffer(
       type: formattedTripOffer.type,
       fare: formattedTripOffer.fare,
       timestamp: serverData.tripOffer.timestamp || Date.now(),
-      for: "io" as const, // Default value
+      for: (serverData.tripOffer.for || "io") as "io" | "hired",
+      tripType: serverData.tripOffer.tripType,
+      tripCategory: serverData.tripOffer.tripCategory,
+      serviceType: serverData.tripOffer.serviceType,
     },
 
     // LiveRideOfferItem required fields
@@ -342,6 +450,7 @@ export function formatSocketDataToRideOffer(
     hasPackage: formattedTripOffer.rideDetails.hasPackage,
     specialRequirements: formattedTripOffer.specialRequirements,
     packageInfo: formattedTripOffer.packageInfo,
+    carType: formattedTripOffer.rideDetails.carType, // Include carType from mapped serviceType
 
     // Pickup details
     pickupTime: formattedTripOffer.rideDetails.pickupTime,
@@ -396,7 +505,10 @@ export function formatSocketDataToBroadcastOffer(
       type: formattedTripOffer.type,
       fare: formattedTripOffer.fare,
       timestamp: serverData.tripOffer.timestamp || Date.now(),
-      for: "io" as const, // Default value
+      for: (serverData.tripOffer.for || "io") as "io" | "hired",
+      tripType: serverData.tripOffer.tripType,
+      tripCategory: serverData.tripOffer.tripCategory,
+      serviceType: serverData.tripOffer.serviceType,
     },
 
     // LiveRideOfferItem required fields
@@ -408,6 +520,7 @@ export function formatSocketDataToBroadcastOffer(
     hasPackage: formattedTripOffer.rideDetails.hasPackage,
     specialRequirements: formattedTripOffer.specialRequirements,
     packageInfo: formattedTripOffer.packageInfo,
+    carType: formattedTripOffer.rideDetails.carType, // Include carType from mapped serviceType
 
     // Pickup details
     pickupTime: formattedTripOffer.rideDetails.pickupTime,

@@ -43,7 +43,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 export default function VerifyOtpScreen() {
   const router = useRouter();
   const log = logger();
-  const { context } = useLocalSearchParams<{ context?: string }>();
+  const { context, loginData: loginDataParam } = useLocalSearchParams<{ 
+    context?: string;
+    loginData?: string;
+  }>();
   const [currentAuth, setAuth] = useAuth();
   const [driver, setDriver] = useDriver();
   const { removeRetrievalId, removeTripId } = useDriver();
@@ -83,9 +86,7 @@ export default function VerifyOtpScreen() {
 
   // Handles granting app access after a successful OTP verification for login
   const completeLoginAfterOtp = async () => {
-    handleCompleteLoginAfterOtp({})
-    // await execute();
-    log("Current user", userData);
+    await handleCompleteLoginAfterOtp();
   };
 
   // Handles profile deletion cleanup and navigation after OTP verification
@@ -295,78 +296,96 @@ export default function VerifyOtpScreen() {
     return textColors.black;
   };
 
-  const driverIdMapping = {
-    1: "d-1",
-    2: "d-2",
-    3: "d-3",
-    4: "d-4",
-    5: "d-5",
-  };
+  const handleCompleteLoginAfterOtp = async () => {
+    try {
+      // Parse login data from route params
+      let loginResponse: any = null;
+      if (loginDataParam) {
+        try {
+          loginResponse = JSON.parse(loginDataParam);
+          log("Parsed login data from params", loginResponse);
+        } catch (error) {
+          log("Error parsing login data:", error);
+          showToast("Invalid login data", {
+            variant: "error",
+            position: "top",
+          });
+          return;
+        }
+      }
 
-  // Car type mapping based on login ID
-  const carTypeMapping = {
-    1: "luxury", // Luxury - can select all types
-    2: "sedan", // Sedan - can select Sedan and Economy
-    3: "suv", // SUV - can select SUV, Sedan, and Economy
-    4: "economy", // Economy - can only select Economy
-    5: "luxury", // Luxury - can select all types
-  };
-
-  const handleCompleteLoginAfterOtp = async (data: any) => {
-    log("User data", data);
-    if (data?.user || currentAuth?.loginId) {
-      // Get the login ID from auth context (set during login)
-      const loginId = currentAuth?.loginId as number | undefined;
-
-      // Validate login ID and get corresponding driver ID
-      if (
-        !loginId ||
-        typeof loginId !== "number" ||
-        loginId < 1 ||
-        loginId > 5
-      ) {
-        console.error("Invalid login ID:", loginId);
-        showToast("Invalid login ID received", {
+      if (!loginResponse || !loginResponse.user) {
+        log("No login data available");
+        showToast("Login data not found", {
           variant: "error",
           position: "top",
         });
         return;
       }
 
-      const driverId = driverIdMapping[loginId as keyof typeof driverIdMapping];
-      const carType = carTypeMapping[loginId as keyof typeof carTypeMapping];
+      const user = loginResponse.user;
+      
+      // Extract driver ID from driver_rec_id
+      const driverId = user.driver_rec_id;
+      
+      // Extract driver name from personal_information
+      const firstName = user.personal_information?.first_name || "";
+      const lastName = user.personal_information?.last_name || "";
+      const driverName = `${firstName} ${lastName}`.trim() || "Driver";
+      
+      // Extract driver type from driver_type field
+      // Map backend driver_type to app DRIVER_TYPES
+      let driverType: string = DRIVER_TYPES.INDEPENDENT_OPERATOR; // default
+      if (user.driver_type) {
+        const backendDriverType = user.driver_type.toUpperCase();
+        if (backendDriverType.includes("NETWORK_IO") || backendDriverType.includes("IO")) {
+          driverType = DRIVER_TYPES.INDEPENDENT_OPERATOR;
+        } else if (backendDriverType.includes("NETWORK") || backendDriverType.includes("EMPLOYEE")) {
+          driverType = DRIVER_TYPES.HIRED; // Use HIRED for network/employee drivers
+        }
+      }
 
+      // Extract online status
+      const isOnline = user.is_online === "YES" || user.is_online === true;
+
+      // Set auth context with actual user data
       await setAuth({
         ...currentAuth,
         user: {
           id: driverId,
-          name: data?.user?.name || `Driver ${loginId}`,
-          type:
-            data?.user?.type === "io" ||
-            data?.user?.type === "independent-operator"
-              ? DRIVER_TYPES.INDEPENDENT_OPERATOR
-              : DRIVER_TYPES.INDEPENDENT_OPERATOR,
+          name: driverName,
+          type: driverType,
         },
       } as any);
 
-      // Set car type in driver context
+      // Set driver context with online status
       await setDriver({
-        ...(driver ?? { online: false }),
-        carType: carType,
-        online: driver?.online ?? false,
+        ...(driver ?? {}),
+        online: isOnline,
       });
+
+      log("Auth context set with user data:", {
+        id: driverId,
+        name: driverName,
+        type: driverType,
+        online: isOnline,
+      });
+
       showToast("Logged in successfully", {
         variant: "success",
         position: "top",
       });
       router.replace("/(tabs)");
+    } catch (error) {
+      log("Error completing login after OTP:", error);
+      showToast("Failed to complete login", {
+        variant: "error",
+        position: "top",
+      });
     }
   };
 
   useEffect(() => {
-    if (userData) {
-      handleCompleteLoginAfterOtp(userData);
-    }
     if (verifyOtpError) {
       showToast(verifyOtpError, { variant: "error", position: "top" });
     }
@@ -376,7 +395,7 @@ export default function VerifyOtpScreen() {
     if (userDataError) {
       showToast(userDataError, { variant: "error", position: "top" });
     }
-  }, [verifyOtpError, resendOtpError, userDataError, userData]);
+  }, [verifyOtpError, resendOtpError, userDataError]);
 
   return (
     <SafeAreaView style={styles.container}>

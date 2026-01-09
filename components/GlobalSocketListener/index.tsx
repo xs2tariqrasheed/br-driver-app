@@ -78,6 +78,7 @@ export function GlobalSocketListener() {
     addBroadcastOffer,
     removeBroadcastOffer,
     markBroadcastOfferAsExpired,
+    updateBroadcastOffer,
     broadcastOffers,
   } = useBroadcastJobOffers();
 
@@ -363,6 +364,14 @@ export function GlobalSocketListener() {
               log(
                 `❌ Broadcast bid ${response} - keeping offer bidable for rebidding`
               );
+
+              // Reset offer status back to "offered" so timer can continue
+              if (tripId) {
+                updateBroadcastOffer(tripId, {
+                  status: "offered" as any,
+                });
+                log(`[GlobalSocketListener] Reset offer ${tripId} status to "offered" after bid rejection`);
+              }
 
               // Don't close modals or change hasAnyActiveOffer for broadcast offers
               // The offer should remain available for rebidding
