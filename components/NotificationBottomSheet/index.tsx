@@ -19,6 +19,8 @@ export interface NotificationBottomSheetProps {
   notification: NotificationItem | null;
   /** Callback when reply is sent (only for special notifications) */
   onSendReply?: (reply: string) => void;
+  /** Whether a reply is currently being sent */
+  isReplying?: boolean;
 }
 
 const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
@@ -26,6 +28,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   onClose,
   notification,
   onSendReply,
+  isReplying = false,
 }) => {
   const [replyText, setReplyText] = useState("");
   const { showRideOfferModal, hasAnyActiveOffer, getTemporaryRide } =
@@ -40,6 +43,8 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   const formattedDateTime = formatDateTimestamp(notification.dateTime);
 
   const handleSendReply = () => {
+    if (isReplying) return; // Prevent action during processing
+    
     if (!replyText.trim()) {
       Alert.alert("Error", "Please enter a reply message");
       return;
@@ -120,6 +125,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
               rounded="half"
               variant="primary"
               onPress={handleViewDetails}
+              disabled={isReplying}
             >
               View Details
             </Button>
@@ -132,6 +138,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
               placeholderTextColor={textColors.grey500}
               value={replyText}
               onChangeText={setReplyText}
+              disabled={isReplying}
             />
 
             <View style={styles.buttonContainer}>
@@ -140,6 +147,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
                 rounded="half"
                 block="half"
                 onPress={handleCancel}
+                disabled={isReplying}
               >
                 Cancel
               </Button>
@@ -148,15 +156,16 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
                 block="half"
                 variant="primary"
                 onPress={handleSendReply}
+                disabled={isReplying || !replyText.trim()}
               >
-                Send
+                {isReplying ? "Sending..." : "Send"}
               </Button>
             </View>
           </View>
         ) : (
           /* Regular notification done button */
           <View style={styles.doneSection}>
-            <Button rounded="half" variant="primary" onPress={handleDone}>
+            <Button rounded="half" variant="primary" onPress={handleDone} disabled={isReplying}>
               Done
             </Button>
           </View>

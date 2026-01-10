@@ -7,6 +7,8 @@ export const AUTH_ENDPOINTS = {
   login: "/auth/signin",
   /** Request password reset OTP */
   requestOtp: "/auth/forgot-password",
+  /** Request OTP for forgot user ID */
+  requestOtpForUserId: "/auth/forgot-user-id",
   /** Verify email with OTP */
   verifyOtp: "/auth/verify",
   /** Reset password with OTP */
@@ -61,6 +63,31 @@ export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;
 export const APP_ENDPOINTS = {
   /** Get app content */
   content: "/settings-service/content",
+} as const;
+
+export const DRIVER_SETTINGS_ENDPOINTS = {
+  /** Update driver settings */
+  updateSettings: "/settings-service/driver/settings",
+} as const;
+
+export const DESIRED_DESTINATIONS_ENDPOINTS = {
+  /** Get all desired destinations */
+  getDestinations: "/settings-service/driver/desired-destinations",
+  /** Create a new desired destination */
+  createDestination: "/settings-service/driver/desired-destinations",
+  /** Update a desired destination */
+  updateDestination: (id: number) => `/settings-service/driver/desired-destinations/${id}`,
+  /** Delete a desired destination */
+  deleteDestination: (id: number) => `/settings-service/driver/desired-destinations/${id}`,
+} as const;
+
+export const NOTIFICATIONS_ENDPOINTS = {
+  /** Get all notifications for the driver */
+  getNotifications: "/notifications/notifications",
+  /** Mark a notification as read */
+  markAsRead: (id: string | number) => `/notifications/notifications/${id}/read`,
+  /** Reply to an actionable notification */
+  reply: (id: string | number) => `/notifications/notifications/${id}/reply`,
 } as const;
 
 // Active Trip API Routes

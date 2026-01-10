@@ -52,7 +52,9 @@ export default function HomeScreen() {
   const [driver, setDriver] = useDriver();
   const { notifications, getRetrievalId, addNotifications } = useDriver();
   const { hasAnyActiveOffer, setHasAnyActiveOffer } = useRideOffer();
-  const [settings, setSettings] = useSettings();
+  const settingsContext = useSettings();
+  const [settings, setSettings, status] = settingsContext;
+  const { isLoading: isSavingSettings, error: settingsError, clearError: clearSettingsError } = status;
   const { connectSocket, disconnectSocket } = useSocket({
     driverId: auth?.user?.id,
   });
@@ -141,8 +143,29 @@ export default function HomeScreen() {
 
   // Ride Types bottom sheet state
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
-  const openRideTypes = () => setSheetOpen(true);
-  const closeRideTypes = () => setSheetOpen(false);
+  // Store initial toggle states when sheet opens (for revert on error)
+  const initialToggleStatesRef = useRef<{
+    economy: boolean;
+    sedan: boolean;
+    suv: boolean;
+    luxury: boolean;
+  } | null>(null);
+  
+  const openRideTypes = () => {
+    // Store initial states when opening the sheet
+    initialToggleStatesRef.current = {
+      economy,
+      sedan,
+      suv,
+      luxury,
+    };
+    setSheetOpen(true);
+  };
+  const closeRideTypes = () => {
+    setSheetOpen(false);
+    // Clear the ref when closing
+    initialToggleStatesRef.current = null;
+  };
 
   // Mute Notifications bottom sheet state
   const [muteSheetOpen, setMuteSheetOpen] = useState<boolean>(false);
@@ -152,6 +175,17 @@ export default function HomeScreen() {
   // Logger function
   const log = logger();
   const demoNotificationsInitialized = useRef(false);
+
+  // Show error toast when settings error occurs
+  useEffect(() => {
+    if (settingsError) {
+      showToast(settingsError, {
+        variant: "error",
+        position: "top",
+      });
+      clearSettingsError();
+    }
+  }, [settingsError, clearSettingsError]);
 
   // Initialize demo notifications on mount
   useEffect(() => {
@@ -259,14 +293,44 @@ export default function HomeScreen() {
   }, [driver?.carType]);
 
   const handleSaveRideTypes = async () => {
-    await setSettings({
-      ...settings,
-      ridePreferences: {
-        ...settings.ridePreferences,
-        rideTypes: { economy, sedan, suv, luxury },
-      },
-    });
-    closeRideTypes();
+    // Store current states before save attempt
+    const currentStates = {
+      economy,
+      sedan,
+      suv,
+      luxury,
+    };
+
+    try {
+      await setSettings({
+        ...settings,
+        ridePreferences: {
+          ...settings.ridePreferences,
+          rideTypes: { economy, sedan, suv, luxury },
+        },
+      });
+      showToast("Offer type preferences saved successfully", {
+        variant: "success",
+        position: "top",
+      });
+      closeRideTypes();
+    } catch (error: any) {
+      // Revert to initial states on error
+      if (initialToggleStatesRef.current) {
+        setEconomy(initialToggleStatesRef.current.economy);
+        setSedan(initialToggleStatesRef.current.sedan);
+        setSuv(initialToggleStatesRef.current.suv);
+        setLuxury(initialToggleStatesRef.current.luxury);
+      }
+      
+      // Error is handled by context and shown via useEffect
+      const errorMessage =
+        error?.message || "Failed to save offer type preferences";
+      showToast(errorMessage, {
+        variant: "error",
+        position: "top",
+      });
+    }
   };
 
   const handleSelectSort = (key: SortKey) => {
@@ -684,7 +748,7 @@ export default function HomeScreen() {
                   value={economy}
                   setValue={setEconomy}
                   size={styles.toggleSmall}
-                  disabled={getRideTypeDisabled.economy}
+                  disabled={getRideTypeDisabled.economy || isSavingSettings}
                 />
               </View>
               <View style={styles.sheetRow}>
@@ -700,7 +764,7 @@ export default function HomeScreen() {
                   value={sedan}
                   setValue={setSedan}
                   size={styles.toggleSmall}
-                  disabled={getRideTypeDisabled.sedan}
+                  disabled={getRideTypeDisabled.sedan || isSavingSettings}
                 />
               </View>
               <View style={styles.sheetRow}>
@@ -716,7 +780,7 @@ export default function HomeScreen() {
                   value={suv}
                   setValue={setSuv}
                   size={styles.toggleSmall}
-                  disabled={getRideTypeDisabled.suv}
+                  disabled={getRideTypeDisabled.suv || isSavingSettings}
                 />
               </View>
               <View style={styles.sheetRow}>
@@ -732,7 +796,7 @@ export default function HomeScreen() {
                   value={luxury}
                   setValue={setLuxury}
                   size={styles.toggleSmall}
-                  disabled={getRideTypeDisabled.luxury}
+                  disabled={getRideTypeDisabled.luxury || isSavingSettings}
                 />
               </View>
             </View>
@@ -741,8 +805,10 @@ export default function HomeScreen() {
                 rounded="half"
                 variant="primary"
                 onPress={handleSaveRideTypes}
+                loading={isSavingSettings}
+                disabled={isSavingSettings}
               >
-                Save
+                {isSavingSettings ? "Saving..." : "Save"}
               </Button>
             </View>
           </View>

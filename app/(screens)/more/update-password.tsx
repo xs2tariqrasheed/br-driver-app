@@ -19,6 +19,7 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
 import { usePost } from "@/hooks/usePost";
 import { useRouter } from "expo-router";
 
@@ -45,7 +46,7 @@ export default function UpdatePasswordScreen() {
   const passwordValue = watch("password");
   const confirmValue = watch("confirmPassword");
 
-  // API: update password (dummy)
+  // API: update password (authenticated)
   const {
     loading: submitting,
     error: submitError,
@@ -53,7 +54,7 @@ export default function UpdatePasswordScreen() {
   } = usePost<
     any,
     { oldPassword: string; password: string; confirmPassword: string }
-  >(AUTH_ENDPOINTS.updatePassword);
+  >(AUTH_ENDPOINTS.updatePassword, API_CLIENT_TYPES.ME);
 
   // Manual visibility override for helper panels via Info icon
   // null => follow auto rule (visible when field has value)

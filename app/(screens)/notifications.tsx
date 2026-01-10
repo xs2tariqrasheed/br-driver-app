@@ -9,9 +9,10 @@ import {
   useDriver,
 } from "@/context/DriverContext";
 import { Image } from "expo-image";
-import { router, Stack } from "expo-router";
-import React, { useState } from "react";
+import { router, Stack, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   SafeAreaView,
   ScrollView,
@@ -25,19 +26,56 @@ type TabType = "All" | "Unread" | "Read";
 const NotificationsScreen: React.FC = () => {
   const {
     notifications,
+    fetchNotifications,
     markNotificationAsRead,
+    replyToNotification,
     addNotifications,
     getNotificationById,
     deleteNotification,
     deleteAllNotifications,
+    isFetchingNotifications,
+    isMarkingAsRead,
+    isDeletingNotification,
+    isReplyingToNotification,
   } = useDriver();
   const [selectedNotification, setSelectedNotification] =
     useState<NotificationItemType | null>(null);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("Unread");
-  // Sample notifications are now initialized in DriverContext
+
+  // Fetch notifications only when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      console.log("[NotificationsScreen] useFocusEffect triggered");
+      let isActive = true;
+
+      const loadNotifications = async () => {
+        if (!isActive) return;
+        try {
+          console.log("[NotificationsScreen] Calling fetchNotifications");
+          await fetchNotifications();
+        } catch (error) {
+          if (!isActive) return;
+          console.error("Error loading notifications:", error);
+        }
+      };
+
+      loadNotifications();
+
+      // Cleanup function to prevent state updates if component unmounts
+      return () => {
+        console.log("[NotificationsScreen] useFocusEffect cleanup");
+        isActive = false;
+      };
+    }, [fetchNotifications])
+  );
+
+  // Check if any API operation is in progress
+  const isProcessing = isFetchingNotifications || isMarkingAsRead || isDeletingNotification || isReplyingToNotification;
 
   const handleNotificationPress = async (notificationId: string) => {
+    if (isProcessing) return; // Prevent action during processing
+
     const notification = getNotificationById(notificationId);
     if (!notification) return;
 
@@ -56,16 +94,29 @@ const NotificationsScreen: React.FC = () => {
     setSelectedNotification(null);
   };
 
-  const handleSendReply = (reply: string) => {
-    Alert.alert(
-      "Reply Sent",
-      `Your reply: "${reply}" has been sent successfully.`
-    );
-    console.log("Reply sent:", reply);
-    // Here you would typically send the reply to your backend
+  const handleSendReply = async (reply: string) => {
+    if (!selectedNotification) return;
+
+    try {
+      await replyToNotification(selectedNotification.id, reply);
+      Alert.alert(
+        "Reply Sent",
+        `Your reply: "${reply}" has been sent successfully.`
+      );
+      console.log("Reply sent:", reply);
+    } catch (error: any) {
+      console.error("Error sending reply:", error);
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to send reply. Please try again.",
+        [{ text: "OK" }]
+      );
+    }
   };
 
   const handleDeleteNotification = async (notificationId: string) => {
+    if (isProcessing) return; // Prevent action during processing
+
     Alert.alert(
       "Delete Notification",
       "Are you sure you want to delete this notification?",
@@ -97,7 +148,7 @@ const NotificationsScreen: React.FC = () => {
   };
 
   const handleDeleteAll = async () => {
-    if (notifications.length === 0) return;
+    if (notifications.length === 0 || isProcessing) return; // Prevent action during processing
 
     Alert.alert(
       "Delete All Notifications",
@@ -183,19 +234,20 @@ const NotificationsScreen: React.FC = () => {
         rightAccessory={
           notifications.length > 0 ? (
             <TouchableOpacity
-              style={styles.deleteAllButton}
+              style={[styles.deleteAllButton, isProcessing && styles.disabledButton]}
               onPress={handleDeleteAll}
               activeOpacity={0.6}
+              disabled={isProcessing}
             >
               <Image
                 source={require("@/assets/images/delete-icon.png")}
-                style={styles.deleteAllIcon}
+                style={[styles.deleteAllIcon, isProcessing && styles.disabledIcon]}
                 contentFit="contain"
               />
               <Typography
                 type="bodySmall"
                 weight="medium"
-                style={styles.deleteAllText}
+                style={[styles.deleteAllText, isProcessing && styles.disabledText]}
               >
                 Clear All
               </Typography>
@@ -207,7 +259,14 @@ const NotificationsScreen: React.FC = () => {
       {/* Tab Navigator */}
       <TabNavigator />
 
-      {filteredNotifications.length > 0 ? (
+      {isFetchingNotifications ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={textColors.teal700} />
+          <Typography type="bodyMedium" weight="regular" style={styles.loadingText}>
+            Loading notifications...
+          </Typography>
+        </View>
+      ) : filteredNotifications.length > 0 ? (
         <ScrollView style={{ flex: 1 }}>
           {filteredNotifications.map((notification) => (
             <NotificationItem
@@ -239,6 +298,7 @@ const NotificationsScreen: React.FC = () => {
         onClose={handleBottomSheetClose}
         notification={selectedNotification}
         onSendReply={handleSendReply}
+        isReplying={isReplyingToNotification}
         />
       </ThemedView>
     </SafeAreaView>
@@ -286,6 +346,24 @@ const styles = StyleSheet.create({
   },
   deleteAllText: {
     color: textColors.red500,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledIcon: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    opacity: 0.5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
+  loadingText: {
+    color: textColors.grey600,
   },
 });
 

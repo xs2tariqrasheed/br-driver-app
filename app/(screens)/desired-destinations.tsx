@@ -5,6 +5,7 @@ import DesiredLocationItem from "@/components/DesiredLocationItem";
 import Divider from "@/components/Divider";
 import Input from "@/components/Form/Input";
 import Header from "@/components/Header";
+import Loader from "@/components/Loader";
 import Logo from "@/components/Logo";
 import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
@@ -17,8 +18,8 @@ import {
   getValidDestinations,
   logger,
 } from "@/utils/helpers";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -31,7 +32,16 @@ import {
 export default function DesiredDestinationsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [driver, setDriver] = useDriver();
+  const driverContext = useDriver();
+  const [driver, setDriver] = driverContext;
+  const {
+    fetchDesiredDestinations,
+    createDesiredDestination: createDestinationAPI,
+    updateDesiredDestination: updateDestinationAPI,
+    deleteDesiredDestination: deleteDestinationAPI,
+    isLoadingDestinations,
+    destinationsError,
+  } = driverContext;
 
   // Local state for desired destinations list
   const [destinations, setDestinations] = useState<DesiredDestination[]>([]);
@@ -44,10 +54,53 @@ export default function DesiredDestinationsScreen() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState<boolean>(false);
 
+  // Loading state for fetching destinations (initial load)
+  const [isFetchingDestinations, setIsFetchingDestinations] = useState<boolean>(true);
+  
+  // Loading state for save operation
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
   // Logger function
   const log = logger();
 
-  // Load destinations from driver context on mount
+  // Fetch destinations from backend whenever screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadDestinations = async () => {
+        if (!isActive) return;
+        
+        setIsFetchingDestinations(true);
+        try {
+          await fetchDesiredDestinations();
+        } catch (error) {
+          if (!isActive) return;
+          log("Error loading destinations:", error);
+          // If fetch fails, fall back to local storage
+          if (driver?.desiredDestinations) {
+            const validDestinations = getValidDestinations(
+              driver.desiredDestinations
+            );
+            setDestinations(validDestinations);
+          }
+        } finally {
+          if (isActive) {
+            setIsFetchingDestinations(false);
+          }
+        }
+      };
+      
+      loadDestinations();
+
+      // Cleanup function to prevent state updates if component unmounts
+      return () => {
+        isActive = false;
+      };
+    }, []) // Empty dependency array - only run on focus
+  );
+
+  // Load destinations from driver context when they change
   useEffect(() => {
     if (driver?.desiredDestinations) {
       const validDestinations = getValidDestinations(
@@ -56,6 +109,16 @@ export default function DesiredDestinationsScreen() {
       setDestinations(validDestinations);
     }
   }, [driver?.desiredDestinations]);
+
+  // Show error toast when destinationsError changes
+  useEffect(() => {
+    if (destinationsError) {
+      showToast(destinationsError, {
+        variant: "error",
+        position: "top",
+      });
+    }
+  }, [destinationsError]);
 
   // Handle incoming params from map screen
   useEffect(() => {
@@ -81,16 +144,27 @@ export default function DesiredDestinationsScreen() {
   };
 
   const handleSave = async () => {
-    if (driver) {
-      await setDriver({
-        ...driver,
-        desiredDestinations: destinations,
+    if (!driver) return;
+
+    setIsSaving(true);
+    try {
+      // Sync all destinations with backend
+      // For now, we'll just show success since individual operations already sync
+      // In the future, we could implement a bulk update endpoint
+      showToast("Destinations saved successfully", {
+        variant: "success",
+        position: "top",
       });
+    } catch (error: any) {
+      const errorMessage =
+        error?.message || "Failed to save destinations";
+      showToast(errorMessage, {
+        variant: "error",
+        position: "top",
+      });
+    } finally {
+      setIsSaving(false);
     }
-    showToast("Destinations saved successfully", {
-      variant: "success",
-      position: "top",
-    });
   };
 
   const isSaveDisabled = useMemo(
@@ -105,6 +179,14 @@ export default function DesiredDestinationsScreen() {
         title="Desired Destinations"
         onBackPress={() => router.replace("/(tabs)")}
       />
+      {isFetchingDestinations && (
+        <View style={styles.loadingOverlay}>
+          <Loader size="medium" />
+          <Typography type="bodyMedium" style={styles.loadingText}>
+            Loading destinations...
+          </Typography>
+        </View>
+      )}
 
       <ScrollView
         style={styles.scroll}
@@ -129,7 +211,7 @@ export default function DesiredDestinationsScreen() {
             variant="outlined"
             rounded="half"
             onPress={handleAddDestination}
-            disabled={destinations.length >= MAX_DESIRED_LOCATIONS}
+            disabled={destinations.length >= MAX_DESIRED_LOCATIONS || isLoadingDestinations || isFetchingDestinations}
           >
             + Add Destination
           </Button>
@@ -174,8 +256,21 @@ export default function DesiredDestinationsScreen() {
                     setEditingIndex(idx);
                     setIsSheetOpen(true);
                   }}
-                  onDelete={() => {
-                    setDestinations(destinations.filter((_, i) => i !== idx));
+                  onDelete={async () => {
+                    try {
+                      await deleteDestinationAPI(dest.id);
+                      showToast("Destination deleted successfully", {
+                        variant: "success",
+                        position: "top",
+                      });
+                    } catch (error: any) {
+                      const errorMessage =
+                        error?.message || "Failed to delete destination";
+                      showToast(errorMessage, {
+                        variant: "error",
+                        position: "top",
+                      });
+                    }
                   }}
                 />
               </View>
@@ -218,9 +313,10 @@ export default function DesiredDestinationsScreen() {
           rounded="half"
           variant="primary"
           onPress={handleSave}
-          disabled={isSaveDisabled}
+          loading={isSaving || isFetchingDestinations}
+          disabled={isSaveDisabled || isLoadingDestinations || isSaving || isFetchingDestinations}
         >
-          Save
+          {isSaving || isFetchingDestinations ? "Saving..." : "Save"}
         </Button>
       </View>
 
@@ -262,37 +358,65 @@ export default function DesiredDestinationsScreen() {
             <Button
               rounded="half"
               variant="primary"
+              loading={isSaving || isFetchingDestinations}
               disabled={
                 !inputAddress.trim() ||
                 (editingIndex === null &&
-                  destinations.length >= MAX_DESIRED_LOCATIONS)
+                  destinations.length >= MAX_DESIRED_LOCATIONS) ||
+                isLoadingDestinations ||
+                isFetchingDestinations
               }
-              onPress={() => {
+              onPress={async () => {
                 const trimmed = inputAddress.trim();
                 if (!trimmed) return;
 
-                if (editingIndex !== null) {
-                  // Edit existing destination
-                  setDestinations((prev) => {
-                    const copy = [...prev];
-                    copy[editingIndex] = createDesiredDestination(trimmed);
-                    return copy;
-                  });
-                } else {
-                  // Add new destination
-                  if (destinations.length >= MAX_DESIRED_LOCATIONS) return;
-                  setDestinations((prev) => [
-                    ...prev,
-                    createDesiredDestination(trimmed),
-                  ]);
-                }
+                try {
+                  if (editingIndex !== null) {
+                    // Edit existing destination
+                    const existingDest = destinations[editingIndex];
+                    const updatedDest = {
+                      ...existingDest,
+                      address: trimmed,
+                    };
+                    await updateDestinationAPI(updatedDest);
+                    showToast("Destination updated successfully", {
+                      variant: "success",
+                      position: "top",
+                    });
+                  } else {
+                    // Add new destination
+                    if (destinations.length >= MAX_DESIRED_LOCATIONS) {
+                      showToast("Maximum destinations limit reached", {
+                        variant: "error",
+                        position: "top",
+                      });
+                      return;
+                    }
+                    const newDest = createDesiredDestination(trimmed);
+                    await createDestinationAPI({
+                      address: newDest.address,
+                      expired_at: newDest.expired_at,
+                    });
+                    showToast("Destination added successfully", {
+                      variant: "success",
+                      position: "top",
+                    });
+                  }
 
-                setInputAddress("");
-                setEditingIndex(null);
-                setIsSheetOpen(false);
+                  setInputAddress("");
+                  setEditingIndex(null);
+                  setIsSheetOpen(false);
+                } catch (error: any) {
+                  const errorMessage =
+                    error?.message || "Failed to save destination";
+                  showToast(errorMessage, {
+                    variant: "error",
+                    position: "top",
+                  });
+                }
               }}
             >
-              Save
+              {isSaving || isFetchingDestinations ? "Saving..." : "Save"}
             </Button>
           </View>
         </View>
@@ -331,5 +455,20 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     paddingVertical: 16,
     width: "100%",
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: textColors.black,
   },
 });

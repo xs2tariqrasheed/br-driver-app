@@ -4,7 +4,9 @@ import Counter from "@/components/Counter";
 import Divider from "@/components/Divider";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
+import Loader from "@/components/Loader";
 import Logo from "@/components/Logo";
+import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import {
@@ -16,7 +18,7 @@ import {
 } from "@/constants/global";
 import { useSettings } from "@/context/SettingsContext";
 import { Stack, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -28,7 +30,9 @@ import {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [settings, setSettings] = useSettings();
+  const settingsContext = useSettings();
+  const [settings, setSettings, status] = settingsContext;
+  const { isLoading, error, clearError } = status;
 
   const [featured, setFeatured] = useState<number>(
     settings.featuredDriverPriceUSD ?? 0
@@ -49,17 +53,31 @@ export default function SettingsScreen() {
   const openSheet = () => setSheetOpen(true);
   const closeSheet = () => setSheetOpen(false);
 
-  // No-op helpers removed; using reusable Counter component instead.
+  // Show error toast when error occurs
+  useEffect(() => {
+    if (error) {
+      showToast(error, { variant: "error", position: "top" });
+      clearError();
+    }
+  }, [error, clearError]);
 
   const handleSave = async () => {
-    await setSettings({
-      ...settings,
-      featuredDriverPriceUSD: featured,
-      etaBufferMinutes: etaMinutes,
-      autoBidEnabled,
-      autoBidStrategy: autoBidEnabled ? strategy : null,
-    });
-    router.back();
+    try {
+      await setSettings({
+        ...settings,
+        featuredDriverPriceUSD: featured,
+        etaBufferMinutes: etaMinutes,
+        autoBidEnabled,
+        autoBidStrategy: autoBidEnabled ? strategy : null,
+      });
+      showToast("Settings saved successfully", {
+        variant: "success",
+        position: "top",
+      });
+      router.back();
+    } catch (e) {
+      // Error is handled by context and shown via useEffect
+    }
   };
 
   return (
@@ -70,10 +88,19 @@ export default function SettingsScreen() {
         }}
       />
       <Header title="Settings" onBackPress={() => router.back()} />
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <Loader size="medium" />
+          <Typography type="bodyMedium" style={styles.loadingText}>
+            Saving settings...
+          </Typography>
+        </View>
+      )}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        pointerEvents={isLoading ? "none" : "auto"}
       >
         <View style={styles.centeredRow}>
           <Logo size="Large" />
@@ -102,6 +129,7 @@ export default function SettingsScreen() {
             max={FEATURED_DRIVER_PRICE_MAX}
             step={1}
             formatLabel={(v) => `$${v}`}
+            disabled={isLoading}
           />
         </View>
 
@@ -130,6 +158,7 @@ export default function SettingsScreen() {
             max={ETA_BUFFER_MINUTES_MAX}
             step={1}
             formatLabel={(v) => `${v} mins`}
+            disabled={isLoading}
           />
         </View>
 
@@ -151,6 +180,7 @@ export default function SettingsScreen() {
                 setAutoBidEnabled(next);
                 if (!next) setStrategy(null);
               }}
+              disabled={isLoading}
               size={{ width: 42, height: 24 }}
             />
           </View>
@@ -166,7 +196,8 @@ export default function SettingsScreen() {
             <TouchableOpacity
               accessibilityRole="button"
               onPress={openSheet}
-              style={styles.dropdown}
+              style={[styles.dropdown, isLoading && styles.disabled]}
+              disabled={isLoading}
             >
               <Typography
                 type="bodyLarge"
@@ -186,8 +217,13 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button rounded="half" variant="primary" onPress={handleSave}>
-          Save
+        <Button 
+          rounded="half" 
+          variant="primary" 
+          onPress={handleSave}
+          disabled={isLoading}
+        >
+          {isLoading ? "Saving..." : "Save"}
         </Button>
       </View>
 
@@ -301,4 +337,19 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontSize: 21, color: textColors.black },
   sheetRow: { paddingVertical: 12 },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: textColors.black,
+  },
 });

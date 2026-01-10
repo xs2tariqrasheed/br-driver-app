@@ -58,12 +58,16 @@ export type SettingsObject = {
 type SettingsState = {
   settings: SettingsObject | null;
   isHydrated: boolean;
+  isLoading: boolean;
+  error: string | null;
 };
 
 type HydrateAction = { type: "HYDRATE"; payload: SettingsObject };
 type SetAction = { type: "SET"; payload: SettingsObject };
 type ClearAction = { type: "CLEAR" };
-type SettingsAction = HydrateAction | SetAction | ClearAction;
+type SetLoadingAction = { type: "SET_LOADING"; payload: boolean };
+type SetErrorAction = { type: "SET_ERROR"; payload: string | null };
+type SettingsAction = HydrateAction | SetAction | ClearAction | SetLoadingAction | SetErrorAction;
 
 export const DEFAULT_SETTINGS: SettingsObject = {
   loginSettings: {
@@ -96,16 +100,25 @@ export const DEFAULT_SETTINGS: SettingsObject = {
   autoBidStrategy: null,
 };
 
-const initialState: SettingsState = { settings: null, isHydrated: false };
+const initialState: SettingsState = { 
+  settings: null, 
+  isHydrated: false,
+  isLoading: false,
+  error: null,
+};
 
 function reducer(state: SettingsState, action: SettingsAction): SettingsState {
   switch (action.type) {
     case "HYDRATE":
-      return { settings: action.payload, isHydrated: true };
+      return { ...state, settings: action.payload, isHydrated: true };
     case "SET":
       return { ...state, settings: action.payload };
     case "CLEAR":
       return { ...state, settings: DEFAULT_SETTINGS };
+    case "SET_LOADING":
+      return { ...state, isLoading: action.payload };
+    case "SET_ERROR":
+      return { ...state, error: action.payload };
     default:
       return state;
   }
@@ -113,7 +126,12 @@ function reducer(state: SettingsState, action: SettingsAction): SettingsState {
 
 type SettingsContextValue = [
   SettingsObject,
-  (next: SettingsObject) => Promise<void>
+  (next: SettingsObject) => Promise<void>,
+  {
+    isLoading: boolean;
+    error: string | null;
+    clearError: () => void;
+  }
 ];
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(
@@ -164,18 +182,105 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const setSettings = useCallback(async (next: SettingsObject) => {
-    dispatch({ type: "SET", payload: next });
-    try {
-      await setStorageItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // ignore persistence failures
-    }
+  const setSettings = useCallback(
+    async (next: SettingsObject) => {
+      // Capture current settings for revert if needed
+      const previousSettings = state.settings;
+
+      dispatch({ type: "SET_LOADING", payload: true });
+      dispatch({ type: "SET_ERROR", payload: null });
+
+      // Update local state immediately for better UX
+      dispatch({ type: "SET", payload: next });
+
+      try {
+        // Save to local storage (non-blocking)
+        try {
+          await setStorageItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+        } catch (storageErr) {
+          console.warn("Local storage save failed:", storageErr);
+        }
+
+        // Sync with backend API
+        const { settingsApiClient } = await import("@/config/apiConfig");
+        const { DRIVER_SETTINGS_ENDPOINTS } = await import("@/constants/endpoints");
+
+        const response = await settingsApiClient.post(
+          DRIVER_SETTINGS_ENDPOINTS.updateSettings,
+          next
+        );
+
+        // Check if the response indicates success or failure
+        const responseData = response?.data;
+        const hasSuccessFlag = responseData?.success === true;
+        const dbResponseCode = responseData?.data?.jHeader?.responseCode;
+        const isDbSuccess =
+          dbResponseCode === undefined ||
+          dbResponseCode === "0" ||
+          dbResponseCode === 0;
+
+        // If any check fails, throw error
+        if (responseData?.success === false || !isDbSuccess || !hasSuccessFlag) {
+          const errorMessage =
+            responseData?.message ||
+            responseData?.data?.jHeader?.message ||
+            responseData?.error ||
+            "Failed to sync settings to backend";
+
+          throw new Error(errorMessage);
+        }
+
+        // Settings synced successfully
+        dispatch({ type: "SET_LOADING", payload: false });
+      } catch (error: any) {
+        // REVERT: If API fails, revert the state and storage
+        if (previousSettings) {
+          dispatch({ type: "SET", payload: previousSettings });
+          try {
+            await setStorageItem(
+              SETTINGS_STORAGE_KEY,
+              JSON.stringify(previousSettings)
+            );
+          } catch (storageErr) {
+            // ignore revert failures for local storage
+          }
+        }
+
+        // Extract error message
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.response?.data?.data?.jHeader?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Failed to sync settings to backend";
+
+        console.warn("[SettingsContext] Error saving settings:", errorMessage);
+
+        dispatch({ type: "SET_ERROR", payload: errorMessage });
+        dispatch({ type: "SET_LOADING", payload: false });
+
+        // CRITICAL: Re-throw to allow caller to catch the failure
+        throw error;
+      }
+    },
+    [state.settings]
+  );
+
+  const clearError = useCallback(() => {
+    dispatch({ type: "SET_ERROR", payload: null });
   }, []);
 
   const contextValue = useMemo<SettingsContextValue>(() => {
-    return [state.settings ?? DEFAULT_SETTINGS, setSettings];
-  }, [state.settings, setSettings]);
+    return [
+      state.settings ?? DEFAULT_SETTINGS, 
+      setSettings,
+      {
+        isLoading: state.isLoading,
+        error: state.error,
+        clearError,
+      }
+    ];
+  }, [state.settings, state.isLoading, state.error, setSettings, clearError]);
 
   if (!state.isHydrated) return null;
 

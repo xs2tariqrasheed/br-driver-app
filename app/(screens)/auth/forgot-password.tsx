@@ -17,6 +17,7 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
 import { usePost } from "@/hooks/usePost";
 import { useRouter } from "expo-router";
 
@@ -43,7 +44,8 @@ export default function ForgotPasswordScreen() {
   });
 
   const { execute: requestOtp, loading } = usePost<any, ForgotFormValues>(
-    AUTH_ENDPOINTS.requestOtp
+    AUTH_ENDPOINTS.requestOtp,
+    API_CLIENT_TYPES.AUTH
   );
 
   /**
@@ -60,7 +62,11 @@ export default function ForgotPasswordScreen() {
       });
       router.push({
         pathname: "/(screens)/auth/verify-otp",
-        params: { context: "forgot-password" },
+        params: { 
+          context: "forgot-password",
+          email: data.loginId, // loginId is email behind the scenes
+          companyId: data.companyId,
+        },
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to send OTP";

@@ -1,4 +1,4 @@
-import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
+import { LIVE_JOB_ENDPOINTS, NOTIFICATIONS_ENDPOINTS } from "@/constants/endpoints";
 import {
   API_CLIENT_TYPES,
   DRIVER_STORAGE_KEY,
@@ -29,6 +29,7 @@ import React, {
   useEffect,
   useMemo,
   useReducer,
+  useState,
 } from "react";
 import { useAuth } from "./AuthContext";
 
@@ -69,6 +70,8 @@ export type DriverObject = {
 type DriverState = {
   driver: DriverObject;
   isHydrated: boolean;
+  isLoadingDestinations: boolean;
+  destinationsError: string | null;
 };
 
 type SetDriverAction = {
@@ -90,6 +93,8 @@ type DriverAction = SetDriverAction | ClearDriverAction | HydrateDriverAction;
 const initialState: DriverState = {
   driver: null,
   isHydrated: false,
+  isLoadingDestinations: false,
+  destinationsError: null,
 };
 
 function driverReducer(state: DriverState, action: DriverAction): DriverState {
@@ -114,12 +119,19 @@ type DriverContextValue = [
   (value: DriverObject) => Promise<void>
 ] & {
   notifications: NotificationItem[];
+  fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
+  replyToNotification: (notificationId: string, reply: string, affiliateNumber?: string) => Promise<any>;
   addNotification: (notification: NotificationItem) => Promise<void>;
   addNotifications: (notifications: NotificationItem[]) => Promise<void>;
   getNotificationById: (id: string) => NotificationItem | undefined;
   deleteNotification: (notificationId: string) => Promise<void>;
   deleteAllNotifications: () => Promise<void>;
+  // Notification loading states
+  isFetchingNotifications: boolean;
+  isMarkingAsRead: boolean;
+  isDeletingNotification: boolean;
+  isReplyingToNotification: boolean;
   hiddenLiveOffers: HiddenLiveOffer[];
   hideLiveOffer: (offerId: string) => Promise<void>;
   skipLiveOffer: (offerId: string) => Promise<void>;
@@ -146,6 +158,13 @@ type DriverContextValue = [
     loading: boolean;
   }>;
   removeRideState: () => Promise<void>;
+  // Desired destinations functions
+  fetchDesiredDestinations: () => Promise<void>;
+  createDesiredDestination: (destination: Omit<DesiredDestination, 'id' | 'created_at'>) => Promise<DesiredDestination>;
+  updateDesiredDestination: (destination: DesiredDestination) => Promise<void>;
+  deleteDesiredDestination: (id: number) => Promise<void>;
+  isLoadingDestinations: boolean;
+  destinationsError: string | null;
 };
 
 const DriverContext = createContext<DriverContextValue | undefined>(undefined);
@@ -215,14 +234,30 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
 
+  // Logger function - memoized to prevent infinite loops when used as a dependency
+  const log = useMemo(() => logger(), []);
+
+  // Use a ref to store the driver state to avoid dependency loops in callbacks
+  const driverRef = React.useRef(state.driver);
+  useEffect(() => {
+    driverRef.current = state.driver;
+  }, [state.driver]);
+
+  // Loading states for notifications
+  const [isFetchingNotifications, setIsFetchingNotifications] = useState(false);
+  const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
+  const [isDeletingNotification, setIsDeletingNotification] = useState(false);
+  const [isReplyingToNotification, setIsReplyingToNotification] = useState(false);
+
   // API hook for driver responses
   const { execute: submitDriverResponse } = usePost(
     LIVE_JOB_ENDPOINTS.driverResponse,
     API_CLIENT_TYPES.AUCTION
   );
 
-  // Logger function
-  const log = logger();
+  useEffect(() => {
+    console.log("[DriverProvider] Rendered");
+  });
 
   // Hydrate once on mount
   useEffect(() => {
@@ -340,6 +375,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Removed automatic fetch - notifications will be fetched when notifications screen is focused
+  // This prevents infinite loops and unnecessary API calls
+
   // Get notifications with read/unread status
   const notifications = useMemo(() => {
     const driverNotifications = state.driver?.notifications || [];
@@ -368,38 +406,195 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     return result;
   }, [state.driver?.notifications, state.driver?.readNotificationIds]);
 
+  // Fetch notifications from backend with fallback to demo
+  const fetchNotifications = useCallback(async () => {
+    console.log("[DriverProvider] fetchNotifications called");
+    setIsFetchingNotifications(true);
+    try {
+      if (!auth?.token) {
+        log("No auth token, using demo notifications");
+        const demoNotifications = createDemoNotifications();
+        // Ensure all demo notifications are unread
+        const unreadDemoNotifications = demoNotifications.map(n => ({
+          ...n,
+          messageType: "unread" as const,
+        }));
+        
+        const currentDriver = driverRef.current;
+        if (currentDriver) {
+          console.log("[DriverProvider] Setting demo notifications (auth check)");
+          await setDriver({
+            ...currentDriver,
+            notifications: unreadDemoNotifications,
+            readNotificationIds: [],
+          });
+        } else {
+          console.log("[DriverProvider] Setting demo notifications (no driver)");
+          await setDriver({
+            online: false,
+            notifications: unreadDemoNotifications,
+            readNotificationIds: [],
+          });
+        }
+        return;
+      }
+
+      try {
+        console.log("[DriverProvider] API Call: getNotifications");
+        const { notificationsApiClient } = await import("@/config/apiConfig");
+        const response = await notificationsApiClient.get(
+          NOTIFICATIONS_ENDPOINTS.getNotifications
+        );
+
+        const responseData = response?.data;
+        if (responseData?.success && Array.isArray(responseData.data) && responseData.data.length > 0) {
+          console.log("[DriverProvider] API Success: received", responseData.data.length, "notifications");
+          // Transform backend notifications to app format
+          const backendNotifications: NotificationItem[] = responseData.data.map(
+            (item: any) => ({
+              id: String(item.notification_rec_id || item.id || `notif-${Date.now()}-${Math.random()}`),
+              messageTitle: item.notification_title || item.title || "Notification",
+              messageBody: item.notification_body || item.body || item.message || "",
+              dateTime: item.created_at || item.dateTime || new Date().toISOString(),
+              messageType: item.is_read ? ("read" as const) : ("unread" as const),
+              isSpecial: item.is_special || false,
+              notificationType: item.notification_type as NotificationType | undefined,
+            })
+          );
+
+          // Update read notification IDs based on backend data
+          const readIds = backendNotifications
+            .filter((n) => n.messageType === "read")
+            .map((n) => n.id);
+
+          const currentDriver = driverRef.current;
+          if (currentDriver) {
+            await setDriver({
+              ...currentDriver,
+              notifications: backendNotifications,
+              readNotificationIds: readIds,
+            });
+          } else {
+            await setDriver({
+              online: false,
+              notifications: backendNotifications,
+              readNotificationIds: readIds,
+            });
+          }
+          log(`Fetched ${backendNotifications.length} notifications from backend`);
+        } else {
+          // Empty response, use demo notifications
+          console.log("[DriverProvider] API Empty or failure flag");
+          throw new Error("Empty response or invalid format");
+        }
+      } catch (apiError: any) {
+        console.log("[DriverProvider] API Error:", apiError.message);
+        log("Error fetching notifications from backend, using demo notifications:", apiError);
+        // Fallback to demo notifications - all unread
+        const demoNotifications = createDemoNotifications();
+        const unreadDemoNotifications = demoNotifications.map(n => ({
+          ...n,
+          messageType: "unread" as const,
+        }));
+        
+        const currentDriver = driverRef.current;
+        if (currentDriver) {
+          console.log("[DriverProvider] Fallback to demo notifications");
+          await setDriver({
+            ...currentDriver,
+            notifications: unreadDemoNotifications,
+            readNotificationIds: [],
+          });
+        } else {
+          console.log("[DriverProvider] Fallback to demo (no driver)");
+          await setDriver({
+            online: false,
+            notifications: unreadDemoNotifications,
+            readNotificationIds: [],
+          });
+        }
+      }
+    } finally {
+      setIsFetchingNotifications(false);
+    }
+  }, [auth?.token, setDriver, log]); // Removed state.driver from dependencies
+
   // Mark notification as read
   const markNotificationAsRead = useCallback(
     async (notificationId: string) => {
-      if (!state.driver) return;
+      const currentDriver = driverRef.current;
+      if (!currentDriver) return;
 
-      const currentReadIds = state.driver.readNotificationIds || [];
+      const currentReadIds = currentDriver.readNotificationIds || [];
       if (currentReadIds.includes(notificationId)) return; // Already read
 
-      const updatedDriver = {
-        ...state.driver,
-        readNotificationIds: [...currentReadIds, notificationId],
-      };
+      setIsMarkingAsRead(true);
+      try {
+        // Optimistically update local state
+        const updatedDriver = {
+          ...currentDriver,
+          readNotificationIds: [...currentReadIds, notificationId],
+        };
+        await setDriver(updatedDriver);
 
-      await setDriver(updatedDriver);
+        // Call backend API
+        try {
+          const { notificationsApiClient } = await import("@/config/apiConfig");
+          await notificationsApiClient.put(
+            NOTIFICATIONS_ENDPOINTS.markAsRead(notificationId)
+          );
+          log(`Notification ${notificationId} marked as read in backend`);
+        } catch (error: any) {
+          log("Error marking notification as read in backend:", error);
+          // Keep local state even if backend call fails
+        }
+      } finally {
+        setIsMarkingAsRead(false);
+      }
     },
-    [state.driver, setDriver]
+    [setDriver, log] // Removed state.driver from dependencies
+  );
+
+  // Reply to actionable notification
+  const replyToNotification = useCallback(
+    async (notificationId: string, reply: string, affiliateNumber?: string) => {
+      setIsReplyingToNotification(true);
+      try {
+        const { notificationsApiClient } = await import("@/config/apiConfig");
+        const response = await notificationsApiClient.post(
+          NOTIFICATIONS_ENDPOINTS.reply(notificationId),
+          {
+            reply,
+            ...(affiliateNumber && { affiliateNumber }),
+          }
+        );
+        log(`Reply sent for notification ${notificationId}`);
+        return response.data;
+      } catch (error: any) {
+        log("Error replying to notification:", error);
+        throw error;
+      } finally {
+        setIsReplyingToNotification(false);
+      }
+    },
+    [log]
   );
 
   // Add new notification
   const addNotification = useCallback(
     async (notification: NotificationItem) => {
-      if (!state.driver) return;
+      const currentDriver = driverRef.current;
+      if (!currentDriver) return;
 
-      const currentNotifications = state.driver.notifications || [];
+      const currentNotifications = currentDriver.notifications || [];
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         notifications: [notification, ...currentNotifications], // Add to beginning
       };
 
       await setDriver(updatedDriver);
     },
-    [state.driver, setDriver]
+    [setDriver] // Removed state.driver from dependencies
   );
 
   // Add multiple notifications at once
@@ -411,8 +606,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         "notifications"
       );
 
+      const currentDriver = driverRef.current;
       // If no driver exists yet, create a basic one
-      if (!state.driver) {
+      if (!currentDriver) {
         log("No driver exists, creating new one with notifications");
         const newDriver: DriverObject = {
           online: false,
@@ -424,10 +620,10 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const currentNotifications = state.driver.notifications || [];
+      const currentNotifications = currentDriver.notifications || [];
       log("Current notifications count:", currentNotifications.length);
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         notifications: [...notifications, ...currentNotifications], // Add all to beginning
       };
 
@@ -438,7 +634,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       await setDriver(updatedDriver);
       log("Driver updated successfully");
     },
-    [state.driver, setDriver]
+    [setDriver, log]
   );
 
   // Get notification by ID
@@ -452,43 +648,45 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   // Delete a single notification
   const deleteNotification = useCallback(
     async (notificationId: string) => {
-      if (!state.driver) {
+      const currentDriver = driverRef.current;
+      if (!currentDriver) {
         log("Cannot delete notification: No driver data available");
         return;
       }
 
-      log(`Deleting notification with ID: ${notificationId}`);
-
-      const currentNotifications = state.driver.notifications || [];
-      const currentReadIds = state.driver.readNotificationIds || [];
-
-      // Check if notification exists
-      const notificationExists = currentNotifications.some(
-        (notification) => notification.id === notificationId
-      );
-
-      if (!notificationExists) {
-        log(`Notification with ID ${notificationId} not found`);
-        return;
-      }
-
-      // Remove notification from notifications array
-      const updatedNotifications = currentNotifications.filter(
-        (notification) => notification.id !== notificationId
-      );
-
-      // Remove notification ID from readNotificationIds if it exists
-      const updatedReadIds = currentReadIds.filter(
-        (id) => id !== notificationId
-      );
-
-      const updatedDriver = {
-        ...state.driver,
-        notifications: updatedNotifications,
-        readNotificationIds: updatedReadIds,
-      };
-
+      setIsDeletingNotification(true);
       try {
+        log(`Deleting notification with ID: ${notificationId}`);
+
+        const currentNotifications = currentDriver.notifications || [];
+        const currentReadIds = currentDriver.readNotificationIds || [];
+
+        // Check if notification exists
+        const notificationExists = currentNotifications.some(
+          (notification) => notification.id === notificationId
+        );
+
+        if (!notificationExists) {
+          log(`Notification with ID ${notificationId} not found`);
+          return;
+        }
+
+        // Remove notification from notifications array
+        const updatedNotifications = currentNotifications.filter(
+          (notification) => notification.id !== notificationId
+        );
+
+        // Remove notification ID from readNotificationIds if it exists
+        const updatedReadIds = currentReadIds.filter(
+          (id) => id !== notificationId
+        );
+
+        const updatedDriver = {
+          ...currentDriver,
+          notifications: updatedNotifications,
+          readNotificationIds: updatedReadIds,
+        };
+
         await setDriver(updatedDriver);
         log(
           `Notification ${notificationId} deleted successfully from context and AsyncStorage`
@@ -496,20 +694,23 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         log(`Error deleting notification ${notificationId}:`, error);
         throw error;
+      } finally {
+        setIsDeletingNotification(false);
       }
     },
-    [state.driver, setDriver, log]
+    [setDriver, log] // Removed state.driver from dependencies
   );
 
   // Delete all notifications
   const deleteAllNotifications = useCallback(async () => {
-    if (!state.driver) {
+    const currentDriver = driverRef.current;
+    if (!currentDriver) {
       log("Cannot delete all notifications: No driver data available");
       return;
     }
 
-    const currentNotifications = state.driver.notifications || [];
-    const currentReadIds = state.driver.readNotificationIds || [];
+    const currentNotifications = currentDriver.notifications || [];
+    const currentReadIds = currentDriver.readNotificationIds || [];
 
     if (currentNotifications.length === 0 && currentReadIds.length === 0) {
       log("No notifications to delete");
@@ -521,7 +722,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     );
 
     const updatedDriver = {
-      ...state.driver,
+      ...currentDriver,
       notifications: [],
       readNotificationIds: [],
     };
@@ -535,7 +736,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       log("Error deleting all notifications:", error);
       throw error;
     }
-  }, [state.driver, setDriver, log]);
+  }, [setDriver, log]); // Removed state.driver from dependencies
 
   // Get hidden live offers
   const hiddenLiveOffers = useMemo(() => {
@@ -1035,6 +1236,271 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.driver, setDriver, log]);
 
+  // Desired destinations functions
+  const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
+  const [destinationsError, setDestinationsError] = useState<string | null>(null);
+
+  // Fetch desired destinations from backend
+  const fetchDesiredDestinations = useCallback(async () => {
+    if (!state.driver) return;
+
+    setIsLoadingDestinations(true);
+    setDestinationsError(null);
+
+    try {
+      const { settingsApiClient } = await import("@/config/apiConfig");
+      const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
+
+      const response = await settingsApiClient.get(
+        DESIRED_DESTINATIONS_ENDPOINTS.getDestinations
+      );
+
+      const responseData = response?.data;
+      const hasSuccessFlag = responseData?.success === true;
+      const dbResponseCode = responseData?.data?.jHeader?.responseCode;
+      const isDbSuccess =
+        dbResponseCode === undefined || dbResponseCode === "0" || dbResponseCode === 0;
+
+      if (!hasSuccessFlag || !isDbSuccess) {
+        const errorMessage =
+          responseData?.message ||
+          responseData?.data?.jHeader?.message ||
+          responseData?.error ||
+          "Failed to fetch desired destinations";
+        throw new Error(errorMessage);
+      }
+
+      // Transform backend destinations to mobile app format
+      const backendDestinations = responseData?.data?.jData?.destinations || [];
+      const transformedDestinations: DesiredDestination[] = backendDestinations.map((dest: any) => ({
+        id: dest.driver_desired_destination_rec_id || dest.id || Date.now(),
+        created_at: dest.created_at || new Date().toISOString(),
+        address: dest.desired_destination || dest.address,
+        expired_at: dest.expires_at || dest.expired_at || new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
+      }));
+
+      // Filter out expired destinations
+      const { valid } = filterExpiredDestinations(transformedDestinations);
+
+      // Update driver context with fetched destinations
+      const updatedDriver = {
+        ...state.driver,
+        desiredDestinations: valid,
+      };
+      await setDriver(updatedDriver);
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.data?.jHeader?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to fetch desired destinations";
+      log("Error fetching desired destinations:", errorMessage);
+      setDestinationsError(errorMessage);
+      throw error;
+    } finally {
+      setIsLoadingDestinations(false);
+    }
+  }, [state.driver, setDriver, log]);
+
+  // Create desired destination
+  const createDesiredDestination = useCallback(
+    async (destination: Omit<DesiredDestination, 'id' | 'created_at'>) => {
+      if (!state.driver) {
+        throw new Error("Driver not found");
+      }
+
+      setIsLoadingDestinations(true);
+      setDestinationsError(null);
+
+      try {
+        const { settingsApiClient } = await import("@/config/apiConfig");
+        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
+
+        // Calculate expiry date (default to 6 hours from now)
+        const expiryDate = new Date();
+        expiryDate.setHours(expiryDate.getHours() + 6);
+
+        const response = await settingsApiClient.post(
+          DESIRED_DESTINATIONS_ENDPOINTS.createDestination,
+          {
+            address: destination.address,
+            expiresAt: destination.expired_at || expiryDate.toISOString(),
+          }
+        );
+
+        const responseData = response?.data;
+        const hasSuccessFlag = responseData?.success === true;
+        const dbResponseCode = responseData?.data?.jHeader?.responseCode;
+        const isDbSuccess =
+          dbResponseCode === undefined || dbResponseCode === "0" || dbResponseCode === 0;
+
+        if (!hasSuccessFlag || !isDbSuccess) {
+          const errorMessage =
+            responseData?.message ||
+            responseData?.data?.jHeader?.message ||
+            responseData?.error ||
+            "Failed to create desired destination";
+          throw new Error(errorMessage);
+        }
+
+        // Create destination object with ID from backend or generate one
+        const createdDestination: DesiredDestination = {
+          id: responseData?.data?.jData?.driver_desired_destination_rec_id || Date.now(),
+          created_at: new Date().toISOString(),
+          address: destination.address,
+          expired_at: destination.expired_at || expiryDate.toISOString(),
+        };
+
+        // Update local state
+        const currentDestinations = state.driver.desiredDestinations || [];
+        const updatedDriver = {
+          ...state.driver,
+          desiredDestinations: [...currentDestinations, createdDestination],
+        };
+        await setDriver(updatedDriver);
+
+        return createdDestination;
+      } catch (error: any) {
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.response?.data?.data?.jHeader?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Failed to create desired destination";
+        log("Error creating desired destination:", errorMessage);
+        setDestinationsError(errorMessage);
+        throw error;
+      } finally {
+        setIsLoadingDestinations(false);
+      }
+    },
+    [state.driver, setDriver, log]
+  );
+
+  // Update desired destination
+  const updateDesiredDestination = useCallback(
+    async (destination: DesiredDestination) => {
+      if (!state.driver) {
+        throw new Error("Driver not found");
+      }
+
+      setIsLoadingDestinations(true);
+      setDestinationsError(null);
+
+      try {
+        const { settingsApiClient } = await import("@/config/apiConfig");
+        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
+
+        const response = await settingsApiClient.put(
+          DESIRED_DESTINATIONS_ENDPOINTS.updateDestination(destination.id),
+          {
+            id: destination.id,
+            address: destination.address,
+            expiresAt: destination.expired_at,
+          }
+        );
+
+        const responseData = response?.data;
+        const hasSuccessFlag = responseData?.success === true;
+        const dbResponseCode = responseData?.data?.jHeader?.responseCode;
+        const isDbSuccess =
+          dbResponseCode === undefined || dbResponseCode === "0" || dbResponseCode === 0;
+
+        if (!hasSuccessFlag || !isDbSuccess) {
+          const errorMessage =
+            responseData?.message ||
+            responseData?.data?.jHeader?.message ||
+            responseData?.error ||
+            "Failed to update desired destination";
+          throw new Error(errorMessage);
+        }
+
+        // Update local state
+        const currentDestinations = state.driver.desiredDestinations || [];
+        const updatedDestinations = currentDestinations.map((dest) =>
+          dest.id === destination.id ? destination : dest
+        );
+        const updatedDriver = {
+          ...state.driver,
+          desiredDestinations: updatedDestinations,
+        };
+        await setDriver(updatedDriver);
+      } catch (error: any) {
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.response?.data?.data?.jHeader?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Failed to update desired destination";
+        log("Error updating desired destination:", errorMessage);
+        setDestinationsError(errorMessage);
+        throw error;
+      } finally {
+        setIsLoadingDestinations(false);
+      }
+    },
+    [state.driver, setDriver, log]
+  );
+
+  // Delete desired destination
+  const deleteDesiredDestination = useCallback(
+    async (id: number) => {
+      if (!state.driver) {
+        throw new Error("Driver not found");
+      }
+
+      setIsLoadingDestinations(true);
+      setDestinationsError(null);
+
+      try {
+        const { settingsApiClient } = await import("@/config/apiConfig");
+        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
+
+        const response = await settingsApiClient.delete(
+          DESIRED_DESTINATIONS_ENDPOINTS.deleteDestination(id)
+        );
+
+        const responseData = response?.data;
+        const hasSuccessFlag = responseData?.success === true;
+        const dbResponseCode = responseData?.data?.jHeader?.responseCode;
+        const isDbSuccess =
+          dbResponseCode === undefined || dbResponseCode === "0" || dbResponseCode === 0;
+
+        if (!hasSuccessFlag || !isDbSuccess) {
+          const errorMessage =
+            responseData?.message ||
+            responseData?.data?.jHeader?.message ||
+            responseData?.error ||
+            "Failed to delete desired destination";
+          throw new Error(errorMessage);
+        }
+
+        // Update local state
+        const currentDestinations = state.driver.desiredDestinations || [];
+        const updatedDestinations = currentDestinations.filter((dest) => dest.id !== id);
+        const updatedDriver = {
+          ...state.driver,
+          desiredDestinations: updatedDestinations,
+        };
+        await setDriver(updatedDriver);
+      } catch (error: any) {
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.response?.data?.data?.jHeader?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Failed to delete desired destination";
+        log("Error deleting desired destination:", errorMessage);
+        setDestinationsError(errorMessage);
+        throw error;
+      } finally {
+        setIsLoadingDestinations(false);
+      }
+    },
+    [state.driver, setDriver, log]
+  );
+
   const contextValue = useMemo<DriverContextValue>(() => {
     const baseArray: [DriverObject, (value: DriverObject) => Promise<void>] = [
       state.driver,
@@ -1044,12 +1510,18 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     // Add notification methods to the array object
     return Object.assign(baseArray, {
       notifications,
+      fetchNotifications,
       markNotificationAsRead,
+      replyToNotification,
       addNotification,
       addNotifications,
       getNotificationById,
       deleteNotification,
       deleteAllNotifications,
+      isFetchingNotifications,
+      isMarkingAsRead,
+      isDeletingNotification,
+      isReplyingToNotification,
       hiddenLiveOffers,
       hideLiveOffer,
       skipLiveOffer,
@@ -1064,17 +1536,29 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       setRideState,
       getRideState,
       removeRideState,
+      fetchDesiredDestinations,
+      createDesiredDestination,
+      updateDesiredDestination,
+      deleteDesiredDestination,
+      isLoadingDestinations,
+      destinationsError,
     });
   }, [
     state.driver,
     setDriver,
     notifications,
+    fetchNotifications,
     markNotificationAsRead,
+    replyToNotification,
     addNotification,
     addNotifications,
     getNotificationById,
     deleteNotification,
     deleteAllNotifications,
+    isFetchingNotifications,
+    isMarkingAsRead,
+    isDeletingNotification,
+    isReplyingToNotification,
     hiddenLiveOffers,
     hideLiveOffer,
     skipLiveOffer,
@@ -1089,6 +1573,12 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     setRideState,
     getRideState,
     removeRideState,
+    fetchDesiredDestinations,
+    createDesiredDestination,
+    updateDesiredDestination,
+    deleteDesiredDestination,
+    isLoadingDestinations,
+    destinationsError,
   ]);
 
   if (!state.isHydrated) return null;

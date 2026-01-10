@@ -1,12 +1,14 @@
 import Accordion from "@/components/Accordion";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
+import Loader from "@/components/Loader";
+import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { APP_SETTINGS_ITEMS, APP_VERSION } from "@/constants/global";
 import { useSettings } from "@/context/SettingsContext";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Image,
   SafeAreaView,
@@ -17,7 +19,32 @@ import {
 
 export default function AppSettingsScreen() {
   const router = useRouter();
-  const [settings, setSettings] = useSettings();
+  const settingsContext = useSettings();
+  const [settings, setSettings, status] = settingsContext;
+  const { isLoading, error, clearError } = status;
+
+  // Show error toast when error occurs
+  useEffect(() => {
+    if (error) {
+      showToast(error, { variant: "error", position: "top" });
+      clearError();
+    }
+  }, [error, clearError]);
+
+  // Helper function to create async toggle handler
+  const createToggleHandler = (updateFn: (next: boolean) => SettingsObject) => {
+    return async (next: boolean) => {
+      try {
+        await setSettings(updateFn(next));
+        showToast("Settings saved successfully", {
+          variant: "success",
+          position: "top",
+        });
+      } catch (e) {
+        // Error is handled by context and shown via useEffect
+      }
+    };
+  };
 
   const items = APP_SETTINGS_ITEMS.map((item) => ({
     key: item.key,
@@ -55,15 +82,24 @@ export default function AppSettingsScreen() {
             <Toggle
               variant="switch"
               value={settings.loginSettings.enableFaceRecognition}
-              setValue={(next: boolean) =>
-                setSettings({
-                  ...settings,
-                  loginSettings: {
-                    ...settings.loginSettings,
-                    enableFaceRecognition: next,
-                  },
-                })
-              }
+              setValue={async (next: boolean) => {
+                try {
+                  await setSettings({
+                    ...settings,
+                    loginSettings: {
+                      ...settings.loginSettings,
+                      enableFaceRecognition: next,
+                    },
+                  });
+                  showToast("Settings saved successfully", {
+                    variant: "success",
+                    position: "top",
+                  });
+                } catch (e) {
+                  // Error is handled by context and shown via useEffect
+                }
+              }}
+              disabled={isLoading}
               size={styles.toggle}
             />
           </View>
@@ -74,15 +110,24 @@ export default function AppSettingsScreen() {
             <Toggle
               variant="switch"
               value={settings.loginSettings.enableFaceId}
-              setValue={(next: boolean) =>
-                setSettings({
-                  ...settings,
-                  loginSettings: {
-                    ...settings.loginSettings,
-                    enableFaceId: next,
-                  },
-                })
-              }
+              setValue={async (next: boolean) => {
+                try {
+                  await setSettings({
+                    ...settings,
+                    loginSettings: {
+                      ...settings.loginSettings,
+                      enableFaceId: next,
+                    },
+                  });
+                  showToast("Settings saved successfully", {
+                    variant: "success",
+                    position: "top",
+                  });
+                } catch (e) {
+                  // Error is handled by context and shown via useEffect
+                }
+              }}
+              disabled={isLoading}
               size={styles.toggle}
             />
           </View>
@@ -93,15 +138,24 @@ export default function AppSettingsScreen() {
             <Toggle
               variant="switch"
               value={settings.loginSettings.enableFingerprint}
-              setValue={(next: boolean) =>
-                setSettings({
-                  ...settings,
-                  loginSettings: {
-                    ...settings.loginSettings,
-                    enableFingerprint: next,
-                  },
-                })
-              }
+              setValue={async (next: boolean) => {
+                try {
+                  await setSettings({
+                    ...settings,
+                    loginSettings: {
+                      ...settings.loginSettings,
+                      enableFingerprint: next,
+                    },
+                  });
+                  showToast("Settings saved successfully", {
+                    variant: "success",
+                    position: "top",
+                  });
+                } catch (e) {
+                  // Error is handled by context and shown via useEffect
+                }
+              }}
+              disabled={isLoading}
               size={styles.toggle}
             />
           </View>
@@ -115,15 +169,24 @@ export default function AppSettingsScreen() {
             <Toggle
               variant="switch"
               value={settings.notifications.muteJobOffers}
-              setValue={(next: boolean) =>
-                setSettings({
-                  ...settings,
-                  notifications: {
-                    ...settings.notifications,
-                    muteJobOffers: next,
-                  },
-                })
-              }
+              setValue={async (next: boolean) => {
+                try {
+                  await setSettings({
+                    ...settings,
+                    notifications: {
+                      ...settings.notifications,
+                      muteJobOffers: next,
+                    },
+                  });
+                  showToast("Settings saved successfully", {
+                    variant: "success",
+                    position: "top",
+                  });
+                } catch (e) {
+                  // Error is handled by context and shown via useEffect
+                }
+              }}
+              disabled={isLoading}
               size={styles.toggle}
             />
           </View>
@@ -134,15 +197,24 @@ export default function AppSettingsScreen() {
             <Toggle
               variant="switch"
               value={settings.notifications.muteAll}
-              setValue={(next: boolean) =>
-                setSettings({
-                  ...settings,
-                  notifications: {
-                    ...settings.notifications,
-                    muteAll: next,
-                  },
-                })
-              }
+              setValue={async (next: boolean) => {
+                try {
+                  await setSettings({
+                    ...settings,
+                    notifications: {
+                      ...settings.notifications,
+                      muteAll: next,
+                    },
+                  });
+                  showToast("Settings saved successfully", {
+                    variant: "success",
+                    position: "top",
+                  });
+                } catch (e) {
+                  // Error is handled by context and shown via useEffect
+                }
+              }}
+              disabled={isLoading}
               size={styles.toggle}
             />
           </View>
@@ -172,18 +244,17 @@ export default function AppSettingsScreen() {
                     <Toggle
                       variant="switch"
                       value={settings.ridePreferences.homePage.liveJobs}
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            homePage: {
-                              ...settings.ridePreferences.homePage,
-                              liveJobs: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          homePage: {
+                            ...settings.ridePreferences.homePage,
+                            liveJobs: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -200,18 +271,17 @@ export default function AppSettingsScreen() {
                       value={
                         settings.ridePreferences.homePage.futureReservations
                       }
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            homePage: {
-                              ...settings.ridePreferences.homePage,
-                              futureReservations: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          homePage: {
+                            ...settings.ridePreferences.homePage,
+                            futureReservations: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -228,18 +298,17 @@ export default function AppSettingsScreen() {
                       value={
                         settings.ridePreferences.homePage.longDistanceIntercity
                       }
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            homePage: {
-                              ...settings.ridePreferences.homePage,
-                              longDistanceIntercity: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          homePage: {
+                            ...settings.ridePreferences.homePage,
+                            longDistanceIntercity: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -254,18 +323,17 @@ export default function AppSettingsScreen() {
                     <Toggle
                       variant="switch"
                       value={settings.ridePreferences.homePage.pets}
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            homePage: {
-                              ...settings.ridePreferences.homePage,
-                              pets: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          homePage: {
+                            ...settings.ridePreferences.homePage,
+                            pets: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -280,18 +348,17 @@ export default function AppSettingsScreen() {
                     <Toggle
                       variant="switch"
                       value={settings.ridePreferences.homePage.package}
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            homePage: {
-                              ...settings.ridePreferences.homePage,
-                              package: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          homePage: {
+                            ...settings.ridePreferences.homePage,
+                            package: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -320,18 +387,17 @@ export default function AppSettingsScreen() {
                     <Toggle
                       variant="switch"
                       value={settings.ridePreferences.rideTypes.economy}
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            rideTypes: {
-                              ...settings.ridePreferences.rideTypes,
-                              economy: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          rideTypes: {
+                            ...settings.ridePreferences.rideTypes,
+                            economy: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -346,18 +412,17 @@ export default function AppSettingsScreen() {
                     <Toggle
                       variant="switch"
                       value={settings.ridePreferences.rideTypes.sedan}
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            rideTypes: {
-                              ...settings.ridePreferences.rideTypes,
-                              sedan: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          rideTypes: {
+                            ...settings.ridePreferences.rideTypes,
+                            sedan: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -372,18 +437,17 @@ export default function AppSettingsScreen() {
                     <Toggle
                       variant="switch"
                       value={settings.ridePreferences.rideTypes.suv}
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            rideTypes: {
-                              ...settings.ridePreferences.rideTypes,
-                              suv: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          rideTypes: {
+                            ...settings.ridePreferences.rideTypes,
+                            suv: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -398,18 +462,17 @@ export default function AppSettingsScreen() {
                     <Toggle
                       variant="switch"
                       value={settings.ridePreferences.rideTypes.luxury}
-                      setValue={(next: boolean) =>
-                        setSettings({
-                          ...settings,
-                          ridePreferences: {
-                            ...settings.ridePreferences,
-                            rideTypes: {
-                              ...settings.ridePreferences.rideTypes,
-                              luxury: next,
-                            },
+                      setValue={createToggleHandler((next) => ({
+                        ...settings,
+                        ridePreferences: {
+                          ...settings.ridePreferences,
+                          rideTypes: {
+                            ...settings.ridePreferences.rideTypes,
+                            luxury: next,
                           },
-                        })
-                      }
+                        },
+                      }))}
+                      disabled={isLoading}
                       size={styles.toggle}
                     />
                   </View>
@@ -430,9 +493,18 @@ export default function AppSettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header title="App Settings" onBackPress={() => router.back()} />
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <Loader size="medium" />
+          <Typography type="bodyMedium" style={styles.loadingText}>
+            Saving settings...
+          </Typography>
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        pointerEvents={isLoading ? "none" : "auto"}
       >
         <Accordion items={items} />
       </ScrollView>
@@ -483,5 +555,20 @@ const styles = StyleSheet.create({
   toggle: {
     width: 42,
     height: 24,
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: textColors.black,
   },
 });

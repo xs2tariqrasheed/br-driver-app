@@ -17,6 +17,7 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
 import { usePost } from "@/hooks/usePost";
 import { useRouter } from "expo-router";
 
@@ -44,7 +45,8 @@ export default function ForgotUserIdScreen() {
   });
 
   const { execute: requestOtp, loading } = usePost<any, ForgotUserIdFormValues>(
-    AUTH_ENDPOINTS.requestOtp
+    AUTH_ENDPOINTS.requestOtpForUserId,
+    API_CLIENT_TYPES.AUTH
   );
 
   /**

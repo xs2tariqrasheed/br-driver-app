@@ -19,8 +19,9 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
 import { usePost } from "@/hooks/usePost";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 type ResetFormValues = {
   password: string;
@@ -29,6 +30,11 @@ type ResetFormValues = {
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { email: emailParam, code: codeParam, companyId: companyIdParam } = useLocalSearchParams<{
+    email?: string;
+    code?: string;
+    companyId?: string;
+  }>();
   const {
     control,
     handleSubmit,
@@ -42,13 +48,14 @@ export default function ResetPasswordScreen() {
   const passwordValue = watch("password");
   const confirmValue = watch("confirmPassword");
 
-  // API: reset password (dummy)
+  // API: reset password
   const {
     loading: submitting,
     error: submitError,
     execute: resetPassword,
-  } = usePost<any, { password: string; confirmPassword: string }>(
-    AUTH_ENDPOINTS.resetPassword
+  } = usePost<any, { email: string; code: string; newPassword: string; companyId?: string }>(
+    AUTH_ENDPOINTS.resetPassword,
+    API_CLIENT_TYPES.AUTH
   );
 
   // Manual visibility override for helper panels via Info icon
@@ -62,10 +69,22 @@ export default function ResetPasswordScreen() {
   >(null);
 
   const onSubmit = async () => {
+    // Validate that we have email, OTP code, and companyId from previous screen
+    if (!emailParam || !codeParam || !companyIdParam) {
+      showToast("Missing required information. Please start the password reset process again.", {
+        variant: "error",
+        position: "top",
+      });
+      router.replace("/(screens)/auth/forgot-password");
+      return;
+    }
+
     try {
       const response = await resetPassword({
-        password: passwordValue,
-        confirmPassword: confirmValue,
+        email: emailParam,
+        code: codeParam,
+        newPassword: passwordValue,
+        companyId: companyIdParam, // Required: must be provided
       });
       showToast(response?.message || "Password reset successfully", {
         variant: "success",

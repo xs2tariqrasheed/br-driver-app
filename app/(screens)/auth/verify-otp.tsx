@@ -43,9 +43,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 export default function VerifyOtpScreen() {
   const router = useRouter();
   const log = logger();
-  const { context, loginData: loginDataParam } = useLocalSearchParams<{ 
+  const { context, loginData: loginDataParam, email: emailParam, companyId: companyIdParam } = useLocalSearchParams<{ 
     context?: string;
     loginData?: string;
+    email?: string;
+    companyId?: string;
   }>();
   const [currentAuth, setAuth] = useAuth();
   const [driver, setDriver] = useDriver();
@@ -252,7 +254,15 @@ export default function VerifyOtpScreen() {
           // After verifying OTP for login: set auth and route to home with success toast
           void completeLoginAfterOtp();
         } else {
-          router.replace("/(screens)/auth/reset-password");
+          // For forgot-password flow: pass email, OTP code, and companyId to reset-password screen
+          router.replace({
+            pathname: "/(screens)/auth/reset-password",
+            params: {
+              email: emailParam || "",
+              code: otp,
+              companyId: companyIdParam || "",
+            },
+          });
         }
       }, 300);
     } catch (e) {
