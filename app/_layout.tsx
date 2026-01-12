@@ -75,12 +75,12 @@ export default function RootLayout() {
                           <RideOfferProvider>
                             <SpecialRequirementsProvider>
                               <PackageInfoProvider>
-                                <BidExpiredProvider>
-                                  <BidBottomSheetProvider>
-                                    <BidWaitingTimerProvider>
-                                      <BidAcceptedProvider>
-                                        <BidUnsuccessfulProvider>
-                                          <BroadcastJobOffersProvider>
+                                <BroadcastJobOffersProvider>
+                                  <BidExpiredProvider>
+                                    <BidBottomSheetProvider>
+                                      <BidWaitingTimerProvider>
+                                        <BidAcceptedProvider>
+                                          <BidUnsuccessfulProvider>
                                             <FutureJobOffersProvider>
                                               <NotificationProvider>
                                                 <ToastProvider>
@@ -156,12 +156,12 @@ export default function RootLayout() {
                                                 </ToastProvider>
                                               </NotificationProvider>
                                             </FutureJobOffersProvider>
-                                          </BroadcastJobOffersProvider>
-                                        </BidUnsuccessfulProvider>
-                                      </BidAcceptedProvider>
-                                    </BidWaitingTimerProvider>
-                                  </BidBottomSheetProvider>
-                                </BidExpiredProvider>
+                                          </BidUnsuccessfulProvider>
+                                        </BidAcceptedProvider>
+                                      </BidWaitingTimerProvider>
+                                    </BidBottomSheetProvider>
+                                  </BidExpiredProvider>
+                                </BroadcastJobOffersProvider>
                               </PackageInfoProvider>
                             </SpecialRequirementsProvider>
                           </RideOfferProvider>

@@ -49,13 +49,26 @@ export const LIVE_JOB_ENDPOINTS = {
 
 export const DRIVER_ENDPOINTS = {
   /** Mark driver as offline */
-  markOffline: (driverId: string) => `/online-drivers/drivers/${driverId}`,
+  markOffline: (driverId: string) => {
+    const numericId = driverId.match(/(\d+)$/)?.[1] || driverId;
+    return `/online-drivers/drivers/${numericId}`;
+  },
   /** Post or update driver's current location while online */
-  postOnlineLocation: (driverId: string) =>
-    `/online-drivers/drivers/${driverId}/location`,
+  postOnlineLocation: (driverId: string) => {
+    const numericId = driverId.match(/(\d+)$/)?.[1] || driverId;
+    return `/online-drivers/drivers/${numericId}/location`;
+  },
   /** Get driver's current location */
-  getOnlineLocation: (driverId: string) =>
-    `/online-drivers/drivers/${driverId}/location`,
+  getOnlineLocation: (driverId: string) => {
+    const numericId = driverId.match(/(\d+)$/)?.[1] || driverId;
+    return `/online-drivers/drivers/${numericId}/location`;
+  },
+  /** Update driver online/offline status */
+  updateStatus: (driverId: string) => {
+    // Ensure we send only the numeric part of the driver ID (e.g., "d-1" -> "1")
+    const numericId = driverId.match(/(\d+)$/)?.[1] || driverId;
+    return `/online-drivers/drivers/${numericId}/status`;
+  },
 } as const;
 
 export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;
@@ -66,8 +79,12 @@ export const APP_ENDPOINTS = {
 } as const;
 
 export const DRIVER_SETTINGS_ENDPOINTS = {
+  /** Get driver settings */
+  getSettings: "/settings-service/driver/settings",
   /** Update driver settings */
   updateSettings: "/settings-service/driver/settings",
+  /** Delete driver profile */
+  deleteProfile: "/settings-service/driver/profile",
 } as const;
 
 export const DESIRED_DESTINATIONS_ENDPOINTS = {

@@ -1326,6 +1326,11 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           {
             address: destination.address,
             expiresAt: destination.expired_at || expiryDate.toISOString(),
+            googleReferenceNumber: (destination as any).googleReferenceNumber || '',
+            latitude: (destination as any).latitude || null,
+            longitude: (destination as any).longitude || null,
+            targetZipCode: (destination as any).targetZipCode || '',
+            commissionPercentage: (destination as any).commissionPercentage || 0,
           }
         );
 

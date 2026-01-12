@@ -31,6 +31,8 @@ export interface BidWaitingTimerModalProps {
 
   /** Inline confirmation mode without closing the modal */
   isConfirming?: boolean;
+  /** Whether the cancel bid API call is in progress */
+  isCanceling?: boolean;
   onKeepWaiting?: () => void;
   onConfirmCancel?: () => void;
 }
@@ -48,17 +50,14 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
   onCompleteProgress,
   open = false,
   isConfirming = false,
+  isCanceling = false,
   onKeepWaiting,
   onConfirmCancel,
 }) => {
-  const { showBidExpired } = useBidExpired();
-  const { hideBidWaitingTimer } = useBidWaitingTimer();
-
   const handleCompleteProgress = useCallback(() => {
+    // onCompleteProgress from context already handles showing expired sheet and hiding timer
     onCompleteProgress();
-    showBidExpired();
-    hideBidWaitingTimer();
-  }, [onCompleteProgress, showBidExpired, hideBidWaitingTimer]);
+  }, [onCompleteProgress]);
 
   return (
     <Modal
@@ -72,7 +71,8 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
       <TouchableOpacity
         style={styles.overlay}
         activeOpacity={1}
-        onPress={onCancel}
+        onPress={isCanceling ? undefined : onCancel}
+        disabled={isCanceling}
       >
         <View
           style={styles.container}
@@ -89,7 +89,11 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
               {isConfirming ? "Cancel Bid" : "Waiting for Customer"}
             </Typography>
             <View style={styles.placeholder} />
-            <TouchableOpacity style={styles.closeButton} onPress={isConfirming ? (onKeepWaiting || onCancel) : onCancel}>
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={isCanceling ? undefined : (isConfirming ? (onKeepWaiting || onCancel) : onCancel)}
+              disabled={isCanceling}
+            >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -112,7 +116,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
               <ProgressTimer
                 duration={progressDuration}
                 onComplete={handleCompleteProgress}
-                isActive={open}
+                isActive={open && !isCanceling}
               />
             </View>
 
@@ -125,6 +129,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                     rounded="half"
                     onPress={onKeepWaiting}
                     style={styles.cancelButton}
+                    disabled={isCanceling}
                   >
                     Keep Waiting
                   </Button>
@@ -133,7 +138,11 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                   <Button
                     variant="danger"
                     rounded="half"
-                    onPress={onConfirmCancel}
+                    // TODO: Uncomment this when the API is ready
+                    // onPress={onConfirmCancel}
+                    // disabled={isCanceling}
+                    disabled={true}
+                    loading={isCanceling}
                   >
                     Cancel Bid
                   </Button>
@@ -145,6 +154,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                   variant="outlined"
                   onPress={onCancel}
                   style={styles.cancelButton}
+                  disabled={isCanceling}
                 >
                   Cancel
                 </Button>

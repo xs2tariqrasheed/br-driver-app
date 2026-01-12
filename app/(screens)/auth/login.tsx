@@ -62,7 +62,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const log = logger();
   const [auth, setAuth] = useAuth() as any;
-  const [settings] = useSettings();
+  const [settings, , { fetchSettings }] = useSettings();
   const {
     control,
     handleSubmit,
@@ -101,11 +101,12 @@ export default function LoginScreen() {
 
     // Note: loginId field in UI represents emailOrPhone behind the scenes
     // The request interceptor in apiConfig.ts automatically transforms
-    // this legacy format (email/password) to DB format (jHeader, jMetaData, jData)
+    // this legacy format (email/password/companyId) to DB format (jHeader, jMetaData, jData)
     // The backend accepts both formats, but DB format is preferred
     const apiPayload = {
       email: data.loginId.trim(), // loginId is actually emailOrPhone
       password: data.password,
+      companyId: data.companyId ? (isNaN(Number(data.companyId)) ? data.companyId : Number(data.companyId)) : undefined,
     };
 
     try {
@@ -123,6 +124,16 @@ export default function LoginScreen() {
       ...existingAuth,
       token: loginResponse.token,
     } as any);
+    
+    // Fetch settings from backend after successful login
+    try {
+      await fetchSettings();
+      log("Settings fetched successfully after login");
+    } catch (error) {
+      log("Failed to fetch settings after login:", error);
+      // Continue with local settings if fetch fails
+    }
+    
     // After login successful login, require OTP verification before granting access
     // Pass login response data to verify-otp screen
     router.push({
@@ -133,6 +144,31 @@ export default function LoginScreen() {
       },
     });
   };
+
+  // Fetch settings when user lands on login screen
+  useEffect(() => {
+    // Fetch settings from backend when component mounts
+    // This ensures settings are synced even if user is already logged in
+    if (auth?.token) {
+      log("Fetching settings on login screen - token exists");
+      fetchSettings().catch((error) => {
+        log("Failed to fetch settings on login screen:", error);
+        // Continue with local settings if fetch fails
+      });
+    } else {
+      log("No token found, skipping settings fetch on login screen");
+    }
+  }, []); // Only run once on mount
+  
+  // Log current settings state for debugging
+  useEffect(() => {
+    log("Login screen - Current settings state:", {
+      enableFingerprint: settings.loginSettings.enableFingerprint,
+      enableFaceId: settings.loginSettings.enableFaceId,
+      enableFaceRecognition: settings.loginSettings.enableFaceRecognition,
+      fullSettings: settings,
+    });
+  }, [settings]);
 
   // Also react to hook error state changes (defensive)
   /**

@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import CustomMap from "@/components/MapWebView";
 import { textColors } from "@/constants/colors";
 import { COORDINATE_REGEX, GOOGLE_MAPS_API_KEY } from "@/constants/global";
-import { logger, reverseGeocode } from "@/utils/helpers";
+import { extractZipCodeFromAddress, logger, reverseGeocode } from "@/utils/helpers";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
@@ -16,6 +16,8 @@ export default function DesiredDestinationsMapScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string>("");
+  const [selectedZipCode, setSelectedZipCode] = useState<string>("");
 
   // Google Maps API key is imported from global constants
 
@@ -24,14 +26,31 @@ export default function DesiredDestinationsMapScreen() {
 
   const handleLocationSelect = async (
     selectedAddress: string,
-    coordinates: { latitude: number; longitude: number }
+    coordinates: { latitude: number; longitude: number },
+    placeId?: string,
+    zipCode?: string
   ) => {
     log("handleLocationSelect called with:", {
       selectedAddress,
       coordinates,
+      placeId,
     });
-    log("selectedAddress", selectedAddress);
-    log("coordinates", coordinates);
+
+    // Always use the placeId and zipCode from the WebView message if available
+    if (placeId) {
+      setSelectedPlaceId(placeId);
+    }
+    // Use zipCode from geocoding if available, otherwise try to extract from address
+    if (zipCode) {
+      setSelectedZipCode(zipCode);
+    } else {
+      // Fallback: try to extract zip code from address string
+      const extractedZip = extractZipCodeFromAddress(selectedAddress);
+      if (extractedZip) {
+        setSelectedZipCode(extractedZip);
+        log("Extracted zip code from address:", extractedZip);
+      }
+    }
 
     // Check if the selectedAddress is in coordinate format (e.g., "31.355034, 74.396754")
     if (COORDINATE_REGEX.test(selectedAddress.trim())) {
@@ -47,6 +66,7 @@ export default function DesiredDestinationsMapScreen() {
         const longitude = parseFloat(lngStr);
 
         // Reverse geocode to get the actual address
+        // Note: We preserve the placeId from the original message
         const resolvedAddress = await reverseGeocode(
           latitude,
           longitude,
@@ -71,12 +91,14 @@ export default function DesiredDestinationsMapScreen() {
 
   const handleContinue = () => {
     if (selectedCoordinates) {
-      // Pass the selected address back via navigation state
+      // Pass the selected address, coordinates, placeId, and zipCode back via navigation state
       router.push({
         pathname: "/(screens)/desired-destinations",
         params: {
           selectedAddress: address,
           selectedCoordinates: JSON.stringify(selectedCoordinates),
+          selectedPlaceId: selectedPlaceId || "",
+          selectedZipCode: selectedZipCode || "",
         },
       });
     }
@@ -100,7 +122,7 @@ export default function DesiredDestinationsMapScreen() {
         <Button
           rounded="half"
           variant="primary"
-          disabled={!address.trim() || !selectedCoordinates}
+          disabled={!address.trim() || !selectedCoordinates || !selectedPlaceId}
           onPress={handleContinue}
         >
           Continue

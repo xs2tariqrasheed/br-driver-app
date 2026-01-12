@@ -25,6 +25,7 @@ import {
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
+import { useSettings } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
 import { useFetch } from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
@@ -52,6 +53,7 @@ export default function VerifyOtpScreen() {
   const [currentAuth, setAuth] = useAuth();
   const [driver, setDriver] = useDriver();
   const { removeRetrievalId, removeTripId } = useDriver();
+  const [, , { fetchSettings }] = useSettings();
   const [otp, setOtp] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [verified, setVerified] = useState<boolean>(false);
@@ -94,6 +96,58 @@ export default function VerifyOtpScreen() {
   // Handles profile deletion cleanup and navigation after OTP verification
   const completeDeleteProfileAfterOtp = async () => {
     try {
+      // First, call the delete profile API with OTP
+      try {
+        log("[VerifyOtpScreen] Calling delete profile API");
+        const { settingsApiClient } = await import("@/config/apiConfig");
+        const { DRIVER_SETTINGS_ENDPOINTS } = await import("@/constants/endpoints");
+
+        const response = await settingsApiClient.delete(
+          DRIVER_SETTINGS_ENDPOINTS.deleteProfile,
+          {
+            data: {
+              otp: otp,
+            },
+          } as any
+        );
+
+        // Check if the response indicates success
+        const responseData = response?.data;
+        const hasSuccessFlag = responseData?.success === true;
+        const dbResponseCode = responseData?.data?.jHeader?.responseCode;
+        const isDbSuccess =
+          dbResponseCode === undefined ||
+          dbResponseCode === "0" ||
+          dbResponseCode === 0;
+
+        if (responseData?.success === false || !isDbSuccess || !hasSuccessFlag) {
+          const errorMessage =
+            responseData?.message ||
+            responseData?.data?.jHeader?.message ||
+            responseData?.error ||
+            "Failed to delete driver profile";
+
+          throw new Error(errorMessage);
+        }
+
+        log("[VerifyOtpScreen] Driver profile deleted successfully from database");
+      } catch (apiError: any) {
+        const errorMessage =
+          apiError?.response?.data?.message ||
+          apiError?.response?.data?.data?.jHeader?.message ||
+          apiError?.response?.data?.error ||
+          apiError?.message ||
+          "Failed to delete driver profile";
+
+        log("[VerifyOtpScreen] Error deleting driver profile:", errorMessage);
+        showToast(errorMessage, {
+          variant: "error",
+          position: "top",
+        });
+        // Don't proceed with cleanup if API call failed
+        return;
+      }
+
       // Call offline API if driver is online
       if (driver?.online) {
         try {
@@ -102,7 +156,7 @@ export default function VerifyOtpScreen() {
           log("[VerifyOtpScreen] Driver successfully marked as offline");
         } catch (error) {
           log("[VerifyOtpScreen] Error marking driver offline:", error);
-          // Continue with delete even if API call fails
+          // Continue with cleanup even if API call fails
         }
       }
 
@@ -112,7 +166,7 @@ export default function VerifyOtpScreen() {
         log("[VerifyOtpScreen] Retrieval ID removed successfully");
       } catch (error) {
         log("[VerifyOtpScreen] Error removing retrieval ID:", error);
-        // Continue with delete even if retrieval ID removal fails
+        // Continue with cleanup even if retrieval ID removal fails
       }
 
       // Remove trip ID from context and AsyncStorage
@@ -121,7 +175,7 @@ export default function VerifyOtpScreen() {
         log("[VerifyOtpScreen] Trip ID removed successfully");
       } catch (error) {
         log("[VerifyOtpScreen] Error removing trip ID:", error);
-        // Continue with delete even if trip ID removal fails
+        // Continue with cleanup even if trip ID removal fails
       }
 
       // Disconnect socket
@@ -130,15 +184,22 @@ export default function VerifyOtpScreen() {
         log("[VerifyOtpScreen] Socket disconnected successfully");
       } catch (error) {
         log("[VerifyOtpScreen] Error disconnecting socket:", error);
-        // Continue with delete even if socket disconnect fails
+        // Continue with cleanup even if socket disconnect fails
       }
 
       // Clear storage and reset contexts
       await clearStorage();
       await setAuth(null);
       await setDriver(null);
-      showToast("Profile Deleted successfully.", {
+      
+      showToast("Profile deleted successfully.", {
         variant: "success",
+        position: "top",
+      });
+    } catch (error) {
+      log("[VerifyOtpScreen] Error in completeDeleteProfileAfterOtp:", error);
+      showToast("An error occurred during profile deletion", {
+        variant: "error",
         position: "top",
       });
     } finally {
@@ -156,20 +217,14 @@ export default function VerifyOtpScreen() {
     return () => clearInterval(timer);
   }, [secondsLeft]);
 
-  // On mount for delete-profile context: trigger OTP send and show success message
+  // On mount for delete-profile context: skip automatic OTP send
+  // The user is already authenticated, so OTP should be requested manually via resend button if needed
+  // For delete-profile, we don't use the forgot-password endpoint which requires loginId/companyId
   useEffect(() => {
     if (context === "delete-profile") {
-      (async () => {
-        try {
-          await resendOtp({});
-          showToast("OTP has sent successfully", {
-            variant: "success",
-            position: "top",
-          });
-        } catch {
-          // ignore; resend handler will surface errors when used manually
-        }
-      })();
+      // Skip automatic OTP send for delete-profile context
+      // User can manually request OTP using the resend button if needed
+      // The OTP will be verified when they complete the OTP input
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context]);
@@ -275,6 +330,16 @@ export default function VerifyOtpScreen() {
 
   /** Requests a new OTP and resets the countdown/input. */
   const handleResend = async () => {
+    // For delete-profile context, skip resend as it requires loginId/companyId
+    // which are not available in the authenticated context
+    if (context === "delete-profile") {
+      showToast("Please use the OTP you received. If you didn't receive it, please contact support.", {
+        variant: "warning",
+        position: "top",
+      });
+      return;
+    }
+    
     try {
       const response = await resendOtp({});
       showToast(response?.message || "OTP resent", {
@@ -380,6 +445,15 @@ export default function VerifyOtpScreen() {
         type: driverType,
         online: isOnline,
       });
+
+      // Fetch driver settings from backend
+      try {
+        await fetchSettings();
+        log("Driver settings fetched successfully");
+      } catch (error) {
+        log("Error fetching driver settings:", error);
+        // Continue with login even if settings fetch fails
+      }
 
       showToast("Logged in successfully", {
         variant: "success",

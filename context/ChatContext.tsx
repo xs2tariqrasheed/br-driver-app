@@ -1,13 +1,12 @@
+import { activeTripApiClient } from "@/config/apiConfig";
 import {
-  ACTIVE_TRIP_SOCKET_EVENTS,
-  API_CLIENT_TYPES,
+  ACTIVE_TRIP_SOCKET_EVENTS
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useModalManager } from "@/context/ModalManagerContext";
-import { router } from "expo-router";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
-import { useFetch } from "@/hooks/useFetch";
+import { router } from "expo-router";
 import React, {
   createContext,
   useCallback,
@@ -76,45 +75,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const { onActiveTripEvent, emitActiveTripEvent } = useActiveTripSocket();
 
-  // Fetch message history
-  const {
-    data: messageHistory,
-    loading: historyLoading,
-    error: historyError,
-    execute: fetchMessageHistory,
-  } = useFetch<Message[]>(
-    state.isOpen ? `/messages/history/${state.customerInfo.phone}` : "",
-    API_CLIENT_TYPES.ACTIVE_TRIP
-  );
-
   // No RN Modal registration needed when using a screen, but keep a central close entry
-  useEffect(() => {
-    registerModal("chatScreen", closeChat);
-    return () => unregisterModal("chatScreen");
-  }, [registerModal, unregisterModal, closeChat]);
+  // Note: closeChat is defined later, so we'll register it in a separate effect
 
-  // Handle message history fetch
-  useEffect(() => {
-    if (state.isOpen && !historyLoading && messageHistory) {
-      setState((prev) => ({
-        ...prev,
-        messages: messageHistory,
-        isLoading: false,
-        error: null,
-      }));
-    }
-  }, [messageHistory, historyLoading, state.isOpen]);
-
-  // Handle history fetch error
-  useEffect(() => {
-    if (state.isOpen && historyError) {
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: "Failed to load message history",
-      }));
-    }
-  }, [historyError, state.isOpen]);
 
   // Socket event listeners
   useEffect(() => {
@@ -134,10 +97,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           status: "sent",
         };
 
-        setState((prev) => ({
-          ...prev,
-          messages: [...prev.messages, newMessage],
-        }));
+        setState((prev) => {
+          // Add new message and sort by timestamp to maintain order
+          const updatedMessages = [...prev.messages, newMessage];
+          updatedMessages.sort((a, b) => {
+            const timeA = new Date(a.timestamp).getTime();
+            const timeB = new Date(b.timestamp).getTime();
+            return timeA - timeB; // Ascending order (oldest first)
+          });
+          return {
+            ...prev,
+            messages: updatedMessages,
+          };
+        });
       }
     );
 
@@ -168,9 +140,116 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("💬 Opening chat modal");
 
+      // Get tripId first
+      const { tripId } = await getTripId();
+      
+      // Fetch customer info from active trip if not already set
+      let customerInfo = state.customerInfo;
+      if (driverId && (!customerInfo?.phone || !customerInfo?.name || customerInfo.name === "Ryan Reynolds")) {
+        try {
+          console.log("💬 Fetching customer info from active trip...");
+          const activeTripResponse = await activeTripApiClient.get(
+            `/active-trips/active-trips/retrieval-id/${driverId}`
+          );
+          
+          const activeTripData = activeTripResponse.data as any;
+          if (activeTripData?.activeTrip) {
+            const activeTrip = activeTripData.activeTrip;
+            const customerId = activeTrip.customerId;
+            
+            // Extract customer_rec_id from customerId (e.g., "c-1" -> 1)
+            let customerRecId: number | null = null;
+            if (customerId) {
+              // Try to extract numeric ID from customerId
+              if (customerId.startsWith('c-')) {
+                const match = customerId.match(/\d+$/);
+                if (match) {
+                  customerRecId = parseInt(match[0], 10);
+                }
+              } else if (!isNaN(Number(customerId))) {
+                customerRecId = parseInt(customerId, 10);
+              }
+            }
+            
+            // If we have customer_rec_id, fetch customer details from API
+            if (customerRecId) {
+              try {
+                console.log(`💬 Fetching customer details for customer_rec_id: ${customerRecId}`);
+                const customerResponse = await activeTripApiClient.get(
+                  `/active-trips/active-trips/customer/${customerRecId}`
+                );
+                
+                const customerData = customerResponse.data as any;
+                if (customerData?.success && customerData?.customer) {
+                  const customer = customerData.customer;
+                  const customerName = customer.name || "Customer";
+                  const customerPhone = customer.phone || "";
+                  
+                  if (customerName && customerName !== "Customer") {
+                    customerInfo = {
+                      name: customerName,
+                      phone: customerPhone,
+                    };
+                    console.log("💬 Customer info fetched from API:", customerInfo);
+                  }
+                }
+              } catch (apiError: any) {
+                console.warn("⚠️ Failed to fetch customer details from API:", apiError);
+              }
+            }
+            
+            // Fallback: Try to get customer info directly from active trip if DB fetch failed
+            if (!customerInfo || customerInfo.name === "Ryan Reynolds" || customerInfo.name === "Customer") {
+              const customerName = 
+                activeTrip.customer?.name || 
+                activeTrip.customerName || 
+                activeTrip.customer_name ||
+                activeTrip.customerDetails?.name ||
+                "Customer";
+              
+              const customerPhone = 
+                activeTrip.customer?.phone || 
+                activeTrip.customerPhone || 
+                activeTrip.customer_phone ||
+                activeTrip.customerDetails?.phone ||
+                "";
+              
+              if (customerName && customerName !== "Customer") {
+                customerInfo = {
+                  name: customerName,
+                  phone: customerPhone,
+                };
+                console.log("💬 Customer info fetched from active trip:", customerInfo);
+              }
+            }
+            
+            // Update state with customer info if we got it
+            if (customerInfo && customerInfo.name !== "Ryan Reynolds" && customerInfo.name !== "Customer") {
+              setState((prev) => ({
+                ...prev,
+                customerInfo,
+              }));
+            }
+          }
+        } catch (fetchError: any) {
+          console.warn("⚠️ Failed to fetch customer info from active trip:", fetchError);
+          // Continue with existing customer info or use defaults
+          if (!customerInfo?.phone || !customerInfo?.name || customerInfo.name === "Ryan Reynolds") {
+            customerInfo = {
+              name: "Customer",
+              phone: "",
+            };
+          }
+        }
+      }
+
       // Validate customer info before proceeding
-      if (!state.customerInfo?.phone || !state.customerInfo?.name) {
-        throw new Error("Customer information is missing. Cannot open chat.");
+      if (!customerInfo?.name || customerInfo.name === "Ryan Reynolds") {
+        console.warn("⚠️ Using default customer name - customer info not available");
+        customerInfo = {
+          name: "Customer",
+          phone: customerInfo?.phone || "",
+        };
       }
 
       // Set state first to open modal - wrap in try-catch for safety
@@ -180,6 +259,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           isOpen: true,
           isLoading: true,
           error: null,
+          customerInfo, // Update with fetched customer info
         }));
         // Navigate to chat screen (full-screen modal presentation)
         router.push("/(screens)/chat");
@@ -188,13 +268,90 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Failed to initialize chat modal");
       }
 
-      // Fetch message history - wrap in try-catch to prevent crashes
+      // Fetch message history
       try {
-        // Only fetch if we have a valid phone number
-        if (state.customerInfo.phone && fetchMessageHistory) {
-          await fetchMessageHistory();
+        
+        if (tripId) {
+          // Fetch message history directly using API client
+          try {
+            const response = await activeTripApiClient.get(
+              `/active-trips/active-trips/messages/history/${tripId}`,
+              {
+                params: { page: 1, limit: 50 },
+              }
+            );
+
+            const responseData = response.data as any;
+            
+            // Check multiple possible locations for messages (DB returns chatMessages, not messages)
+            const messages = responseData.messages || responseData.data?.chatMessages || responseData.data?.messages || responseData.data?.message || [];
+            
+            if (responseData.success && Array.isArray(messages) && messages.length > 0) {
+              // Transform API response to Message format
+              // DB returns: chatMessagesRecId, message, senderEntity, sentAt
+              const transformedMessages: Message[] = messages.map((msg: any) => {
+                // Parse timestamp - DB returns "2026-01-12 13:32:14.000000" format
+                let timestamp = msg.sentAt || msg.message_ts || msg.timestamp || msg.P_MESSAGE_TS || new Date().toISOString();
+                
+                // Convert DB timestamp format to ISO if needed
+                if (typeof timestamp === 'string' && timestamp.includes(' ') && !timestamp.includes('T')) {
+                  // Format: "2026-01-12 13:32:14.000000" -> "2026-01-12T13:32:14.000Z"
+                  timestamp = timestamp.replace(' ', 'T').replace(/\.\d+$/, '') + 'Z';
+                }
+                
+                return {
+                  id: msg.chatMessagesRecId?.toString() || msg.message_rec_id?.toString() || msg.message_id?.toString() || `msg-${Date.now()}-${Math.random()}`,
+                  text: msg.message || msg.message_text || msg.P_MESSAGE || '',
+                  sender: msg.senderEntity === 'CUSTOMER' || msg.sender_entity === 'CUSTOMER' || msg.P_SENDER_ENTITY === 'CUSTOMER' ? 'customer' : 'driver',
+                  timestamp: timestamp,
+                  status: 'sent',
+                };
+              });
+
+              // Sort messages by timestamp in ascending order (oldest first, newest at bottom)
+              transformedMessages.sort((a, b) => {
+                const timeA = new Date(a.timestamp).getTime();
+                const timeB = new Date(b.timestamp).getTime();
+                return timeA - timeB; // Ascending order (oldest first)
+              });
+
+              console.log(`💬 [Chat History] Transformed and sorted ${transformedMessages.length} messages (oldest to newest)`);
+              setState((prev) => ({
+                ...prev,
+                messages: transformedMessages,
+                isLoading: false,
+                error: null,
+              }));
+            } else {
+              console.log(`💬 [Chat History] No messages found or empty array. Response:`, {
+                success: responseData.success,
+                messagesCount: Array.isArray(messages) ? messages.length : 'not an array',
+                checkedLocations: {
+                  responseDataMessages: responseData.messages?.length || 0,
+                  dataChatMessages: responseData.data?.chatMessages?.length || 0,
+                  dataMessages: responseData.data?.messages?.length || 0,
+                },
+              });
+              // No messages or empty response
+              setState((prev) => ({
+                ...prev,
+                isLoading: false,
+                messages: [],
+                error: null,
+              }));
+            }
+          } catch (fetchError: any) {
+            console.error("❌ Failed to fetch message history:", fetchError);
+            // Continue with empty messages - user can still send messages
+            setState((prev) => ({
+              ...prev,
+              isLoading: false,
+              messages: [],
+              error: fetchError?.message || "Failed to load message history. You can still send messages.",
+            }));
+          }
         } else {
-          // If no phone, just open empty chat
+          // If no tripId, just open empty chat
           setState((prev) => ({
             ...prev,
             isLoading: false,
@@ -243,7 +400,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         error?.message || "Failed to open chat. Please try again."
       );
     }
-  }, [fetchMessageHistory, state.customerInfo]);
+  }, [getTripId, driverId, state.customerInfo]);
 
   const closeChat = useCallback(() => {
     console.log("💬 Closing chat modal");
@@ -292,13 +449,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         status: "sending",
       };
 
-      // Add message to UI immediately
-      setState((prev) => ({
-        ...prev,
-        messages: [...prev.messages, newMessage],
-        isSending: true,
-        error: null,
-      }));
+      // Add message to UI immediately and maintain sort order
+      setState((prev) => {
+        const updatedMessages = [...prev.messages, newMessage];
+        // Sort by timestamp to maintain chronological order
+        updatedMessages.sort((a, b) => {
+          const timeA = new Date(a.timestamp).getTime();
+          const timeB = new Date(b.timestamp).getTime();
+          return timeA - timeB; // Ascending order (oldest first)
+        });
+        return {
+          ...prev,
+          messages: updatedMessages,
+          isSending: true,
+          error: null,
+        };
+      });
 
       // Emit socket event
       try {
@@ -308,7 +474,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           message: text.trim(),
           timestamp: newMessage.timestamp,
         };
-        console.log("💬 Message payload:", JSON.stringify(messagePayload));
         // Send as object, not stringified
         emitActiveTripEvent(
           ACTIVE_TRIP_SOCKET_EVENTS.SEND_MESSAGE,

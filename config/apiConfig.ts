@@ -845,11 +845,15 @@ async function transformRequestToDbFormat(
     if (data && typeof data === "object" && ("email" in data || "password" in data)) {
       const email = data.email || "";
       const password = data.password || "";
+      const companyId = data.companyId !== undefined 
+        ? (typeof data.companyId === 'string' ? parseInt(data.companyId, 10) : data.companyId)
+        : undefined;
       
       if (email && password) {
         return await buildLoginRequest({
           emailOrPhone: email,
           password: password,
+          companyId: companyId,
         });
       }
     }

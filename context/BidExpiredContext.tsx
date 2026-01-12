@@ -1,12 +1,14 @@
 import BidStatusModal from "@/components/BidStatusModal";
 import { BID_STATUS } from "@/constants/global";
 import { useModalManager } from "@/context/ModalManagerContext";
+import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import {
   createContext,
   ReactNode,
   useContext,
   useEffect,
   useState,
+  useRef,
 } from "react";
 
 interface BidExpiredContextType {
@@ -14,7 +16,7 @@ interface BidExpiredContextType {
   isBidExpiredVisible: boolean;
 
   // Actions
-  showBidExpired: () => void;
+  showBidExpired: (tripId?: string) => void;
   hideBidExpired: () => void;
   onTimerComplete: () => void;
   onClose: () => void;
@@ -27,8 +29,24 @@ const BidExpiredContext = createContext<BidExpiredContextType | undefined>(
 export function BidExpiredProvider({ children }: { children: ReactNode }) {
   const [isBidExpiredVisible, setIsBidExpiredVisible] = useState(false);
   const { registerModal, unregisterModal } = useModalManager();
+  const { broadcastOffers, updateBroadcastOffer } = useBroadcastJobOffers();
+  const currentTripIdRef = useRef<string | null>(null);
 
-  const showBidExpired = () => {
+  const showBidExpired = (tripId?: string) => {
+    // Store tripId if provided for status update
+    if (tripId) {
+      currentTripIdRef.current = tripId;
+      // Update broadcast offer status to "expired" locally when sheet opens
+      const offerToUpdate = broadcastOffers.find(
+        (o) => o.tripOffer.tripId === tripId
+      );
+      if (offerToUpdate) {
+        updateBroadcastOffer(offerToUpdate.id, {
+          status: "expired" as any,
+        });
+        console.log(`[BidExpired] Updated offer ${offerToUpdate.id} status to "expired" when sheet opened`);
+      }
+    }
     setIsBidExpiredVisible(true);
   };
 

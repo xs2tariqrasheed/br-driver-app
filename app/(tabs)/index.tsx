@@ -67,6 +67,11 @@ export default function HomeScreen() {
   const { execute: postOnlineLocation, loading: onlineLocationLoading } =
     usePost(DRIVER_ENDPOINTS.postOnlineLocation(auth?.user?.id || ""));
 
+  // Driver status API using shared post hook
+  const { execute: updateDriverStatus, loading: statusLoading } = usePost(
+    DRIVER_ENDPOINTS.updateStatus(auth?.user?.id || "")
+  );
+
   // Interval is managed centrally in OnlineLocationTracker (app/_layout)
 
   const statusValue: DriverStatusLabel = driver?.online
@@ -376,6 +381,30 @@ export default function HomeScreen() {
         log("[HomeScreen] Posting initial location to go online");
         await postOnlineLocation(payload as any);
 
+        // Update driver status to online in database
+        log("[HomeScreen] Updating driver status to online");
+        const statusResponse = await updateDriverStatus({ isOnline: true });
+
+        // Check if the API response indicates failure
+        if (statusResponse && typeof statusResponse === "object") {
+          const isSuccess =
+            statusResponse.success !== false &&
+            (statusResponse.data?.jHeader?.responseCode === "0" ||
+              statusResponse.data?.jHeader?.responseCode === 0 ||
+              statusResponse.data?.jHeader?.responseCode === undefined);
+
+          if (!isSuccess) {
+            const errorMessage =
+              statusResponse.message ||
+              statusResponse.data?.jHeader?.message ||
+              "Failed to update driver status to online";
+            log("[HomeScreen] Driver status update failed:", errorMessage);
+            throw new Error(errorMessage);
+          }
+        }
+
+        log("[HomeScreen] Driver status updated to online successfully");
+
         // Store the location for future tracking
         await setStorageItem(
           PREVIOUS_LOCATION_STORAGE_KEY,
@@ -388,12 +417,10 @@ export default function HomeScreen() {
           log("[HomeScreen] Socket connected successfully");
         } catch (error) {
           log("[HomeScreen] Failed to connect socket:", error);
-          // Don't fail the online process if socket connection fails
         }
 
-        // Only set driver online if API call succeeds
+        // ONLY set driver online if everything above succeeded
         await setDriver({ ...(driver ?? {}), online: true });
-
         showToast("You are now Online", { variant: "success" });
 
         // Interval loop is managed centrally in OnlineLocationTracker
@@ -430,20 +457,47 @@ export default function HomeScreen() {
         }
 
         log("[HomeScreen] Marking driver as offline via API");
+        
+        // Update driver status to offline in database
+        log("[HomeScreen] Updating driver status to offline");
+        const statusResponse = await updateDriverStatus({ isOnline: false });
+
+        // Check if the API response indicates failure
+        if (statusResponse && typeof statusResponse === "object") {
+          const isSuccess =
+            statusResponse.success !== false &&
+            (statusResponse.data?.jHeader?.responseCode === "0" ||
+              statusResponse.data?.jHeader?.responseCode === 0 ||
+              statusResponse.data?.jHeader?.responseCode === undefined);
+
+          if (!isSuccess) {
+            const errorMessage =
+              statusResponse.message ||
+              statusResponse.data?.jHeader?.message ||
+              "Failed to update driver status to offline";
+            log("[HomeScreen] Driver status update failed:", errorMessage);
+            throw new Error(errorMessage);
+          }
+        }
+
+        log("[HomeScreen] Driver status updated to offline successfully");
+
+        // Delete online location
         await deleteOnlineLocation();
 
-        // Clear the previous location storage when going offline
+        // Clear the previous location storage
         await removeStorageItem(PREVIOUS_LOCATION_STORAGE_KEY);
         log("[HomeScreen] Cleared previous location storage");
 
-        // Disconnect socket when going offline
+        // Disconnect socket
         try {
           disconnectSocket();
           log("[HomeScreen] Socket disconnected successfully");
         } catch (error) {
           log("[HomeScreen] Error disconnecting socket:", error);
-          // Don't fail the offline process if socket disconnection fails
         }
+
+        // ONLY update driver state if everything above succeeded
         setHasAnyActiveOffer(false);
         await setDriver({
           ...(driver ?? {}),

@@ -255,10 +255,19 @@ export default function RideOfferModal({
 
   const isOffered = offer?.status === LIVE_JOB_STATUS.OFFERED;
   const isExpired = offer?.status === LIVE_JOB_STATUS.EXPIRED;
+  const isRejected = offer?.status === LIVE_JOB_STATUS.REJECTED;
+  // Allow rebidding for rejected or expired bids
+  const canBid = isOffered || (isExpired && bidable) || (isRejected && bidable);
   const shouldDisabled = isSkipLoading || isHideLoading || isSubmitBidLoading;
 
   // Handle bid button click for bidable offers
   const handleBidClick = () => {
+    // Allow rebidding for rejected or expired bids
+    if ((isExpired || isRejected) && bidable) {
+      // Reset status to "offered" to allow rebidding
+      // Note: This assumes the parent component will handle status update
+      console.log(`[RideOffer] Allowing rebid for ${offer?.status} status`);
+    }
     // As a screen, keep Ride Offer visible and open the Bid sheet on top
     const bidData = buildMockBidData();
     showBidBottomSheet(bidData, handleBidSubmitted);
@@ -270,8 +279,8 @@ export default function RideOfferModal({
       const result = await submitBid(data?.selectedBid);
       console.log("🔔 Bid submission result:", result);
       if (result && "success" in result && result.success) {
-        // Show waiting timer with completion callback
-        showBidWaitingTimer();
+        // Show waiting timer with completion callback, passing the current offer
+        showBidWaitingTimer(offer || undefined);
       }
     } catch (e) {
       // Error toast handled in submitBid
@@ -445,7 +454,7 @@ export default function RideOfferModal({
                     Skip Price
                   </Button>
 
-                  {bidable ? (
+                  {bidable && canBid ? (
                     <Button
                       variant="primary"
                       block={false}
@@ -455,7 +464,7 @@ export default function RideOfferModal({
                       disabled={shouldDisabled}
                       loading={isSubmitBidLoading}
                     >
-                      Bid
+                      {isExpired || isRejected ? "Re-bid" : "Bid"}
                     </Button>
                   ) : (
                     <Button

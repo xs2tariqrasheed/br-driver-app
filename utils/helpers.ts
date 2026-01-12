@@ -215,6 +215,8 @@ export interface LocationCoordinates {
 export interface LocationSelectData {
   address: string;
   coordinates: LocationCoordinates;
+  placeId?: string;
+  zipCode?: string;
 }
 
 /**
@@ -225,6 +227,8 @@ export interface WebViewMessageData {
   latitude: number;
   longitude: number;
   address?: string;
+  placeId?: string;
+  zipCode?: string;
 }
 
 /**
@@ -508,13 +512,26 @@ export const generateMapHTML = (
                   console.log('Geocoding result:', { status, results });
                   if (status === 'OK' && results[0]) {
                     const address = results[0].formatted_address;
-                    console.log('Address found:', address);
+                    const placeId = results[0].place_id || '';
+                    // Extract postal code from address components
+                    let zipCode = '';
+                    if (results[0].address_components) {
+                      const postalCodeComponent = results[0].address_components.find(
+                        component => component.types.includes('postal_code')
+                      );
+                      if (postalCodeComponent) {
+                        zipCode = postalCodeComponent.long_name || postalCodeComponent.short_name || '';
+                      }
+                    }
+                    console.log('Address found:', address, 'place_id:', placeId, 'zipCode:', zipCode);
                     // Auto-select this location with address
                     window.ReactNativeWebView.postMessage(JSON.stringify({
                       type: 'location_selected',
                       latitude: pos.lat,
                       longitude: pos.lng,
-                      address: address
+                      address: address,
+                      placeId: placeId,
+                      zipCode: zipCode
                     }));
                   } else {
                     console.log('Geocoding failed, using fallback');
@@ -524,7 +541,9 @@ export const generateMapHTML = (
                       type: 'location_selected',
                       latitude: pos.lat,
                       longitude: pos.lng,
-                      address: fallbackAddress
+                      address: fallbackAddress,
+                      placeId: '',
+                      zipCode: ''
                     }));
                   }
                 });
@@ -580,12 +599,25 @@ export const generateMapHTML = (
                 console.log('Click geocoding result:', { status, results });
                 if (status === 'OK' && results[0]) {
                   const address = results[0].formatted_address;
-                  console.log('Click address found:', address);
+                  const placeId = results[0].place_id || '';
+                  // Extract postal code from address components
+                  let zipCode = '';
+                  if (results[0].address_components) {
+                    const postalCodeComponent = results[0].address_components.find(
+                      component => component.types.includes('postal_code')
+                    );
+                    if (postalCodeComponent) {
+                      zipCode = postalCodeComponent.long_name || postalCodeComponent.short_name || '';
+                    }
+                  }
+                  console.log('Click address found:', address, 'place_id:', placeId, 'zipCode:', zipCode);
                   window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: 'location_selected',
                     latitude: position.lat(),
                     longitude: position.lng(),
-                    address: address
+                    address: address,
+                    placeId: placeId,
+                    zipCode: zipCode
                   }));
                 } else {
                   console.log('Click geocoding failed, using fallback');
@@ -595,7 +627,9 @@ export const generateMapHTML = (
                     type: 'location_selected',
                     latitude: position.lat(),
                     longitude: position.lng(),
-                    address: fallbackAddress
+                    address: fallbackAddress,
+                    placeId: '',
+                    zipCode: ''
                   }));
                 }
               });
@@ -880,11 +914,24 @@ export const generateHeatmapHTML = (
               geocoder.geocode({ location: position }, function(results, status) {
                 if (status === 'OK' && results[0]) {
                   const address = results[0].formatted_address;
+                  const placeId = results[0].place_id || '';
+                  // Extract postal code from address components
+                  let zipCode = '';
+                  if (results[0].address_components) {
+                    const postalCodeComponent = results[0].address_components.find(
+                      component => component.types.includes('postal_code')
+                    );
+                    if (postalCodeComponent) {
+                      zipCode = postalCodeComponent.long_name || postalCodeComponent.short_name || '';
+                    }
+                  }
                   window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: 'location_selected',
                     latitude: position.lat(),
                     longitude: position.lng(),
-                    address: address
+                    address: address,
+                    placeId: placeId,
+                    zipCode: zipCode
                   }));
                 } else {
                   // Fallback to coordinates if geocoding fails
@@ -893,7 +940,9 @@ export const generateHeatmapHTML = (
                     type: 'location_selected',
                     latitude: position.lat(),
                     longitude: position.lng(),
-                    address: fallbackAddress
+                    address: fallbackAddress,
+                    placeId: '',
+                    zipCode: ''
                   }));
                 }
               });
@@ -1162,13 +1211,15 @@ export const handleWebViewLocationMessage = (
     if (data.type === "location_selected") {
       // If address is provided, use it directly; otherwise, fall back to coordinates
       if (data.address) {
-        log("Calling onLocationSelect with address:", data.address);
+        log("Calling onLocationSelect with address:", data.address, "placeId:", data.placeId, "zipCode:", data.zipCode);
         onLocationSelect({
           address: data.address,
           coordinates: {
             latitude: data.latitude,
             longitude: data.longitude,
           },
+          placeId: data.placeId,
+          zipCode: data.zipCode,
         });
       } else {
         log("Calling onMapPress with coordinates");
@@ -1185,6 +1236,54 @@ export const handleWebViewLocationMessage = (
 // =============================================================================
 // DESTINATION MANAGEMENT HELPERS
 // =============================================================================
+
+/**
+ * Extracts postal/zip code from an address string using common patterns.
+ * Tries to find postal codes in various formats (US: 12345, UK: SW1A 1AA, etc.)
+ *
+ * @param {string} address - The address string to search
+ * @returns {string} The extracted postal code or empty string if not found
+ */
+export const extractZipCodeFromAddress = (address: string): string => {
+  if (!address) return '';
+  
+  // Common postal code patterns:
+  // US: 5 digits (12345) or 5+4 (12345-6789)
+  // UK: SW1A 1AA format
+  // Canada: A1A 1A1 format
+  // Pakistan: 5 digits (54000)
+  // Generic: 4-6 digits
+  
+  // Try Pakistan format first (5 digits)
+  const pakistanPattern = /\b\d{5}\b/;
+  const pakMatch = address.match(pakistanPattern);
+  if (pakMatch) {
+    return pakMatch[0];
+  }
+  
+  // Try US format (5 digits or 5-4)
+  const usPattern = /\b\d{5}(?:-\d{4})?\b/;
+  const usMatch = address.match(usPattern);
+  if (usMatch) {
+    return usMatch[0];
+  }
+  
+  // Try UK format (SW1A 1AA)
+  const ukPattern = /\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/i;
+  const ukMatch = address.match(ukPattern);
+  if (ukMatch) {
+    return ukMatch[0].replace(/\s+/g, '');
+  }
+  
+  // Try generic 4-6 digit pattern
+  const genericPattern = /\b\d{4,6}\b/;
+  const genericMatch = address.match(genericPattern);
+  if (genericMatch) {
+    return genericMatch[0];
+  }
+  
+  return '';
+};
 
 /**
  * Creates a new desired destination object with automatic expiration time.

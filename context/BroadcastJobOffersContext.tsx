@@ -11,6 +11,7 @@ export interface BroadcastJobOffer {
     | "accepted"
     | "rejected"
     | "expired"
+    | "offer-expired"
     | "skipped"
     | "hidden";
   bidable: boolean;
@@ -442,23 +443,16 @@ export function BroadcastJobOffersProvider({
       return;
     }
 
-    console.log(`⏰ Marking broadcast offer as expired: ${tripId}`);
+    console.log(`⏰ Removing broadcast offer due to expiration: ${tripId}`);
 
-    // Update the offer status to expired
-    setBroadcastOffers((prev) =>
-      prev.map((offer) => {
-        // Check if this offer matches the expired tripId
-        if (offer.tripOffer.tripId === tripId && offer.status !== "expired") {
-          console.log(
-            `📡 Found matching broadcast offer to mark as expired: ${offer.id}`
-          );
-          return { ...offer, status: "expired" as const };
-        }
-        return offer;
-      })
-    );
+    // Remove the offer from the list
+    setBroadcastOffers((prev) => {
+      const filtered = prev.filter((offer) => offer.tripOffer.tripId !== tripId);
+      console.log(`📡 Removed offer with tripId ${tripId}. Count: ${prev.length} -> ${filtered.length}`);
+      return filtered;
+    });
 
-    console.log("✅ Broadcast offer marked as expired successfully");
+    console.log("✅ Broadcast offer removed successfully");
   };
 
   // Reset demo offers to default state

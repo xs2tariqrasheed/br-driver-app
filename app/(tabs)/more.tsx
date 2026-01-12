@@ -360,7 +360,6 @@ export default function MoreScreen() {
         confirmButtonText="Yes, Delete"
         onCancel={() => setDeleteProfileSheetOpen(false)}
         onConfirm={() => {
-          handleDataDelete();
           setDeleteProfileSheetOpen(false);
           router.push("/(screens)/auth/verify-otp?context=delete-profile");
         }}

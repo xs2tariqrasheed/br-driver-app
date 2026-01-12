@@ -498,6 +498,13 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         variant: "error",
         position: "top",
       });
+
+      // If trip is expired, remove it and close modal
+      if (errorMessage.toLowerCase().includes("expired")) {
+        try { hideRideOfferModal(); } catch {}
+        try { await setHasAnyActiveOffer(false); } catch {}
+      }
+
       setIsSubmitBidLoading(false);
       throw error;
     }
@@ -549,6 +556,12 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         variant: "error",
         position: "top",
       });
+
+      // If trip is expired, ensure state is cleaned up
+      if (errorMessage.toLowerCase().includes("expired")) {
+        try { await setHasAnyActiveOffer(false); } catch {}
+      }
+
       setIsSubmitBidLoading(false);
       throw error;
     }

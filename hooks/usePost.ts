@@ -96,7 +96,11 @@ export const usePost = <T = any, B = any>(
         const response = await client.post<ApiResponse<T>>(endpoint, body, {
           params,
         });
-        const responseData = (response.data as any)?.data ?? response.data;
+        // For auth endpoints, don't extract nested 'data' property since backend returns { token, user, status, message, data }
+        // For other endpoints, extract nested 'data' if it exists (for DB response format)
+        const responseData = (clientType === API_CLIENT_TYPES.AUTH && endpoint.includes("/auth/signin"))
+          ? response.data
+          : ((response.data as any)?.data ?? response.data);
         log(`${logPrefix} ✅ Response`, {
           baseURL: client.defaults.baseURL,
           endpoint,

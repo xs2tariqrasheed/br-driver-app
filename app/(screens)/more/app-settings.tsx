@@ -5,7 +5,8 @@ import Loader from "@/components/Loader";
 import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import { APP_SETTINGS_ITEMS, APP_VERSION } from "@/constants/global";
+import { APP_SETTINGS_ITEMS, APP_VERSION, DRIVER_TYPES } from "@/constants/global";
+import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
@@ -22,6 +23,11 @@ export default function AppSettingsScreen() {
   const settingsContext = useSettings();
   const [settings, setSettings, status] = settingsContext;
   const { isLoading, error, clearError } = status;
+  const [auth] = useAuth();
+  
+  // Check if user is an independent operator
+  const isIndependentOperator =
+    auth?.user?.type === DRIVER_TYPES.INDEPENDENT_OPERATOR;
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -233,58 +239,63 @@ export default function AppSettingsScreen() {
               ),
               children: (
                 <View style={styles.group}>
-                  <View style={styles.row}>
-                    <Typography
-                      type="bodyLarge"
-                      weight="medium"
-                      style={styles.text16}
-                    >
-                      Live Jobs
-                    </Typography>
-                    <Toggle
-                      variant="switch"
-                      value={settings.ridePreferences.homePage.liveJobs}
-                      setValue={createToggleHandler((next) => ({
-                        ...settings,
-                        ridePreferences: {
-                          ...settings.ridePreferences,
-                          homePage: {
-                            ...settings.ridePreferences.homePage,
-                            liveJobs: next,
-                          },
-                        },
-                      }))}
-                      disabled={isLoading}
-                      size={styles.toggle}
-                    />
-                  </View>
-                  <View style={styles.row}>
-                    <Typography
-                      type="bodyLarge"
-                      weight="medium"
-                      style={styles.text16}
-                    >
-                      Future Reservations
-                    </Typography>
-                    <Toggle
-                      variant="switch"
-                      value={
-                        settings.ridePreferences.homePage.futureReservations
-                      }
-                      setValue={createToggleHandler((next) => ({
-                        ...settings,
-                        ridePreferences: {
-                          ...settings.ridePreferences,
-                          homePage: {
-                            ...settings.ridePreferences.homePage,
-                            futureReservations: next,
-                          },
-                        },
-                      }))}
-                      disabled={isLoading}
-                      size={styles.toggle}
-                    />
-                  </View>
+                  {/* Hide Live Jobs and Future Reservations for independent operators */}
+                  {!isIndependentOperator && (
+                    <>
+                      <View style={styles.row}>
+                        <Typography
+                          type="bodyLarge"
+                          weight="medium"
+                          style={styles.text16}
+                        >
+                          Live Jobs
+                        </Typography>
+                        <Toggle
+                          variant="switch"
+                          value={settings.ridePreferences.homePage.liveJobs}
+                          setValue={createToggleHandler((next) => ({
+                            ...settings,
+                            ridePreferences: {
+                              ...settings.ridePreferences,
+                              homePage: {
+                                ...settings.ridePreferences.homePage,
+                                liveJobs: next,
+                              },
+                            },
+                          }))}
+                          disabled={isLoading}
+                          size={styles.toggle}
+                        />
+                      </View>
+                      <View style={styles.row}>
+                        <Typography
+                          type="bodyLarge"
+                          weight="medium"
+                          style={styles.text16}
+                        >
+                          Future Reservations
+                        </Typography>
+                        <Toggle
+                          variant="switch"
+                          value={
+                            settings.ridePreferences.homePage.futureReservations
+                          }
+                          setValue={createToggleHandler((next) => ({
+                            ...settings,
+                            ridePreferences: {
+                              ...settings.ridePreferences,
+                              homePage: {
+                                ...settings.ridePreferences.homePage,
+                                futureReservations: next,
+                              },
+                            },
+                          }))}
+                          disabled={isLoading}
+                          size={styles.toggle}
+                        />
+                      </View>
+                    </>
+                  )}
                   <View style={styles.row}>
                     <Typography
                       type="bodyLarge"

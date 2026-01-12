@@ -73,6 +73,7 @@ export default function LiveJobOffersScreen({
   const {
     broadcastOffers,
     updateBroadcastOffer,
+    removeBroadcastOffer,
     clearAllBroadcastOffers,
     resetDemoOffers,
   } = useBroadcastJobOffers();
@@ -145,18 +146,23 @@ export default function LiveJobOffersScreen({
     let filtered: any[];
 
     if (showHiddenJobs) {
-      // Show all offers (offered, accepted, skipped, hidden, expired)
+      // Show all offers (offered, accepted, skipped, hidden, expired, rejected, bidding)
       filtered = broadcastOffers;
       log(
-        `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (including hidden/skipped/expired)`
+        `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (including hidden/skipped/expired/rejected)`
       );
     } else {
-      // Show only active offers (offered, bidding, or accepted)
+      // Show active offers, and offers that can be re-bid (rejected/expired)
       filtered = broadcastOffers.filter(
-        (offer) => offer.status === "offered" || offer.status === "bidding" || offer.status === "accepted"
+        (offer) => 
+          offer.status === "offered" || 
+          offer.status === "bidding" || 
+          offer.status === "accepted" ||
+          offer.status === "rejected" ||
+          offer.status === "expired"
       );
       log(
-        `[LiveJobOffersScreen] Showing ${filtered.length} active offers (offered/bidding/accepted only) out of ${broadcastOffers.length} total`
+        `[LiveJobOffersScreen] Showing ${filtered.length} visible offers out of ${broadcastOffers.length} total`
       );
     }
 
@@ -187,16 +193,34 @@ export default function LiveJobOffersScreen({
 
   // Get item status for each job
   const getItemStatus = useCallback(
-    (jobId: string): LocalJobStatus | "expired" | "accepted" | "offered" => {
+    (jobId: string): LocalJobStatus | "expired" | "accepted" | "offered" | "rejected" | "bidding" | "offer-expired" => {
       const hiddenOffer = getLiveOfferStatus(jobId);
       const broadcastOffer = broadcastOffers.find(
         (offer) => offer.id === jobId
       );
 
-      // Check if the offer is expired in the broadcast context FIRST (highest priority)
+      // Check if the offer is truly expired in the broadcast context FIRST (highest priority)
+      if (broadcastOffer?.status === "offer-expired") {
+        console.log(`  - returning offer-expired status (highest priority)`);
+        return "offer-expired";
+      }
+
+      // Check if the bid is expired in the broadcast context
       if (broadcastOffer?.status === "expired") {
-        console.log(`  - returning expired status (highest priority)`);
+        console.log(`  - returning bid expired status`);
         return "expired";
+      }
+
+      // Check if the offer is rejected in the broadcast context
+      if (broadcastOffer?.status === "rejected") {
+        console.log(`  - returning rejected status`);
+        return "rejected";
+      }
+
+      // Check if the offer is bidding in the broadcast context
+      if (broadcastOffer?.status === "bidding") {
+        console.log(`  - returning bidding status`);
+        return "bidding";
       }
 
       // For fresh offers (status "offered"), always return "offered" regardless of previous status
@@ -242,22 +266,25 @@ export default function LiveJobOffersScreen({
       const job = sortedJobs.find((j) => j.id === jobId);
       if (!job) return;
 
-      // Check if job is expired (but still allow interaction for debugging)
-      const now = new Date();
+      // Check job status
       const isExpired = job.status === "expired";
+      const isRejected = job.status === "rejected";
       const isBidding = job.status === "bidding";
 
-      if (isBidding) {
+      // Allow rebidding for rejected or expired bids
+      // This check must come BEFORE the isBidding check to handle cases where 
+      // the status might be stuck or transitioning
+      if ((isExpired || isRejected) && job.bidable) {
+        log(
+          `[LiveJobOffersScreen] Job ${jobId} is ${job.status}, allowing rebid. Resetting status to offered.`
+        );
+        // Reset status to "offered" to allow rebidding
+        updateBroadcastOffer(jobId, { status: "offered" });
+        // Proceed with opening the bid sheet
+      } else if (isBidding) {
         log(`[LiveJobOffersScreen] Job ${jobId} is already in bidding state, waiting for customer`);
         showToast("Waiting for customer response...", { variant: "warning", position: "top" });
         return;
-      }
-
-      if (isExpired) {
-        log(
-          `[LiveJobOffersScreen] Job ${jobId} is expired, but allowing action for debugging`
-        );
-        // Don't return - allow the action to proceed
       }
 
       if (job.bidable) {
@@ -294,18 +321,18 @@ export default function LiveJobOffersScreen({
         log(`[LiveJobOffersScreen] Opening ETA modal for job: ${jobId}`);
       }
     },
-    [sortedJobs, showRideOfferModal, showBidBottomSheet]
+    [sortedJobs, showRideOfferModal, showBidBottomSheet, updateBroadcastOffer]
   );
 
   // Handle bid submission from bid bottom sheet
   const handleBidSubmitted = useCallback(
     async (bidData: any, job?: any) => {
+      // Use job parameter if provided, otherwise fall back to selectedJobForBid
+      const jobToUse = job || selectedJobForBid;
+
       try {
         log("[LiveJobOffersScreen] Bid submitted from bottom sheet:", bidData);
-        log("[LiveJobOffersScreen] Job data:", job);
-
-        // Use job parameter if provided, otherwise fall back to selectedJobForBid
-        const jobToUse = job || selectedJobForBid;
+        log("[LiveJobOffersScreen] Job data:", jobToUse);
 
         if (!jobToUse) {
           log("[LiveJobOffersScreen] No job data available for bid submission");
@@ -347,7 +374,7 @@ export default function LiveJobOffersScreen({
           setSelectedJobForBid(null);
 
           // Show waiting timer for customer response
-          showBidWaitingTimer();
+          showBidWaitingTimer(jobToUse);
           log("[LiveJobOffersScreen] Showing bid waiting timer");
         }
       } catch (error) {
@@ -360,12 +387,21 @@ export default function LiveJobOffersScreen({
           variant: "error",
           position: "top",
         });
+
+        // If trip is expired, remove it from the list as per user request
+        if (errorMessage.toLowerCase().includes("expired")) {
+          if (jobToUse?.id) {
+            removeBroadcastOffer(jobToUse.id);
+            log(`[LiveJobOffersScreen] Removed expired offer ${jobToUse.id} after failed bid`);
+          }
+        }
       }
     },
     [
       submitBidForBroadcastOffer,
       selectedJobForBid,
       updateBroadcastOffer,
+      removeBroadcastOffer,
       showBidWaitingTimer,
     ]
   );
@@ -439,9 +475,19 @@ export default function LiveJobOffersScreen({
           variant: "error",
           position: "top",
         });
+
+        // If trip is expired, remove it from the list
+        if (errorMessage.toLowerCase().includes("expired")) {
+          if (selectedJobForAccept?.id) {
+            removeBroadcastOffer(selectedJobForAccept.id);
+            log(`[LiveJobOffersScreen] Removed expired offer ${selectedJobForAccept.id} after failed ETA`);
+          }
+          setIsETAModalOpen(false);
+          setSelectedJobForAccept(null);
+        }
       }
     },
-    [selectedJobForAccept, submitETA, updateBroadcastOffer]
+    [selectedJobForAccept, submitETA, updateBroadcastOffer, removeBroadcastOffer]
   );
 
   // Handle "View +X More" click
@@ -724,6 +770,9 @@ export default function LiveJobOffersScreen({
       processingOfferId !== null && processingOfferId !== item.id;
 
     // Determine disabled state based on actual status
+    // IMPORTANT: Distinguish between:
+    // - "expired" = bid expired (allow rebidding if bidable)
+    // - "offer-expired" = entire offer/trip expired (disable all actions)
     let isDisabled = false;
 
     // Check if action has been taken
@@ -733,7 +782,17 @@ export default function LiveJobOffersScreen({
       isDisabled = true;
     } else if (item.status === "hidden") {
       isDisabled = true;
-    } else if (item.status === "expired") {
+    } else if (item.status === "offer-expired") {
+      // Offer itself expired - disable all actions (no rebidding allowed)
+      isDisabled = true;
+    } else if (item.status === "expired" && item.bidable) {
+      // Bid expired but offer still active - allow rebidding
+      isDisabled = false;
+    } else if (item.status === "rejected" && item.bidable) {
+      // Bid rejected but offer still active - allow rebidding
+      isDisabled = false;
+    } else if (item.status === "expired" && !item.bidable) {
+      // Non-bidable offers that are expired should be disabled
       isDisabled = true;
     } else {
       isDisabled = false;

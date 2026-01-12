@@ -15,11 +15,12 @@ import { useDriver } from "@/context/DriverContext";
 import {
   createDesiredDestination,
   DesiredDestination,
+  extractZipCodeFromAddress,
   getValidDestinations,
   logger,
 } from "@/utils/helpers";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -51,6 +52,12 @@ export default function DesiredDestinationsScreen() {
 
   // Add/Edit Destination bottom sheet state
   const [inputAddress, setInputAddress] = useState<string>("");
+  const [selectedCoordinates, setSelectedCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string>("");
+  const [selectedZipCode, setSelectedZipCode] = useState<string>("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState<boolean>(false);
 
@@ -126,51 +133,48 @@ export default function DesiredDestinationsScreen() {
     if (params.selectedAddress) {
       log("Setting input address:", params.selectedAddress);
       setInputAddress(params.selectedAddress as string);
+      
+      // Parse coordinates if provided
+      if (params.selectedCoordinates) {
+        try {
+          const coords = JSON.parse(params.selectedCoordinates as string);
+          setSelectedCoordinates(coords);
+        } catch (error) {
+          log("Error parsing coordinates:", error);
+        }
+      }
+      
+      // Set placeId and zipCode if provided
+      if (params.selectedPlaceId) {
+        setSelectedPlaceId(params.selectedPlaceId as string);
+      }
+      if (params.selectedZipCode) {
+        setSelectedZipCode(params.selectedZipCode as string);
+      }
+      
       setIsSheetOpen(true);
       // Clear the params to avoid reopening on subsequent renders
       router.setParams({
         selectedAddress: undefined,
         selectedCoordinates: undefined,
+        selectedPlaceId: undefined,
+        selectedZipCode: undefined,
       });
     }
-  }, [params.selectedAddress, router]);
+  }, [params.selectedAddress, params.selectedCoordinates, params.selectedPlaceId, params.selectedZipCode, router]);
 
   const handleAddDestination = () => {
     log("handleAddDestination called");
     setEditingIndex(null);
     setInputAddress("");
+    setSelectedCoordinates(null);
+    setSelectedPlaceId("");
+    setSelectedZipCode("");
+    setCommission(0); // Reset commission when opening sheet
     log("Opening sheet");
     setIsSheetOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!driver) return;
-
-    setIsSaving(true);
-    try {
-      // Sync all destinations with backend
-      // For now, we'll just show success since individual operations already sync
-      // In the future, we could implement a bulk update endpoint
-      showToast("Destinations saved successfully", {
-        variant: "success",
-        position: "top",
-      });
-    } catch (error: any) {
-      const errorMessage =
-        error?.message || "Failed to save destinations";
-      showToast(errorMessage, {
-        variant: "error",
-        position: "top",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const isSaveDisabled = useMemo(
-    () => destinations.length === 0,
-    [destinations.length]
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -253,6 +257,9 @@ export default function DesiredDestinationsScreen() {
                   address={dest.address}
                   onEdit={() => {
                     setInputAddress(dest.address);
+                    setSelectedCoordinates(null);
+                    setSelectedPlaceId("");
+                    setSelectedZipCode("");
                     setEditingIndex(idx);
                     setIsSheetOpen(true);
                   }}
@@ -278,52 +285,12 @@ export default function DesiredDestinationsScreen() {
           </View>
         )}
 
-        <Divider style={styles.divider} />
-
-        <View style={styles.section}>
-          <Typography
-            type="titleExtraLarge"
-            weight="semibold"
-            style={styles.textBlack}
-          >
-            Offer a Commission
-          </Typography>
-          <Typography
-            type="bodyMedium"
-            weight="regular"
-            style={[styles.textBlack, styles.mt10]}
-          >
-            Boost your chances of getting rides to your desired destinations by
-            offering a extra commission on the fare.
-          </Typography>
-
-          <Counter
-            value={commission}
-            onChange={setCommission}
-            min={0}
-            max={100}
-            step={1}
-            formatLabel={(v) => `+${v}%`}
-          />
-        </View>
       </ScrollView>
-
-      <View style={styles.footer}>
-        <Button
-          rounded="half"
-          variant="primary"
-          onPress={handleSave}
-          loading={isSaving || isFetchingDestinations}
-          disabled={isSaveDisabled || isLoadingDestinations || isSaving || isFetchingDestinations}
-        >
-          {isSaving || isFetchingDestinations ? "Saving..." : "Save"}
-        </Button>
-      </View>
 
       {/* Add Destination Bottom Sheet */}
       <BottomSheet
         scrollable
-        snapPoints={["35%", "50%"]}
+        snapPoints={["50%", "70%"]}
         snapPointsWhenKeyboardVisible={["75%", "95%"]}
         open={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
@@ -348,19 +315,51 @@ export default function DesiredDestinationsScreen() {
             </Typography>
           </TouchableOpacity>
           <Input
-            placeholder="Enter a location or address"
+            placeholder="Select from map to add destination"
             value={inputAddress}
-            onChangeText={setInputAddress}
-            style={{ marginTop: 12 }}
+            onChangeText={() => {}} // Disable manual input
+            disabled={true}
+            style={{ marginTop: 12, opacity: 0.6 }}
           />
+
+          {/* Commission Section */}
+          <View style={[styles.section, { marginTop: 24 }]}>
+            <Typography
+              type="titleExtraLarge"
+              weight="semibold"
+              style={styles.textBlack}
+            >
+              Offer a Commission
+            </Typography>
+            <Typography
+              type="bodyMedium"
+              weight="regular"
+              style={[styles.textBlack, styles.mt10]}
+            >
+              Boost your chances of getting rides to your desired destinations by
+              offering a extra commission on the fare.
+            </Typography>
+
+            <Counter
+              value={commission}
+              onChange={setCommission}
+              min={0}
+              max={100}
+              step={1}
+              formatLabel={(v) => `+${v}%`}
+            />
+          </View>
 
           <View style={styles.sheetFooter}>
             <Button
               rounded="half"
               variant="primary"
-              loading={isSaving || isFetchingDestinations}
+              loading={isSaving}
               disabled={
                 !inputAddress.trim() ||
+                !selectedCoordinates ||
+                !selectedPlaceId ||
+                commission === 0 ||
                 (editingIndex === null &&
                   destinations.length >= MAX_DESIRED_LOCATIONS) ||
                 isLoadingDestinations ||
@@ -368,7 +367,13 @@ export default function DesiredDestinationsScreen() {
               }
               onPress={async () => {
                 const trimmed = inputAddress.trim();
-                if (!trimmed) return;
+                if (!trimmed || !selectedCoordinates || !selectedPlaceId) {
+                  showToast("Please select a location from the map", {
+                    variant: "error",
+                    position: "top",
+                  });
+                  return;
+                }
 
                 try {
                   if (editingIndex !== null) {
@@ -393,10 +398,27 @@ export default function DesiredDestinationsScreen() {
                       return;
                     }
                     const newDest = createDesiredDestination(trimmed);
+                    // Use zipCode from map selection, or extract from address, or use default
+                    const finalZipCode = selectedZipCode || extractZipCodeFromAddress(trimmed) || "00000";
+                    
+                    // Check if commission is set (must be greater than 0)
+                    if (commission === 0) {
+                      showToast("Please select a commission for your destination first as it is required", {
+                        variant: "error",
+                        position: "top",
+                      });
+                      return;
+                    }
+                    
                     await createDestinationAPI({
                       address: newDest.address,
                       expired_at: newDest.expired_at,
-                    });
+                      googleReferenceNumber: selectedPlaceId,
+                      latitude: selectedCoordinates.latitude,
+                      longitude: selectedCoordinates.longitude,
+                      targetZipCode: finalZipCode,
+                      commissionPercentage: commission,
+                    } as any);
                     showToast("Destination added successfully", {
                       variant: "success",
                       position: "top",
@@ -404,6 +426,10 @@ export default function DesiredDestinationsScreen() {
                   }
 
                   setInputAddress("");
+                  setSelectedCoordinates(null);
+                  setSelectedPlaceId("");
+                  setSelectedZipCode("");
+                  setCommission(0); // Reset commission after saving
                   setEditingIndex(null);
                   setIsSheetOpen(false);
                 } catch (error: any) {
@@ -416,7 +442,7 @@ export default function DesiredDestinationsScreen() {
                 }
               }}
             >
-              {isSaving || isFetchingDestinations ? "Saving..." : "Save"}
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </View>
         </View>
@@ -440,12 +466,6 @@ const styles = StyleSheet.create({
   listWrap: { gap: 8 },
   divider: { marginTop: 18, marginBottom: 8 },
   section: { marginTop: 10 },
-  footer: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 24,
-    backgroundColor: textColors.white,
-  },
   // Bottom sheet styles
   sheetFooter: { paddingTop: 12 },
   selectMapRow: {

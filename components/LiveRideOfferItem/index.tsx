@@ -107,8 +107,8 @@ export interface LiveRideOfferItemProps {
   onButtonClick: () => void;
   /** Custom style for the container */
   style?: ViewStyle;
-  /** Status of the item (visible by default) */
-  itemStatus?: ItemStatus | "expired" | "accepted" | "offered";
+    /** Status of the item (visible by default) */
+  itemStatus?: ItemStatus | "expired" | "accepted" | "offered" | "rejected" | "bidding" | "offer-expired";
   /** Whether the parent list is currently scrolling (disables swipe gestures) */
   isScrolling?: boolean;
   /** Whether the bid button should be hidden */
@@ -196,7 +196,7 @@ export default function LiveRideOfferItem({
   const { skipLiveOffer, hideLiveOffer, getLiveOfferStatus } = useDriver();
   const { hideRideOfferModal, setHasAnyActiveOffer } = useRideOffer();
   const { closeAllModals } = useModalManager();
-  const { updateBroadcastOffer, getBroadcastOffer } = useBroadcastJobOffers();
+  const { updateBroadcastOffer, getBroadcastOffer, removeBroadcastOffer } = useBroadcastJobOffers();
   const translateX = React.useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get("window").width;
   const [showHideButton, setShowHideButton] = React.useState(false);
@@ -209,25 +209,42 @@ export default function LiveRideOfferItem({
 
   // Determine button title based on offer status and bidable prop
   const getButtonTitle = () => {
-    // Check if the offer itself is expired (from broadcast context) - highest priority
-    if (itemStatus === LIVE_JOB_STATUS.EXPIRED) {
-      console.log(`[LiveRideOfferItem] Job ${id} - showing Expired`);
-      return "Expired";
-    }
-
     // Check for user actions based on itemStatus (from broadcast context)
     if (itemStatus === LIVE_JOB_STATUS.ACCEPTED) {
       console.log(`[LiveRideOfferItem] Job ${id} - showing Accepted`);
       return "Accepted";
-    } else if (itemStatus === "bidding") {
-      console.log(`[LiveRideOfferItem] Job ${id} - showing Waiting for Customer`);
-      return "Waiting...";
     } else if (itemStatus === "skipped") {
       console.log(`[LiveRideOfferItem] Job ${id} - showing Skipped`);
       return "Skipped";
     } else if (itemStatus === "hidden") {
       console.log(`[LiveRideOfferItem] Job ${id} - showing Hidden`);
       return "Hidden";
+    }
+
+    // Check if the offer itself is expired (offer-expired) - highest priority, disable rebidding
+    if (itemStatus === "offer-expired") {
+      console.log(`[LiveRideOfferItem] Job ${id} - offer itself expired, showing Expired`);
+      return "Expired";
+    }
+
+    // Allow rebidding for rejected or expired bids (if bidable) - check BEFORE bidding status
+    // This ensures that when a bid expires or is rejected, it shows "Re-bid" instead of "Waiting..."
+    // Note: "expired" here means bid expired, not offer expired
+    if ((itemStatus === LIVE_JOB_STATUS.EXPIRED || itemStatus === "rejected") && bidable) {
+      console.log(`[LiveRideOfferItem] Job ${id} - allowing rebid for ${itemStatus} status (bid expired/rejected)`);
+      return "Re-bid";
+    }
+
+    // Show "Waiting..." only if status is bidding and not expired/rejected
+    if (itemStatus === "bidding") {
+      console.log(`[LiveRideOfferItem] Job ${id} - showing Waiting for Customer`);
+      return "Waiting...";
+    }
+
+    // Check if the offer itself is expired (non-bidable offers that expired)
+    if (itemStatus === LIVE_JOB_STATUS.EXPIRED && !bidable) {
+      console.log(`[LiveRideOfferItem] Job ${id} - non-bidable offer expired, showing Expired`);
+      return "Expired";
     }
 
     // Check for fresh offers (offered status) - show default state based on bidable prop
@@ -311,9 +328,10 @@ export default function LiveRideOfferItem({
           `[LiveRideOfferItem] Left swipe detected for job ${id}, velocity: ${velocityX}`
         );
 
-        // Check if offer is expired before attempting to skip
-        if (itemStatus === LIVE_JOB_STATUS.EXPIRED) {
-          console.log(`[LiveRideOfferItem] Job ${id} is expired, cannot skip`);
+        // Check if offer itself is expired (offer-expired) - cannot skip
+        // Note: "expired" (bid expired) is allowed for rebidding, so we allow skip action
+        if (itemStatus === "offer-expired") {
+          console.log(`[LiveRideOfferItem] Job ${id} offer is expired, cannot skip`);
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: false,
@@ -357,6 +375,13 @@ export default function LiveRideOfferItem({
               variant: "error",
               position: "top",
             });
+
+            // If trip is expired, remove it from the list as per user request
+            if (errorMessage.toLowerCase().includes("expired")) {
+              removeBroadcastOffer(id);
+              console.log(`[LiveRideOfferItem] Removed expired offer ${id} after failed skip`);
+            }
+
             // Reset position if skip fails
             Animated.spring(translateX, {
               toValue: 0,
@@ -396,9 +421,10 @@ export default function LiveRideOfferItem({
   // Handle hide action
   const handleHideOffer = async () => {
     try {
-      // Check if offer is expired before attempting to hide
-      if (itemStatus === LIVE_JOB_STATUS.EXPIRED) {
-        console.log(`[LiveRideOfferItem] Job ${id} is expired, cannot hide`);
+      // Check if offer itself is expired (offer-expired) - cannot hide
+      // Note: "expired" (bid expired) is allowed for rebidding, so we allow hide action
+      if (itemStatus === "offer-expired") {
+        console.log(`[LiveRideOfferItem] Job ${id} offer is expired, cannot hide`);
         setShowHideButton(false);
         return;
       }
@@ -427,19 +453,27 @@ export default function LiveRideOfferItem({
         variant: "error",
         position: "top",
       });
+
+      // If trip is expired, remove it from the list as per user request
+      if (errorMessage.toLowerCase().includes("expired")) {
+        removeBroadcastOffer(id);
+        console.log(`[LiveRideOfferItem] Removed expired offer ${id} after failed hide`);
+      }
+
       setIsHiding(false);
       onProcessingEnd?.(); // Notify parent that processing ended
       // Keep the overlay open so user can retry
     }
   };
 
-  // Handle hide action
+  // Handle reject action
   const handleRejectButtonClick = async () => {
     try {
-      // Check if offer is expired before attempting to hide
-      if (itemStatus === LIVE_JOB_STATUS.EXPIRED) {
+      // Check if offer itself is expired (offer-expired) - cannot reject
+      // Note: "expired" (bid expired) is allowed for rebidding, so we allow reject action
+      if (itemStatus === "offer-expired") {
         console.log(
-          `[HiredDriverJobOfferItem] Job ${id} is expired, cannot reject`
+          `[HiredDriverJobOfferItem] Job ${id} offer is expired, cannot reject`
         );
         showToast("Offer is expired and cannot be rejected", {
           variant: "error",
@@ -462,16 +496,23 @@ export default function LiveRideOfferItem({
       setIsRejecting(false);
       onProcessingEnd?.(); // Notify parent that processing ended
     } catch (error) {
-      console.error("Failed to hide offer:", error);
+      console.error("Failed to reject offer:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to hide offer. Please try again.";
+          : "Failed to reject offer. Please try again.";
       showToast(errorMessage, {
         variant: "error",
         position: "top",
       });
-      setIsHiding(false);
+
+      // If trip is expired, remove it from the list as per user request
+      if (errorMessage.toLowerCase().includes("expired")) {
+        removeBroadcastOffer(id);
+        console.log(`[LiveRideOfferItem] Removed expired offer ${id} after failed reject`);
+      }
+
+      setIsRejecting(false);
       onProcessingEnd?.(); // Notify parent that processing ended
       // Keep the overlay open so user can retry
     }
@@ -570,14 +611,12 @@ export default function LiveRideOfferItem({
                       <ProgressTimer
                         duration={calculateProgressTimerDuration(expiredAt)!}
                         onComplete={() => {
-                          // Only expire if offer is still in "offered" state
+                          // Only remove if offer is still in "offered" state
                           // If driver has performed any action (bid, accept, etc.), status would have changed
                           const currentOffer = getBroadcastOffer(id);
                           if (currentOffer && currentOffer.status === LIVE_JOB_STATUS.OFFERED) {
-                            // Update the offer status to expired when timer completes
-                            updateBroadcastOffer(id, {
-                              status: LIVE_JOB_STATUS.EXPIRED,
-                            });
+                            // Remove the offer when timer completes
+                            removeBroadcastOffer(id);
                             showToast("Offer expired", {
                               variant: "warning",
                               position: "top",

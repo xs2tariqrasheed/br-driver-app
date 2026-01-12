@@ -1,12 +1,14 @@
 import BidStatusModal from "@/components/BidStatusModal";
 import { BID_STATUS } from "@/constants/global";
 import { useModalManager } from "@/context/ModalManagerContext";
+import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import {
   createContext,
   ReactNode,
   useContext,
   useEffect,
   useState,
+  useRef,
 } from "react";
 
 interface BidUnsuccessfulContextType {
@@ -14,7 +16,7 @@ interface BidUnsuccessfulContextType {
   isBidUnsuccessfulVisible: boolean;
 
   // Actions
-  showBidUnsuccessful: () => void;
+  showBidUnsuccessful: (tripId?: string) => void;
   hideBidUnsuccessful: () => void;
   onTimerComplete: () => void;
   onClose: () => void;
@@ -28,8 +30,24 @@ export function BidUnsuccessfulProvider({ children }: { children: ReactNode }) {
   const [isBidUnsuccessfulVisible, setIsBidUnsuccessfulVisible] =
     useState(false);
   const { registerModal, unregisterModal } = useModalManager();
+  const { broadcastOffers, updateBroadcastOffer } = useBroadcastJobOffers();
+  const currentTripIdRef = useRef<string | null>(null);
 
-  const showBidUnsuccessful = () => {
+  const showBidUnsuccessful = (tripId?: string) => {
+    // Store tripId if provided for status update
+    if (tripId) {
+      currentTripIdRef.current = tripId;
+      // Update broadcast offer status to "rejected" locally when sheet opens
+      const offerToUpdate = broadcastOffers.find(
+        (o) => o.tripOffer.tripId === tripId
+      );
+      if (offerToUpdate) {
+        updateBroadcastOffer(offerToUpdate.id, {
+          status: "rejected" as any,
+        });
+        console.log(`[BidUnsuccessful] Updated offer ${offerToUpdate.id} status to "rejected" when sheet opened`);
+      }
+    }
     setIsBidUnsuccessfulVisible(true);
   };
 

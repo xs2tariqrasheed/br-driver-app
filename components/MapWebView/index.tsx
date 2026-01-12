@@ -22,8 +22,10 @@ interface CustomMapProps {
    * Callback function called when a location is selected on the map
    * @param address - The human-readable address of the selected location
    * @param coordinates - The latitude and longitude coordinates of the selected location
+   * @param placeId - Optional Google Place ID for the selected location
+   * @param zipCode - Optional postal/zip code for the selected location
    */
-  onLocationSelect: (address: string, coordinates: LocationCoordinates) => void;
+  onLocationSelect: (address: string, coordinates: LocationCoordinates, placeId?: string, zipCode?: string) => void;
   /**
    * Optional initial region to center the map on when it loads
    * If not provided, the map will attempt to use the user's current location
@@ -153,6 +155,8 @@ export default function CustomMap({
         GOOGLE_MAPS_API_KEY
       );
       log("address", address);
+      // Note: reverseGeocode doesn't return placeId, so we pass undefined
+      // The placeId will come from the WebView message handler
       onLocationSelect(address, { latitude, longitude });
     } catch (error) {
       console.error("Error getting address:", error);
@@ -187,7 +191,7 @@ export default function CustomMap({
           handleWebViewLocationMessage(
             event,
             (data: LocationSelectData) => {
-              onLocationSelect(data.address, data.coordinates);
+              onLocationSelect(data.address, data.coordinates, data.placeId, data.zipCode);
             },
             handleMapPress
           )
