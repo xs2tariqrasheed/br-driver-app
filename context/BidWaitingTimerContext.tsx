@@ -81,9 +81,16 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
 
   // Register modal with ModalManager
   useEffect(() => {
-    registerModal("bidWaitingTimer", hideBidWaitingTimer);
+    // Prevent closing during cancel API call
+    const handleClose = () => {
+      if (isCanceling || isConfirming) {
+        return; // Prevent closing during cancel process
+      }
+      hideBidWaitingTimer();
+    };
+    registerModal("bidWaitingTimer", handleClose);
     return () => unregisterModal("bidWaitingTimer");
-  }, [registerModal, unregisterModal, hideBidWaitingTimer]);
+  }, [registerModal, unregisterModal, hideBidWaitingTimer, isCanceling, isConfirming]);
 
   // Compute remaining ms without causing provider re-renders
   const getRemainingMs = () => {

@@ -64,15 +64,15 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
       visible={open}
       transparent
       animationType="slide"
-      onRequestClose={onCancel}
+      onRequestClose={isCanceling ? undefined : (isConfirming ? (onKeepWaiting || onCancel) : onCancel)}
       presentationStyle={Platform.OS === "ios" ? "overFullScreen" : undefined}
       statusBarTranslucent={Platform.OS === "android"}
     >
       <TouchableOpacity
         style={styles.overlay}
         activeOpacity={1}
-        onPress={isCanceling ? undefined : onCancel}
-        disabled={isCanceling}
+        onPress={isCanceling || isConfirming ? undefined : onCancel}
+        disabled={isCanceling || isConfirming}
       >
         <View
           style={styles.container}
@@ -138,10 +138,8 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                   <Button
                     variant="danger"
                     rounded="half"
-                    // TODO: Uncomment this when the API is ready
-                    // onPress={onConfirmCancel}
-                    // disabled={isCanceling}
-                    disabled={true}
+                    onPress={onConfirmCancel}
+                    disabled={isCanceling}
                     loading={isCanceling}
                   >
                     Cancel Bid
