@@ -235,7 +235,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         // Settings synced successfully
         dispatch({ type: "SET_LOADING", payload: false });
-      } catch (error: any) {
+      } catch (error) {
         // REVERT: If API fails, revert the state and storage
         if (previousSettings) {
           dispatch({ type: "SET", payload: previousSettings });
@@ -441,7 +441,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
 
       dispatch({ type: "SET_LOADING", payload: false });
-    } catch (error: any) {
+      }
+    } catch (error) {
       // Extract error message
       const errorMessage =
         error?.response?.data?.message ||
