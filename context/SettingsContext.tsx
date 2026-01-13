@@ -250,11 +250,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Extract error message
+        const errorAny = error as any;
         const errorMessage =
-          error?.response?.data?.message ||
-          error?.response?.data?.data?.jHeader?.message ||
-          error?.response?.data?.error ||
-          error?.message ||
+          errorAny?.response?.data?.message ||
+          errorAny?.response?.data?.data?.jHeader?.message ||
+          errorAny?.response?.data?.error ||
+          errorAny?.message ||
           "Failed to sync settings to backend";
 
         console.warn("[SettingsContext] Error saving settings:", errorMessage);
@@ -444,11 +445,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       // Extract error message
+      const errorAny = error as any;
       const errorMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.data?.jHeader?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
+        errorAny?.response?.data?.message ||
+        errorAny?.response?.data?.data?.jHeader?.message ||
+        errorAny?.response?.data?.error ||
+        errorAny?.message ||
         "Failed to fetch settings from backend";
 
       console.warn("[SettingsContext] Error fetching settings:", errorMessage);
