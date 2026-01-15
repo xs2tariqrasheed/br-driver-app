@@ -56,8 +56,25 @@ export const getServiceUrl = (
   fallback?: string
 ): string => {
   // If a custom base URL is set, it overrides all other configurations
+  // Extract the port from the testing URL for this service and use it with custom base URL
   if (customBaseUrl) {
-    return customBaseUrl;
+    // Remove port if already included in customBaseUrl
+    const baseUrlWithoutPort = customBaseUrl.replace(/:\d+$/, "");
+    
+    // Get the port from the testing URL for this service
+    const testingUrl = SERVICES_TESTING_URLS[serviceName];
+    if (testingUrl) {
+      // Extract port from testing URL (e.g., "http://192.168.1.3:3001" -> "3001")
+      const portMatch = testingUrl.match(/:(\d+)$/);
+      if (portMatch) {
+        const port = portMatch[1];
+        return `${baseUrlWithoutPort}:${port}`;
+      }
+    }
+    
+    // Fallback: if we can't extract port, check if customBaseUrl already has a port
+    const hasPort = /:\d+/.test(customBaseUrl);
+    return hasPort ? customBaseUrl : `${customBaseUrl}:3001`;
   }
 
   // When testing mode is enabled, use testing URLs

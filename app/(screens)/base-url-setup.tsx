@@ -5,6 +5,7 @@ import Logo from "@/components/Logo";
 import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { updateBaseUrls } from "@/config/apiConfig";
+import { textColors } from "@/constants/colors";
 import { DEPLOYED_BASE_URL_STORAGE_KEY } from "@/constants/global";
 import { setStorageItem } from "@/utils/helpers";
 import { useRouter } from "expo-router";
@@ -21,7 +22,8 @@ import {
 /**
  * Screen that prompts the user to enter the deployed base URL on first launch.
  * This URL is used as the base for all API services.
- * Validation ensures it is a valid HTTPS URL.
+ * Validation ensures it is a valid HTTP or HTTPS URL without port.
+ * The port :3001 will be automatically appended when making API calls.
  */
 export default function BaseUrlSetupScreen() {
   const router = useRouter();
@@ -29,17 +31,25 @@ export default function BaseUrlSetupScreen() {
   const [loading, setLoading] = useState(false);
 
   /**
-   * Basic validation for HTTPS URL
+   * Basic validation for HTTP/HTTPS URL without port
    */
   const validateUrl = (input: string) => {
     const trimmed = input.trim();
-    if (!trimmed.startsWith("https://")) return false;
+    // Accept both http:// and https://
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+      return false;
+    }
     
-    // Also allow IP addresses for testing if needed, but user specifically asked for HTTPS URL
-    // So we'll stick to a slightly more lenient regex that just ensures it's https and has some content after
-    const simpleHttpsRegex = /^https:\/\/.+/;
+    // Reject URLs that contain a port (colon followed by digits before the first slash or end)
+    // This ensures user enters base URL without port (e.g., http://3.84.108.176)
+    if (/:(\d+)(?:\/|$)/.test(trimmed)) {
+      return false;
+    }
     
-    return simpleHttpsRegex.test(trimmed);
+    // Simple regex to ensure it's http/https and has valid format
+    const urlRegex = /^https?:\/\/[^\s\/]+(?:\/.*)?$/;
+    
+    return urlRegex.test(trimmed);
   };
 
   const handleSubmit = async () => {
@@ -50,7 +60,7 @@ export default function BaseUrlSetupScreen() {
     }
 
     if (!validateUrl(trimmedUrl)) {
-      showToast("Please enter a valid HTTPS URL", { variant: "error", position: "top" });
+      showToast("Please enter a valid HTTP or HTTPS URL (without port)", { variant: "error", position: "top" });
       return;
     }
 
@@ -88,18 +98,18 @@ export default function BaseUrlSetupScreen() {
           </View>
 
           <View style={styles.titleGroup}>
-            <Typography type="titleExtraLarge" weight="semibold">
+            <Typography style={styles.textBlack} type="titleExtraLarge" weight="semibold">
               Server Configuration
             </Typography>
-            <Typography type="bodyMedium">
-              Please enter the deployed base URL for the server you want to connect to. This will be used for all services.
+            <Typography style={styles.textBlack} weight="regular" type="bodyMedium">
+              Please enter the deployed base URL for the server you want to connect to (without port). This will be used for all services.
             </Typography>
           </View>
 
           <View style={styles.formGroup}>
             <Input
               label="Deployed Base URL"
-              placeholder="https://api.example.com"
+              placeholder="http://3.84.108.176"
               value={url}
               onChangeText={setUrl}
               autoCapitalize="none"
@@ -145,5 +155,8 @@ const styles = StyleSheet.create({
   },
   formGroup: {
     gap: 20,
+  },
+  textBlack: {
+    color: textColors.black,
   },
 });

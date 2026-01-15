@@ -1,3 +1,4 @@
+import { updateBaseUrls } from "@/config/apiConfig";
 import { textColors } from "@/constants/colors";
 import { APP_ENDPOINTS, DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import { API_CLIENT_TYPES, DEPLOYED_BASE_URL_STORAGE_KEY } from "@/constants/global";
@@ -20,12 +21,14 @@ export default function Index() {
   const [baseUrlChecked, setBaseUrlChecked] = useState(false);
   const [hasBaseUrl, setHasBaseUrl] = useState(false);
 
-  // Check for base URL on mount
+  // Check for base URL on mount and update API clients
   useEffect(() => {
     (async () => {
       try {
         const baseUrl = await getStorageItem(DEPLOYED_BASE_URL_STORAGE_KEY);
         if (baseUrl) {
+          // Update all API clients with the stored base URL
+          updateBaseUrls(baseUrl);
           setHasBaseUrl(true);
         }
       } catch (e) {

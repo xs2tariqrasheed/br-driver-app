@@ -16,11 +16,11 @@
  */
 
 import { AUTH_STORAGE_KEY } from "@/constants/global";
+import type { DbRequestJson, DbResponse } from "@/types/dbRequest";
 import { getStorageItem, logger } from "@/utils/helpers";
+import { buildLoginRequest } from "@/utils/requestBuilder";
 import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { getServiceUrl, setCustomBaseUrl } from "./urlResolver";
-import { buildLoginRequest } from "@/utils/requestBuilder";
-import type { DbRequestJson, DbResponse } from "@/types/dbRequest";
 const log = logger();
 
 export interface ApiResponse<T = any> {
@@ -82,6 +82,9 @@ const createApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config) => {
+      const completeURL = `${config.baseURL || ""}${config.url || ""}`;
+      console.log(`🚀 [auctionApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(`🚀 [auctionApiClient] Base URL: ${config.baseURL}`);
       log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
       const dynamicBaseUrl = config.baseURL;
       log(`🚀 Dynamic Base URL: ${dynamicBaseUrl}`);
@@ -331,6 +334,9 @@ const createAuthApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
+      const completeURL = `${config.baseURL || ""}${config.url || ""}`;
+      console.log(`🚀 [authApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(`🚀 [authApiClient] Base URL: ${config.baseURL}`);
       log(`🚀 Auth API Request: ${config.method?.toUpperCase()} ${config.url}`);
       
       // Check if this endpoint needs DB request format transformation
@@ -469,6 +475,9 @@ const createMeApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config) => {
+      const completeURL = `${config.baseURL || ""}${config.url || ""}`;
+      console.log(`🚀 [meApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(`🚀 [meApiClient] Base URL: ${config.baseURL}`);
       log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
       const data = await getStorageItem(AUTH_STORAGE_KEY);
       const token = data ? JSON.parse(data).token : null;
@@ -592,6 +601,9 @@ const createSettingsApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config) => {
+      const completeURL = `${config.baseURL || ""}${config.url || ""}`;
+      console.log(`🚀 [settingsApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(`🚀 [settingsApiClient] Base URL: ${config.baseURL}`);
       log(
         `🚀 Settings API Request: ${config.method?.toUpperCase()} ${config.url}`
       );
@@ -720,6 +732,9 @@ const createActiveTripApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config) => {
+      const completeURL = `${config.baseURL || ""}${config.url || ""}`;
+      console.log(`🚀 [activeTripApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(`🚀 [activeTripApiClient] Base URL: ${config.baseURL}`);
       log(
         `🚀 Active Trip API Request: ${config.method?.toUpperCase()} ${
           config.url
@@ -971,6 +986,9 @@ const createNotificationsApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config) => {
+      const completeURL = `${config.baseURL || ""}${config.url || ""}`;
+      console.log(`🚀 [notificationsApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(`🚀 [notificationsApiClient] Base URL: ${config.baseURL}`);
       log(
         `🚀 Notifications API Request: ${config.method?.toUpperCase()} ${config.url}`
       );
@@ -1067,26 +1085,46 @@ export const notificationsApiClient = createNotificationsApiClient();
  * @param baseUrl - The new base URL to use for all services
  */
 export const updateBaseUrls = (baseUrl: string) => {
-  if (!baseUrl) return;
+  if (!baseUrl) {
+    console.warn("⚠️ updateBaseUrls called with empty baseUrl");
+    return;
+  }
+
+  // Remove trailing slash if present
+  const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
   
-  // Update the global custom base URL in urlResolver
-  setCustomBaseUrl(baseUrl);
-  
+  // Update the global custom base URL in urlResolver (store without port)
+  // This ensures getServiceUrl will return the custom URL for any future calls
+  setCustomBaseUrl(cleanBaseUrl);
+
+  // Remove port if already included in baseUrl
+  const baseUrlWithoutPort = cleanBaseUrl.replace(/:\d+$/, "");
+
+  // Map each client to its specific port based on SERVICES_TESTING_URLS
   const clients = [
-    apiClient,
-    authApiClient,
-    meApiClient,
-    auctionApiClient,
-    settingsApiClient,
-    activeTripApiClient,
-    notificationsApiClient
+    { name: "apiClient", client: apiClient, port: 3003 }, // online-drivers
+    { name: "authApiClient", client: authApiClient, port: 3001 }, // auth
+    { name: "meApiClient", client: meApiClient, port: 3001 }, // me (shares with auth)
+    { name: "auctionApiClient", client: auctionApiClient, port: 3002 }, // auction
+    { name: "settingsApiClient", client: settingsApiClient, port: 3004 }, // settings
+    { name: "activeTripApiClient", client: activeTripApiClient, port: 3005 }, // active-trip
+    { name: "notificationsApiClient", client: notificationsApiClient, port: 3006 } // notifications
   ];
+
+  console.log("🌐 ========== UPDATING ALL API CLIENTS ==========");
+  console.log(`🌐 Custom Base URL (stored): ${cleanBaseUrl}`);
+  console.log(`🌐 Base URL without port: ${baseUrlWithoutPort}`);
   
-  clients.forEach(client => {
-    client.defaults.baseURL = baseUrl;
+  clients.forEach(({ name, client, port }) => {
+    const oldBaseURL = client.defaults.baseURL;
+    const newBaseURL = `${baseUrlWithoutPort}:${port}`;
+    client.defaults.baseURL = newBaseURL;
+    console.log(`🌐 ${name}: ${oldBaseURL} → ${newBaseURL} (port ${port})`);
   });
-  
-  log(`🌐 All API clients updated to use base URL: ${baseUrl}`);
+
+  console.log("🌐 ==============================================");
+  log(`🌐 All API clients updated with service-specific ports`);
+  log(`🌐 Custom base URL set in urlResolver: ${cleanBaseUrl}`);
 };
 
 export { axios };
