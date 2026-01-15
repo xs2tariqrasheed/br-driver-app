@@ -21,9 +21,12 @@ import {
   EMPTY_STATE_MESSAGES,
   LOCAL_JOB_STATUS,
   OFFER_TYPES,
+  API_CLIENT_TYPES,
+  TRIP_OFFER_ACTIONS,
   type LocalJobStatus,
   type OfferType,
 } from "@/constants/global";
+import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import { useAuth } from "@/context/AuthContext";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
@@ -32,6 +35,7 @@ import { useDriver } from "@/context/DriverContext";
 import { usePackageInfo } from "@/context/PackageInfoContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
+import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -79,8 +83,6 @@ export default function LiveJobOffersScreen({
   } = useBroadcastJobOffers();
   const {
     showRideOfferModal,
-    submitETA,
-    isSubmitETALoading,
     submitBid,
     submitBidForBroadcastOffer,
     isSubmitBidLoading,
@@ -97,6 +99,13 @@ export default function LiveJobOffersScreen({
     useState<boolean>(false);
   const [selectedJobForAccept, setSelectedJobForAccept] = useState<any>(null);
   const [selectedJobForBid, setSelectedJobForBid] = useState<any>(null);
+  const [isSubmitETALoading, setIsSubmitETALoading] = useState<boolean>(false);
+
+  // API hook for submitting driver response for broadcast offers
+  const { execute: submitDriverResponse } = usePost(
+    LIVE_JOB_ENDPOINTS.driverResponse,
+    API_CLIENT_TYPES.AUCTION
+  );
 
   // Reactively track trip-in-progress based on driver context changes
   useEffect(() => {
@@ -352,10 +361,12 @@ export default function LiveJobOffersScreen({
           return;
         }
 
-        // Call the submit bid API with the selected bid amount and tripId
+        // Call the submit bid API with the selected bid amount, eta, boostAmount and tripId
         const result = await submitBidForBroadcastOffer(
           jobToUse.tripOffer.tripId,
-          bidData.selectedBid
+          bidData.selectedBid,
+          bidData.eta,
+          bidData.isBoosted ? bidData.boostAmount : undefined
         );
 
         if (result?.success) {
@@ -406,7 +417,7 @@ export default function LiveJobOffersScreen({
     ]
   );
 
-  // Handle ETA submission for accept flow
+  // Handle ETA submission for accept flow (broadcast offers)
   const handleETASubmit = useCallback(
     async (eta: number) => {
       if (!selectedJobForAccept) {
@@ -414,8 +425,20 @@ export default function LiveJobOffersScreen({
         return;
       }
 
+      const driverId = auth?.user?.id;
+      const tripId = selectedJobForAccept.tripOffer?.tripId;
+
+      if (!driverId || !tripId) {
+        log("[LiveJobOffersScreen] Missing driverId or tripId");
+        showToast("Unable to accept offer. Please try again.", {
+          variant: "error",
+          position: "top",
+        });
+        return;
+      }
+
       // Skip API call for demo offers
-      if (selectedJobForAccept.id?.startsWith("demo-") || selectedJobForAccept.tripOffer?.tripId?.startsWith("demo-")) {
+      if (selectedJobForAccept.id?.startsWith("demo-") || tripId?.startsWith("demo-")) {
         log("[LiveJobOffersScreen] Demo offer detected - skipping API call for ETA");
         showToast("Demo offer: Ride accepted locally (no API call)", {
           variant: "success",
@@ -437,15 +460,21 @@ export default function LiveJobOffersScreen({
       }
 
       try {
+        setIsSubmitETALoading(true);
         log(
-          `[LiveJobOffersScreen] Submitting ETA for job: ${selectedJobForAccept.id}`,
-          eta
+          `[LiveJobOffersScreen] Submitting ETA for broadcast offer: ${selectedJobForAccept.id}`,
+          `tripId: ${tripId}, ETA: ${eta}`
         );
 
-        // Call the submit ETA API
-        await submitETA(eta);
+        // Call the API directly for broadcast offers
+        await submitDriverResponse({
+          driverId: driverId,
+          tripId: tripId,
+          response: TRIP_OFFER_ACTIONS.ACCEPT,
+          eta: eta, // ETA is sent but will be ignored by backend for non-biddable offers
+        });
 
-        log("[LiveJobOffersScreen] ETA submitted successfully");
+        log("[LiveJobOffersScreen] ETA submitted successfully for broadcast offer");
 
         // Mark the offer as accepted in the context
         updateBroadcastOffer(selectedJobForAccept.id, { status: "accepted" });
@@ -463,14 +492,20 @@ export default function LiveJobOffersScreen({
         setIsETAModalOpen(false);
         setSelectedJobForAccept(null);
 
+        // Add a small delay before redirecting to allow backend to initialize the trip
+        // This prevents "Active trip resource not found" error
+        log("[LiveJobOffersScreen] Waiting for backend to initialize trip before redirecting...");
+        await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
+
         // Redirect to active ride screen
+        log("[LiveJobOffersScreen] Redirecting to active-ride screen");
         router.replace("/(screens)/active-ride");
       } catch (error) {
-        log("[LiveJobOffersScreen] Failed to submit ETA:", error);
+        log("[LiveJobOffersScreen] Failed to submit ETA for broadcast offer:", error);
         const errorMessage =
           error instanceof Error
             ? error.message
-            : "Failed to submit ETA. Please try again.";
+            : "Failed to accept ride offer. Please try again.";
         showToast(errorMessage, {
           variant: "error",
           position: "top",
@@ -485,9 +520,12 @@ export default function LiveJobOffersScreen({
           setIsETAModalOpen(false);
           setSelectedJobForAccept(null);
         }
+        // On error, keep the ETA modal open so user can retry
+      } finally {
+        setIsSubmitETALoading(false);
       }
     },
-    [selectedJobForAccept, submitETA, updateBroadcastOffer, removeBroadcastOffer]
+    [selectedJobForAccept, auth, submitDriverResponse, updateBroadcastOffer, removeBroadcastOffer]
   );
 
   // Handle "View +X More" click

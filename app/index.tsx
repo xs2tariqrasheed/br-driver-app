@@ -1,12 +1,12 @@
 import { textColors } from "@/constants/colors";
 import { APP_ENDPOINTS, DRIVER_ENDPOINTS } from "@/constants/endpoints";
-import { API_CLIENT_TYPES } from "@/constants/global";
+import { API_CLIENT_TYPES, DEPLOYED_BASE_URL_STORAGE_KEY } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useContent } from "@/context/ContentContext";
 import { useDriver } from "@/context/DriverContext";
 import { useDelete } from "@/hooks/useDelete";
 import { useFetch } from "@/hooks/useFetch";
-import { logger } from "@/utils/helpers";
+import { getStorageItem, logger } from "@/utils/helpers";
 import { Redirect, Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -17,6 +17,25 @@ export default function Index() {
   const [driver, setDriver] = useDriver();
   const [, setContent] = useContent();
   const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [baseUrlChecked, setBaseUrlChecked] = useState(false);
+  const [hasBaseUrl, setHasBaseUrl] = useState(false);
+
+  // Check for base URL on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const baseUrl = await getStorageItem(DEPLOYED_BASE_URL_STORAGE_KEY);
+        if (baseUrl) {
+          setHasBaseUrl(true);
+        }
+      } catch (e) {
+        console.error("Error checking base URL in Index:", e);
+      } finally {
+        setBaseUrlChecked(true);
+      }
+    })();
+  }, []);
+
   const { data, loading, error, execute } = useFetch(
     APP_ENDPOINTS.content,
     API_CLIENT_TYPES.SETTINGS
@@ -39,12 +58,12 @@ export default function Index() {
   };
 
   useEffect(() => {
-    setTimeout(() => {
+    // If we have a base URL, we can redirect to login immediately
+    // If not, the conditional redirect to base-url-setup will handle it below
+    if (baseUrlChecked && hasBaseUrl) {
       setShouldRedirect(true);
-    }, 5000);
-    // Fetch content when component mounts
-    // fetchContent();
-  }, []);
+    }
+  }, [baseUrlChecked, hasBaseUrl]);
 
   // useEffect(() => {
   //   // Store content in context when data is available
@@ -87,8 +106,8 @@ export default function Index() {
   //   handleOffline();
   // }, [error, auth?.user?.id, markDriverOffline, driver, setDriver, log]);
 
-  // Show loading state while fetching
-  if (loading || (!shouldRedirect && !error)) {
+  // Show loading state while checking URL or fetching
+  if (!baseUrlChecked || (hasBaseUrl && loading && !shouldRedirect)) {
     return (
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
@@ -117,6 +136,16 @@ export default function Index() {
           </TouchableOpacity>
         </View>
       </View>
+    );
+  }
+
+  // Redirect to base URL setup if missing
+  if (baseUrlChecked && !hasBaseUrl) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Redirect href="/(screens)/base-url-setup" />
+      </>
     );
   }
 

@@ -10,6 +10,27 @@
 
 import { IS_TESTING, SERVICES_TESTING_URLS } from "@/constants/global";
 
+let customBaseUrl: string | null = null;
+
+/**
+ * Sets a custom base URL to override all service URLs.
+ * This is typically used when the user enters a deployed base URL on app startup.
+ * 
+ * @param url - The custom base URL
+ */
+export const setCustomBaseUrl = (url: string): void => {
+  customBaseUrl = url;
+};
+
+/**
+ * Gets the currently set custom base URL, if any.
+ * 
+ * @returns The custom base URL or null
+ */
+export const getCustomBaseUrl = (): string | null => {
+  return customBaseUrl;
+};
+
 /**
  * Gets the appropriate service URL based on testing mode
  *
@@ -34,6 +55,11 @@ export const getServiceUrl = (
   envVar?: string,
   fallback?: string
 ): string => {
+  // If a custom base URL is set, it overrides all other configurations
+  if (customBaseUrl) {
+    return customBaseUrl;
+  }
+
   // When testing mode is enabled, use testing URLs
   if (IS_TESTING) {
     const testingUrl = SERVICES_TESTING_URLS[serviceName];

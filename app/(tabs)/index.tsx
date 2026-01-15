@@ -50,7 +50,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const [auth] = useAuth();
   const [driver, setDriver] = useDriver();
-  const { notifications, getRetrievalId, addNotifications } = useDriver();
+  const { notifications, getRetrievalId, addNotifications, removeRetrievalId, removeTripId } = useDriver();
   const { hasAnyActiveOffer, setHasAnyActiveOffer } = useRideOffer();
   const settingsContext = useSettings();
   const [settings, setSettings, status] = settingsContext;

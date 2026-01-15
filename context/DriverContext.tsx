@@ -255,10 +255,6 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     API_CLIENT_TYPES.AUCTION
   );
 
-  useEffect(() => {
-    console.log("[DriverProvider] Rendered");
-  });
-
   // Hydrate once on mount
   useEffect(() => {
     (async () => {
@@ -408,11 +404,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch notifications from backend with fallback to demo
   const fetchNotifications = useCallback(async () => {
-    console.log("[DriverProvider] fetchNotifications called");
     setIsFetchingNotifications(true);
     try {
       if (!auth?.token) {
-        log("No auth token, using demo notifications");
         const demoNotifications = createDemoNotifications();
         // Ensure all demo notifications are unread
         const unreadDemoNotifications = demoNotifications.map(n => ({
@@ -422,14 +416,12 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         
         const currentDriver = driverRef.current;
         if (currentDriver) {
-          console.log("[DriverProvider] Setting demo notifications (auth check)");
           await setDriver({
             ...currentDriver,
             notifications: unreadDemoNotifications,
             readNotificationIds: [],
           });
         } else {
-          console.log("[DriverProvider] Setting demo notifications (no driver)");
           await setDriver({
             online: false,
             notifications: unreadDemoNotifications,
@@ -440,7 +432,6 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        console.log("[DriverProvider] API Call: getNotifications");
         const { notificationsApiClient } = await import("@/config/apiConfig");
         const response = await notificationsApiClient.get(
           NOTIFICATIONS_ENDPOINTS.getNotifications
@@ -448,7 +439,6 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
         const responseData = response?.data;
         if (responseData?.success && Array.isArray(responseData.data) && responseData.data.length > 0) {
-          console.log("[DriverProvider] API Success: received", responseData.data.length, "notifications");
           // Transform backend notifications to app format
           const backendNotifications: NotificationItem[] = responseData.data.map(
             (item: any) => ({
@@ -484,11 +474,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           log(`Fetched ${backendNotifications.length} notifications from backend`);
         } else {
           // Empty response, use demo notifications
-          console.log("[DriverProvider] API Empty or failure flag");
           throw new Error("Empty response or invalid format");
         }
       } catch (apiError: any) {
-        console.log("[DriverProvider] API Error:", apiError.message);
         log("Error fetching notifications from backend, using demo notifications:", apiError);
         // Fallback to demo notifications - all unread
         const demoNotifications = createDemoNotifications();
@@ -499,14 +487,12 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         
         const currentDriver = driverRef.current;
         if (currentDriver) {
-          console.log("[DriverProvider] Fallback to demo notifications");
           await setDriver({
             ...currentDriver,
             notifications: unreadDemoNotifications,
             readNotificationIds: [],
           });
         } else {
-          console.log("[DriverProvider] Fallback to demo (no driver)");
           await setDriver({
             online: false,
             notifications: unreadDemoNotifications,
@@ -746,14 +732,15 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   // Hide live offer
   const hideLiveOffer = useCallback(
     async (offerId: string) => {
-      if (!state.driver) return;
+      const currentDriver = driverRef.current;
+      if (!currentDriver) return;
 
       // Handle demo offers locally without API call
       if (offerId.startsWith("demo-")) {
         log(`[DriverContext] Hiding demo offer ${offerId} - local only, skipping API`);
 
         // Update local state only
-        const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+        const currentHiddenOffers = currentDriver.hiddenLiveOffers || [];
         const existingOffer = currentHiddenOffers.find(
           (offer) => offer.id === offerId
         );
@@ -771,7 +758,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           );
 
           const updatedDriver = {
-            ...state.driver,
+            ...currentDriver,
             hiddenLiveOffers: updatedOffers,
           };
           await setDriver(updatedDriver);
@@ -784,7 +771,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           };
 
           const updatedDriver = {
-            ...state.driver,
+            ...currentDriver,
             hiddenLiveOffers: [...currentHiddenOffers, newHiddenOffer],
           };
           await setDriver(updatedDriver);
@@ -807,7 +794,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         );
 
         // Only update local state if API succeeds
-        const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+        const currentHiddenOffers = currentDriver.hiddenLiveOffers || [];
         const existingOffer = currentHiddenOffers.find(
           (offer) => offer.id === offerId
         );
@@ -825,7 +812,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           );
 
           const updatedDriver = {
-            ...state.driver,
+            ...currentDriver,
             hiddenLiveOffers: updatedOffers,
           };
           await setDriver(updatedDriver);
@@ -838,7 +825,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           };
 
           const updatedDriver = {
-            ...state.driver,
+            ...currentDriver,
             hiddenLiveOffers: [...currentHiddenOffers, newHiddenOffer],
           };
           await setDriver(updatedDriver);
@@ -849,20 +836,21 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [state.driver, setDriver, submitDriverResponse, driverId, log]
+    [setDriver, submitDriverResponse, driverId, log]
   );
 
   // Skip live offer
   const skipLiveOffer = useCallback(
     async (offerId: string) => {
-      if (!state.driver) return;
+      const currentDriver = driverRef.current;
+      if (!currentDriver) return;
 
       // Handle demo offers locally without API call
       if (offerId.startsWith("demo-")) {
         log(`[DriverContext] Skipping demo offer ${offerId} - local only, skipping API`);
 
         // Update local state only
-        const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+        const currentHiddenOffers = currentDriver.hiddenLiveOffers || [];
         const existingOffer = currentHiddenOffers.find(
           (offer) => offer.id === offerId
         );
@@ -880,7 +868,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           );
 
           const updatedDriver = {
-            ...state.driver,
+            ...currentDriver,
             hiddenLiveOffers: updatedOffers,
           };
           await setDriver(updatedDriver);
@@ -893,7 +881,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           };
 
           const updatedDriver = {
-            ...state.driver,
+            ...currentDriver,
             hiddenLiveOffers: [...currentHiddenOffers, newSkippedOffer],
           };
           await setDriver(updatedDriver);
@@ -916,7 +904,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         );
 
         // Only update local state if API succeeds
-        const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+        const currentHiddenOffers = currentDriver.hiddenLiveOffers || [];
         const existingOffer = currentHiddenOffers.find(
           (offer) => offer.id === offerId
         );
@@ -934,7 +922,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           );
 
           const updatedDriver = {
-            ...state.driver,
+            ...currentDriver,
             hiddenLiveOffers: updatedOffers,
           };
           await setDriver(updatedDriver);
@@ -947,7 +935,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           };
 
           const updatedDriver = {
-            ...state.driver,
+            ...currentDriver,
             hiddenLiveOffers: [...currentHiddenOffers, newSkippedOffer],
           };
           await setDriver(updatedDriver);
@@ -958,7 +946,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [state.driver, setDriver, submitDriverResponse, driverId, log]
+    [setDriver, submitDriverResponse, driverId, log]
   );
 
   // Get live offer status
@@ -972,26 +960,28 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   // Unhide live offer (remove from hidden list)
   const unhideLiveOffer = useCallback(
     async (offerId: string) => {
-      if (!state.driver) return;
+      const currentDriver = driverRef.current;
+      if (!currentDriver) return;
 
-      const currentHiddenOffers = state.driver.hiddenLiveOffers || [];
+      const currentHiddenOffers = currentDriver.hiddenLiveOffers || [];
       const updatedOffers = currentHiddenOffers.filter(
         (offer) => offer.id !== offerId
       );
 
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         hiddenLiveOffers: updatedOffers,
       };
       await setDriver(updatedDriver);
     },
-    [state.driver, setDriver]
+    [setDriver]
   );
 
   // Set retrieval ID (stores in both context and AsyncStorage)
   const setRetrievalId = useCallback(
     async (retrievalId: string) => {
-      if (!state.driver) {
+      const currentDriver = driverRef.current;
+      if (!currentDriver) {
         log("Cannot set retrieval ID: No driver data available");
         return;
       }
@@ -1000,7 +990,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
       // Update driver context
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         retrievalId: retrievalId,
       };
       await setDriver(updatedDriver);
@@ -1014,13 +1004,14 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [state.driver, setDriver, log]
+    [setDriver, log]
   );
 
   // Set trip ID (stores in both context and AsyncStorage)
   const setTripId = useCallback(
     async (tripId: string) => {
-      if (!state.driver) {
+      const currentDriver = driverRef.current;
+      if (!currentDriver) {
         log("Cannot set trip ID: No driver data available");
         return;
       }
@@ -1029,7 +1020,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
       // Update driver context
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         tripId: tripId,
       };
       await setDriver(updatedDriver);
@@ -1043,7 +1034,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [state.driver, setDriver, log]
+    [setDriver, log]
   );
 
   // Get retrieval ID (retrieves from AsyncStorage and sets in context)
@@ -1058,9 +1049,10 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       log(`Retrieved retrieval ID from AsyncStorage: ${retrievalId}`);
 
       // Update context if driver exists and ID is different
-      if (state.driver && state.driver.retrievalId !== retrievalId) {
+      const currentDriver = driverRef.current;
+      if (currentDriver && currentDriver.retrievalId !== retrievalId) {
         const updatedDriver = {
-          ...state.driver,
+          ...currentDriver,
           retrievalId: retrievalId,
         };
         await setDriver(updatedDriver);
@@ -1081,7 +1073,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       }
       return { retrievalId: null, loading: false };
     }
-  }, [state.driver, setDriver, log]);
+  }, [setDriver, log]);
 
   // Get trip ID (retrieves from AsyncStorage and sets in context)
   const getTripId = useCallback(async () => {
@@ -1095,9 +1087,10 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       log(`Retrieved trip ID from AsyncStorage: ${tripId}`);
 
       // Update context if driver exists and ID is different
-      if (state.driver && state.driver.tripId !== tripId) {
+      const currentDriver = driverRef.current;
+      if (currentDriver && currentDriver.tripId !== tripId) {
         const updatedDriver = {
-          ...state.driver,
+          ...currentDriver,
           tripId: tripId,
         };
         await setDriver(updatedDriver);
@@ -1118,16 +1111,17 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       }
       return { tripId: null, loading: false };
     }
-  }, [state.driver, setDriver, log]);
+  }, [setDriver, log]);
 
   // Remove retrieval ID (removes from both context and AsyncStorage)
   const removeRetrievalId = useCallback(async () => {
     log("Removing retrieval ID from context and AsyncStorage");
 
     // Update driver context
-    if (state.driver) {
+    const currentDriver = driverRef.current;
+    if (currentDriver) {
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         retrievalId: null,
       };
       await setDriver(updatedDriver);
@@ -1141,16 +1135,17 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       log(`Error removing retrieval ID from AsyncStorage:`, error);
       throw error;
     }
-  }, [state.driver, setDriver, log]);
+  }, [setDriver, log]);
 
   // Remove trip ID (removes from both context and AsyncStorage)
   const removeTripId = useCallback(async () => {
     log("Removing trip ID from context and AsyncStorage");
 
     // Update driver context
-    if (state.driver) {
+    const currentDriver = driverRef.current;
+    if (currentDriver) {
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         tripId: null,
       };
       await setDriver(updatedDriver);
@@ -1164,7 +1159,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       log(`Error removing trip ID from AsyncStorage:`, error);
       throw error;
     }
-  }, [state.driver, setDriver, log]);
+  }, [setDriver, log]);
 
   // Ride state functions
   const setRideState = useCallback(
@@ -1172,9 +1167,10 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       log("Setting ride state in context and AsyncStorage:", rideState);
 
       // Update driver context
-      if (state.driver) {
+      const currentDriver = driverRef.current;
+      if (currentDriver) {
         const updatedDriver = {
-          ...state.driver,
+          ...currentDriver,
           rideState,
         };
         await setDriver(updatedDriver);
@@ -1189,7 +1185,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [state.driver, setDriver, log]
+    [setDriver, log]
   );
 
   const getRideState = useCallback(async () => {
@@ -1218,9 +1214,10 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     log("Removing ride state from context and AsyncStorage");
 
     // Update driver context
-    if (state.driver) {
+    const currentDriver = driverRef.current;
+    if (currentDriver) {
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         rideState: null,
       };
       await setDriver(updatedDriver);
@@ -1234,7 +1231,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       log(`Error removing ride state from AsyncStorage:`, error);
       throw error;
     }
-  }, [state.driver, setDriver, log]);
+  }, [setDriver, log]);
 
   // Desired destinations functions
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
@@ -1242,7 +1239,8 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch desired destinations from backend
   const fetchDesiredDestinations = useCallback(async () => {
-    if (!state.driver) return;
+    const currentDriver = driverRef.current;
+    if (!currentDriver) return;
 
     setIsLoadingDestinations(true);
     setDestinationsError(null);
@@ -1271,20 +1269,43 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Transform backend destinations to mobile app format
-      const backendDestinations = responseData?.data?.jData?.destinations || [];
+      // Backend returns data in jData.driverDesiredDestinations array
+      const backendDestinations = responseData?.data?.jData?.driverDesiredDestinations || 
+                                  responseData?.data?.jData?.destinations || [];
       const transformedDestinations: DesiredDestination[] = backendDestinations.map((dest: any) => ({
-        id: dest.driver_desired_destination_rec_id || dest.id || Date.now(),
+        id: dest.driverDesiredDestinationsRecId || 
+            dest.driver_desired_destination_rec_id || 
+            dest.id || 
+            Date.now(),
         created_at: dest.created_at || new Date().toISOString(),
-        address: dest.desired_destination || dest.address,
-        expired_at: dest.expires_at || dest.expired_at || new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
-      }));
+        address: dest.desiredDestination || 
+                 dest.desired_destination || 
+                 dest.address,
+        expired_at: dest.expiresAt || 
+                    dest.expires_at || 
+                    dest.expired_at || 
+                    new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
+        // Include additional fields for editing
+        googleReferenceNumber: dest.googleReferenceNumber || 
+                               dest.google_reference_number || 
+                               "",
+        latitude: dest.latitude || null,
+        longitude: dest.longitude || null,
+        targetZipCode: dest.targetZipCode || 
+                       dest.target_zip_code || 
+                       "",
+        commissionPercentage: dest.commissionPercentage || 
+                              dest.commission_percentage || 
+                              0,
+        priority: dest.priority || 1,
+      } as any));
 
       // Filter out expired destinations
       const { valid } = filterExpiredDestinations(transformedDestinations);
 
       // Update driver context with fetched destinations
       const updatedDriver = {
-        ...state.driver,
+        ...currentDriver,
         desiredDestinations: valid,
       };
       await setDriver(updatedDriver);
@@ -1301,12 +1322,13 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoadingDestinations(false);
     }
-  }, [state.driver, setDriver, log]);
+  }, [setDriver, log]);
 
   // Create desired destination
   const createDesiredDestination = useCallback(
     async (destination: Omit<DesiredDestination, 'id' | 'created_at'>) => {
-      if (!state.driver) {
+      const currentDriver = driverRef.current;
+      if (!currentDriver) {
         throw new Error("Driver not found");
       }
 
@@ -1358,9 +1380,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         };
 
         // Update local state
-        const currentDestinations = state.driver.desiredDestinations || [];
+        const currentDestinations = currentDriver.desiredDestinations || [];
         const updatedDriver = {
-          ...state.driver,
+          ...currentDriver,
           desiredDestinations: [...currentDestinations, createdDestination],
         };
         await setDriver(updatedDriver);
@@ -1380,13 +1402,14 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         setIsLoadingDestinations(false);
       }
     },
-    [state.driver, setDriver, log]
+    [setDriver, log]
   );
 
   // Update desired destination
   const updateDesiredDestination = useCallback(
     async (destination: DesiredDestination) => {
-      if (!state.driver) {
+      const currentDriver = driverRef.current;
+      if (!currentDriver) {
         throw new Error("Driver not found");
       }
 
@@ -1397,12 +1420,19 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         const { settingsApiClient } = await import("@/config/apiConfig");
         const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
 
+        const destWithExtras = destination as any;
         const response = await settingsApiClient.put(
           DESIRED_DESTINATIONS_ENDPOINTS.updateDestination(destination.id),
           {
             id: destination.id,
             address: destination.address,
             expiresAt: destination.expired_at,
+            googleReferenceNumber: destWithExtras.googleReferenceNumber || "",
+            latitude: destWithExtras.latitude || null,
+            longitude: destWithExtras.longitude || null,
+            targetZipCode: destWithExtras.targetZipCode || "",
+            priority: destWithExtras.priority || 1,
+            commissionPercentage: destWithExtras.commissionPercentage || 0,
           }
         );
 
@@ -1422,12 +1452,12 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Update local state
-        const currentDestinations = state.driver.desiredDestinations || [];
+        const currentDestinations = currentDriver.desiredDestinations || [];
         const updatedDestinations = currentDestinations.map((dest) =>
           dest.id === destination.id ? destination : dest
         );
         const updatedDriver = {
-          ...state.driver,
+          ...currentDriver,
           desiredDestinations: updatedDestinations,
         };
         await setDriver(updatedDriver);
@@ -1445,13 +1475,14 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         setIsLoadingDestinations(false);
       }
     },
-    [state.driver, setDriver, log]
+    [setDriver, log]
   );
 
   // Delete desired destination
   const deleteDesiredDestination = useCallback(
     async (id: number) => {
-      if (!state.driver) {
+      const currentDriver = driverRef.current;
+      if (!currentDriver) {
         throw new Error("Driver not found");
       }
 
@@ -1482,10 +1513,10 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Update local state
-        const currentDestinations = state.driver.desiredDestinations || [];
+        const currentDestinations = currentDriver.desiredDestinations || [];
         const updatedDestinations = currentDestinations.filter((dest) => dest.id !== id);
         const updatedDriver = {
-          ...state.driver,
+          ...currentDriver,
           desiredDestinations: updatedDestinations,
         };
         await setDriver(updatedDriver);
@@ -1503,7 +1534,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         setIsLoadingDestinations(false);
       }
     },
-    [state.driver, setDriver, log]
+    [setDriver, log]
   );
 
   const contextValue = useMemo<DriverContextValue>(() => {

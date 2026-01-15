@@ -38,6 +38,10 @@ export interface ConfirmationModalProps {
   confirmButtonText: string;
   /** Optional to reduce accidental double taps */
   disabled?: boolean;
+  /** Whether the confirm action is loading */
+  loading?: boolean;
+  /** Loading text to show on confirm button when loading */
+  loadingText?: string;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -49,18 +53,40 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   cancelButtonText,
   confirmButtonText,
   disabled = false,
+  loading = false,
+  loadingText = "Loading...",
 }) => {
+  // Prevent closing when loading
+  const handleCancel = () => {
+    if (!loading) {
+      onCancel();
+    }
+  };
+
+  const handleOverlayPress = () => {
+    if (!loading) {
+      onCancel();
+    }
+  };
+
+  const handleRequestClose = () => {
+    if (!loading) {
+      onCancel();
+    }
+  };
+
   return (
     <Modal
       visible={open}
       transparent
       animationType="slide"
-      onRequestClose={onCancel}
+      onRequestClose={handleRequestClose}
     >
       <TouchableOpacity
         style={styles.overlay}
         activeOpacity={1}
-        onPress={onCancel}
+        onPress={handleOverlayPress}
+        disabled={loading}
       >
         <View
           style={styles.container}
@@ -77,11 +103,15 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             >
               {title}
             </Typography>
-            <TouchableOpacity style={styles.closeButton} onPress={onCancel}>
+            <TouchableOpacity 
+              style={[styles.closeButton, loading && styles.closeButtonDisabled]} 
+              onPress={handleCancel}
+              disabled={loading}
+            >
               <Typography
                 type="bodyLarge"
                 weight="semibold"
-                style={styles.closeButtonText}
+                style={[styles.closeButtonText, loading && styles.closeButtonTextDisabled]}
               >
                 ✕
               </Typography>
@@ -103,8 +133,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 variant="outlined"
                 rounded="half"
                 block="half"
-              onPress={disabled ? () => {} : onCancel}
-              disabled={disabled}
+                onPress={handleCancel}
+                disabled={disabled || loading}
               >
                 {cancelButtonText}
               </Button>
@@ -112,10 +142,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 variant="danger"
                 rounded="half"
                 block="half"
-              onPress={disabled ? () => {} : onConfirm}
-              disabled={disabled}
+                onPress={loading ? () => {} : onConfirm}
+                disabled={disabled || loading}
+                loading={loading}
               >
-                {confirmButtonText}
+                {loading ? loadingText : confirmButtonText}
               </Button>
             </View>
           </View>
@@ -160,6 +191,12 @@ const styles = StyleSheet.create({
     color: textColors.black,
     fontSize: 18,
     fontWeight: "700",
+  },
+  closeButtonDisabled: {
+    opacity: 0.5,
+  },
+  closeButtonTextDisabled: {
+    opacity: 0.5,
   },
   headerTitle: {
     color: textColors.black,

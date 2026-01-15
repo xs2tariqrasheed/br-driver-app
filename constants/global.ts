@@ -20,6 +20,8 @@ export const RETRIEVAL_ID_STORAGE_KEY = "@retrieval_id";
 export const TRIP_ID_STORAGE_KEY = "@trip_id";
 // Ride state storage key
 export const RIDE_STATE_STORAGE_KEY = "@ride_state";
+// Deployed base URL storage key
+export const DEPLOYED_BASE_URL_STORAGE_KEY = "@deployed_base_url";
 // Notifications backup storage key (used during logout to preserve notifications)
 export const NOTIFICATIONS_BACKUP_STORAGE_KEY = "@notifications_backup";
 
@@ -252,8 +254,9 @@ export const EMPTY_STATE_MESSAGES = {
 
 // Bid Waiting Timer
 // Duration for the bid waiting timer in milliseconds
-// Default: 30 seconds - can be easily changed to 15 seconds (15000), 1 minute (60000), etc.
-export const BID_WAITING_TIMER_DURATION_MS = 30000; // 30 seconds
+// Default: 60 seconds - matches backend CUSTOMER_BID_RESPONSE_TIMEOUT
+// This ensures driver timer matches the actual backend timeout for customer bid response
+export const BID_WAITING_TIMER_DURATION_MS = 60000; // 60 seconds
 
 // Bid Status Types
 export const BID_STATUS = {
@@ -269,12 +272,12 @@ export const BID_STATUS_MESSAGES = {
   EXPIRED: {
     TITLE: "Bid Expired!",
     DESCRIPTION:
-      "The customer didn't respond in time. You can rebid if you're still interested.",
+      "Your bid has expired. You can rebid if you're still interested.",
   },
   UNSUCCESSFUL: {
     TITLE: "Bid Unsuccessful!",
     DESCRIPTION:
-      "The customer chose another driver. Don't worry! more ride offers are coming your way.",
+      "Your bid has been rejected. You can rebid if you're still interested.",
   },
   ACCEPTED: {
     TITLE: "Bid Accepted!",
@@ -349,7 +352,7 @@ export const SPEECH_MESSAGES = {
   BID_EXPIRED:
     "Your bid has expired. You can rebid if you're still interested.",
   BID_UNSUCCESSFUL:
-    "Your bid was unsuccessful. Don't worry! More ride offers are coming your way.",
+    "Your bid has rejected. You can rebid if you're still interested",
   MAKE_STOP: "You have a stop request",
   NEW_MESSAGE: "You have a new blink message",
 } as const;

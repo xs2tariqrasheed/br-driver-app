@@ -165,10 +165,17 @@ export default function RideOfferModal({
   const overlayMinHeight = Math.max(250, windowHeight * 0.35);
 
   // Bid context hooks
-  const { showBidBottomSheet } = useBidBottomSheet();
-  const { showBidWaitingTimer } = useBidWaitingTimer();
-  const { submitBid, setHasAnyActiveOffer, isSubmitBidLoading } =
-    useRideOffer();
+  const { showBidBottomSheet, hideBidBottomSheet } = useBidBottomSheet();
+  const { showBidWaitingTimer, hideBidWaitingTimer } = useBidWaitingTimer();
+  const { closeAllModals } = useModalManager();
+  const { 
+    submitBid, 
+    setHasAnyActiveOffer, 
+    isSubmitBidLoading,
+    currentOffer,
+    updateCurrentOfferStatus,
+    hideRideOfferModal,
+  } = useRideOffer();
 
   // Build mock BidData for BidBottomSheet
   const buildMockBidData = () => {
@@ -276,7 +283,11 @@ export default function RideOfferModal({
   // Handle bid submission success
   const handleBidSubmitted = async (data: any) => {
     try {
-      const result = await submitBid(data?.selectedBid);
+      const result = await submitBid(
+        data?.selectedBid,
+        data?.eta,
+        data?.isBoosted ? data?.boostAmount : undefined
+      );
       console.log("🔔 Bid submission result:", result);
       if (result && "success" in result && result.success) {
         // Show waiting timer with completion callback, passing the current offer
@@ -298,6 +309,30 @@ export default function RideOfferModal({
   const handleShowPackage = (data: PackageInfo) => {
     // Open the package info modal (overlay on top of ride offer modal)
     openPackageInfo(data);
+  };
+
+  // Handle timer completion for sequential offers
+  const handleTimerComplete = () => {
+    // Only mark as expired if offer is still in "offered" state
+    // If driver has performed any action (bid, accept, etc.), status would have changed
+    if (offer && offer.status === LIVE_JOB_STATUS.OFFERED) {
+      console.log(`[RideOffer] Timer completed for sequential offer ${offer.id} - marking as expired`);
+      // Update offer status to expired (server will also send expiration event)
+      updateCurrentOfferStatus("expired");
+      // Set hasAnyActiveOffer to false when offer expires
+      setHasAnyActiveOffer(false);
+      // Close all modals and bottom sheets
+      closeAllModals();
+      hideBidBottomSheet();
+      hideBidWaitingTimer();
+      hideRideOfferModal();
+      // Note: Server-side expiration event will be handled by ExpirationService
+      // which will close the modal and redirect. This is just a fallback.
+    } else {
+      console.log(
+        `[RideOffer] Skipping expiration for ${offer?.id} - status changed to: ${offer?.status}`
+      );
+    }
   };
 
   const Content = (
@@ -421,6 +456,7 @@ export default function RideOfferModal({
                   hideActionButton={true}
                   removeFlex
                   disabled
+                  onTimerComplete={handleTimerComplete}
                 />
               </View>
 

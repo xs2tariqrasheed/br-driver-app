@@ -32,7 +32,9 @@ export const LIVE_JOB_ENDPOINTS = {
   /** Submit a bid */
   submitBid: "/auction/bids/submit",
   /** Cancel a bid */
-  cancelBid: "/auction/bids/cancel",
+  cancelBid: "/auction/trip-offers/bids/cancel",
+  /** Mark a bid as expired */
+  expireBid: "/auction/trip-offers/bids/expire",
   /** Submit driver response to trip offer (bid, rebid, or skip) */
   driverResponse: "/auction/trip-offers/driver-response",
   /** Get trip offer details by ID */
@@ -112,4 +114,5 @@ export const ACTIVE_TRIP_ROUTES = {
   RETRIEVAL_ID: "/active-trips/active-trips/retrieval-id",
   DRIVER_ACTION: "/active-trips/active-trips/driver-action",
   ADD_STOP: "/active-trips/active-trips/add-stop",
+  CANCEL: "/active-trips/active-trips/cancel",
 } as const;

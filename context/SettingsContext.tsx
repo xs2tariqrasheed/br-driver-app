@@ -235,7 +235,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         // Settings synced successfully
         dispatch({ type: "SET_LOADING", payload: false });
-      } catch (error) {
+      } catch (error: any) {
         // REVERT: If API fails, revert the state and storage
         if (previousSettings) {
           dispatch({ type: "SET", payload: previousSettings });
@@ -250,12 +250,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Extract error message
-        const errorAny = error as any;
         const errorMessage =
-          errorAny?.response?.data?.message ||
-          errorAny?.response?.data?.data?.jHeader?.message ||
-          errorAny?.response?.data?.error ||
-          errorAny?.message ||
+          error?.response?.data?.message ||
+          error?.response?.data?.data?.jHeader?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
           "Failed to sync settings to backend";
 
         console.warn("[SettingsContext] Error saving settings:", errorMessage);
@@ -380,6 +379,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
       const response = await settingsApiClient.get(DRIVER_SETTINGS_ENDPOINTS.getSettings);
 
+      // Log the full API response for debugging
+      console.log("[SettingsContext] Full API Response:", JSON.stringify(response?.data, null, 2));
+
       // Check if the response indicates success or failure
       const responseData = response?.data;
       const hasSuccessFlag = responseData?.success === true;
@@ -403,9 +405,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // Transform DB response to mobile app format
       const dbData = responseData?.data?.jData || {};
       
+      // Log the raw DB data before transformation
+      console.log("[SettingsContext] Raw DB Data (jData):", JSON.stringify(dbData, null, 2));
+      
       // Check if data is nested in driverSettings
       if (dbData.driverSettings) {
+        console.log("[SettingsContext] Found driverSettings object:", JSON.stringify(dbData.driverSettings, null, 2));
+        console.log("[SettingsContext] isFingerprintEnabled value:", dbData.driverSettings.isFingerprintEnabled);
+        console.log("[SettingsContext] isFaceIdEnabled value:", dbData.driverSettings.isFaceIdEnabled);
+        console.log("[SettingsContext] isFaceRecognitionEnabled value:", dbData.driverSettings.isFaceRecognitionEnabled);
+      } else {
+        console.log("[SettingsContext] No driverSettings found, checking root level");
+        console.log("[SettingsContext] P_IS_FINGERPRINT_ENABLED value:", dbData.P_IS_FINGERPRINT_ENABLED);
+        console.log("[SettingsContext] P_IS_FACE_ID_ENABLED value:", dbData.P_IS_FACE_ID_ENABLED);
+        console.log("[SettingsContext] P_IS_FACE_RECOGNITION_ENABLED value:", dbData.P_IS_FACE_RECOGNITION_ENABLED);
+      }
+      
       const transformedSettings = transformDbResponseToSettings(dbData);
+      
+      // Log the transformed settings
+      console.log("[SettingsContext] Transformed Settings:", JSON.stringify(transformedSettings, null, 2));
+      console.log("[SettingsContext] enableFingerprint:", transformedSettings.loginSettings.enableFingerprint);
+      console.log("[SettingsContext] enableFaceId:", transformedSettings.loginSettings.enableFaceId);
+      console.log("[SettingsContext] enableFaceRecognition:", transformedSettings.loginSettings.enableFaceRecognition);
 
       // Merge with defaults to ensure all keys are present
       const mergedSettings: SettingsObject = {
@@ -442,15 +464,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
 
       dispatch({ type: "SET_LOADING", payload: false });
-      }
-    } catch (error) {
+    } catch (error: any) {
       // Extract error message
-      const errorAny = error as any;
       const errorMessage =
-        errorAny?.response?.data?.message ||
-        errorAny?.response?.data?.data?.jHeader?.message ||
-        errorAny?.response?.data?.error ||
-        errorAny?.message ||
+        error?.response?.data?.message ||
+        error?.response?.data?.data?.jHeader?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
         "Failed to fetch settings from backend";
 
       console.warn("[SettingsContext] Error fetching settings:", errorMessage);

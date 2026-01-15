@@ -173,6 +173,10 @@ export default function ActiveRideScreen() {
     ACTIVE_TRIP_ROUTES.DRIVER_ACTION,
     API_CLIENT_TYPES.ACTIVE_TRIP
   );
+  const { execute: cancelTrip, loading: isCancellingTrip } = usePost(
+    ACTIVE_TRIP_ROUTES.CANCEL,
+    API_CLIENT_TYPES.ACTIVE_TRIP
+  );
 
   // Load ride state on component mount
   useEffect(() => {
@@ -864,12 +868,63 @@ export default function ActiveRideScreen() {
   };
 
   const handleConfirmCancel = async () => {
+    if (!selectedReason) {
+      return;
+    }
+
     try {
-      // Handle cancel ride logic here
-      console.log("Ride cancelled:", {
+      // Get tripId and driverId
+      const { tripId: currentTripId } = await getTripId();
+      const currentDriverId = auth?.user?.id;
+
+      if (!currentTripId || !currentDriverId) {
+        console.error("Missing tripId or driverId for cancellation");
+        showToast("Unable to cancel trip. Please try again.", "error", "top");
+        return;
+      }
+
+      // Map cancel reason to database format
+      // Database expects uppercase with underscores (e.g., "VEHICLE_ISSUE", "CUSTOMER_NO_SHOW")
+      const reasonMap: Record<CancelRideReason, string> = {
+        "Vehicle Issue": "VEHICLE_ISSUE",
+        "Customer No Show": "CUSTOMER_NO_SHOW",
+        "Wrong Address": "WRONG_ADDRESS",
+        "Safety Concern": "SAFETY_CONCERN",
+        "Personal Emergency": "PERSONAL_EMERGENCY",
+        "Other": "OTHER",
+      };
+
+      const dbReason = reasonMap[selectedReason] || "OTHER";
+
+      console.log("🎯 Cancelling trip:", {
+        tripId: currentTripId,
+        driverId: currentDriverId,
         reason: selectedReason,
+        dbReason,
         comments: cancelComments,
       });
+
+      // Call cancel trip API
+      const cancelResponse = await cancelTrip({
+        tripId: currentTripId,
+        driverId: currentDriverId,
+        reason: dbReason,
+        comments: cancelComments || undefined,
+        cancelledBy: "DRIVER",
+      });
+
+      // Handle response - usePost extracts nested 'data' property if it exists
+      // Backend returns: { success: true, message: '...', data: dbResponse }
+      // Hook extracts: response.data.data (which is dbResponse, no success field)
+      // So if success field is missing, the API call succeeded (no error thrown)
+      const response = cancelResponse as any;
+      if (response?.success === false) {
+        throw new Error(response?.error || response?.message || "Failed to cancel trip");
+      }
+      
+      // If we get here, either success is true or the hook extracted nested data (meaning success)
+
+      console.log("✅ Trip cancelled successfully in database");
 
       // Disconnect active trip socket
       console.log("🔌 Disconnecting active trip socket...");
@@ -879,26 +934,42 @@ export default function ActiveRideScreen() {
       console.log("🔌 Reconnecting offers socket...");
       await connectOffersSocket();
 
-      // Clean up trip data in parallel
+      // Clean up trip data - ensure all cleanup completes before navigation
+      console.log("🧹 Cleaning up trip data...");
       await Promise.all([
         removeRetrievalId(),
         removeTripId(),
         removeRideState(),
       ]);
+      console.log("✅ Trip data cleaned up");
 
       // Clear only non-demo broadcast offers when ride is cancelled
       clearNonDemoBroadcastOffers();
       console.log("Cleared non-demo broadcast offers");
 
+      // Close modals and reset state
       closeConfirmationModal();
       closeCancelRideSheet();
-      // Reset state
       setSelectedReason(null);
       setCancelComments("");
+
+      // Show success message
+      showToast("Trip cancelled successfully", "success", "top");
+
+      // Small delay to ensure context updates propagate before navigation
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Navigate to home
       router.replace("/(tabs)");
     } catch (error) {
       console.error("Error handling ride cancellation:", error);
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel trip. Please try again.",
+        "error",
+        "top"
+      );
     }
   };
 
@@ -1442,6 +1513,8 @@ export default function ActiveRideScreen() {
         onCancel={handleGoBack}
         cancelButtonText="Go Back"
         confirmButtonText="Yes, Cancel"
+        loading={isCancellingTrip}
+        loadingText="Cancelling..."
       />
 
       {/* Update ETA Bottom Sheet */}

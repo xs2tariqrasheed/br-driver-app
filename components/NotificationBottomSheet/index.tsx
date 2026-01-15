@@ -65,12 +65,14 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   };
 
   // Check if we should show the "View Details" button
+  // Allow reopening sequential offers from notifications even if hasAnyActiveOffer is false
+  // (driver may have closed the modal but still wants to view/accept the offer)
   const shouldShowViewDetails = () => {
     return (
       notification?.notificationType ===
         NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER &&
-      rideOffer &&
-      hasAnyActiveOffer
+      rideOffer
+      // Removed hasAnyActiveOffer check to allow reopening offers from notifications
     );
   };
 

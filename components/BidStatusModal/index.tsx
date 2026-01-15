@@ -140,8 +140,12 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
 
       // Navigate to active-ride screen when status is ACCEPTED
       if (status === BID_STATUS.ACCEPTED) {
-        console.log("navigating to active-ride screen in BidStatusModal");
-        router.replace("/(screens)/active-ride");
+        console.log("⏳ Waiting for backend to initialize trip before redirecting...");
+        // Add a small delay before redirecting to allow backend to initialize the trip
+        setTimeout(() => {
+          console.log("🚀 Redirecting to active-ride screen in BidStatusModal");
+          router.replace("/(screens)/active-ride");
+        }, 1500); // 1.5 second delay
       }
 
       // Call onTimerComplete after navigation for ACCEPTED status
@@ -165,8 +169,12 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
     console.log("status on Close in BidStatusModal", status);
     // Navigate to active-ride screen when status is ACCEPTED
     if (status === BID_STATUS.ACCEPTED) {
-      console.log("navigating to active-ride screen in BidStatusModal");
-      router.replace("/(screens)/active-ride");
+      console.log("⏳ Waiting for backend to initialize trip before redirecting...");
+      // Add a small delay before redirecting to allow backend to initialize the trip
+      setTimeout(() => {
+        console.log("🚀 Redirecting to active-ride screen in BidStatusModal");
+        router.replace("/(screens)/active-ride");
+      }, 1500); // 1.5 second delay
     }
   }, [onClose, status]);
 

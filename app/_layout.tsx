@@ -34,6 +34,9 @@ import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Host } from "react-native-portalize";
 import "react-native-reanimated";
+import { DEPLOYED_BASE_URL_STORAGE_KEY } from "@/constants/global";
+import { getStorageItem } from "@/utils/helpers";
+import { updateBaseUrls } from "@/config/apiConfig";
 
 // Keep the native splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync();
@@ -46,6 +49,20 @@ export default function RootLayout() {
     "SF-Pro-Display-Bold": require("../assets/fonts/SF-Pro-Display-Bold.otf"),
     "SF-Pro-Display-Black": require("../assets/fonts/SF-Pro-Display-Black.otf"),
   });
+
+  // Check for deployed base URL on startup to initialize API clients
+  useEffect(() => {
+    (async () => {
+      try {
+        const baseUrl = await getStorageItem(DEPLOYED_BASE_URL_STORAGE_KEY);
+        if (baseUrl) {
+          updateBaseUrls(baseUrl);
+        }
+      } catch (e) {
+        console.error("Error checking base URL:", e);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (loaded) {
@@ -97,6 +114,12 @@ export default function RootLayout() {
                                                   >
                                                     <Stack.Screen
                                                       name="(screens)/auth"
+                                                      options={{
+                                                        headerShown: false,
+                                                      }}
+                                                    />
+                                                    <Stack.Screen
+                                                      name="(screens)/base-url-setup"
                                                       options={{
                                                         headerShown: false,
                                                       }}

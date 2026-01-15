@@ -22,6 +22,9 @@ import { useNotification } from "@/context/NotificationContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useNetworkMonitoring } from "@/hooks/useNetworkMonitoring";
+import { usePost } from "@/hooks/usePost";
+import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
 import { expirationService } from "@/services/ExpirationService";
 import { formatDateTimestamp, logger } from "@/utils/helpers";
 import {
@@ -68,6 +71,7 @@ export function GlobalSocketListener() {
     setHasAnyActiveOffer,
     showRideOfferModal,
     markSequentialOfferAsExpired,
+    updateCurrentOfferStatus,
     hideRideOfferModal,
     saveTemporaryRide,
     removeTemporaryRide,
@@ -87,6 +91,12 @@ export function GlobalSocketListener() {
   const { showBidUnsuccessful } = useBidUnsuccessful();
   const { hideBidWaitingTimer } = useBidWaitingTimer();
   const { showBidExpired } = useBidExpired();
+  
+  // API hooks
+  const { execute: expireBid } = usePost(
+    LIVE_JOB_ENDPOINTS.expireBid,
+    API_CLIENT_TYPES.AUCTION
+  );
 
   useEffect(() => {
     if (!driver?.online) {
@@ -405,33 +415,40 @@ export function GlobalSocketListener() {
               };
               await addNotification(notification);
             } else {
-              // For sequential offers, handle as before
-              hideRideOfferModal();
-              closeAllModals();
-              // Small delay to ensure other modals close before showing bid unsuccessful
-              setTimeout(() => {
-                // Try to get tripId from current offer or data
-                const tripIdForReject = tripId || currentOffer?.tripOffer?.tripId;
-                showBidUnsuccessful(tripIdForReject);
-              }, 1000);
+              // For sequential offers, keep modal open and allow rebidding
               log(
-                `❌ Sequential bid ${response} - showing BidUnsuccessful modal`
+                `❌ Sequential bid ${response} - keeping modal open for rebidding`
               );
 
-              // Set hasAnyActiveOffer to false on bid rejection for sequential offers
-              setHasAnyActiveOffer(false);
+              // Update current offer status to "rejected" so the UI shows "Re-bid" button
+              if (currentOffer && currentOffer.tripOffer.tripId === tripId) {
+                updateCurrentOfferStatus("rejected");
+                log(`[GlobalSocketListener] Updated sequential offer status to "rejected" for trip ${tripId}`);
+              }
+
+              // Hide waiting timer since bid was rejected
+              hideBidWaitingTimer();
+
+              // Keep modal open - don't close it or set hasAnyActiveOffer to false
+              // This allows driver to rebid immediately
+
+              // Show toast notification
+              showToast("Your bid was not accepted. You can rebid if you're still interested.", {
+                variant: "warning",
+                position: "top",
+              });
 
               // Add notification
               const message =
-                "Your bid was not accepted. Keep looking for other opportunities.";
+                "Your bid was not accepted. You can rebid if you're still interested.";
 
               const notification = {
                 id: `bid-${response}-${Date.now()}`,
-                messageTitle: "Bid Rejected",
+                messageTitle: "Bid Not Accepted",
                 messageBody: message,
                 dateTime: formatDateTimestamp(timestamp),
                 messageType: "unread" as const,
-                notificationType: NOTIFICATION_TYPES.ERROR,
+                notificationType: NOTIFICATION_TYPES.WARNING,
               };
               await addNotification(notification);
             }
@@ -441,6 +458,21 @@ export function GlobalSocketListener() {
               log(
                 `❌ Broadcast bid ${response} - keeping offer for rebidding`
               );
+
+              // Call API to mark bid as expired in database
+              const driverId = auth?.driverId;
+              if (tripId && driverId) {
+                try {
+                  await expireBid({
+                    driverId,
+                    tripId,
+                  });
+                  log(`[GlobalSocketListener] Called expire bid API for trip ${tripId}`);
+                } catch (error) {
+                  log(`[GlobalSocketListener] Failed to expire bid for trip ${tripId}:`, error);
+                  // Continue with local state update even if API call fails
+                }
+              }
 
               // Update status to "expired" so the UI shows "Re-bid"
               if (tripId) {
@@ -475,21 +507,32 @@ export function GlobalSocketListener() {
               };
               await addNotification(notification);
             } else {
-              // For sequential offers, handle as before
-              hideRideOfferModal();
-              closeAllModals();
-              // Small delay to ensure other modals close before showing bid expired
-              setTimeout(() => {
-                showBidExpired();
-              }, 1000);
-              log(`❌ Sequential bid ${response} - showing BidExpired modal`);
+              // For sequential offers, keep modal open and allow rebidding
+              log(
+                `❌ Sequential bid ${response} - keeping modal open for rebidding`
+              );
 
-              // Set hasAnyActiveOffer to false on bid rejection/expiry
-              setHasAnyActiveOffer(false);
+              // Update current offer status to "expired" so the UI shows "Re-bid" button
+              if (currentOffer && currentOffer.tripOffer.tripId === tripId) {
+                updateCurrentOfferStatus("expired");
+                log(`[GlobalSocketListener] Updated sequential offer status to "expired" for trip ${tripId}`);
+              }
+
+              // Hide waiting timer since bid expired
+              hideBidWaitingTimer();
+
+              // Keep modal open - don't close it or set hasAnyActiveOffer to false
+              // This allows driver to rebid immediately
+
+              // Show toast notification
+              showToast("Your bid has expired. You can rebid if you're still interested.", {
+                variant: "warning",
+                position: "top",
+              });
 
               // Add notification
               const message =
-                "Your bid has expired. Keep looking for other opportunities.";
+                "Your bid has expired. You can rebid if you're still interested.";
 
               const notification = {
                 id: `bid-${response}-${Date.now()}`,

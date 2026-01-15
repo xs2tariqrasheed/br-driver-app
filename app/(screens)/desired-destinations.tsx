@@ -257,9 +257,16 @@ export default function DesiredDestinationsScreen() {
                   address={dest.address}
                   onEdit={() => {
                     setInputAddress(dest.address);
-                    setSelectedCoordinates(null);
-                    setSelectedPlaceId("");
-                    setSelectedZipCode("");
+                    // Populate fields from destination if available
+                    const destWithExtras = dest as any;
+                    setSelectedCoordinates(
+                      destWithExtras.latitude && destWithExtras.longitude
+                        ? { latitude: destWithExtras.latitude, longitude: destWithExtras.longitude }
+                        : null
+                    );
+                    setSelectedPlaceId(destWithExtras.googleReferenceNumber || "");
+                    setSelectedZipCode(destWithExtras.targetZipCode || "");
+                    setCommission(destWithExtras.commissionPercentage || 0);
                     setEditingIndex(idx);
                     setIsSheetOpen(true);
                   }}
@@ -357,32 +364,70 @@ export default function DesiredDestinationsScreen() {
               loading={isSaving}
               disabled={
                 !inputAddress.trim() ||
-                !selectedCoordinates ||
-                !selectedPlaceId ||
-                commission === 0 ||
+                (editingIndex === null && (!selectedCoordinates || !selectedPlaceId)) ||
+                (editingIndex === null && commission === 0) ||
                 (editingIndex === null &&
                   destinations.length >= MAX_DESIRED_LOCATIONS) ||
                 isLoadingDestinations ||
-                isFetchingDestinations
+                isFetchingDestinations ||
+                isSaving
               }
               onPress={async () => {
                 const trimmed = inputAddress.trim();
-                if (!trimmed || !selectedCoordinates || !selectedPlaceId) {
-                  showToast("Please select a location from the map", {
-                    variant: "error",
-                    position: "top",
-                  });
-                  return;
+                
+                // Validate for new destinations
+                if (editingIndex === null) {
+                  if (!trimmed || !selectedCoordinates || !selectedPlaceId) {
+                    showToast("Please select a location from the map", {
+                      variant: "error",
+                      position: "top",
+                    });
+                    return;
+                  }
+                  if (commission === 0) {
+                    showToast("Please select a commission for your destination first as it is required", {
+                      variant: "error",
+                      position: "top",
+                    });
+                    return;
+                  }
                 }
 
+                setIsSaving(true);
                 try {
                   if (editingIndex !== null) {
                     // Edit existing destination
                     const existingDest = destinations[editingIndex];
+                    const destWithExtras = existingDest as any;
+                    
+                    // Use existing coordinates/placeId if not changed, or new ones if user selected from map
+                    const finalCoordinates = selectedCoordinates || 
+                      (destWithExtras.latitude && destWithExtras.longitude
+                        ? { latitude: destWithExtras.latitude, longitude: destWithExtras.longitude }
+                        : null);
+                    const finalPlaceId = selectedPlaceId || destWithExtras.googleReferenceNumber || "";
+                    const finalZipCode = selectedZipCode || destWithExtras.targetZipCode || extractZipCodeFromAddress(trimmed) || "00000";
+                    const finalCommission = commission || destWithExtras.commissionPercentage || 0;
+                    
+                    if (!finalCoordinates) {
+                      showToast("Please select a location from the map to update", {
+                        variant: "error",
+                        position: "top",
+                      });
+                      setIsSaving(false);
+                      return;
+                    }
+                    
                     const updatedDest = {
                       ...existingDest,
                       address: trimmed,
-                    };
+                      googleReferenceNumber: finalPlaceId,
+                      latitude: finalCoordinates.latitude,
+                      longitude: finalCoordinates.longitude,
+                      targetZipCode: finalZipCode,
+                      commissionPercentage: finalCommission,
+                    } as any;
+                    
                     await updateDestinationAPI(updatedDest);
                     showToast("Destination updated successfully", {
                       variant: "success",
@@ -395,20 +440,12 @@ export default function DesiredDestinationsScreen() {
                         variant: "error",
                         position: "top",
                       });
+                      setIsSaving(false);
                       return;
                     }
                     const newDest = createDesiredDestination(trimmed);
                     // Use zipCode from map selection, or extract from address, or use default
                     const finalZipCode = selectedZipCode || extractZipCodeFromAddress(trimmed) || "00000";
-                    
-                    // Check if commission is set (must be greater than 0)
-                    if (commission === 0) {
-                      showToast("Please select a commission for your destination first as it is required", {
-                        variant: "error",
-                        position: "top",
-                      });
-                      return;
-                    }
                     
                     await createDestinationAPI({
                       address: newDest.address,
@@ -439,10 +476,15 @@ export default function DesiredDestinationsScreen() {
                     variant: "error",
                     position: "top",
                   });
+                } finally {
+                  setIsSaving(false);
                 }
               }}
             >
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving 
+                ? (editingIndex !== null ? "Updating..." : "Saving...")
+                : (editingIndex !== null ? "Update" : "Save")
+              }
             </Button>
           </View>
         </View>

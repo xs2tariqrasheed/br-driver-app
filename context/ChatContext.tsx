@@ -1,12 +1,13 @@
-import { activeTripApiClient } from "@/config/apiConfig";
 import {
-  ACTIVE_TRIP_SOCKET_EVENTS
+  ACTIVE_TRIP_SOCKET_EVENTS,
+  API_CLIENT_TYPES,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useModalManager } from "@/context/ModalManagerContext";
-import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
 import { router } from "expo-router";
+import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
+import { activeTripApiClient } from "@/config/apiConfig";
 import React, {
   createContext,
   useCallback,
@@ -283,6 +284,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             const responseData = response.data as any;
             
+            // Log the response for debugging
+            console.log("💬 [Chat History] API Response:", JSON.stringify({
+              success: responseData.success,
+              hasMessages: !!responseData.messages,
+              hasChatMessages: !!responseData.data?.chatMessages,
+              messagesLength: Array.isArray(responseData.messages) ? responseData.messages.length : 'N/A',
+              chatMessagesLength: Array.isArray(responseData.data?.chatMessages) ? responseData.data.chatMessages.length : 'N/A',
+            }, null, 2));
+
             // Check multiple possible locations for messages (DB returns chatMessages, not messages)
             const messages = responseData.messages || responseData.data?.chatMessages || responseData.data?.messages || responseData.data?.message || [];
             
@@ -474,6 +484,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           message: text.trim(),
           timestamp: newMessage.timestamp,
         };
+        console.log("💬 Message payload:", JSON.stringify(messagePayload));
         // Send as object, not stringified
         emitActiveTripEvent(
           ACTIVE_TRIP_SOCKET_EVENTS.SEND_MESSAGE,

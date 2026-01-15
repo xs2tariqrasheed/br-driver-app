@@ -8,6 +8,7 @@ import {
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import { usePost } from "@/hooks/usePost";
 import { router } from "expo-router";
 import { createContext, ReactNode, useContext, useState } from "react";
@@ -35,7 +36,7 @@ interface RideOffer {
   bidable: boolean;
 
   // LiveRideOfferItem required fields
-  rideType: keyof typeof RIDE_TYPES;
+  rideType: (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES];
   peopleCount: number;
   rating: number;
   hasSpecialRequirements: boolean;
@@ -91,12 +92,19 @@ interface RideOfferContextType {
   skipRideOfferPrice: () => Promise<void>;
   hideRideOffer: () => Promise<void>;
   submitETA: (eta: number) => Promise<void>;
-  submitBid: (bidAmount: number) => Promise<{ success: boolean } | undefined>;
+  submitBid: (
+    bidAmount: number,
+    eta?: number | string,
+    boostAmount?: number
+  ) => Promise<{ success: boolean } | undefined>;
   submitBidForBroadcastOffer: (
     tripId: string,
-    bidAmount: number
+    bidAmount: number,
+    eta?: number | string,
+    boostAmount?: number
   ) => Promise<{ success: boolean } | undefined>;
   markSequentialOfferAsExpired: (tripId: string) => void;
+  updateCurrentOfferStatus: (status: "rejected" | "expired") => void;
   setHasAnyActiveOffer: (hasActive: boolean) => Promise<void>;
   // Temporary ride methods
   saveTemporaryRide: (notificationId: string, rideOffer: RideOffer) => void;
@@ -111,6 +119,7 @@ const RideOfferContext = createContext<RideOfferContextType | undefined>(
 
 export function RideOfferProvider({ children }: { children: ReactNode }) {
   const [auth] = useAuth();
+  const { closeAllModals } = useModalManager();
 
   const driverId = auth?.user?.id;
   const [isRideOfferModalVisible, setIsRideOfferModalVisible] = useState(false);
@@ -309,7 +318,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         driverId: driverId,
         tripId: currentOffer.tripOffer.tripId,
         response: TRIP_OFFER_ACTIONS.ACCEPT,
-        // eta: eta,
+        eta: eta,
       });
 
       console.log("✅ Ride offer accepted with ETA successfully");
@@ -335,7 +344,13 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       setCurrentOffer(null);
       setModalCallbacks(null);
 
+      // Add a small delay before redirecting to allow backend to initialize the trip
+      // This prevents "Active trip resource not found" error
+      console.log("⏳ Waiting for backend to initialize trip before redirecting...");
+      await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
+
       // Navigate to active-ride screen
+      console.log("🚀 Redirecting to active-ride screen");
       router.replace("/(screens)/active-ride");
     } catch (error) {
       console.error("❌ Error in submit ETA:", error);
@@ -461,7 +476,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   /**
    * Submit a bid amount for the current ride offer
    */
-  const submitBid = async (bidAmount: number) => {
+  const submitBid = async (
+    bidAmount: number,
+    eta?: number | string,
+    boostAmount?: number
+  ) => {
     if (!currentOffer) return;
 
     try {
@@ -470,7 +489,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         "🌐 Submitting bid for ride offer:",
         currentOffer.tripOffer.tripId,
         "bidAmount:",
-        bidAmount
+        bidAmount,
+        "eta:",
+        eta,
+        "boostAmount:",
+        boostAmount
       );
 
       await submitDriverResponse({
@@ -478,6 +501,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         tripId: currentOffer.tripOffer.tripId,
         response: TRIP_OFFER_ACTIONS.BID,
         bidAmount,
+        eta,
+        boostAmount,
       });
 
       console.log("✅ Bid submitted successfully context");
@@ -515,7 +540,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
    */
   const submitBidForBroadcastOffer = async (
     tripId: string,
-    bidAmount: number
+    bidAmount: number,
+    eta?: number | string,
+    boostAmount?: number
   ) => {
     if (!tripId || !driverId) {
       console.error("❌ Missing tripId or driverId for bid submission");
@@ -528,7 +555,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         "🌐 Submitting bid for broadcast offer:",
         tripId,
         "bidAmount:",
-        bidAmount
+        bidAmount,
+        "eta:",
+        eta,
+        "boostAmount:",
+        boostAmount
       );
 
       await submitDriverResponse({
@@ -536,6 +567,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         tripId: tripId,
         response: TRIP_OFFER_ACTIONS.BID,
         bidAmount,
+        eta,
+        boostAmount,
       });
 
       console.log("✅ Bid submitted successfully for broadcast offer");
@@ -568,11 +601,30 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   };
 
   /**
+   * Update current offer status (for bid rejection/expiration)
+   * This allows the modal to stay open and show "Re-bid" button
+   */
+  const updateCurrentOfferStatus = (status: "rejected" | "expired") => {
+    if (currentOffer) {
+      console.log(`📱 Updating current offer status to: ${status}`);
+      setCurrentOffer((prev) =>
+        prev ? { ...prev, status: status as "rejected" | "expired" } : null
+      );
+      console.log(`✅ Current offer status updated to: ${status}`);
+    } else {
+      console.log(`⚠️ No current offer to update`);
+    }
+  };
+
+  /**
    * Mark a sequential offer as expired by tripId
    * This method is called by the ExpirationService when server sends expiration event
    */
   const markSequentialOfferAsExpired = (tripId: string) => {
     console.log(`⏰ Marking sequential offer as expired: ${tripId}`);
+
+    // Close all modals and bottom sheets when offer expires
+    closeAllModals();
 
     // Check if the current offer matches the expired tripId
     if (currentOffer && currentOffer.tripOffer.tripId === tripId) {
@@ -595,6 +647,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       console.log("✅ Sequential offer marked as expired successfully");
     } else {
       console.log(`📱 Current offer does not match expired tripId: ${tripId}`);
+      // Even if current offer doesn't match, set hasAnyActiveOffer to false
+      // as the sequential offer has expired
+      setHasAnyActiveOffer(false);
     }
   };
 
@@ -668,6 +723,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     submitBid,
     submitBidForBroadcastOffer,
     markSequentialOfferAsExpired,
+    updateCurrentOfferStatus,
     setHasAnyActiveOffer,
     saveTemporaryRide,
     getTemporaryRide,

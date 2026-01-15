@@ -332,17 +332,25 @@ export function formatSocketDataToTripOffer(
   const hasPackage = hasPackageFromCategory(tripOffer.tripCategory);
   const hasSpecialRequirements = hasSpecialRequirementsFromCategory(tripOffer.tripCategory);
 
+  // Calculate expiration time using actual timeout from server (in milliseconds)
+  // Use server timestamp if available, otherwise use current time
+  const serverTimestamp = timestamp ? new Date(timestamp).getTime() : Date.now();
+  const expirationTime = serverTimestamp + (timeout || OFFER_TIMEOUT);
+
   // Debug logging
   console.log("[formatSocketDataToTripOffer] Backend data:", {
     tripType: tripOffer.tripType,
     serviceType: tripOffer.serviceType,
     tripCategory: tripOffer.tripCategory,
+    timeout,
+    timestamp,
   });
   console.log("[formatSocketDataToTripOffer] Mapped values:", {
     rideType,
     carType,
     hasPackage,
     hasSpecialRequirements,
+    expirationTime: new Date(expirationTime).toISOString(),
   });
 
   return {
@@ -385,7 +393,7 @@ export function formatSocketDataToTripOffer(
         ? new Date(tripOffer.timestamp).toISOString()
         : new Date().toISOString(),
       driverInstructions: DEFAULT_VALUES.driverInstructions,
-      expiredAt: new Date(Date.now() + OFFER_TIMEOUT).toISOString(), // 20 seconds from now (matches backend)
+      expiredAt: new Date(expirationTime).toISOString(), // Use actual timeout from server
     },
 
     // Special requirements (using defaults for now)

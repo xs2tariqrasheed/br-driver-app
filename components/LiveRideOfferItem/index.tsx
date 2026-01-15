@@ -127,6 +127,8 @@ export interface LiveRideOfferItemProps {
   expiredAt?: string | Date | null;
   /** Car type for the ride */
   carType?: CarType | string;
+  /** Callback when the expiration timer completes (for sequential offers) */
+  onTimerComplete?: () => void;
 }
 
 /**
@@ -192,6 +194,7 @@ export default function LiveRideOfferItem({
   type = OFFER_TYPES.LIVE,
   expiredAt,
   carType = CAR_TYPE.SUV,
+  onTimerComplete,
 }: LiveRideOfferItemProps) {
   const { skipLiveOffer, hideLiveOffer, getLiveOfferStatus } = useDriver();
   const { hideRideOfferModal, setHasAnyActiveOffer } = useRideOffer();
@@ -611,6 +614,15 @@ export default function LiveRideOfferItem({
                       <ProgressTimer
                         duration={calculateProgressTimerDuration(expiredAt)!}
                         onComplete={() => {
+                          // Check if this is a sequential offer (has onTimerComplete callback)
+                          if (onTimerComplete) {
+                            // For sequential offers, use the provided callback
+                            // The callback should check if offer is still in "offered" state
+                            onTimerComplete();
+                            return;
+                          }
+
+                          // For broadcast offers, use existing logic
                           // Only remove if offer is still in "offered" state
                           // If driver has performed any action (bid, accept, etc.), status would have changed
                           const currentOffer = getBroadcastOffer(id);

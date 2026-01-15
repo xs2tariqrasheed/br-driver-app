@@ -18,7 +18,7 @@
 import { AUTH_STORAGE_KEY } from "@/constants/global";
 import { getStorageItem, logger } from "@/utils/helpers";
 import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import { getServiceUrl } from "./urlResolver";
+import { getServiceUrl, setCustomBaseUrl } from "./urlResolver";
 import { buildLoginRequest } from "@/utils/requestBuilder";
 import type { DbRequestJson, DbResponse } from "@/types/dbRequest";
 const log = logger();
@@ -1059,5 +1059,34 @@ export const auctionApiClient = createAuctionApiClient();
 export const settingsApiClient = createSettingsApiClient();
 export const activeTripApiClient = createActiveTripApiClient();
 export const notificationsApiClient = createNotificationsApiClient();
+
+/**
+ * Updates the base URL for all API clients.
+ * This is used when the user enters a deployed base URL on app startup.
+ * 
+ * @param baseUrl - The new base URL to use for all services
+ */
+export const updateBaseUrls = (baseUrl: string) => {
+  if (!baseUrl) return;
+  
+  // Update the global custom base URL in urlResolver
+  setCustomBaseUrl(baseUrl);
+  
+  const clients = [
+    apiClient,
+    authApiClient,
+    meApiClient,
+    auctionApiClient,
+    settingsApiClient,
+    activeTripApiClient,
+    notificationsApiClient
+  ];
+  
+  clients.forEach(client => {
+    client.defaults.baseURL = baseUrl;
+  });
+  
+  log(`🌐 All API clients updated to use base URL: ${baseUrl}`);
+};
 
 export { axios };

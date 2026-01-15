@@ -71,6 +71,10 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
     LIVE_JOB_ENDPOINTS.cancelBid,
     API_CLIENT_TYPES.AUCTION
   );
+  const { execute: expireBid } = usePost(
+    LIVE_JOB_ENDPOINTS.expireBid,
+    API_CLIENT_TYPES.AUCTION
+  );
 
   const hideBidWaitingTimer = useCallback(() => {
     setIsBidWaitingTimerVisible(false);
@@ -123,15 +127,30 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
       });
   };
 
-  const handleCompleteProgress = () => {
+  const handleCompleteProgress = async () => {
     // Exit confirming mode if active and proceed to default completion
     if (isConfirming) setIsConfirming(false);
     
     // Update broadcast offer status to "expired" locally when timer completes
     // This ensures button shows "Re-bid" immediately, even before socket response
-    if (currentOfferRef.current) {
-      const offer = currentOfferRef.current;
-      const tripId = offer?.tripOffer?.tripId || offer?.tripId;
+    const offer = currentOfferRef.current;
+    const tripId = offer?.tripOffer?.tripId || offer?.tripId;
+    const driverId = auth?.driverId;
+    
+    if (tripId && driverId) {
+      // Call API to mark bid as expired in database
+      try {
+        await expireBid({
+          driverId,
+          tripId,
+        });
+        console.log(`[BidWaitingTimer] Called expire bid API for trip ${tripId}`);
+      } catch (error) {
+        console.error(`[BidWaitingTimer] Failed to expire bid for trip ${tripId}:`, error);
+        // Continue with local state update even if API call fails
+      }
+      
+      // Update local state
       if (tripId) {
         const offerToUpdate = broadcastOffers.find(
           (o) => o.tripOffer.tripId === tripId
@@ -144,9 +163,6 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-    
-    // Extract tripId from the offer for showing expired sheet
-    const tripId = currentOfferRef.current?.tripOffer?.tripId || currentOfferRef.current?.tripId;
     
     if (onCompleteProgressRef.current) {
       onCompleteProgressRef.current();

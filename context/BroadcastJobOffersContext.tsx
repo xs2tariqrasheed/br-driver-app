@@ -33,7 +33,7 @@ export interface BroadcastJobOffer {
   };
 
   // LiveRideOfferItem required fields
-  rideType: keyof typeof RIDE_TYPES;
+  rideType: (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES];
   peopleCount: number;
   rating: number;
   hasSpecialRequirements: boolean;
