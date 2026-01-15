@@ -112,7 +112,7 @@ export default function Index() {
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <Image
-          source={require("../assets/images/logo.gif")}
+          source={require("../assets/images/splash-logo.gif")}
           style={styles.logo}
           resizeMode="contain"
         />
