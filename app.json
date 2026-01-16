@@ -18,7 +18,7 @@
         "NSLocationWhenInUseUsageDescription": "Your location is needed to find and navigate to jobs nearby.",
         "NSUserTrackingUsageDescription": "We use notifications to alert you for incoming jobs and updates.",
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": false,
+          "NSAllowsArbitraryLoads": true,
           "NSAllowsLocalNetworking": true,
           "NSExceptionDomains": {
             "localhost": {
