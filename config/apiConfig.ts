@@ -473,7 +473,7 @@ const createMeApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "me",
       process.env.EXPO_PUBLIC_BASE_URL,
-      "http://192.168.100.160:3000"
+      "http://3.84.108.176:3001"
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -599,7 +599,7 @@ const createSettingsApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "settings",
       process.env.EXPO_PUBLIC_SETTINGS_BASE_URL,
-      "http://192.168.100.160:3003"
+      "http://3.84.108.176:3004"
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -984,7 +984,7 @@ const createNotificationsApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "notifications",
       process.env.EXPO_PUBLIC_NOTIFICATIONS_BASE_URL,
-      "http://192.168.100.160:3006"
+      "http://3.84.108.176:3006"
     ),
     HEADERS: {
       "Content-Type": "application/json",
