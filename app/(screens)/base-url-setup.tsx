@@ -27,7 +27,7 @@ import {
  */
 export default function BaseUrlSetupScreen() {
   const router = useRouter();
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState("http://3.84.108.176");
   const [loading, setLoading] = useState(false);
 
   /**

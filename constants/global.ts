@@ -484,15 +484,15 @@ export type NetworkQuality =
 // When IS_TESTING is true, these URLs will be used instead of environment variables
 // All URLs should include the http:// protocol prefix for local testing
 export const SERVICES_TESTING_URLS = {
-  "auth": "http://192.168.1.3:3001",
-  "auction": "http://192.168.1.3:3002",
-  "online-drivers": "http://192.168.1.3:3003",
-  "settings": "http://192.168.1.3:3004",
-  "active-trip": "http://192.168.1.3:3005",
-  "notifications": "http://192.168.1.3:3006", // Notifications service on port 3006
-  "me": "http://192.168.1.3:3001", // Shares with auth service
-  "offers-socket": "http://192.168.1.3:3002", // Shares with auction service
-  "active-trip-socket": "http://192.168.1.3:3005", // Shares with active-trip service
+  "auth": "http://3.84.108.176:3001",
+  "auction": "http://3.84.108.176:3002",
+  "online-drivers": "http://3.84.108.176:3003",
+  "settings": "http://3.84.108.176:3004",
+  "active-trip": "http://3.84.108.176:3005",
+  "notifications": "http://3.84.108.176:3006", // Notifications service on port 3006
+  "me": "http://3.84.108.176:3001", // Shares with auth service
+  "offers-socket": "http://3.84.108.176:3002", // Shares with auction service
+  "active-trip-socket": "http://3.84.108.176:3005", // Shares with active-trip service
 } as const;
 
 // DB Request Format Constants

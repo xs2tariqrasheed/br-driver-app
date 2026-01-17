@@ -33,7 +33,7 @@
         "buildConfiguration": "Release"
       },
       "env": {
-        "EXPO_PUBLIC_BASE_URL": "https://djh0g1zn5pc6f.cloudfront.net",
+        "EXPO_PUBLIC_BASE_URL": "http://3.84.108.176",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_NEW": "AIzaSyBOsjnq4_VrV_PdrgsJVmUImv-f5-y7_3M",
         "EXPO_PUBLIC_ENVIRONMENT": "production",
@@ -46,7 +46,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_BASE_URL": "https://djh0g1zn5pc6f.cloudfront.net",
+        "EXPO_PUBLIC_BASE_URL": "http://3.84.108.176",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDXb5djCy2217thBLl785mPmds2_qudYC8",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_NEW": "AIzaSyBOsjnq4_VrV_PdrgsJVmUImv-f5-y7_3M",
         "EXPO_PUBLIC_ENVIRONMENT": "production",
