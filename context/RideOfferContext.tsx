@@ -1,6 +1,6 @@
 import ETAModal from "@/components/ETAModal";
 import { showToast } from "@/components/Toast";
-import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
+import { ACTIVE_TRIP_ROUTES, LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import {
   API_CLIENT_TYPES,
   RIDE_TYPES,
@@ -145,6 +145,12 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   const { execute: submitDriverResponse } = usePost(
     LIVE_JOB_ENDPOINTS.driverResponse,
     API_CLIENT_TYPES.AUCTION
+  );
+  
+  // API hook for updating ETA (non-blocking, used after trip acceptance)
+  const { execute: updateETA } = usePost(
+    ACTIVE_TRIP_ROUTES.UPDATE_ETA,
+    API_CLIENT_TYPES.ACTIVE_TRIP
   );
 
   /**
@@ -313,10 +319,13 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         eta
       );
 
+      // Store tripId before clearing currentOffer
+      const tripId = currentOffer.tripOffer.tripId;
+
       // Submit driver response to API with ETA
       await submitDriverResponse({
         driverId: driverId,
-        tripId: currentOffer.tripOffer.tripId,
+        tripId: tripId,
         response: TRIP_OFFER_ACTIONS.ACCEPT,
         eta: eta,
       });
@@ -326,12 +335,13 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         variant: "success",
         position: "top",
       });
+      
       // NEW: Remove temporary rides for expired offers
-      if (currentOffer.tripOffer.tripId) {
-        removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
+      if (tripId) {
+        removeTemporaryRidesByTripId(tripId);
         console.log(
           "✅ Removed temporary rides for accepted tripId:",
-          currentOffer.tripOffer.tripId
+          tripId
         );
       }
 
@@ -348,6 +358,28 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       // This prevents "Active trip resource not found" error
       console.log("⏳ Waiting for backend to initialize trip before redirecting...");
       await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
+
+      // Non-blocking: Try to update ETA in the database (don't block navigation if it fails)
+      // This is for non-biddable offers where ETA was provided but may not be stored in DB
+      try {
+        console.log("🔄 Attempting to update ETA in database (non-blocking)...");
+        await updateETA({
+          tripId: tripId,
+          driverId: driverId,
+          eta: eta,
+        });
+        console.log("✅ ETA updated in database successfully");
+      } catch (etaError) {
+        // Don't block the user - just notify them that ETA update failed
+        console.warn("⚠️ Failed to update ETA in database (non-blocking):", etaError);
+        showToast(
+          "Ride accepted! ETA update failed. You can update it later during the active ride.",
+          {
+            variant: "error",
+            position: "top",
+          }
+        );
+      }
 
       // Navigate to active-ride screen
       console.log("🚀 Redirecting to active-ride screen");

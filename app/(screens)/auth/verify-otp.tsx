@@ -423,13 +423,16 @@ export default function VerifyOtpScreen() {
       // Extract online status
       const isOnline = user.is_online === "YES" || user.is_online === true;
 
-      // Set auth context with actual user data
+      // Set auth context with full user data (including all driver details for profile screen)
+      // Store the complete user object so profile screen can access all information
       await setAuth({
         ...currentAuth,
         user: {
           id: driverId,
           name: driverName,
           type: driverType,
+          // Store the complete user object with all driver details
+          ...user,
         },
       } as any);
 

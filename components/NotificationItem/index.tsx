@@ -69,9 +69,17 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      {/* Logo */}
+      {/* Icon - Mail icon for actionable/special notifications, Logo for read-only */}
       <View style={styles.logoContainer}>
-        <Logo size="Small" />
+        {isSpecial ? (
+          <Image
+            source={require("@/assets/images/mail.svg")}
+            style={styles.mailIcon}
+            contentFit="contain"
+          />
+        ) : (
+          <Logo size="Small" />
+        )}
       </View>
 
       {/* Content */}
@@ -141,6 +149,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginRight: 10,
     marginTop: 2, // Small adjustment to align with text baseline
+  },
+  mailIcon: {
+    width: 24,
+    height: 24,
   },
   contentContainer: {
     flex: 1,

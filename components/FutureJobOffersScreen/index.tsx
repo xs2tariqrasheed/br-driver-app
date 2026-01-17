@@ -87,6 +87,7 @@ export default function FutureJobOffersScreen({
   }, [futureOffers, showHiddenJobs]);
 
   // Sort jobs based on external sort criteria
+  // This sorting works for all offer types including future offers
   const sortedJobs = useMemo(() => {
     log(`[FutureJobOffersScreen] sortedJobs useMemo triggered`);
     log(
@@ -94,15 +95,35 @@ export default function FutureJobOffersScreen({
         filteredJobs?.length || 0
       }`
     );
+    log(`[FutureJobOffersScreen] sortBy: ${externalSortBy}`);
 
-    const sorted = [...(filteredJobs ?? [])].sort((a, b) => {
+    if (!filteredJobs || filteredJobs.length === 0) {
+      return [];
+    }
+
+    const sorted = [...filteredJobs].sort((a, b) => {
       if (externalSortBy === "time") {
-        return a.pickupTime - b.pickupTime;
+        // Sort by pickup time (ascending - shortest time first)
+        const timeA = a.pickupTime ?? Infinity;
+        const timeB = b.pickupTime ?? Infinity;
+        return timeA - timeB;
+      } else {
+        // Sort by pickup distance (ascending - shortest distance first)
+        const distanceA = a.pickupDistance ?? Infinity;
+        const distanceB = b.pickupDistance ?? Infinity;
+        return distanceA - distanceB;
       }
-      return a.pickupDistance - b.pickupDistance;
     });
 
     log(`[FutureJobOffersScreen] sortedJobs result length: ${sorted.length}`);
+    log(
+      `[FutureJobOffersScreen] First 3 sorted offers:`,
+      sorted.slice(0, 3).map((o) => ({
+        id: o.id,
+        pickupTime: o.pickupTime,
+        pickupDistance: o.pickupDistance,
+      }))
+    );
     return sorted;
   }, [filteredJobs, externalSortBy]);
 

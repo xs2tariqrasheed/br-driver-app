@@ -8,7 +8,11 @@ import { ThemedView } from "@/components/ThemedView";
 import { useToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import { router, Stack } from "expo-router";
+import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
+import { useAuth } from "@/context/AuthContext";
+import { usePost } from "@/hooks/usePost";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Keyboard,
@@ -24,11 +28,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const FeedbackScreen: React.FC = () => {
   const { showToast } = useToast();
+  const [auth] = useAuth();
+  const params = useLocalSearchParams();
   const [rating, setRating] = useState(0);
   const [comments, setComments] = useState("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+
+  // Get tripId and customerId from route params
+  const tripId = (params.tripId as string) || "";
+  const customerId = (params.customerId as string) || "";
+  const driverId = auth?.user?.id;
+
+  // API hook for submitting feedback
+  const { execute: submitFeedback } = usePost(
+    ACTIVE_TRIP_ROUTES.SUBMIT_FEEDBACK,
+    API_CLIENT_TYPES.ACTIVE_TRIP
+  );
 
   // Dummy fare data as per the screenshot
   const fareItems: InfoTableDataItem[] = [
@@ -76,9 +94,78 @@ const FeedbackScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    showToast("Feedback submitted successfully!", "success", "top");
-    router.replace("/(tabs)");
-    return;
+    // Validate rating is provided
+    if (rating === 0) {
+      showToast("Please provide a rating before submitting", "error", "top");
+      return;
+    }
+
+    // Validate tripId and driverId are available
+    if (!tripId || !driverId) {
+      console.error("[FeedbackScreen] Missing tripId or driverId:", { tripId, driverId });
+      showToast("Unable to submit feedback. Missing trip information.", "error", "top");
+      // Still allow navigation even if feedback can't be submitted
+      router.replace("/(tabs)");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      console.log("[FeedbackScreen] Submitting feedback:", {
+        tripId,
+        driverId,
+        rating,
+        feedback: comments,
+      });
+
+      const response = await submitFeedback({
+        tripId,
+        driverId,
+        rating,
+        feedback: comments || undefined, // Only include if provided
+      });
+
+      console.log("[FeedbackScreen] Full response received:", JSON.stringify(response, null, 2));
+
+      // Handle response structure: usePost may extract response.data.data, so we need to check both structures
+      // Backend returns: { success: true, message: "...", data: dbResponse }
+      // usePost might extract: dbResponse (which has jHeader with responseCode)
+      const isSuccess = 
+        response?.success === true || 
+        (response?.jHeader && (response.jHeader.responseCode === 0 || response.jHeader.responseCode === '0'));
+
+      if (isSuccess) {
+        const successMessage = 
+          response?.message || 
+          response?.jHeader?.message || 
+          "Feedback submitted successfully!";
+        
+        console.log("[FeedbackScreen] Feedback submitted successfully:", response);
+        showToast(successMessage, "success", "top");
+        router.replace("/(tabs)");
+      } else {
+        const errorMessage = 
+          response?.error || 
+          response?.jHeader?.message || 
+          "Failed to submit feedback. Please try again.";
+        
+        console.error("[FeedbackScreen] Failed to submit feedback:", response);
+        showToast(errorMessage, "error", "top");
+        // Still allow navigation even if feedback submission failed
+        router.replace("/(tabs)");
+      }
+    } catch (error) {
+      console.error("[FeedbackScreen] Error submitting feedback:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "An error occurred while submitting feedback. Please try again.";
+      showToast(errorMessage, "error", "top");
+      // Still allow navigation even if feedback submission failed
+      router.replace("/(tabs)");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const dismissKeyboard = () => {
@@ -172,6 +259,8 @@ const FeedbackScreen: React.FC = () => {
                 rounded="half"
                 onPress={handleSubmit}
                 style={styles.submitButton}
+                disabled={isSubmitting || rating === 0}
+                loading={isSubmitting}
               >
                 Submit
               </Button>

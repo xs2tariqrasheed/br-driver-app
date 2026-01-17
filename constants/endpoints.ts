@@ -20,8 +20,8 @@ export const AUTH_ENDPOINTS = {
 } as const;
 
 export const HEATMAP_ENDPOINTS = {
-  // Heatmap API endpoint (dummy for now)
-  heatmapData: "https://api.example.com/heatmap-data",
+  /** Get heatmap coordinates for customer pickup addresses */
+  getHeatmapCoordinates: "/settings-service/heatmap/coordinates",
 } as const;
 
 export const LIVE_JOB_ENDPOINTS = {
@@ -115,4 +115,6 @@ export const ACTIVE_TRIP_ROUTES = {
   DRIVER_ACTION: "/active-trips/active-trips/driver-action",
   ADD_STOP: "/active-trips/active-trips/add-stop",
   CANCEL: "/active-trips/active-trips/cancel",
+  UPDATE_ETA: "/active-trips/active-trips/update-eta",
+  SUBMIT_FEEDBACK: "/active-trips/active-trips/submit-feedback",
 } as const;

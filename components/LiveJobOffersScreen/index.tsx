@@ -17,16 +17,16 @@
  */
 
 import { textColors } from "@/constants/colors";
+import { ACTIVE_TRIP_ROUTES, LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import {
+  API_CLIENT_TYPES,
   EMPTY_STATE_MESSAGES,
   LOCAL_JOB_STATUS,
   OFFER_TYPES,
-  API_CLIENT_TYPES,
   TRIP_OFFER_ACTIONS,
   type LocalJobStatus,
   type OfferType,
 } from "@/constants/global";
-import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import { useAuth } from "@/context/AuthContext";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
@@ -106,6 +106,12 @@ export default function LiveJobOffersScreen({
     LIVE_JOB_ENDPOINTS.driverResponse,
     API_CLIENT_TYPES.AUCTION
   );
+  
+  // API hook for updating ETA (non-blocking, used after trip acceptance)
+  const { execute: updateETA } = usePost(
+    ACTIVE_TRIP_ROUTES.UPDATE_ETA,
+    API_CLIENT_TYPES.ACTIVE_TRIP
+  );
 
   // Reactively track trip-in-progress based on driver context changes
   useEffect(() => {
@@ -180,17 +186,30 @@ export default function LiveJobOffersScreen({
   }, [broadcastOffers, showHiddenJobs]);
 
   // Sort jobs based on external sort criteria
+  // This sorting works for all offer types including demo offers, live offers, and hired offers
   const sortedJobs = useMemo(() => {
     log(`[LiveJobOffersScreen] sortedJobs useMemo triggered`);
     log(
       `[LiveJobOffersScreen] filteredJobs length: ${filteredJobs?.length || 0}`
     );
+    log(`[LiveJobOffersScreen] sortBy: ${externalSortBy}`);
 
-    const sorted = [...(filteredJobs ?? [])].sort((a, b) => {
+    if (!filteredJobs || filteredJobs.length === 0) {
+      return [];
+    }
+
+    const sorted = [...filteredJobs].sort((a, b) => {
       if (externalSortBy === "time") {
-        return a.pickupTime - b.pickupTime;
+        // Sort by pickup time (ascending - shortest time first)
+        const timeA = a.pickupTime ?? Infinity;
+        const timeB = b.pickupTime ?? Infinity;
+        return timeA - timeB;
+      } else {
+        // Sort by pickup distance (ascending - shortest distance first)
+        const distanceA = a.pickupDistance ?? Infinity;
+        const distanceB = b.pickupDistance ?? Infinity;
+        return distanceA - distanceB;
       }
-      return a.pickupDistance - b.pickupDistance;
     });
 
     log(`[LiveJobOffersScreen] sortedJobs result length: ${sorted.length}`);
@@ -497,6 +516,28 @@ export default function LiveJobOffersScreen({
         log("[LiveJobOffersScreen] Waiting for backend to initialize trip before redirecting...");
         await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
 
+        // Non-blocking: Try to update ETA in the database (don't block navigation if it fails)
+        // This is for non-biddable offers where ETA was provided but may not be stored in DB
+        try {
+          log("[LiveJobOffersScreen] Attempting to update ETA in database (non-blocking)...");
+          await updateETA({
+            tripId: tripId,
+            driverId: driverId,
+            eta: eta,
+          });
+          log("[LiveJobOffersScreen] ✅ ETA updated in database successfully");
+        } catch (etaError) {
+          // Don't block the user - just notify them that ETA update failed
+          log("[LiveJobOffersScreen] ⚠️ Failed to update ETA in database (non-blocking):", etaError);
+          showToast(
+            "Ride accepted! ETA update failed. You can update it later during the active ride.",
+            {
+              variant: "error",
+              position: "top",
+            }
+          );
+        }
+
         // Redirect to active ride screen
         log("[LiveJobOffersScreen] Redirecting to active-ride screen");
         router.replace("/(screens)/active-ride");
@@ -525,7 +566,7 @@ export default function LiveJobOffersScreen({
         setIsSubmitETALoading(false);
       }
     },
-    [selectedJobForAccept, auth, submitDriverResponse, updateBroadcastOffer, removeBroadcastOffer]
+    [selectedJobForAccept, auth, submitDriverResponse, updateBroadcastOffer, removeBroadcastOffer, updateETA, showToast, log]
   );
 
   // Handle "View +X More" click

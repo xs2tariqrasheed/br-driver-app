@@ -137,14 +137,21 @@ export default function HomeScreen() {
 
   // Sorting bottom sheet state
   const [sortSheetOpen, setSortSheetOpen] = useState<boolean>(false);
+  type SortKey = "time" | "distance";
+  const [sortBy, setSortBy] = useState<SortKey>("distance"); // Temporary selection in sheet
+  const [activeSortBy, setActiveSortBy] = useState<SortKey>("distance"); // Active sorting applied to offers
+  
   const openSortSheet = () => {
+    // Reset sortBy to current activeSortBy when opening sheet
     setSortBy(activeSortBy);
     setSortSheetOpen(true);
   };
-  const closeSortSheet = () => setSortSheetOpen(false);
-  type SortKey = "time" | "distance";
-  const [sortBy, setSortBy] = useState<SortKey>("distance");
-  const [activeSortBy, setActiveSortBy] = useState<SortKey>("distance");
+  
+  const closeSortSheet = () => {
+    // Reset sortBy to activeSortBy when closing without applying
+    setSortBy(activeSortBy);
+    setSortSheetOpen(false);
+  };
 
   // Ride Types bottom sheet state
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
@@ -339,18 +346,23 @@ export default function HomeScreen() {
   };
 
   const handleSelectSort = (key: SortKey) => {
+    // Update temporary selection (only affects UI in sheet)
     setSortBy(key);
   };
 
   const handleApplySort = () => {
+    // Apply the selected sort to active sorting
     setActiveSortBy(sortBy);
+    log(`[HomeScreen] Applied sorting: ${sortBy}`);
     closeSortSheet();
   };
 
   const handleResetSort = () => {
+    // Reset to default sorting (distance)
     const def: SortKey = "distance";
     setSortBy(def);
     setActiveSortBy(def);
+    log(`[HomeScreen] Reset sorting to default: ${def}`);
     closeSortSheet();
   };
 

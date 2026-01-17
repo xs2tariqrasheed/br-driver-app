@@ -1,7 +1,7 @@
 import { IconButton } from "@/components/Button";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import React from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { Image, StyleSheet, TextStyle, View, ViewStyle } from "react-native";
 
 export type CounterProps = {
@@ -33,43 +33,103 @@ export default function Counter({
   decrementButtonStyle,
   incrementButtonStyle,
 }: CounterProps) {
+  // Keep latest value in a ref so button handlers can stay stable
+  // (avoids iOS "blink" caused by re-rendering Pressable buttons on every tap).
+  const valueRef = useRef<number>(value);
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
   const canDecrement = !disabled && value - step >= min;
   const canIncrement = !disabled && value + step <= max;
 
-  const handleDec = () => {
-    if (!canDecrement) return;
-    const next = Math.max(min, value - step);
+  const handleDec = useCallback(() => {
+    // Re-check against latest value
+    const current = valueRef.current;
+    if (disabled) return;
+    if (current - step < min) return;
+    const next = Math.max(min, current - step);
     onChange(next);
-  };
+  }, [disabled, min, onChange, step]);
 
-  const handleInc = () => {
-    if (!canIncrement) return;
-    const next = Math.min(max, value + step);
+  const handleInc = useCallback(() => {
+    const current = valueRef.current;
+    if (disabled) return;
+    if (current + step > max) return;
+    const next = Math.min(max, current + step);
     onChange(next);
-  };
+  }, [disabled, max, onChange, step]);
 
   const label = formatLabel ? formatLabel(value) : String(value);
 
+  const minusIcon = useMemo(
+    () => (
+      <Image source={require("@/assets/images/minus.png")} style={styles.icon20} />
+    ),
+    []
+  );
+  const plusIcon = useMemo(
+    () => (
+      <Image source={require("@/assets/images/plus.png")} style={styles.icon20} />
+    ),
+    []
+  );
+
+  const DecrementButton = useMemo(
+    () =>
+      memo(function DecrementButton({
+        isDisabled,
+      }: {
+        isDisabled: boolean;
+      }) {
+        return (
+          <IconButton
+            size={1}
+            rounded
+            icon={minusIcon}
+            accessibilityRole="button"
+            onPress={handleDec}
+            disabled={isDisabled}
+            style={[
+              styles.iconButton24,
+              isDisabled && styles.disabledBtn,
+              decrementButtonStyle,
+            ]}
+          />
+        );
+      }),
+    [decrementButtonStyle, handleDec, minusIcon]
+  );
+
+  const IncrementButton = useMemo(
+    () =>
+      memo(function IncrementButton({
+        isDisabled,
+      }: {
+        isDisabled: boolean;
+      }) {
+        return (
+          <IconButton
+            size={1}
+            rounded
+            icon={plusIcon}
+            accessibilityRole="button"
+            onPress={handleInc}
+            disabled={isDisabled}
+            style={[
+              styles.iconButton24,
+              isDisabled && styles.disabledBtn,
+              incrementButtonStyle,
+            ]}
+          />
+        );
+      }),
+    [handleInc, incrementButtonStyle, plusIcon]
+  );
+
   return (
     <View style={[styles.counterRow, containerStyle]}>
-      <IconButton
-        size={1}
-        rounded
-        icon={
-          <Image
-            source={require("@/assets/images/minus.png")}
-            style={styles.icon20}
-          />
-        }
-        accessibilityRole="button"
-        onPress={handleDec}
-        disabled={!canDecrement}
-        style={[
-          styles.iconButton24,
-          !canDecrement && styles.disabledBtn,
-          decrementButtonStyle,
-        ]}
-      />
+      <DecrementButton isDisabled={!canDecrement} />
 
       <View style={[styles.counterValueWrap, valueContainerStyle]}>
         <Typography
@@ -81,24 +141,7 @@ export default function Counter({
         </Typography>
       </View>
 
-      <IconButton
-        size={1}
-        rounded
-        icon={
-          <Image
-            source={require("@/assets/images/plus.png")}
-            style={styles.icon20}
-          />
-        }
-        accessibilityRole="button"
-        onPress={handleInc}
-        disabled={!canIncrement}
-        style={[
-          styles.iconButton24,
-          !canIncrement && styles.disabledBtn,
-          incrementButtonStyle,
-        ]}
-      />
+      <IncrementButton isDisabled={!canIncrement} />
     </View>
   );
 }

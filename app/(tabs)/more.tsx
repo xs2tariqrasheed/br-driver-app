@@ -61,11 +61,11 @@ const ITEMS: MoreItem[] = [
     title: "Contact Base",
     icon: require("@/assets/images/more/contact-base-icon.png"),
   },
-  {
-    key: "coming-soon",
-    title: "Coming Soon",
-    icon: require("@/assets/images/more/coming-soon-icon.png"),
-  },
+  // {
+  //   key: "coming-soon",
+  //   title: "Coming Soon",
+  //   icon: require("@/assets/images/more/coming-soon-icon.png"),
+  // },
   {
     key: "share-app",
     title: "Share App",
@@ -250,6 +250,12 @@ export default function MoreScreen() {
   };
 
   const data: MoreItem[] = ITEMS.map((item) => {
+    if (item.key === "profile") {
+      return {
+        ...item,
+        onClick: () => router.push("/(screens)/profile"),
+      };
+    }
     if (item.key === "change-password") {
       return {
         ...item,

@@ -62,6 +62,17 @@ export default function ActiveRideScreen() {
     []
   );
 
+  // Keep bottom sheet snapPoints stable to avoid re-renders (and TextInput focus loss)
+  // while the active trip screen updates in real-time (socket/location updates).
+  const updateEtaSnapPoints = useMemo<(string | number)[]>(
+    () => ["40%", "60%"],
+    []
+  );
+  const updateEtaSnapPointsWhenKeyboardVisible = useMemo<(string | number)[]>(
+    () => ["90%", "95%"],
+    []
+  );
+
   // Get params from navigation
   const params = useLocalSearchParams();
   const {
@@ -78,7 +89,7 @@ export default function ActiveRideScreen() {
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
   const { clearNonDemoBroadcastOffers } = useBroadcastJobOffers();
-  const { openChat } = useChat();
+  const { openChat, customerInfo } = useChat();
   const { showToast } = useToast();
 
   // Active trip socket connection
@@ -175,6 +186,10 @@ export default function ActiveRideScreen() {
   );
   const { execute: cancelTrip, loading: isCancellingTrip } = usePost(
     ACTIVE_TRIP_ROUTES.CANCEL,
+    API_CLIENT_TYPES.ACTIVE_TRIP
+  );
+  const { execute: updateETA, loading: isUpdatingETA } = usePost(
+    ACTIVE_TRIP_ROUTES.UPDATE_ETA,
     API_CLIENT_TYPES.ACTIVE_TRIP
   );
 
@@ -674,6 +689,11 @@ export default function ActiveRideScreen() {
       // Set completion loading state
       setIsCompletingRide(true);
 
+      // Get tripId and customerId before clearing them
+      const { tripId: storedTripId } = await getTripId();
+      const tripIdForFeedback = storedTripId || jobOfferData?.tripId || jobOfferData?.id;
+      const customerIdForFeedback = jobOfferData?.customerId || jobOfferData?.activeTrip?.customerId;
+
       // Disconnect active trip socket
       console.log("🔌 Disconnecting active trip socket...");
       disconnectActiveTripSocket();
@@ -693,9 +713,15 @@ export default function ActiveRideScreen() {
       clearNonDemoBroadcastOffers();
       console.log("Cleared non-demo broadcast offers");
 
-      // Redirect to feedback screen
+      // Redirect to feedback screen with trip data
       console.log("Redirecting to feedback screen...");
-      router.replace("/(screens)/feedback");
+      router.replace({
+        pathname: "/(screens)/feedback",
+        params: {
+          tripId: tripIdForFeedback || "",
+          customerId: customerIdForFeedback || "",
+        },
+      });
     } catch (error) {
       console.error("Error handling ride completion:", error);
       // Reset loading state on error
@@ -796,10 +822,15 @@ export default function ActiveRideScreen() {
     },
   ];
 
-  const customerPhone = "1234567890";
+  // Get customer phone number from ChatContext (same as chat modal)
+  const customerPhone = customerInfo?.phone || "";
 
   // Contact action functions
   const handleCallCustomer = async () => {
+    if (!customerPhone) {
+      showToast("Customer phone number is not available", "error", "top");
+      return;
+    }
     try {
       await openPhoneDialer(customerPhone);
     } catch (error) {
@@ -824,6 +855,10 @@ export default function ActiveRideScreen() {
   };
 
   const handleWhatsApp = async () => {
+    if (!customerPhone) {
+      showToast("Customer phone number is not available", "error", "top");
+      return;
+    }
     try {
       await openWhatsApp(customerPhone);
     } catch (error) {
@@ -978,11 +1013,40 @@ export default function ActiveRideScreen() {
   };
 
   // Update ETA handler
-  const handleUpdateETASubmit = (eta: number, note?: string) => {
-    // Handle ETA update logic here
-    console.log("ETA updated:", { eta, note });
-    closeUpdateETASheet();
-  };
+  const handleUpdateETASubmit = useCallback(
+    async (eta: number, note?: string) => {
+      if (!driverId || !jobOfferData?.id) {
+        console.error("Missing driverId or tripId for ETA update");
+        showToast("Unable to update ETA. Missing trip information.", "error", "top");
+        return;
+      }
+
+      try {
+        const response = await updateETA({
+          tripId: jobOfferData.id,
+          driverId,
+          eta,
+          note: note || undefined, // Only include note if provided
+        });
+
+        if (response?.success) {
+          showToast("ETA updated successfully", "success", "top");
+          closeUpdateETASheet();
+        } else {
+          console.error("Failed to update ETA:", response);
+          showToast(
+            response?.error || "Failed to update ETA. Please try again.",
+            "error",
+            "top"
+          );
+        }
+      } catch (error) {
+        console.error("Error updating ETA:", error);
+        showToast("An error occurred while updating ETA. Please try again.", "error", "top");
+      }
+    },
+    [driverId, jobOfferData?.id, updateETA, showToast, closeUpdateETASheet]
+  );
 
   // Add Toll handler
   const handleAddTollSubmit = (tollAmount: number) => {
@@ -1287,7 +1351,7 @@ export default function ActiveRideScreen() {
           weight="bold"
           style={styles.sheetHeaderText}
         >
-          Phone: {customerPhone}
+          Phone: {customerPhone || "N/A"}
         </Typography>
         <View style={styles.sheetContainer}>
           {[
@@ -1522,14 +1586,15 @@ export default function ActiveRideScreen() {
         open={updateETASheetOpen}
         onClose={closeUpdateETASheet}
         onSubmit={handleUpdateETASubmit}
-        snapPoints={["40%", "60%"]}
-        snapPointsWhenKeyboardVisible={["90%", "95%"]}
+        snapPoints={updateEtaSnapPoints}
+        snapPointsWhenKeyboardVisible={updateEtaSnapPointsWhenKeyboardVisible}
         swipeToClose={false}
         variant="update"
         headerTitle="Update ETA"
         description="Let the rider know if your arrival time has changed."
         showNoteSection={true}
         buttonText="Update ETA"
+        isLoading={isUpdatingETA}
       />
 
       {/* Add Toll Bottom Sheet */}

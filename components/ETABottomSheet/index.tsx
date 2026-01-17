@@ -1,5 +1,5 @@
 import { textColors } from "@/constants/colors";
-import React, { useState } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import CustomBottomSheet from "../BottomSheet";
 import Button from "../Button";
@@ -32,7 +32,7 @@ export interface ETABottomSheetProps {
  * A simplified bottom sheet that shows ETA counter and submit button
  * Used when driver accepts a ride offer
  */
-const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
+const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(({
   open = false,
   onClose,
   onSubmit,
@@ -49,45 +49,45 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
   headerTitle = "Provide ETA",
   snapPointsWhenKeyboardVisible,
 }) => {
-  const [eta, setEta] = useState(15); // Default 15 minutes
-  const [note, setNote] = useState("");
+  /**
+   * IMPORTANT (iOS): keep controlled TextInput state OUTSIDE the BottomSheet component tree root.
+   * If we store `note` in this component, every keystroke re-renders `CustomBottomSheet` /
+   * `@gorhom/bottom-sheet` which can cause focus loss ("blinking") on iOS simulators.
+   *
+   * We keep the form state in a child component so only that subtree re-renders.
+   */
+  const SheetContent = memo(function SheetContent() {
+    // Keep latest values in refs so submit can read both without forcing parent rerenders
+    const etaRef = useRef<number>(15);
+    const noteRef = useRef<string>("");
 
-  const handleSubmit = () => {
-    if (showNoteSection) {
-      onSubmit(eta, note);
-    } else {
-      onSubmit(eta);
-    }
-  };
+    const EtaSection = memo(function EtaSection({
+      open,
+      disabled,
+      onEtaChange,
+    }: {
+      open: boolean;
+      disabled: boolean;
+      onEtaChange: (eta: number) => void;
+    }) {
+      const [eta, setEta] = useState(15);
 
-  return (
-    <CustomBottomSheet
-      scrollable
-      open={open}
-      onClose={onClose}
-      snapPoints={snapPoints}
-      initialSnapIndex={snapPointsWhenKeyboardVisible ? 1 : initialSnapIndex}
-      showHeader={showHeader}
-      backdrop={backdrop}
-      swipeToClose={swipeToClose}
-      headerTitle={headerTitle}
-      snapPointsWhenKeyboardVisible={snapPointsWhenKeyboardVisible}
-      disabledClose={isLoading}
-    >
-      {/* <Divider /> */}
-      <View style={styles.container}>
-        {/* Description for Update variant */}
-        {variant === "update" && description && (
-          <Typography
-            type="bodyLarge"
-            weight="regular"
-            style={styles.description}
-          >
-            {description}
-          </Typography>
-        )}
+      useEffect(() => {
+        if (!open) {
+          setEta(15);
+          onEtaChange(15);
+        }
+      }, [open, onEtaChange]);
 
-        {/* ETA Section */}
+      const handleEtaChange = useCallback(
+        (next: number) => {
+          setEta(next);
+          onEtaChange(next);
+        },
+        [onEtaChange]
+      );
+
+      return (
         <View
           style={[
             styles.etaSection,
@@ -114,36 +114,110 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
           <Counter
             containerStyle={styles.etaCounterContainer}
             value={eta}
-            onChange={setEta}
+            onChange={handleEtaChange}
             min={1}
             max={60}
             step={1}
             formatLabel={(value) => `${value} mins`}
-            disabled={isLoading}
+            disabled={disabled}
           />
         </View>
+      );
+    });
 
-        {/* Note Section for Update variant */}
-        {variant === "update" && showNoteSection && (
-          <View style={styles.noteSection}>
-            <Typography
-              type="bodyLarge"
-              weight="medium"
-              style={styles.noteLabel}
-            >
-              Add a Note
-            </Typography>
-            <TextArea
-              placeholder="eg. Heavy traffic on main road."
-              value={note}
-              onChangeText={setNote}
-              numberOfLines={3}
-              style={styles.noteTextArea}
-              returnKeyType="done"
-              blurOnSubmit={true}
-            />
-          </View>
+    const NoteSection = memo(function NoteSection({
+      open,
+      disabled,
+      onNoteChange,
+    }: {
+      open: boolean;
+      disabled: boolean;
+      onNoteChange: (note: string) => void;
+    }) {
+      const [note, setNote] = useState("");
+
+      useEffect(() => {
+        if (!open) {
+          setNote("");
+          onNoteChange("");
+        }
+      }, [open, onNoteChange]);
+
+      const handleNoteChange = useCallback(
+        (text: string) => {
+          setNote(text);
+          onNoteChange(text);
+        },
+        [onNoteChange]
+      );
+
+      if (!(variant === "update" && showNoteSection)) return null;
+
+      return (
+        <View style={styles.noteSection}>
+          <Typography
+            type="bodyLarge"
+            weight="medium"
+            style={styles.noteLabel}
+          >
+            Add a Note
+          </Typography>
+          <TextArea
+            placeholder="eg. Heavy traffic on main road."
+            value={note}
+            onChangeText={handleNoteChange}
+            numberOfLines={3}
+            style={styles.noteTextArea}
+            returnKeyType="done"
+            blurOnSubmit={true}
+            disabled={disabled}
+          />
+        </View>
+      );
+    });
+
+    const handleEtaRefChange = useCallback((eta: number) => {
+      etaRef.current = eta;
+    }, []);
+
+    const handleNoteRefChange = useCallback((note: string) => {
+      noteRef.current = note;
+    }, []);
+
+    const handleSubmit = useCallback(() => {
+      if (showNoteSection) {
+        onSubmit(etaRef.current, noteRef.current);
+      } else {
+        onSubmit(etaRef.current);
+      }
+    }, [onSubmit, showNoteSection]);
+
+    return (
+      <View style={styles.container}>
+        {/* Description for Update variant */}
+        {variant === "update" && description && (
+          <Typography
+            type="bodyLarge"
+            weight="regular"
+            style={styles.description}
+          >
+            {description}
+          </Typography>
         )}
+
+        {/* ETA Section (kept isolated so typing note doesn't re-render the Counter) */}
+        <EtaSection
+          open={open}
+          disabled={isLoading}
+          onEtaChange={handleEtaRefChange}
+        />
+
+        {/* Note Section (isolated so pressing +/- doesn't re-render the TextArea) */}
+        <NoteSection
+          open={open}
+          disabled={isLoading}
+          onNoteChange={handleNoteRefChange}
+        />
 
         {/* Submit Button */}
         <View style={styles.submitSection}>
@@ -158,9 +232,27 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = ({
           </Button>
         </View>
       </View>
+    );
+  });
+
+  return (
+    <CustomBottomSheet
+      open={open}
+      onClose={onClose}
+      snapPoints={snapPoints}
+      initialSnapIndex={snapPointsWhenKeyboardVisible ? 1 : initialSnapIndex}
+      showHeader={showHeader}
+      backdrop={backdrop}
+      swipeToClose={swipeToClose}
+      headerTitle={headerTitle}
+      snapPointsWhenKeyboardVisible={snapPointsWhenKeyboardVisible}
+      disabledClose={isLoading}
+    >
+      {/* <Divider /> */}
+      <SheetContent />
     </CustomBottomSheet>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
