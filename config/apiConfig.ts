@@ -391,8 +391,28 @@ const createAuthApiClient = (): AxiosInstance => {
     (error: AxiosError) => {
       // Handle authentication-specific error scenarios
       let errorMessage: string = "An unexpected error occurred";
-      if (error.code === "ECONNABORTED") {
-        errorMessage = "Request timed out";
+      
+      // First, handle network errors (common on iOS when there's no response)
+      if (!error.response) {
+        // Network error - no response received
+        if (error.code === "ECONNABORTED") {
+          errorMessage = "Request timed out. Please check your connection and try again.";
+        } else if (error.code === "ECONNREFUSED" || error.code === "ERR_CONNECTION_REFUSED") {
+          errorMessage = "Unable to connect to server. Please check your connection and try again.";
+        } else if (error.code === "ENOTFOUND" || error.code === "ERR_NAME_NOT_RESOLVED") {
+          errorMessage = "Unable to reach server. Please check your internet connection.";
+        } else if (error.code === "ERR_NETWORK" || error.code === "NETWORK_ERROR") {
+          errorMessage = "Network error. Please check your internet connection and try again.";
+        } else if (error.message && error.message.includes("Network request failed")) {
+          errorMessage = "Network request failed. Please check your internet connection and try again.";
+        } else if (error.message && error.message.includes("timeout")) {
+          errorMessage = "Request timed out. Please check your connection and try again.";
+        } else if (error.message) {
+          // Use the error message if available
+          errorMessage = error.message;
+        } else {
+          errorMessage = "Unable to connect to server. Please check your internet connection and try again.";
+        }
       } else if (error.response?.status === 400) {
         errorMessage = "Invalid credentials. Please check your login details.";
       } else if (error.response?.status === 401) {
@@ -420,7 +440,12 @@ const createAuthApiClient = (): AxiosInstance => {
         }
       }
 
-      log("❌ Auth API Error:", errorMessage);
+      log("❌ Auth API Error:", {
+        message: errorMessage,
+        code: error.code,
+        response: error.response?.status,
+        originalError: error.message,
+      });
       return Promise.reject(new Error(errorMessage));
     }
   );

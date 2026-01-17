@@ -6,6 +6,8 @@ import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import PackageInfoModal from "@/components/PackageInfoModal";
 import SpecialRequirementsModal from "@/components/SpecialRequirementsModal";
 import { ToastProvider } from "@/components/Toast";
+import { updateBaseUrls } from "@/config/apiConfig";
+import { DEPLOYED_BASE_URL_STORAGE_KEY } from "@/constants/global";
 import { AuthProvider } from "@/context/AuthContext";
 import { BidAcceptedProvider } from "@/context/BidAcceptedContext";
 import { BidBottomSheetProvider } from "@/context/BidBottomSheetContext";
@@ -24,6 +26,7 @@ import { PackageInfoProvider } from "@/context/PackageInfoContext";
 import { RideOfferProvider } from "@/context/RideOfferContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { SpecialRequirementsProvider } from "@/context/SpecialRequirementsContext";
+import { getStorageItem } from "@/utils/helpers";
 import { speechManager } from "@/utils/speechManager";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
@@ -34,9 +37,6 @@ import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Host } from "react-native-portalize";
 import "react-native-reanimated";
-import { DEPLOYED_BASE_URL_STORAGE_KEY } from "@/constants/global";
-import { getStorageItem } from "@/utils/helpers";
-import { updateBaseUrls } from "@/config/apiConfig";
 
 // Keep the native splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync();
