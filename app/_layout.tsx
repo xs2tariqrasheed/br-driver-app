@@ -160,7 +160,12 @@ export default function RootLayout() {
                                                       name="(screens)/ride-offer"
                                                       options={{
                                                         headerShown: false,
-                                                        presentation: "fullScreenModal",
+                                                        // iOS fix: don't present as a native full-screen modal, otherwise
+                                                        // provider-level RN Modals (e.g. ETAModal) can appear behind it.
+                                                        presentation:
+                                                          Platform.OS === "ios"
+                                                            ? "card"
+                                                            : "fullScreenModal",
                                                       }}
                                                     />
                                                   </Stack>

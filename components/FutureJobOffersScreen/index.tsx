@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
+  Platform,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -53,8 +54,7 @@ export default function FutureJobOffersScreen({
   const filteredJobs = useMemo(() => {
     log(`[FutureJobOffersScreen] filteredJobs useMemo triggered`);
     log(
-      `[FutureJobOffersScreen] futureOffers length: ${
-        futureOffers?.length || 0
+      `[FutureJobOffersScreen] futureOffers length: ${futureOffers?.length || 0
       }`
     );
     log(`[FutureJobOffersScreen] showHiddenJobs: ${showHiddenJobs}`);
@@ -91,8 +91,7 @@ export default function FutureJobOffersScreen({
   const sortedJobs = useMemo(() => {
     log(`[FutureJobOffersScreen] sortedJobs useMemo triggered`);
     log(
-      `[FutureJobOffersScreen] filteredJobs length: ${
-        filteredJobs?.length || 0
+      `[FutureJobOffersScreen] filteredJobs length: ${filteredJobs?.length || 0
       }`
     );
     log(`[FutureJobOffersScreen] sortBy: ${externalSortBy}`);
@@ -159,7 +158,7 @@ export default function FutureJobOffersScreen({
           weight="semibold"
           style={styles.viewMoreText}
         >
-          View +{additionalJobsCount} More
+          Click here to view +{additionalJobsCount} more
         </Typography>
         <Image
           source={require("@/assets/images/double-down-arrows-icon.png")}
@@ -289,7 +288,7 @@ export default function FutureJobOffersScreen({
           keyExtractor={(item) => item.id}
           renderItem={renderJobItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: Platform.OS === "ios" && showAllJobs ? "20%" : 20 }]}
           ListFooterComponent={hasMoreJobs ? renderViewMoreIndicator : null}
         />
       )}
@@ -303,7 +302,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 10,
-    paddingBottom: 20,
   },
   jobItemWrapper: {
     marginBottom: 16,
@@ -356,7 +354,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    marginTop: 8,
+    marginTop: Platform.OS === "android" ? 8 : -16,
   },
   viewMoreText: {
     fontFamily: "SF-Pro-Display-Semibold",

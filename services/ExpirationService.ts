@@ -50,6 +50,26 @@ export class ExpirationService {
         this.log(
           `❌ Offer not found for tripId: ${tripId} - skipping expiration`
         );
+        // Even if we can't locate the offer object (e.g. user backed out and currentOffer was cleared),
+        // we MUST still clear the "active offer" flag so the driver doesn't get stuck.
+        showToast("Ride offer expired!", {
+          variant: "warning",
+          position: "top",
+        });
+
+        if (contexts.closeAllModals) {
+          this.log("🔽 Closing all modals due to offer expiration (offer not found)");
+          contexts.closeAllModals();
+        }
+
+        if (contexts.hideRideOfferModal) {
+          contexts.hideRideOfferModal();
+        }
+
+        if (contexts.setHasAnyActiveOffer) {
+          await contexts.setHasAnyActiveOffer(false);
+        }
+
         return;
       }
 

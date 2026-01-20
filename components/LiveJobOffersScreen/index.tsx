@@ -8,7 +8,7 @@
  * - External sorting (controlled by parent component)
  * - Show/hide hidden jobs toggle functionality
  * - Scrollable list with FlatList (shows first 3 items initially)
- * - Functional "View +X More" button to expand all jobs
+ * - Functional "Click here to view +X more" button to expand all jobs
  * - Smart scroll detection to disable swipe gestures during scrolling
  * - Swipe gestures disabled when viewing hidden jobs (prevents re-skipping)
  * - Empty state handling
@@ -42,6 +42,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -106,7 +107,7 @@ export default function LiveJobOffersScreen({
     LIVE_JOB_ENDPOINTS.driverResponse,
     API_CLIENT_TYPES.AUCTION
   );
-  
+
   // API hook for updating ETA (non-blocking, used after trip acceptance)
   const { execute: updateETA } = usePost(
     ACTIVE_TRIP_ROUTES.UPDATE_ETA,
@@ -147,8 +148,7 @@ export default function LiveJobOffersScreen({
   const filteredJobs = useMemo(() => {
     log(`[LiveJobOffersScreen] filteredJobs useMemo triggered`);
     log(
-      `[LiveJobOffersScreen] broadcastOffers length: ${
-        broadcastOffers?.length || 0
+      `[LiveJobOffersScreen] broadcastOffers length: ${broadcastOffers?.length || 0
       }`
     );
     log(`[LiveJobOffersScreen] showHiddenJobs: ${showHiddenJobs}`);
@@ -169,9 +169,9 @@ export default function LiveJobOffersScreen({
     } else {
       // Show active offers, and offers that can be re-bid (rejected/expired)
       filtered = broadcastOffers.filter(
-        (offer) => 
-          offer.status === "offered" || 
-          offer.status === "bidding" || 
+        (offer) =>
+          offer.status === "offered" ||
+          offer.status === "bidding" ||
           offer.status === "accepted" ||
           offer.status === "rejected" ||
           offer.status === "expired"
@@ -569,7 +569,7 @@ export default function LiveJobOffersScreen({
     [selectedJobForAccept, auth, submitDriverResponse, updateBroadcastOffer, removeBroadcastOffer, updateETA, showToast, log]
   );
 
-  // Handle "View +X More" click
+  // Handle "Click here to view +X more" click
   const handleViewMorePress = useCallback(() => {
     setShowAllJobs(true);
     log(`[LiveJobOffersScreen] Showing all ${sortedJobs.length} jobs`);
@@ -651,7 +651,7 @@ export default function LiveJobOffersScreen({
     }
   };
 
-  // Render "View +X More" indicator
+  // Render "Click here to view +X more" indicator
   const renderViewMoreIndicator = () => {
     const additionalJobsCount = sortedJobs.length - 3;
     if (additionalJobsCount <= 0 || showAllJobs) return null;
@@ -667,7 +667,7 @@ export default function LiveJobOffersScreen({
           weight="semibold"
           style={styles.viewMoreText}
         >
-          View +{additionalJobsCount} More
+          Click here to view +{additionalJobsCount} more
         </Typography>
         <Image
           source={require("@/assets/images/double-down-arrows-icon.png")}
@@ -803,12 +803,12 @@ export default function LiveJobOffersScreen({
     };
   }, []);
 
-  // Log when "View +X More" indicator should be shown
+  // Log when "Click here to view +X more" indicator should be shown
   useEffect(() => {
     if (hasMoreJobs) {
       const additionalCount = sortedJobs.length - 3;
       log(
-        `[LiveJobOffersScreen] Showing "View +${additionalCount} More" indicator`
+        `[LiveJobOffersScreen] Showing "Click here to view +${additionalCount} more" indicator`
       );
     }
   }, [hasMoreJobs, sortedJobs.length]);
@@ -951,7 +951,7 @@ export default function LiveJobOffersScreen({
           keyExtractor={(item) => item.id}
           renderItem={(props) => renderJobItem({ ...props, isScrolling })}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: Platform.OS === "ios" && showAllJobs ? "20%" : 20 }]}
           ListFooterComponent={hasMoreJobs ? renderViewMoreIndicator : null}
           onScrollBeginDrag={handleScrollBeginDrag}
           onScrollEndDrag={handleScrollEndDrag}
@@ -982,7 +982,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 10,
-    paddingBottom: 20,
   },
   jobItemWrapper: {
     marginBottom: 16,
@@ -1048,7 +1047,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    marginTop: 8,
+    marginTop: Platform.OS === "android" ? 8 : -16,
     paddingBottom: 100,
   },
   viewMoreText: {
@@ -1080,6 +1079,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
     marginTop: 10,
+    paddingHorizontal: 20,
   },
   viewActiveRideButton: {
     marginTop: -26,

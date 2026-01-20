@@ -1,8 +1,10 @@
 import { NOTIFICATION_TYPES, SPEECH_MESSAGES } from "@/constants/global";
+import { useChat } from "@/context/ChatContext";
 import { useModalManager } from "@/context/ModalManagerContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useSettings } from "@/context/SettingsContext";
 import { speechManager } from "@/utils/speechManager";
+import { usePathname } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, TouchableOpacity } from "react-native";
 import { Portal } from "react-native-portalize";
@@ -16,6 +18,11 @@ const NotificationModal: React.FC = () => {
   const slideAnim = useRef(new Animated.Value(-200)).current;
   const hasSpokenRef = useRef(false);
   const { registerModal, unregisterModal } = useModalManager();
+  const { isOpen: isChatModalOpen } = useChat();
+  const pathname = usePathname();
+  
+  // Check if driver is on chat screen
+  const isOnChatScreen = pathname === "/(screens)/chat";
 
   // Register with Modal Manager so it can be closed centrally
   useEffect(() => {
@@ -35,7 +42,8 @@ const NotificationModal: React.FC = () => {
       // Speak the notification message only once
       const speakMessage = async () => {
         // Only speak if we haven't spoken for this notification yet
-        if (!hasSpokenRef.current) {
+        // AND chat screen/modal is NOT open
+        if (!hasSpokenRef.current && !isChatModalOpen && !isOnChatScreen) {
           hasSpokenRef.current = true;
 
           // Check mute settings
@@ -75,6 +83,9 @@ const NotificationModal: React.FC = () => {
           }
 
           await speechManager.speak(message);
+        } else if (isChatModalOpen || isOnChatScreen) {
+          // If chat is open, stop any ongoing speech
+          speechManager.stop();
         }
       };
 
@@ -105,7 +116,7 @@ const NotificationModal: React.FC = () => {
         useNativeDriver: true,
       }).start();
     }
-  }, [isOpen, data, slideAnim, hideNotification, settings]);
+  }, [isOpen, data, slideAnim, hideNotification, settings, isChatModalOpen, isOnChatScreen]);
 
   // Handle manual close (when user clicks close button or backdrop)
   const handleClose = () => {

@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import MapView, {
+  AnimatedRegion,
   Callout,
   Marker,
   Polyline,
@@ -138,12 +139,7 @@ export default function RideMap({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [carRotation, setCarRotation] = useState(0);
-  
-  // State to track animated coordinates for iOS compatibility
-  const [animatedCoordinateState, setAnimatedCoordinateState] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const [carTracksViewChanges, setCarTracksViewChanges] = useState(true);
 
   // Testing state
   const [isTesting, setIsTesting] = useState(false);
@@ -152,6 +148,16 @@ export default function RideMap({
 
   // Speed for realistic movement
   const SPEED = 15; // meters per second
+
+  // Animated region for the car marker (prevents React re-render jitter on iOS)
+  const animatedCarRegionRef = useRef(
+    new AnimatedRegion({
+      latitude: 0,
+      longitude: 0,
+      latitudeDelta: 0,
+      longitudeDelta: 0,
+    })
+  );
 
   // Custom map theme
   const customMapStyle = [
@@ -341,21 +347,8 @@ export default function RideMap({
     };
   }, [currentLocation]);
 
-  // Memoize animated coordinate object - Use state for iOS compatibility
-  const animatedCoordinate = useMemo(() => {
-    if (Platform.OS === "ios" && animatedCoordinateState) {
-      return animatedCoordinateState;
-    }
-    return {
-      latitude: animatedLatitude.current,
-      longitude: animatedLongitude.current,
-    };
-  }, [animatedCoordinateState]);
-
-  // iOS: Listen to animated value changes and update state (throttled for performance)
+  // Listen to animated value changes and update the AnimatedRegion (no React re-render per tick)
   useEffect(() => {
-    if (Platform.OS !== "ios") return;
-
     // Store refs in variables for cleanup
     const latRef = animatedLatitude.current;
     const lngRef = animatedLongitude.current;
@@ -364,6 +357,9 @@ export default function RideMap({
     let updateTimeout: ReturnType<typeof setTimeout> | null = null;
     let lastUpdate = 0;
     const UPDATE_THROTTLE = 50; // Update at most every 50ms for smoother performance
+    let rotTimeout: ReturnType<typeof setTimeout> | null = null;
+    let lastRotUpdate = 0;
+    const ROTATION_THROTTLE = 80; // Slightly slower to avoid iOS marker flicker/shaking
 
     const updateCoordinateState = () => {
       const now = Date.now();
@@ -372,7 +368,12 @@ export default function RideMap({
         updateTimeout = setTimeout(() => {
           const lat = (latRef as any)._value;
           const lng = (lngRef as any)._value;
-          setAnimatedCoordinateState({ latitude: lat, longitude: lng });
+          animatedCarRegionRef.current.setValue({
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: 0,
+            longitudeDelta: 0,
+          });
           lastUpdate = Date.now();
         }, UPDATE_THROTTLE - (now - lastUpdate));
         return;
@@ -380,8 +381,27 @@ export default function RideMap({
       
       const lat = (latRef as any)._value;
       const lng = (lngRef as any)._value;
-      setAnimatedCoordinateState({ latitude: lat, longitude: lng });
+      animatedCarRegionRef.current.setValue({
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0,
+        longitudeDelta: 0,
+      });
       lastUpdate = now;
+    };
+
+    const updateRotationState = (value: number) => {
+      const now = Date.now();
+      if (now - lastRotUpdate < ROTATION_THROTTLE) {
+        if (rotTimeout) clearTimeout(rotTimeout);
+        rotTimeout = setTimeout(() => {
+          setCarRotation(value);
+          lastRotUpdate = Date.now();
+        }, ROTATION_THROTTLE - (now - lastRotUpdate));
+        return;
+      }
+      setCarRotation(value);
+      lastRotUpdate = now;
     };
 
     const latListener = latRef.addListener(() => {
@@ -393,11 +413,15 @@ export default function RideMap({
     });
 
     const rotationListener = rotRef.addListener(({ value }) => {
-      setCarRotation(value);
+      // iOS marker rotation uses state (Android can use Animated.Value directly)
+      if (Platform.OS === "ios") {
+        updateRotationState(value);
+      }
     });
 
     return () => {
       if (updateTimeout) clearTimeout(updateTimeout);
+      if (rotTimeout) clearTimeout(rotTimeout);
       latRef.removeListener(latListener);
       lngRef.removeListener(lngListener);
       rotRef.removeListener(rotationListener);
@@ -513,6 +537,7 @@ export default function RideMap({
     try {
       setIsLoading(true);
       setError(null);
+      setCarTracksViewChanges(true);
 
       // Get device's current location
       let current: LocationCoordinates;
@@ -548,14 +573,14 @@ export default function RideMap({
       animatedLatitude.current.setValue(current.latitude);
       animatedLongitude.current.setValue(current.longitude);
       animatedRotation.current.setValue(0);
-      
-      // Initialize iOS coordinate state
-      if (Platform.OS === "ios") {
-        setAnimatedCoordinateState({
-          latitude: current.latitude,
-          longitude: current.longitude,
-        });
-      }
+
+      // Initialize AnimatedRegion immediately so the car marker shows reliably
+      animatedCarRegionRef.current.setValue({
+        latitude: current.latitude,
+        longitude: current.longitude,
+        latitudeDelta: 0,
+        longitudeDelta: 0,
+      });
 
       // Use API coordinates if provided, otherwise geocode the address
       let pickup: LocationCoordinates | null = null;
@@ -879,14 +904,6 @@ export default function RideMap({
 
       setCurrentLocation(nextPoint);
       
-      // Update iOS coordinate state synchronously for smoother updates
-      if (Platform.OS === "ios") {
-        setAnimatedCoordinateState({
-          latitude: nextPoint.latitude,
-          longitude: nextPoint.longitude,
-        });
-      }
-      
       if (isDropoff) {
         setCurrentDropoffIndex(index + 1);
       } else {
@@ -938,15 +955,13 @@ export default function RideMap({
       // Reset animated values
       animatedLatitude.current.setValue(initialLoc.latitude);
       animatedLongitude.current.setValue(initialLoc.longitude);
+      animatedCarRegionRef.current.setValue({
+        latitude: initialLoc.latitude,
+        longitude: initialLoc.longitude,
+        latitudeDelta: 0,
+        longitudeDelta: 0,
+      });
       
-      // Update iOS coordinate state
-      if (Platform.OS === "ios") {
-        setAnimatedCoordinateState({
-          latitude: initialLoc.latitude,
-          longitude: initialLoc.longitude,
-        });
-      }
-
       // Reset route indices
       setCurrentPickupIndex(0);
       setCurrentDropoffIndex(0);
@@ -1046,39 +1061,22 @@ export default function RideMap({
               />
             )}
 
-        {/* Current location marker (car) - Use Marker.Animated for smooth movement */}
-        {Platform.OS === "ios" ? (
-          <Marker
-            ref={markerRef}
-            coordinate={animatedCoordinateState || {
-              latitude: (animatedLatitude.current as any)._value,
-              longitude: (animatedLongitude.current as any)._value,
-            }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            rotation={carRotation}
-            flat={true}
-            zIndex={1000}
-            tracksViewChanges={false}
-          >
-            <Image
-              source={require("@/assets/images/3d-car-icon.png")}
-              style={styles.carIcon}
-              resizeMode="contain"
-            />
-          </Marker>
-        ) : (
+        {/* Current location marker (car) - use AnimatedRegion to avoid iOS jitter/blinking */}
+        {currentLocation && (
           <Marker.Animated
             ref={markerRef}
-            coordinate={animatedCoordinate}
+            coordinate={animatedCarRegionRef.current as any}
             anchor={{ x: 0.5, y: 0.5 }}
-            rotation={animatedRotation.current}
+            rotation={Platform.OS === "ios" ? carRotation : (animatedRotation.current as any)}
             flat={true}
             zIndex={1000}
+            tracksViewChanges={carTracksViewChanges}
           >
             <Image
               source={require("@/assets/images/3d-car-icon.png")}
               style={styles.carIcon}
               resizeMode="contain"
+              onLoad={() => setCarTracksViewChanges(false)}
             />
           </Marker.Animated>
         )}

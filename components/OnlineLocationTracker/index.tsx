@@ -31,6 +31,8 @@ const OnlineLocationTracker: React.FC = () => {
     driverId: auth?.user?.id,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isTickInFlightRef = useRef(false);
+  const lastSentLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const socketReconnectAttemptedRef = useRef(false); // Track socket reconnection attempts
   const [appIsActive, setAppIsActive] = useState(
     AppState.currentState === "active"
@@ -165,16 +167,30 @@ const OnlineLocationTracker: React.FC = () => {
 
     // Function to run tracking tick
     const runTrackingTick = async () => {
+      if (isTickInFlightRef.current) {
+        log(
+          "[OnlineLocationTracker] Previous tick still running - skipping this tick"
+        );
+        return;
+      }
+
+      isTickInFlightRef.current = true;
       try {
         const loc = await Location.getCurrentPositionAsync({});
         const current = {
           lat: loc.coords.latitude,
           lng: loc.coords.longitude,
         };
-        const prevRaw = await getStorageItem(PREVIOUS_LOCATION_STORAGE_KEY);
-        const prev = prevRaw
-          ? (JSON.parse(prevRaw) as { lat: number; lng: number })
-          : null;
+        // Prefer in-memory last sent location (avoids AsyncStorage race conditions),
+        // fall back to storage on cold start.
+        let prev = lastSentLocationRef.current;
+        if (!prev) {
+          const prevRaw = await getStorageItem(PREVIOUS_LOCATION_STORAGE_KEY);
+          prev = prevRaw
+            ? (JSON.parse(prevRaw) as { lat: number; lng: number })
+            : null;
+          lastSentLocationRef.current = prev;
+        }
 
         log(`[OnlineLocationTracker] Current: ${current.lat}, ${current.lng}`);
         log(
@@ -183,16 +199,39 @@ const OnlineLocationTracker: React.FC = () => {
           }`
         );
 
+        // If we have never sent a location in this session, send once immediately
+        // so backend has an initial position, then start threshold-based updates.
+        if (!prev) {
+          log(
+            "[OnlineLocationTracker] No previous location found - sending initial location once"
+          );
+          await postOnlineLocation(current as any);
+          await setStorageItem(
+            PREVIOUS_LOCATION_STORAGE_KEY,
+            JSON.stringify(current)
+          );
+          lastSentLocationRef.current = current;
+          return;
+        }
+
+        // Strict dedupe: identical coordinates should never be re-sent.
+        if (prev.lat === current.lat && prev.lng === current.lng) {
+          log(
+            "[OnlineLocationTracker] Location unchanged (lat/lng identical) - skipping API call"
+          );
+          return;
+        }
+
         const distanceMeters = calculateDistanceMeters(prev, current);
 
-        if (prev && !Number.isFinite(distanceMeters)) {
+        if (!Number.isFinite(distanceMeters)) {
           log(
             "[OnlineLocationTracker] Invalid distance calculated - skipping API call"
           );
           return;
         }
 
-        if (distanceMeters > MENTIONED_DISTANCE) {
+        if (distanceMeters >= MENTIONED_DISTANCE) {
           log(
             `[OnlineLocationTracker] Moved ${distanceMeters}m (threshold: ${MENTIONED_DISTANCE}m) - calling API`
           );
@@ -201,6 +240,7 @@ const OnlineLocationTracker: React.FC = () => {
             PREVIOUS_LOCATION_STORAGE_KEY,
             JSON.stringify(current)
           );
+          lastSentLocationRef.current = current;
         } else {
           log(
             `[OnlineLocationTracker] Moved ${distanceMeters}m (threshold: ${MENTIONED_DISTANCE}m) - skipping API call`
@@ -208,6 +248,8 @@ const OnlineLocationTracker: React.FC = () => {
         }
       } catch (e) {
         log("[OnlineLocationTracker] interval error", e);
+      } finally {
+        isTickInFlightRef.current = false;
       }
     };
 

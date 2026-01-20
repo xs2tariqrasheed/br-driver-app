@@ -389,6 +389,13 @@ export default function HomeScreen() {
           lng: first.coords.longitude,
         };
 
+        // Store the location immediately so the central OnlineLocationTracker
+        // doesn't "cold start" and re-post the same initial coordinates.
+        await setStorageItem(
+          PREVIOUS_LOCATION_STORAGE_KEY,
+          JSON.stringify(payload)
+        );
+
         // Call the online location API first
         log("[HomeScreen] Posting initial location to go online");
         await postOnlineLocation(payload as any);
@@ -416,12 +423,6 @@ export default function HomeScreen() {
         }
 
         log("[HomeScreen] Driver status updated to online successfully");
-
-        // Store the location for future tracking
-        await setStorageItem(
-          PREVIOUS_LOCATION_STORAGE_KEY,
-          JSON.stringify(payload)
-        );
 
         // Connect to socket when going online
         try {

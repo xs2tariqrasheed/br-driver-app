@@ -181,7 +181,7 @@ const FeedbackScreen: React.FC = () => {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
       >
         <TouchableWithoutFeedback onPress={dismissKeyboard}>

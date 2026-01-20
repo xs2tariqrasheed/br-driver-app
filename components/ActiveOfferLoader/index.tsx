@@ -16,7 +16,12 @@ interface ActiveOfferLoaderProps {
  * Shows a loader with message and button to navigate to job offers.
  */
 export default function ActiveOfferLoader({ style }: ActiveOfferLoaderProps) {
-  const { hasAnyActiveOffer } = useRideOffer();
+  const {
+    hasAnyActiveOffer,
+    currentOffer,
+    temporaryRides,
+    setHasAnyActiveOffer,
+  } = useRideOffer();
 
   // Don't render if no active offer
   if (!hasAnyActiveOffer) {
@@ -24,6 +29,14 @@ export default function ActiveOfferLoader({ style }: ActiveOfferLoaderProps) {
   }
 
   const handleGoToJobOffers = () => {
+    // User expectation: this button should ALWAYS go to Notifications.
+    // Safety: if we have no offer data at all but the flag is still true, clear it
+    // so the driver doesn't get stuck on this screen.
+    const hasOfferData =
+      !!currentOffer || (temporaryRides && Object.keys(temporaryRides).length > 0);
+    if (!hasOfferData) {
+      setHasAnyActiveOffer(false);
+    }
     router.push("/(screens)/notifications");
   };
 

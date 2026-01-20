@@ -4,6 +4,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Button from "@/components/Button";
 import Header from "@/components/Header";
 import LiveRideOfferItem from "@/components/LiveRideOfferItem";
+import { showToast } from "@/components/Toast";
 import { colors, textColors } from "@/constants/colors";
 import {
   LIVE_JOB_STATUS,
@@ -24,8 +26,8 @@ import {
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
-import { useModalManager } from "@/context/ModalManagerContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import { PackageInfo, usePackageInfo } from "@/context/PackageInfoContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import {
@@ -61,7 +63,14 @@ interface RideOffer {
   // Basic ride offer info
   id: string;
   type: (typeof TRIP_OFFER_TYPES)[keyof typeof TRIP_OFFER_TYPES];
-  status: "offered" | "accepted" | "skipped" | "expired";
+  status:
+    | "offered"
+    | "bidding"
+    | "accepted"
+    | "skipped"
+    | "rejected"
+    | "expired"
+    | "offer-expired";
 
   // Trip offer details
   tripOffer: TripOffer;
@@ -175,6 +184,8 @@ export default function RideOfferModal({
     currentOffer,
     updateCurrentOfferStatus,
     hideRideOfferModal,
+    removeTemporaryRidesByTripId,
+    markSequentialOfferAsExpired,
   } = useRideOffer();
 
   // Build mock BidData for BidBottomSheet
@@ -260,17 +271,39 @@ export default function RideOfferModal({
     setOffer(offerProp || null);
   }, [offerProp]);
 
-  const isOffered = offer?.status === LIVE_JOB_STATUS.OFFERED;
-  const isExpired = offer?.status === LIVE_JOB_STATUS.EXPIRED;
-  const isRejected = offer?.status === LIVE_JOB_STATUS.REJECTED;
-  // Allow rebidding for rejected or expired bids
-  const canBid = isOffered || (isExpired && bidable) || (isRejected && bidable);
+  // If this offer is opened from Notifications, it may already be expired.
+  // We use expiredAt as the source of truth to prevent showing action buttons for expired offers.
+  const expiredAtMs =
+    offer?.expiredAt instanceof Date
+      ? offer.expiredAt.getTime()
+      : offer?.expiredAt
+        ? new Date(offer.expiredAt).getTime()
+        : undefined;
+  const isExpiredByTime =
+    typeof expiredAtMs === "number" &&
+    !Number.isNaN(expiredAtMs) &&
+    expiredAtMs <= Date.now();
+
+  const isBidding = offer?.status === "bidding";
+  const isOfferExpired =
+    offer?.status === "offer-expired" ||
+    (offer?.status === LIVE_JOB_STATUS.OFFERED && isExpiredByTime);
+
+  // Bid states (offer still alive, driver can rebid)
+  const isBidExpired = offer?.status === LIVE_JOB_STATUS.EXPIRED && bidable;
+  const isRejected = offer?.status === LIVE_JOB_STATUS.REJECTED && bidable;
+
+  const isOffered =
+    offer?.status === LIVE_JOB_STATUS.OFFERED && !isExpiredByTime && !isOfferExpired;
+
+  // Allow rebidding for rejected or bid-expired bids
+  const canBid = isOffered || isBidExpired || isRejected;
   const shouldDisabled = isSkipLoading || isHideLoading || isSubmitBidLoading;
 
   // Handle bid button click for bidable offers
   const handleBidClick = () => {
     // Allow rebidding for rejected or expired bids
-    if ((isExpired || isRejected) && bidable) {
+    if ((isBidExpired || isRejected) && bidable) {
       // Reset status to "offered" to allow rebidding
       // Note: This assumes the parent component will handle status update
       console.log(`[RideOffer] Allowing rebid for ${offer?.status} status`);
@@ -317,17 +350,23 @@ export default function RideOfferModal({
     // If driver has performed any action (bid, accept, etc.), status would have changed
     if (offer && offer.status === LIVE_JOB_STATUS.OFFERED) {
       console.log(`[RideOffer] Timer completed for sequential offer ${offer.id} - marking as expired`);
-      // Update offer status to expired (server will also send expiration event)
-      updateCurrentOfferStatus("expired");
-      // Set hasAnyActiveOffer to false when offer expires
-      setHasAnyActiveOffer(false);
-      // Close all modals and bottom sheets
-      closeAllModals();
-      hideBidBottomSheet();
-      hideBidWaitingTimer();
-      hideRideOfferModal();
-      // Note: Server-side expiration event will be handled by ExpirationService
-      // which will close the modal and redirect. This is just a fallback.
+      const tripId = offer.tripOffer?.tripId;
+
+      // Case 1 rule: only expire when still "offered" (no action taken)
+      showToast("Ride offer expired!", { variant: "warning", position: "top" });
+
+      // Prefer centralized expiration handling (cleans up state + notifications)
+      if (tripId) {
+        markSequentialOfferAsExpired(tripId);
+      } else {
+        // Fallback cleanup
+        updateCurrentOfferStatus("offer-expired");
+        setHasAnyActiveOffer(false);
+        closeAllModals();
+        hideBidBottomSheet();
+        hideBidWaitingTimer();
+        hideRideOfferModal();
+      }
     } else {
       console.log(
         `[RideOffer] Skipping expiration for ${offer?.id} - status changed to: ${offer?.status}`
@@ -351,7 +390,7 @@ export default function RideOfferModal({
         <View
           ref={headerRef}
           onLayout={handleHeaderLayout}
-          style={{ paddingTop: insets.top }}
+          style={{ paddingTop: insets.top + (Platform.OS === "ios" ? 20 : 0) }}
         >
           <Header
             title="Ride Offer"
@@ -444,24 +483,42 @@ export default function RideOfferModal({
               {/* Ride Offer Tile */}
               <View style={styles.offerSection}>
                 <LiveRideOfferItem
-                  {...offer}
+                  id={offer?.id || ""}
+                  rideType={offer?.rideType || RIDE_TYPES.ONE_WAY}
+                  peopleCount={offer?.peopleCount || 0}
+                  rating={offer?.rating || 0}
+                  hasSpecialRequirements={offer?.hasSpecialRequirements || false}
                   onPressSpecialRequirements={() => {
                     handleShowSpecialRequirements(offer?.specialRequirements);
                   }}
+                  hasPackage={offer?.hasPackage || false}
                   onPressPackage={() => {
                     handleShowPackage(offer?.packageInfo);
                   }}
+                  bidable={bidable}
+                  pickupTime={offer?.pickupTime || 0}
+                  pickupDistance={offer?.pickupDistance || 0}
+                  pickupAddress={offer?.pickupAddress || ""}
+                  dropoffTime={offer?.dropoffTime || 0}
+                  dropoffDistance={offer?.dropoffDistance || 0}
+                  dropoffAddress={offer?.dropoffAddress || ""}
+                  rideTime={offer?.rideTime || 0}
+                  rideDistance={offer?.rideDistance || 0}
+                  totalPrice={offer?.totalPrice || offer?.tripOffer?.fare || 0}
+                  driverEarn={offer?.driverEarn || 0}
                   onButtonClick={() => {}}
                   itemStatus={offer?.status as any}
                   hideActionButton={true}
                   removeFlex
                   disabled
+                  carType={offer?.carType}
+                  expiredAt={offer?.expiredAt}
                   onTimerComplete={handleTimerComplete}
                 />
               </View>
 
               {/* Action Buttons or Expired UI */}
-              {isOffered && (
+              {!isOfferExpired && (isOffered || isBidExpired || isRejected || isBidding) && (
                 <View
                   style={styles.buttonContainer}
                   onStartShouldSetResponder={() => false}
@@ -472,7 +529,7 @@ export default function RideOfferModal({
                     rounded="half"
                     style={styles.hideButton}
                     onPress={onHide}
-                    disabled={shouldDisabled}
+                    disabled={shouldDisabled || isBidding}
                     loading={isHideLoading}
                   >
                     Hide
@@ -484,23 +541,26 @@ export default function RideOfferModal({
                     rounded="half"
                     style={styles.skipButton}
                     onPress={onSkipPrice}
-                    disabled={shouldDisabled}
+                    disabled={shouldDisabled || isBidding}
                     loading={isSkipLoading}
                   >
                     Skip Price
                   </Button>
 
-                  {bidable && canBid ? (
+                  {bidable ? (
                     <Button
                       variant="primary"
                       block={false}
                       rounded="half"
                       style={styles.acceptButton}
-                      onPress={handleBidClick}
-                      disabled={shouldDisabled}
+                      onPress={() => {
+                        if (isBidding) return;
+                        handleBidClick();
+                      }}
+                      disabled={shouldDisabled || isBidding}
                       loading={isSubmitBidLoading}
                     >
-                      {isExpired || isRejected ? "Re-bid" : "Bid"}
+                      {isBidding ? "Waiting..." : isBidExpired || isRejected ? "Re-bid" : "Bid"}
                     </Button>
                   ) : (
                     <Button
@@ -509,7 +569,7 @@ export default function RideOfferModal({
                       rounded="half"
                       style={styles.acceptButton}
                       onPress={onAccept}
-                      disabled={shouldDisabled}
+                      disabled={shouldDisabled || isBidding}
                     >
                       Accept
                     </Button>
@@ -517,7 +577,7 @@ export default function RideOfferModal({
                 </View>
               )}
 
-              {isExpired && (
+              {isOfferExpired && (
                 <View style={styles.expiredContainer}>
                   <View style={styles.expiredAlert}>
                     <Text style={styles.expiredText}>

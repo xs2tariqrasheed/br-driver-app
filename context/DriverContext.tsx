@@ -4,8 +4,8 @@ import {
   DRIVER_STORAGE_KEY,
   LOCAL_JOB_STATUS,
   NOTIFICATION_TYPES,
-  NotificationType,
   NOTIFICATIONS_BACKUP_STORAGE_KEY,
+  NotificationType,
   RETRIEVAL_ID_STORAGE_KEY,
   RIDE_STATE_STORAGE_KEY,
   TRIP_ID_STORAGE_KEY,
@@ -106,7 +106,7 @@ function driverReducer(state: DriverState, action: DriverAction): DriverState {
       return { ...state, driver: null };
     }
     case "HYDRATE_DRIVER": {
-      return { driver: action.payload, isHydrated: true };
+      return { ...state, driver: action.payload, isHydrated: true };
     }
     default: {
       return state;
@@ -270,10 +270,13 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
         if (notificationsBackupRaw) {
           try {
-            notificationsBackup = JSON.parse(notificationsBackupRaw);
+            const parsedBackup = JSON.parse(notificationsBackupRaw);
+            notificationsBackup = parsedBackup;
             log(
               "Found notifications backup:",
-              notificationsBackup.notifications.length,
+              Array.isArray(parsedBackup?.notifications)
+                ? parsedBackup.notifications.length
+                : 0,
               "notifications"
             );
           } catch (parseError) {
@@ -406,7 +409,35 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   const fetchNotifications = useCallback(async () => {
     setIsFetchingNotifications(true);
     try {
+      const mergeById = (
+        primary: NotificationItem[],
+        secondary: NotificationItem[]
+      ): NotificationItem[] => {
+        const map = new Map<string, NotificationItem>();
+        for (const n of [...primary, ...secondary]) {
+          if (!map.has(n.id)) map.set(n.id, n);
+        }
+        return Array.from(map.values()).sort((a, b) => {
+          const at = new Date(a.dateTime).getTime();
+          const bt = new Date(b.dateTime).getTime();
+          return bt - at;
+        });
+      };
+
+      const currentDriver = driverRef.current;
+      const existingNotifications = currentDriver?.notifications || [];
+
+      // IMPORTANT:
+      // Don't wipe locally-added notifications (e.g. sequential ride-offer notifications)
+      // when backend is unavailable or empty. Only fall back to demo when we have nothing.
       if (!auth?.token) {
+        if (existingNotifications.length > 0) {
+          log(
+            "[DriverContext] fetchNotifications: no auth token, preserving existing local notifications:",
+            existingNotifications.length
+          );
+          return;
+        }
         const demoNotifications = createDemoNotifications();
         // Ensure all demo notifications are unread
         const unreadDemoNotifications = demoNotifications.map(n => ({
@@ -414,7 +445,6 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           messageType: "unread" as const,
         }));
         
-        const currentDriver = driverRef.current;
         if (currentDriver) {
           await setDriver({
             ...currentDriver,
@@ -438,7 +468,11 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         );
 
         const responseData = response?.data;
-        if (responseData?.success && Array.isArray(responseData.data) && responseData.data.length > 0) {
+        if (
+          responseData?.success &&
+          Array.isArray(responseData.data) &&
+          responseData.data.length > 0
+        ) {
           // Transform backend notifications to app format
           const backendNotifications: NotificationItem[] = responseData.data.map(
             (item: any) => ({
@@ -457,12 +491,15 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
             .filter((n) => n.messageType === "read")
             .map((n) => n.id);
 
-          const currentDriver = driverRef.current;
           if (currentDriver) {
+            const merged = mergeById(existingNotifications, backendNotifications);
+            const existingReadIds = currentDriver.readNotificationIds || [];
             await setDriver({
               ...currentDriver,
-              notifications: backendNotifications,
-              readNotificationIds: readIds,
+              notifications: merged,
+              readNotificationIds: Array.from(
+                new Set([...existingReadIds, ...readIds])
+              ),
             });
           } else {
             await setDriver({
@@ -478,6 +515,15 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (apiError: any) {
         log("Error fetching notifications from backend, using demo notifications:", apiError);
+        // Fallback: keep existing notifications if we have any; otherwise use demo.
+        if (existingNotifications.length > 0) {
+          log(
+            "[DriverContext] fetchNotifications: backend failed, preserving existing local notifications:",
+            existingNotifications.length
+          );
+          return;
+        }
+
         // Fallback to demo notifications - all unread
         const demoNotifications = createDemoNotifications();
         const unreadDemoNotifications = demoNotifications.map(n => ({
@@ -485,7 +531,6 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           messageType: "unread" as const,
         }));
         
-        const currentDriver = driverRef.current;
         if (currentDriver) {
           await setDriver({
             ...currentDriver,

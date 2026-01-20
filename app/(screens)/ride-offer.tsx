@@ -2,7 +2,7 @@ import RideOffer from "@/components/RideOffer";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { Stack, router } from "expo-router";
 import { useEffect } from "react";
-import { SafeAreaView } from "react-native";
+import { Platform, SafeAreaView } from "react-native";
 
 export default function RideOfferScreen() {
   const {
@@ -39,7 +39,14 @@ export default function RideOfferScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <Stack.Screen options={{ headerShown: false, presentation: "fullScreenModal" }} />
+      <Stack.Screen
+        options={{
+          headerShown: false,
+          // iOS fix: avoid native full-screen modal presentation so provider-level RN Modals
+          // (ETAModal) render above this screen instead of behind it.
+          presentation: Platform.OS === "ios" ? "card" : "fullScreenModal",
+        }}
+      />
       <RideOffer
         asScreen
         visible={true}

@@ -31,11 +31,21 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   isReplying = false,
 }) => {
   const [replyText, setReplyText] = useState("");
-  const { showRideOfferModal, hasAnyActiveOffer, getTemporaryRide } =
+  const {
+    showRideOfferModal,
+    getTemporaryRide,
+    getTemporaryRideByTripId,
+  } =
     useRideOffer();
 
   // Get ride offer data from temporary ride state using notification ID
-  const rideOffer = notification?.id ? getTemporaryRide(notification.id) : null;
+  const rideOfferById = notification?.id ? getTemporaryRide(notification.id) : null;
+  const rideOfferTripId = (notification as any)?.rideOfferData?.tripId as
+    | string
+    | undefined;
+  const rideOffer =
+    rideOfferById ||
+    (rideOfferTripId ? getTemporaryRideByTripId(rideOfferTripId) : null);
 
   if (!notification) return null;
 

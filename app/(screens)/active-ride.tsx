@@ -46,14 +46,14 @@ import {
   ActivityIndicator,
   Animated,
   Image,
-  Platform,
+  PixelRatio,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
-  View,
+  View
 } from "react-native";
 
 export default function ActiveRideScreen() {
@@ -118,22 +118,28 @@ export default function ActiveRideScreen() {
   // Dynamic width for header toggle (Map/Details) similar to Home screen status toggle
   const { width: screenWidth } = useWindowDimensions();
   const headerToggleSize = useMemo(() => {
-    // Estimate width needed based on longest label and screen size
+    // IMPORTANT: Toggle "labeled" variant splits width into 2 equal cells.
+    // Each cell has paddingHorizontal: 8 and label fontSize: 12 with numberOfLines=1,
+    // so width must be computed from the longest label's rendered width to avoid truncation.
+    const fontScale = PixelRatio.getFontScale?.() ?? 1;
+    const labelFontSize = 12;
+    const cellPaddingX = 8 * 2; // left+right padding per cell (Toggle styles.labeledCell)
+    const extraBuffer = 6; // small safety buffer for bold weight + wider glyphs
+
     const longestLabelLength = Math.max(...labels.map((l) => String(l).length));
-    const approxCharWidth = 8.5; // Increased from 8 to account for wider characters
-    const horizontalPadding = 44; // Increased from 36 to 44 for better spacing
-    const knobAllowance = 32; // Increased from 28 to 32 for better knob space
-    // Increased min width for small devices to ensure full text visibility
-    const minWidth = screenWidth < 375 ? 140 : 130; // Higher min for small screens
-    const maxWidth = Math.min(240, Math.round(screenWidth * (Platform.OS === "android" ? 0.3 : 0.5))); // Slightly increased max
-    const baseWidth =
-      longestLabelLength * approxCharWidth + horizontalPadding + knobAllowance;
-    // For small screens, add extra padding
-    const isSmallScreen = screenWidth < 375;
-    const computedWidth = isSmallScreen 
-      ? baseWidth * 1.3 // Add 30% more width for small screens
-      : baseWidth * 1.15; // Add 15% more width for all screens
-    const finalWidth = Math.min(maxWidth, Math.max(minWidth, computedWidth));
+
+    // Approximate average glyph width for SF Pro @ 12px: ~0.52em per character.
+    // Multiply by fontScale to respect accessibility font scaling.
+    const approxCharWidth = labelFontSize * 0.52 * fontScale;
+    const requiredHalfWidth =
+      longestLabelLength * approxCharWidth + cellPaddingX + extraBuffer;
+    const requiredTotalWidth = Math.ceil(requiredHalfWidth * 2);
+
+    // Keep it within the screen so it never goes off-screen.
+    // We allow a large share of the width because labels must never truncate.
+    const maxAllowed = Math.floor(screenWidth * 0.9);
+    const finalWidth = Math.min(maxAllowed, requiredTotalWidth);
+
     return { width: finalWidth, height: 28 } as const;
   }, [screenWidth, labels]);
 
@@ -1620,7 +1626,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingRight: 10,
   },
-  headerToggleSize: { width: 112, height: 28 },
   actionBarContainer: {
     padding: 10,
   },

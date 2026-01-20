@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-    Image,
-    KeyboardAvoidingView,
-    Linking,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Image,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import BottomSheet from "@/components/BottomSheet";
@@ -33,6 +33,12 @@ type LoginFormValues = {
   companyId: string;
   loginId: string; // UI label is "Login ID" but value is emailOrPhone
   password: string;
+};
+
+const LOGIN_DEFAULT_VALUES: LoginFormValues = {
+  companyId: "4",
+  loginId: "ali.khan@example.com",
+  password: "112233",
 };
 
 /**
@@ -69,7 +75,7 @@ export default function LoginScreen() {
     reset,
     formState: { errors },
   } = useForm<LoginFormValues>({
-    defaultValues: { companyId: "", loginId: "", password: "" },
+    defaultValues: LOGIN_DEFAULT_VALUES,
     mode: "onChange",
   });
 
@@ -213,10 +219,10 @@ export default function LoginScreen() {
     setForgotSheetOpen(false);
   }, []);
 
-  // Reset form whenever this screen gains focus
+  // Reset form to default values whenever this screen gains focus
   useFocusEffect(
     useCallback(() => {
-      reset({ companyId: "", loginId: "", password: "" });
+      reset(LOGIN_DEFAULT_VALUES);
     }, [reset])
   );
 

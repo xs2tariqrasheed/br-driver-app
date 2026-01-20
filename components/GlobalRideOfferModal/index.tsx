@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
-import { useRideOffer } from "@/context/RideOfferContext";
 import { useModalManager } from "@/context/ModalManagerContext";
+import { useRideOffer } from "@/context/RideOfferContext";
+import { useEffect } from "react";
 import RideOfferModal from "../RideOffer";
 
 /**

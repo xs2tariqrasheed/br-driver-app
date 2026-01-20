@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import {
   NOTIFICATION_TYPES,
@@ -85,6 +85,19 @@ export function GlobalSocketListener() {
     updateBroadcastOffer,
     broadcastOffers,
   } = useBroadcastJobOffers();
+
+  // IMPORTANT:
+  // This component intentionally avoids including many values in the effect deps to prevent
+  // re-registering socket listeners. To prevent stale closures, keep the latest values in refs.
+  const currentOfferRef = useRef(currentOffer);
+  useEffect(() => {
+    currentOfferRef.current = currentOffer;
+  }, [currentOffer]);
+
+  const broadcastOffersRef = useRef(broadcastOffers);
+  useEffect(() => {
+    broadcastOffersRef.current = broadcastOffers;
+  }, [broadcastOffers]);
 
   // Bid context hooks
   const { showBidAccepted } = useBidAccepted();
@@ -174,6 +187,8 @@ export function GlobalSocketListener() {
               messageType: "unread" as const,
               notificationType:
                 NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER as NotificationType,
+              // Helps reopen the offer even if notification IDs change due to refresh.
+              rideOfferData: { tripId: rideOffer.tripOffer.tripId },
             };
             await addNotification(notification);
 
@@ -286,7 +301,8 @@ export function GlobalSocketListener() {
             // Close all modals first, then show bid unsuccessful modal
             closeAllModals();
             // Try to get tripId from current offer or data
-            const tripIdForReject = tripId || currentOffer?.tripOffer?.tripId;
+            const tripIdForReject =
+              tripId || currentOfferRef.current?.tripOffer?.tripId;
             showBidUnsuccessful(tripIdForReject);
             log("❌ Ride offer rejected - showing unsuccessful sheet");
 
@@ -334,15 +350,18 @@ export function GlobalSocketListener() {
           hideBidWaitingTimer();
 
           // Check if this is a broadcast offer
-          const isBroadcastOffer = 
-            offerType === TRIP_OFFER_TYPES.BROADCAST || 
-            broadcastOffers.some(o => o.tripOffer.tripId === tripId);
+          const isBroadcastOffer =
+            offerType === TRIP_OFFER_TYPES.BROADCAST ||
+            broadcastOffersRef.current.some((o) => o.tripOffer.tripId === tripId);
+
+          const isBidExpired =
+            response === TRIP_OFFER_ACTIONS.EXPIRE || response === "expired";
 
           if (response === TRIP_OFFER_ACTIONS.ACCEPT) {
             // Store tripId on successful bid accept
             if (tripId) {
               try {
-                await setTripId(tripId);
+                await setTripId(String(tripId));
                 log("✅ Stored tripId from bid-response accept:", tripId);
               } catch (e) {
                 log("❌ Failed to store tripId from bid-response:", e);
@@ -383,7 +402,7 @@ export function GlobalSocketListener() {
               if (tripId) {
                 // Find the offer by tripId and update it using the offer's id
                 const offerToUpdate = broadcastOffers.find(
-                  (offer) => offer.tripOffer.tripId === tripId
+                  (offer) => String(offer.tripOffer.tripId) === String(tripId)
                 );
                 if (offerToUpdate) {
                   updateBroadcastOffer(offerToUpdate.id, {
@@ -400,7 +419,7 @@ export function GlobalSocketListener() {
 
               // Don't close modals or change hasAnyActiveOffer for broadcast offers
               // The offer should remain available for rebidding
-              showBidUnsuccessful(tripId);
+              showBidUnsuccessful(String(tripId));
               // Add notification with different message for broadcast offers
               const message =
                 "Your bid was not accepted this time. You can rebid on this offer until it expires.";
@@ -421,22 +440,28 @@ export function GlobalSocketListener() {
               );
 
               // Update current offer status to "rejected" so the UI shows "Re-bid" button
-              if (currentOffer && currentOffer.tripOffer.tripId === tripId) {
-                updateCurrentOfferStatus("rejected");
-                log(`[GlobalSocketListener] Updated sequential offer status to "rejected" for trip ${tripId}`);
-              }
+              updateCurrentOfferStatus("rejected", String(tripId));
+              log(
+                `[GlobalSocketListener] Updated sequential offer status to "rejected" for trip ${tripId}`
+              );
 
               // Hide waiting timer since bid was rejected
               hideBidWaitingTimer();
+
+              // NEW: Show unsuccessful modal for sequential offers
+              showBidUnsuccessful(String(tripId));
 
               // Keep modal open - don't close it or set hasAnyActiveOffer to false
               // This allows driver to rebid immediately
 
               // Show toast notification
-              showToast("Your bid was not accepted. You can rebid if you're still interested.", {
-                variant: "warning",
-                position: "top",
-              });
+              showToast(
+                "Your bid was not accepted. You can rebid if you're still interested.",
+                {
+                  variant: "warning",
+                  position: "top",
+                }
+              );
 
               // Add notification
               const message =
@@ -452,7 +477,7 @@ export function GlobalSocketListener() {
               };
               await addNotification(notification);
             }
-          } else if (response === TRIP_OFFER_ACTIONS.EXPIRE) {
+          } else if (isBidExpired) {
             if (isBroadcastOffer) {
               // For broadcast offers, keep the offer and allow re-bidding
               log(
@@ -465,7 +490,7 @@ export function GlobalSocketListener() {
                 try {
                   await expireBid({
                     driverId,
-                    tripId,
+                    tripId: String(tripId),
                   });
                   log(`[GlobalSocketListener] Called expire bid API for trip ${tripId}`);
                 } catch (error) {
@@ -478,7 +503,7 @@ export function GlobalSocketListener() {
               if (tripId) {
                 // Find the offer by tripId and update it using the offer's id
                 const offerToUpdate = broadcastOffers.find(
-                  (offer) => offer.tripOffer.tripId === tripId
+                  (offer) => String(offer.tripOffer.tripId) === String(tripId)
                 );
                 if (offerToUpdate) {
                   updateBroadcastOffer(offerToUpdate.id, {
@@ -513,22 +538,28 @@ export function GlobalSocketListener() {
               );
 
               // Update current offer status to "expired" so the UI shows "Re-bid" button
-              if (currentOffer && currentOffer.tripOffer.tripId === tripId) {
-                updateCurrentOfferStatus("expired");
-                log(`[GlobalSocketListener] Updated sequential offer status to "expired" for trip ${tripId}`);
-              }
+              updateCurrentOfferStatus("expired", String(tripId));
+              log(
+                `[GlobalSocketListener] Updated sequential offer status to "expired" for trip ${tripId}`
+              );
 
               // Hide waiting timer since bid expired
               hideBidWaitingTimer();
+
+              // NEW: Show expired modal for sequential offers
+              showBidExpired(String(tripId));
 
               // Keep modal open - don't close it or set hasAnyActiveOffer to false
               // This allows driver to rebid immediately
 
               // Show toast notification
-              showToast("Your bid has expired. You can rebid if you're still interested.", {
-                variant: "warning",
-                position: "top",
-              });
+              showToast(
+                "Your bid has expired. You can rebid if you're still interested.",
+                {
+                  variant: "warning",
+                  position: "top",
+                }
+              );
 
               // Add notification
               const message =
@@ -570,8 +601,8 @@ export function GlobalSocketListener() {
             setHasAnyActiveOffer,
             closeAllModals,
             // Pass context data for offer discovery
-            currentOffer: currentOffer,
-            broadcastOffers: broadcastOffers,
+            currentOffer: currentOfferRef.current,
+            broadcastOffers: broadcastOffersRef.current,
           });
 
           // NEW: Remove temporary rides for expired offers
