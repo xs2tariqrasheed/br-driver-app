@@ -1,10 +1,13 @@
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    import Header from "@/components/Header";
+import Header from "@/components/Header";
 import JobDetails from "@/components/JobDetails";
+import { activeTripApiClient } from "@/config/apiConfig";
 import { textColors } from "@/constants/colors";
+import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
+import { transformTripDetailsFromDb, transformTripDetailsToJobOffer } from "@/utils/helpers";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
 
 /**
  * Transform broadcast offer to JobDetails format
@@ -25,9 +28,9 @@ function transformBroadcastOfferToJobOffer(broadcastOffer: any) {
     peopleCount: broadcastOffer.peopleCount,
     rating: broadcastOffer.rating,
     hasSpecialRequirements: broadcastOffer.hasSpecialRequirements,
-    onPressSpecialRequirements: () => {},
+    onPressSpecialRequirements: () => { },
     hasPackage: broadcastOffer.hasPackage,
-    onPressPackage: () => {},
+    onPressPackage: () => { },
     pickupTime: broadcastOffer.pickupTime,
     pickupDistance: broadcastOffer.pickupDistance,
     pickupAddress: broadcastOffer.pickupAddress,
@@ -40,7 +43,7 @@ function transformBroadcastOfferToJobOffer(broadcastOffer: any) {
     driverEarn: broadcastOffer.driverEarn,
     buttonTitle: broadcastOffer.buttonTitle,
     disabled: broadcastOffer.status !== "offered",
-    onButtonClick: () => {},
+    onButtonClick: () => { },
     driverInstructions: "Please arrive on time and follow customer instructions.",
     fareDetails: [
       {
@@ -89,19 +92,88 @@ function transformBroadcastOfferToJobOffer(broadcastOffer: any) {
 }
 
 export default function TripDetailsScreen() {
-  const params = useLocalSearchParams<{ offerId?: string }>();
+  const params = useLocalSearchParams<{ offerId?: string; tripNumber?: string }>();
   const { broadcastOffers } = useBroadcastJobOffers();
   const [jobOfferData, setJobOfferData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params.offerId) {
-      const offer = broadcastOffers.find((o) => o.id === params.offerId);
-      if (offer) {
-        const transformed = transformBroadcastOfferToJobOffer(offer);
-        setJobOfferData(transformed);
+    const loadTripData = async () => {
+      // Priority 1: If tripNumber is provided, fetch from API
+      if (params.tripNumber) {
+        try {
+          setIsLoading(true);
+          setError(null);
+          const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${params.tripNumber}`;
+
+          const response = await activeTripApiClient.get(endpoint);
+          const responseData = response.data as any;
+
+          const responseCode = responseData?.jHeader?.responseCode;
+          const isSuccess = responseCode === 0 || responseCode === "0" || responseCode === undefined;
+
+          if (isSuccess && responseData?.data) {
+            const transformed = transformTripDetailsFromDb(responseData.data);
+            if (transformed) {
+              const jobOffer = transformTripDetailsToJobOffer(transformed);
+              setJobOfferData(jobOffer);
+            } else {
+              console.error("❌ [TripDetails] Failed to transform trip data");
+              setError("Failed to parse trip data");
+            }
+          } else {
+            const errorMsg = responseData?.jHeader?.message || "Failed to fetch trip details";
+            console.error("❌ [TripDetails] API Error:", errorMsg);
+            console.error("❌ [TripDetails] Response Code:", responseCode);
+            setError(errorMsg);
+          }
+        } catch (err: any) {
+          console.error("❌ [TripDetails] Error Type:", err?.name);
+          if (err?.response) {
+            console.error("❌ [TripDetails] Error Response Status:", err.response.status);
+          }
+          setError(err?.message || "Failed to load trip details");
+        } finally {
+          setIsLoading(false);
+        }
+        return;
       }
-    }
-  }, [params.offerId, broadcastOffers]);
+
+      // Priority 2: If offerId is provided, use broadcast offers
+      if (params.offerId) {
+        const offer = broadcastOffers.find((o) => o.id === params.offerId);
+        if (offer) {
+          const transformed = transformBroadcastOfferToJobOffer(offer);
+          setJobOfferData(transformed);
+        }
+      }
+    };
+
+    loadTripData();
+  }, [params.offerId, params.tripNumber, broadcastOffers]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="Trip Details" onBackPress={() => router.back()} />
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={textColors.teal900} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="Trip Details" onBackPress={() => router.back()} />
+        <View style={styles.emptyContainer}>
+          {/* Could add error message display here */}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!jobOfferData) {
     return (
@@ -116,7 +188,7 @@ export default function TripDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-    <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <Header title="Trip Details" onBackPress={() => router.back()} />
       <ScrollView
         style={styles.scrollView}

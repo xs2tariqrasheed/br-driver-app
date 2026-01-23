@@ -1,5 +1,9 @@
 import { textColors } from "@/constants/colors";
-import React, { useState } from "react";
+import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
+import { API_CLIENT_TYPES } from "@/constants/global";
+import { useFetch } from "@/hooks/useFetch";
+import { SystemSuggestedBid, transformBidPrices } from "@/utils/helpers";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   Modal,
@@ -13,12 +17,8 @@ import Button from "../Button";
 import Counter from "../Counter";
 import Divider from "../Divider";
 import Toggle from "../Form/Toggle";
+import SkeletonLoader from "../Loader/SkeletonLoader";
 import Typography from "../Typography";
-
-export interface SystemSuggestedBid {
-  amount: number;
-  driverEarn: number;
-}
 
 export interface BidData {
   amount: number;
@@ -59,25 +59,119 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
   const {
     amount,
     systemEta,
-    systemSuggestedBids,
-    boostedPrices,
+    systemSuggestedBids: initialSystemSuggestedBids,
+    boostedPrices: initialBoostedPrices,
     numberOfBids,
   } = bid;
+
+  // Fetch system suggested bid prices
+  const { execute: fetchBidPrices, loading: isLoadingPrices } = useFetch(
+    LIVE_JOB_ENDPOINTS.getSystemSuggestedBidPrices,
+    API_CLIENT_TYPES.AUCTION
+  );
+
+  // State for fetched prices
+  const [fetchedSystemSuggestedBids, setFetchedSystemSuggestedBids] =
+    useState<SystemSuggestedBid[] | null>(null);
+  const [fetchedBoostedPrices, setFetchedBoostedPrices] = useState<
+    number[] | null
+  >(null);
+  const [fetchedBidsOnThisJob, setFetchedBidsOnThisJob] = useState<
+    string | null
+  >(null);
+  const [fetchedDriverPayoutPercentage, setFetchedDriverPayoutPercentage] =
+    useState<number | null>(null);
+
+  // Use fetched prices if available, otherwise use initial prices
+  const systemSuggestedBids =
+    fetchedSystemSuggestedBids || initialSystemSuggestedBids;
+  const boostedPrices = fetchedBoostedPrices || initialBoostedPrices;
+
   const [selectedBid, setSelectedBid] = useState(amount);
   const [eta, setEta] = useState(systemEta);
   const [isBoosted, setIsBoosted] = useState(false);
   const [boostAmount, setBoostAmount] = useState(boostedPrices[0] || 0);
 
+  // Fetch prices when modal opens
+  useEffect(() => {
+    if (open) {
+      const loadBidPrices = async () => {
+        try {
+          const response = await fetchBidPrices();
+
+          // Check DB response format
+          const responseCode = response?.jHeader?.responseCode;
+          const isSuccess =
+            responseCode === 0 ||
+            responseCode === "0" ||
+            responseCode === undefined;
+
+          if (isSuccess && response) {
+
+            // Transform from raw DB response structure
+            // useFetch extracts response.data.data ?? response.data, so response is the DB response
+            const jData = response.jData || response.data?.jData;
+            const systemSuggestedPrices = jData?.system_suggested_prices;
+
+            if (systemSuggestedPrices) {
+              // Use helper function to transform the data
+              const transformed = transformBidPrices(systemSuggestedPrices);
+
+              if (transformed.systemSuggestedBids.length > 0) {
+                setFetchedSystemSuggestedBids(transformed.systemSuggestedBids);
+              }
+              if (transformed.boostedPrices.length > 0) {
+                setFetchedBoostedPrices(transformed.boostedPrices);
+              }
+              if (transformed.bidsOnThisJob !== null) {
+                setFetchedBidsOnThisJob(transformed.bidsOnThisJob);
+              }
+              if (transformed.driverPayoutPercentage !== null) {
+                setFetchedDriverPayoutPercentage(transformed.driverPayoutPercentage);
+              }
+            } else {
+              console.log('⚠️ [BidBottomSheetModal] No system_suggested_prices found in response');
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching bid prices:", error);
+          // Continue with initial prices if fetch fails
+        }
+      };
+
+      loadBidPrices();
+    }
+  }, [open, fetchBidPrices]);
+
   // Get min and max values from suggested bids
-  const minBid = Math.min(...systemSuggestedBids.map((b) => b.amount));
-  const maxBid = Math.max(...systemSuggestedBids.map((b) => b.amount));
-  const minBoost = Math.min(...boostedPrices);
-  const maxBoost = Math.max(...boostedPrices);
+  const minBid =
+    systemSuggestedBids.length > 0
+      ? Math.min(...systemSuggestedBids.map((b) => b.amount))
+      : amount;
+  const maxBid =
+    systemSuggestedBids.length > 0
+      ? Math.max(...systemSuggestedBids.map((b) => b.amount))
+      : amount;
+  const minBoost =
+    boostedPrices.length > 0 ? Math.min(...boostedPrices) : 0;
+  const maxBoost =
+    boostedPrices.length > 0 ? Math.max(...boostedPrices) : 0;
 
   // Find the selected bid data
   const selectedBidData = systemSuggestedBids.find(
     (b) => b.amount === selectedBid
   );
+
+  // Calculate driver earnings for selected bid
+  // driver_payout_percentage is the system charge percentage, so driver earns: bidAmount * (1 - systemChargePercentage)
+  const calculateDriverEarn = (bidAmount: number): number => {
+    const systemChargePercentage = fetchedDriverPayoutPercentage !== null
+      ? fetchedDriverPayoutPercentage / 100
+      : 0.15; // Default 15% system charge (85% driver payout)
+    const earn = bidAmount * (1 - systemChargePercentage);
+    // Keep cents precision so small charges (e.g., 2.5%) are visible
+    return Math.round(earn * 100) / 100;
+  };
 
   const handleSubmit = () => {
     onSubmit({
@@ -134,13 +228,24 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                   source={require("@/assets/images/peoples.png")}
                   style={styles.peopleIcon}
                 />
-                <Typography
-                  type="bodyLarge"
-                  weight="regular"
-                  style={styles.peopleText}
-                >
-                  &lt; {numberOfBids}
-                </Typography>
+                {isLoadingPrices ? (
+                  <SkeletonLoader
+                    width={40}
+                    height={20}
+                    borderRadius={4}
+                    animated={true}
+                  />
+                ) : (
+                  <Typography
+                    type="bodyLarge"
+                    weight="regular"
+                    style={styles.peopleText}
+                  >
+                    {fetchedBidsOnThisJob !== null
+                      ? fetchedBidsOnThisJob
+                      : `< ${numberOfBids}`}
+                  </Typography>
+                )}
               </View>
             </View>
             {/* Adjust Price Heading */}
@@ -153,42 +258,70 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
             </Typography>
             {/* Suggested Bid Buttons */}
             <View style={styles.suggestedBidsContainer}>
-              {systemSuggestedBids.map((suggestedBid) => (
-                <Pressable
-                  key={suggestedBid.amount}
-                  style={[
-                    styles.bidButton,
-                    selectedBid === suggestedBid.amount &&
-                      styles.selectedBidButton,
-                  ]}
-                  onPress={() => setSelectedBid(suggestedBid.amount)}
-                >
-                  <Typography
-                    type="bodyLarge"
-                    weight="semibold"
+              {isLoadingPrices ? (
+                // Show skeleton loaders matching the bid button structure
+                <>
+                  {[1, 2, 3, 4, 5].map((index) => (
+                    <View key={`skeleton-${index}`} style={styles.bidButton}>
+                      <SkeletonLoader
+                        width="100%"
+                        height={20}
+                        borderRadius={4}
+                        animated={true}
+                      />
+                    </View>
+                  ))}
+                </>
+              ) : (
+                systemSuggestedBids.map((suggestedBid) => (
+                  <Pressable
+                    key={suggestedBid.amount}
                     style={[
-                      styles.bidButtonText,
+                      styles.bidButton,
                       selectedBid === suggestedBid.amount &&
-                        styles.selectedBidButtonText,
+                      styles.selectedBidButton,
                     ]}
+                    onPress={() => setSelectedBid(suggestedBid.amount)}
                   >
-                    ${suggestedBid.amount}
-                  </Typography>
-                </Pressable>
-              ))}
+                    <Typography
+                      type="bodyLarge"
+                      weight="semibold"
+                      style={[
+                        styles.bidButtonText,
+                        selectedBid === suggestedBid.amount &&
+                        styles.selectedBidButtonText,
+                      ]}
+                    >
+                      ${suggestedBid.amount}
+                    </Typography>
+                  </Pressable>
+                ))
+              )}
             </View>
 
             {/* Bid Counter */}
-            <Counter
-              value={selectedBid}
-              onChange={setSelectedBid}
-              min={minBid}
-              max={maxBid}
-              step={1}
-              formatLabel={(value) =>
-                `$${value} ($${selectedBidData?.driverEarn || 0})`
-              }
-            />
+            {isLoadingPrices ? (
+              <View style={styles.counterSkeletonContainer}>
+                <SkeletonLoader
+                  width="100%"
+                  height={50}
+                  borderRadius={8}
+                  animated={true}
+                />
+              </View>
+            ) : (
+              <Counter
+                value={selectedBid}
+                onChange={setSelectedBid}
+                min={minBid}
+                max={maxBid}
+                step={1}
+                formatLabel={(value) => {
+                  const earn = calculateDriverEarn(value);
+                  return `$${value} ($${earn.toFixed(2)})`;
+                }}
+              />
+            )}
 
             <Divider marginVertical={24} />
 
@@ -255,7 +388,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                         style={[
                           styles.bidButton,
                           boostAmount === boostPrice &&
-                            styles.selectedBidButton,
+                          styles.selectedBidButton,
                         ]}
                         onPress={() => setBoostAmount(boostPrice)}
                       >
@@ -265,7 +398,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                           style={[
                             styles.boostButtonText,
                             boostAmount === boostPrice &&
-                              styles.selectedBoostButtonText,
+                            styles.selectedBoostButtonText,
                           ]}
                         >
                           ${boostPrice}
@@ -290,7 +423,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
             </View>
 
             {/* Submit Button */}
-            <View 
+            <View
               style={styles.submitSection}
               onStartShouldSetResponder={() => false}
             >
@@ -417,6 +550,10 @@ const styles = StyleSheet.create({
   counterLabel: {
     color: textColors.black,
     marginBottom: 8,
+  },
+  counterSkeletonContainer: {
+    marginTop: 16,
+    width: "100%",
   },
   etaCounterContainer: {
     width: "100%",

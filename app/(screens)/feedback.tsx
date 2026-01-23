@@ -7,11 +7,13 @@ import Rating from "@/components/Rating";
 import { ThemedView } from "@/components/ThemedView";
 import { useToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
+import { activeTripApiClient } from "@/config/apiConfig";
 import { textColors } from "@/constants/colors";
 import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
 import { API_CLIENT_TYPES } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { usePost } from "@/hooks/usePost";
+import { transformTripDetailsFromDb, transformTripDetailsToFareSummary } from "@/utils/helpers";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -37,8 +39,9 @@ const FeedbackScreen: React.FC = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
 
-  // Get tripId and customerId from route params
+  // Get tripId, tripNumber, and customerId from route params
   const tripId = (params.tripId as string) || "";
+  const tripNumber = (params.tripNumber as string) || "";
   const customerId = (params.customerId as string) || "";
   const driverId = auth?.user?.id;
 
@@ -48,15 +51,65 @@ const FeedbackScreen: React.FC = () => {
     API_CLIENT_TYPES.ACTIVE_TRIP
   );
 
-  // Dummy fare data as per the screenshot
-  const fareItems: InfoTableDataItem[] = [
-    { label: "Ride Price", value: "$20.25" },
-    { label: "Tolls", value: "$0.75" },
+  // State for fare items
+  const [fareItems, setFareItems] = useState<InfoTableDataItem[]>([
+    { label: "Ride Price", value: "$0.00" },
+    { label: "Tolls", value: "$0.00" },
     { label: "Discount", value: "$0.00" },
-    { label: "UnBilled Tolls", value: "$4.00" },
-    { label: "Extra Wait Time", value: "$05.00" },
-    { label: "Additional Stops", value: "$10.00" },
-  ];
+    { label: "UnBilled Tolls", value: "$0.00" },
+    { label: "Extra Wait Time", value: "$0.00" },
+    { label: "Additional Stops", value: "$0.00" },
+  ]);
+
+  // Fetch trip details when screen loads
+  useEffect(() => {
+    const loadTripDetails = async () => {
+      // Use tripNumber if available, otherwise try to extract from tripId
+      const tripNumberToFetch = tripNumber || (tripId && !tripId.includes("-") ? tripId : null);
+
+      if (tripNumberToFetch) {
+        try {
+          const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${tripNumberToFetch}`;
+
+          const response = await activeTripApiClient.get(endpoint);
+          const responseData = response.data as any;
+
+          const responseCode = responseData?.jHeader?.responseCode;
+          const isSuccess = responseCode === 0 || responseCode === "0" || responseCode === undefined;
+
+          if (isSuccess && responseData?.data) {
+            const transformed = transformTripDetailsFromDb(responseData.data);
+
+            if (transformed) {
+              const fareSummary = transformTripDetailsToFareSummary(transformed);
+
+              if (fareSummary.length > 0) {
+                setFareItems(fareSummary);
+                console.log("✅ [FeedbackScreen] Fare summary loaded successfully!");
+              } else {
+                console.warn("⚠️ [FeedbackScreen] Fare summary is empty");
+              }
+            } else {
+              console.error("❌ [FeedbackScreen] Failed to transform trip data");
+            }
+          } else {
+            const errorMsg = responseData?.jHeader?.message || "Failed to fetch trip details";
+            console.error("❌ [FeedbackScreen] API Error:", errorMsg);
+            console.error("❌ [FeedbackScreen] Response Code:", responseCode);
+            // Continue with default fare items if fetch fails
+          }
+        } catch (err: any) {
+          console.error("❌ [FeedbackScreen] Error Message:", err?.message);
+          console.error("❌ [FeedbackScreen] Error Response Status:", err.response.status);
+          // Continue with default fare items if fetch fails
+        }
+      } else {
+        console.error("❌ [FeedbackScreen] No trip number available, using default fare items");
+      }
+    };
+
+    loadTripDetails();
+  }, [tripNumber, tripId]);
 
   // Handle keyboard events
   useEffect(() => {
@@ -111,12 +164,6 @@ const FeedbackScreen: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      console.log("[FeedbackScreen] Submitting feedback:", {
-        tripId,
-        driverId,
-        rating,
-        feedback: comments,
-      });
 
       const response = await submitFeedback({
         tripId,
@@ -130,25 +177,25 @@ const FeedbackScreen: React.FC = () => {
       // Handle response structure: usePost may extract response.data.data, so we need to check both structures
       // Backend returns: { success: true, message: "...", data: dbResponse }
       // usePost might extract: dbResponse (which has jHeader with responseCode)
-      const isSuccess = 
-        response?.success === true || 
+      const isSuccess =
+        response?.success === true ||
         (response?.jHeader && (response.jHeader.responseCode === 0 || response.jHeader.responseCode === '0'));
 
       if (isSuccess) {
-        const successMessage = 
-          response?.message || 
-          response?.jHeader?.message || 
+        const successMessage =
+          response?.message ||
+          response?.jHeader?.message ||
           "Feedback submitted successfully!";
-        
+
         console.log("[FeedbackScreen] Feedback submitted successfully:", response);
         showToast(successMessage, "success", "top");
         router.replace("/(tabs)");
       } else {
-        const errorMessage = 
-          response?.error || 
-          response?.jHeader?.message || 
+        const errorMessage =
+          response?.error ||
+          response?.jHeader?.message ||
           "Failed to submit feedback. Please try again.";
-        
+
         console.error("[FeedbackScreen] Failed to submit feedback:", response);
         showToast(errorMessage, "error", "top");
         // Still allow navigation even if feedback submission failed
@@ -179,95 +226,95 @@ const FeedbackScreen: React.FC = () => {
         {/* Header */}
         <Header title="Ride Completed" hideBackIcon={true} />
 
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        // behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
-      >
-        <TouchableWithoutFeedback onPress={dismissKeyboard}>
-          <ScrollView
-            ref={scrollViewRef}
-            contentContainerStyle={[
-              styles.scrollContent,
-              {
-                paddingBottom:
-                  keyboardHeight > 0 ? keyboardHeight + 20 : insets.bottom + 100,
-              },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Logo */}
-            <View style={styles.logoContainer}>
-              <Logo />
-            </View>
-
-            {/* Fare Summary */}
-            <InfoTable
-              title="Fare Summary"
-              data={fareItems}
-              showFooter={true}
-            />
-
-            {/* Rate Your Rider Section */}
-            <View style={styles.ratingSection}>
-              <Typography
-                type="headingSmall"
-                weight="bold"
-                style={styles.ratingTitle}
-              >
-                Rate Your Rider
-              </Typography>
-              <Typography
-                type="bodyMedium"
-                weight="regular"
-                style={styles.ratingQuestion}
-              >
-                How was your experience with this passenger?
-              </Typography>
-              <View style={styles.ratingContainer}>
-                <Rating rating={rating} onRatingChange={setRating} size={48} />
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          // behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
+        >
+          <TouchableWithoutFeedback onPress={dismissKeyboard}>
+            <ScrollView
+              ref={scrollViewRef}
+              contentContainerStyle={[
+                styles.scrollContent,
+                {
+                  paddingBottom:
+                    keyboardHeight > 0 ? keyboardHeight + 20 : insets.bottom + 100,
+                },
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Logo */}
+              <View style={styles.logoContainer}>
+                <Logo />
               </View>
-            </View>
 
-            {/* Add Comments Section */}
-            <View style={styles.commentsSection}>
-              <TextArea
-                label="Add Comments"
-                placeholder="Type Here"
-                value={comments}
-                onChangeText={setComments}
-                numberOfLines={4}
-                style={styles.textArea}
+              {/* Fare Summary */}
+              <InfoTable
+                title="Fare Summary"
+                data={fareItems}
+                showFooter={true}
               />
-            </View>
 
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
-              <Button
-                variant="outlined"
-                block="half"
-                rounded="half"
-                onPress={handleSkip}
-                style={styles.skipButton}
-              >
-                Skip
-              </Button>
-              <Button
-                variant="primary"
-                block="half"
-                rounded="half"
-                onPress={handleSubmit}
-                style={styles.submitButton}
-                disabled={isSubmitting || rating === 0}
-                loading={isSubmitting}
-              >
-                Submit
-              </Button>
-            </View>
-          </ScrollView>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+              {/* Rate Your Rider Section */}
+              <View style={styles.ratingSection}>
+                <Typography
+                  type="headingSmall"
+                  weight="bold"
+                  style={styles.ratingTitle}
+                >
+                  Rate Your Rider
+                </Typography>
+                <Typography
+                  type="bodyMedium"
+                  weight="regular"
+                  style={styles.ratingQuestion}
+                >
+                  How was your experience with this passenger?
+                </Typography>
+                <View style={styles.ratingContainer}>
+                  <Rating rating={rating} onRatingChange={setRating} size={48} />
+                </View>
+              </View>
+
+              {/* Add Comments Section */}
+              <View style={styles.commentsSection}>
+                <TextArea
+                  label="Add Comments"
+                  placeholder="Type Here"
+                  value={comments}
+                  onChangeText={setComments}
+                  numberOfLines={4}
+                  style={styles.textArea}
+                />
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.buttonContainer}>
+                <Button
+                  variant="outlined"
+                  block="half"
+                  rounded="half"
+                  onPress={handleSkip}
+                  style={styles.skipButton}
+                >
+                  Skip
+                </Button>
+                <Button
+                  variant="primary"
+                  block="half"
+                  rounded="half"
+                  onPress={handleSubmit}
+                  style={styles.submitButton}
+                  disabled={isSubmitting || rating === 0}
+                  loading={isSubmitting}
+                >
+                  Submit
+                </Button>
+              </View>
+            </ScrollView>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </ThemedView>
     </SafeAreaView>
   );

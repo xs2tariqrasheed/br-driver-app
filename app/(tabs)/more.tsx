@@ -6,9 +6,10 @@ import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
 import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
 import { textColors } from "@/constants/colors";
-import { DRIVER_ENDPOINTS } from "@/constants/endpoints";
+import { BASE_OFFICE_ENDPOINTS, DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import {
-  CONTACT_BASE,
+  API_CLIENT_TYPES,
+  DB_ACTION_DEFAULTS,
   DRIVER_STORAGE_KEY,
   NOTIFICATIONS_BACKUP_STORAGE_KEY,
   URLS,
@@ -17,16 +18,19 @@ import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { SETTINGS_STORAGE_KEY } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
+import { usePost } from "@/hooks/usePost";
 import {
   clearStorageSelectively,
   getStorageItem,
   logger,
   setStorageItem,
 } from "@/utils/helpers";
+import { buildRequest } from "@/utils/requestBuilder";
 import { disconnectSocket } from "@/utils/socket";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   Linking,
@@ -43,6 +47,13 @@ type MoreItem = {
   title: string;
   icon: any;
   onClick?: () => void;
+};
+
+type BaseOfficeContactDetails = {
+  full_address: string | null;
+  primary_phone_number: string | null; // dispatcher
+  primary_email_address: string | null;
+  driver_relations_phone_number: string | null;
 };
 
 const ITEMS: MoreItem[] = [
@@ -102,12 +113,83 @@ export default function MoreScreen() {
   const [logoutSheetOpen, setLogoutSheetOpen] = useState(false);
   const [deleteProfileSheetOpen, setDeleteProfileSheetOpen] = useState(false);
   const [contactBaseSheetOpen, setContactBaseSheetOpen] = useState(false);
+  const [baseOfficeContactDetails, setBaseOfficeContactDetails] =
+    useState<BaseOfficeContactDetails | null>(null);
+  const [baseOfficeError, setBaseOfficeError] = useState<string | null>(null);
   const bottomTabOverflow = useBottomTabOverflow();
 
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation } = useDelete(
     DRIVER_ENDPOINTS.markOffline(auth?.user?.id || "")
   );
+
+  const { execute: fetchBaseOfficeContactDetailsApi, loading: baseOfficeLoading } =
+    usePost<any>(BASE_OFFICE_ENDPOINTS.getContactDetails, API_CLIENT_TYPES.SETTINGS);
+
+  const fetchBaseOfficeContacts = async () => {
+    try {
+      setBaseOfficeError(null);
+      setBaseOfficeContactDetails(null);
+
+      const user = auth?.user as Record<string, unknown> | undefined;
+      const toNum = (v: unknown, d: number) => {
+        if (v == null) return d;
+        const n = typeof v === "number" ? v : parseInt(String(v), 10);
+        return Number.isFinite(n) ? n : d;
+      };
+      const actionCode = "CMN.S.BASE_OFFICE_CONTACT_DETAILS";
+      const requestBody = await buildRequest(
+        actionCode,
+        {
+          P_ACTION_CODE: actionCode,
+          P_AFFILIATE_NUM: toNum(
+            user?.affiliate_num ?? user?.affiliateNum,
+            DB_ACTION_DEFAULTS.AFFILIATE_NUM
+          ),
+          P_APP_NAME: DB_ACTION_DEFAULTS.APP_NAME,
+          P_COMPANY_ID: toNum(
+            user?.company_id ?? user?.companyId,
+            DB_ACTION_DEFAULTS.COMPANY_ID
+          ),
+        },
+        {
+          source: "NativeApp",
+          includeGPS: false,
+          includeActionCode: true,
+        }
+      );
+
+      const dbResponse = await fetchBaseOfficeContactDetailsApi(requestBody);
+      const candidate =
+        dbResponse?.jData?.baseOfficeContactDetails ??
+        dbResponse?.data?.jData?.baseOfficeContactDetails ??
+        dbResponse?.baseOfficeContactDetails;
+
+      const hasAnyValue =
+        candidate &&
+        (candidate.full_address ||
+          candidate.primary_phone_number ||
+          candidate.primary_email_address ||
+          candidate.driver_relations_phone_number);
+
+      if (!hasAnyValue) {
+        setBaseOfficeError("No base contacts founds");
+        setBaseOfficeContactDetails(null);
+        return;
+      }
+
+      setBaseOfficeContactDetails(candidate as BaseOfficeContactDetails);
+    } catch {
+      setBaseOfficeError("No base contacts founds");
+      setBaseOfficeContactDetails(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!contactBaseSheetOpen) return;
+    fetchBaseOfficeContacts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactBaseSheetOpen]);
 
   const handleLogout = async () => {
     // Mark driver as offline via API
@@ -266,7 +348,6 @@ export default function MoreScreen() {
       return {
         ...item,
         onClick: () => {
-          console.log("[MoreScreen] Delete profile clicked");
           setDeleteProfileSheetOpen(true);
         },
       };
@@ -378,63 +459,100 @@ export default function MoreScreen() {
         initialSnapIndex={0}
         showHeader={true}
         headerTitle="Contact Base"
-        onClose={() => setContactBaseSheetOpen(false)}
+        onClose={() => {
+          setContactBaseSheetOpen(false);
+          setBaseOfficeContactDetails(null);
+          setBaseOfficeError(null);
+        }}
       >
-        <View style={styles.addressRow}>
-          <Image
-            source={require("@/assets/images/contact-base-location-icon.png")}
-            style={styles.addressIcon}
-          />
-          <Typography
-            type="bodyMedium"
-            weight="semibold"
-            style={styles.addressText}
-          >
-            {CONTACT_BASE.address}
-          </Typography>
-        </View>
+        {baseOfficeLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={textColors.grey700} />
+            <Typography type="bodyMedium" style={styles.loadingText}>
+              Loading...
+            </Typography>
+          </View>
+        ) : baseOfficeError || !baseOfficeContactDetails ? (
+          <View style={styles.emptyContainer}>
+            <Typography type="bodyMedium" style={styles.emptyText}>
+              No base contacts founds
+            </Typography>
+          </View>
+        ) : (
+          <>
+            {!!baseOfficeContactDetails.full_address && (
+              <View style={styles.addressRow}>
+                <Image
+                  source={require("@/assets/images/contact-base-location-icon.png")}
+                  style={styles.addressIcon}
+                />
+                <Typography
+                  type="bodyMedium"
+                  weight="semibold"
+                  style={styles.addressText}
+                >
+                  {baseOfficeContactDetails.full_address}
+                </Typography>
+              </View>
+            )}
 
-        <View style={styles.contactList}>
-          {[
-            {
-              label: "Driver Relations",
-              phone: CONTACT_BASE.driverRelationsPhone,
-            },
-            {
-              label: "Business Office",
-              phone: CONTACT_BASE.businessOfficePhone,
-            },
-          ].map((item) => (
-            <TouchableOpacity
-              key={item.label}
-              style={styles.contactRow}
-              activeOpacity={0.7}
-              onPress={() => Linking.openURL(`tel:${item.phone}`)}
+            <View style={styles.contactList}>
+              {[
+                {
+                  label: "Driver Relations",
+                  phone: baseOfficeContactDetails.driver_relations_phone_number,
+                },
+                {
+                  label: "Dispatcher",
+                  phone: baseOfficeContactDetails.primary_phone_number,
+                },
+              ].map((item) => {
+                const disabled = !item.phone;
+                return (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[
+                      styles.contactRow,
+                      disabled ? styles.contactRowDisabled : null,
+                    ]}
+                    activeOpacity={0.7}
+                    disabled={disabled}
+                    onPress={() => Linking.openURL(`tel:${item.phone}`)}
+                  >
+                    <Typography
+                      type="subHeadingLarge"
+                      weight="bold"
+                      style={styles.contactLabel}
+                    >
+                      {item.label}
+                    </Typography>
+                    <Typography
+                      type="bodyMedium"
+                      weight="regular"
+                      style={styles.contactNumber}
+                    >
+                      {item.phone || "-"}
+                    </Typography>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Button
+              variant="primary"
+              rounded="half"
+              disabled={
+                baseOfficeLoading || !baseOfficeContactDetails.primary_phone_number
+              }
+              onPress={() =>
+                Linking.openURL(
+                  `tel:${baseOfficeContactDetails.primary_phone_number}`
+                )
+              }
             >
-              <Typography
-                type="subHeadingLarge"
-                weight="bold"
-                style={styles.contactLabel}
-              >
-                {item.label}
-              </Typography>
-              <Typography
-                type="bodyMedium"
-                weight="regular"
-                style={styles.contactNumber}
-              >
-                {item.phone}
-              </Typography>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Button
-          variant="primary"
-          rounded="half"
-          onPress={() => Linking.openURL(`tel:${CONTACT_BASE.dispatcherPhone}`)}
-        >
-          Call Dispatcher
-        </Button>
+              Call Dispatcher
+            </Button>
+          </>
+        )}
       </CustomBottomSheet>
     </SafeAreaView>
   );
@@ -512,5 +630,27 @@ const styles = StyleSheet.create({
   },
   contactList: {
     marginVertical: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+  },
+  loadingText: {
+    color: textColors.grey700,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+  },
+  emptyText: {
+    color: textColors.grey700,
+  },
+  contactRowDisabled: {
+    opacity: 0.5,
   },
 });

@@ -8,8 +8,9 @@ import {
   MapRegion,
 } from "@/utils/helpers";
 import { useEffect, useRef, useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, Platform, StyleSheet, Text, View } from "react-native";
 import MapView, {
+  Callout,
   Circle,
   Marker,
   PROVIDER_GOOGLE,
@@ -48,24 +49,110 @@ interface HeatMapProps {
 
 /**
  * Custom Overlay component for ETA labels
+ * iOS: Shows ETA label directly on the map
+ * Android: Shows ETA in a Callout when user taps on the marker or circle
  */
 interface ETAOverlayProps {
-  coordinate: LocationCoordinates;
+  lat: number;
+  lng: number;
   eta: string;
+  demandLevel?: "high" | "medium" | "low";
+  isSelected?: boolean;
+  onMarkerPress?: () => void;
 }
 
-const ETAOverlay = ({ coordinate, eta }: ETAOverlayProps) => {
+const isAndroid = Platform.OS === "android";
+
+/**
+ * iOS ETA Overlay - Shows label directly
+ */
+const ETAOverlayIOS = ({ lat, lng, eta }: ETAOverlayProps) => {
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+
+  useEffect(() => {
+    // Disable tracking after initial render to prevent blinking
+    const timer = setTimeout(() => setTracksViewChanges(false), 300);
+    return () => clearTimeout(timer);
+  }, [eta, lat, lng]);
+
   return (
     <Marker
-      coordinate={coordinate}
+      coordinate={{ latitude: lat, longitude: lng }}
       anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={false}
+      tracksViewChanges={tracksViewChanges}
+      zIndex={9999}
     >
       <View style={styles.etaLabel}>
         <Text style={styles.etaText}>ETA: {eta}</Text>
       </View>
     </Marker>
   );
+};
+
+/**
+ * Android ETA Overlay - Shows ETA in Callout on tap
+ */
+const ETAOverlayAndroid = ({
+  lat,
+  lng,
+  eta,
+  demandLevel,
+  isSelected,
+  onMarkerPress,
+}: ETAOverlayProps) => {
+  // Get demand color for the indicator dot
+  const getDemandColor = () => {
+    switch (demandLevel) {
+      case "high":
+        return "#DD2626";
+      case "medium":
+        return "#DD9726";
+      case "low":
+        return "#38DD38";
+      default:
+        return "#DD9726";
+    }
+  };
+
+  return (
+    <Marker
+      coordinate={{ latitude: lat, longitude: lng }}
+      anchor={{ x: 0.5, y: 0.5 }}
+      tracksViewChanges={false}
+      zIndex={9999}
+      tappable={true}
+      onPress={onMarkerPress}
+    >
+      {/* Larger tappable area with visible dot */}
+      <View style={styles.androidMarkerContainer}>
+        <View
+          style={[
+            styles.androidMarkerDot,
+            { backgroundColor: getDemandColor() },
+            isSelected && styles.androidMarkerDotSelected,
+          ]}
+        />
+      </View>
+      {/* Callout shown on tap */}
+      <Callout tooltip style={styles.calloutContainer}>
+        <View style={styles.calloutBubble}>
+          <Text style={styles.calloutText}>ETA: {eta}</Text>
+        </View>
+      </Callout>
+    </Marker>
+  );
+};
+
+/**
+ * Platform-specific ETA Overlay
+ */
+const ETAOverlay = (props: ETAOverlayProps) => {
+  if (isAndroid) {
+    return <ETAOverlayAndroid {...props} />;
+  }
+  // iOS doesn't need isSelected or onMarkerPress
+  const { isSelected, onMarkerPress, ...iosProps } = props;
+  return <ETAOverlayIOS {...iosProps} />;
 };
 
 /**
@@ -162,6 +249,11 @@ export default function HeatMap({
   // Loading state to show spinner while map initializes
   const [isLoading, setIsLoading] = useState(true);
 
+  // Track which marker should show its callout (Android only)
+  const [selectedMarkerIndex, setSelectedMarkerIndex] = useState<number | null>(
+    null
+  );
+
   // Pickup icon for user location marker
   const pickupIcon = Image.resolveAssetSource(
     require("@/assets/images/pickup-icon.png")
@@ -211,11 +303,61 @@ export default function HeatMap({
   };
 
   /**
+   * Calculate distance between two coordinates in meters (Haversine formula)
+   */
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  /**
    * Handles map press events by processing the location selection.
+   * On Android, also checks if tap is within a circle to show ETA.
    */
   const handleMapPress = (event: any) => {
     const { coordinate } = event.nativeEvent;
     log("Map pressed at:", coordinate);
+
+    // On Android, check if tap is within any circle's radius
+    if (isAndroid && showETALabels) {
+      for (let i = 0; i < heatmapData.length; i++) {
+        const point = heatmapData[i];
+        if (!point.eta) continue;
+
+        const w = typeof point.weight === "number" ? point.weight : 0.5;
+        const radiusScale = 0.8 + w * 0.6;
+        const circleRadius = radius * radiusScale;
+
+        const distance = calculateDistance(
+          coordinate.latitude,
+          coordinate.longitude,
+          point.lat,
+          point.lng
+        );
+
+        // If tap is within circle radius, show the callout
+        if (distance <= circleRadius) {
+          setSelectedMarkerIndex(i);
+          // Reset after a delay
+          setTimeout(() => setSelectedMarkerIndex(null), 5000);
+          return; // Don't trigger location select for circle taps
+        }
+      }
+    }
 
     if (onLocationSelect) {
       // For now, use coordinates as address
@@ -233,30 +375,16 @@ export default function HeatMap({
   /**
    * Get color for demand level
    */
-  const getDemandColor = (
-    demandLevel: "high" | "medium" | "low" | undefined
-  ) => {
+  const getDemandRgb = (demandLevel: "high" | "medium" | "low" | undefined) => {
     switch (demandLevel) {
       case "high":
-        return {
-          fillColor: "rgba(221, 38, 38, 0.4)", // red-500 with opacity
-          strokeColor: "rgba(221, 38, 38, 0.8)",
-        };
+        return { r: 221, g: 38, b: 38 };
       case "medium":
-        return {
-          fillColor: "rgba(221, 151, 38, 0.4)", // yellow-500 with opacity
-          strokeColor: "rgba(221, 151, 38, 0.8)",
-        };
+        return { r: 221, g: 151, b: 38 };
       case "low":
-        return {
-          fillColor: "rgba(56, 221, 56, 0.4)", // green-500 with opacity
-          strokeColor: "rgba(56, 221, 56, 0.8)",
-        };
+        return { r: 56, g: 221, b: 56 };
       default:
-        return {
-          fillColor: "rgba(221, 151, 38, 0.4)", // default to medium
-          strokeColor: "rgba(221, 151, 38, 0.8)",
-        };
+        return { r: 221, g: 151, b: 38 };
     }
   };
 
@@ -279,14 +407,19 @@ export default function HeatMap({
       >
         {/* Render demand circles */}
         {heatmapData.map((point, index) => {
-          const colors = getDemandColor(point.demandLevel);
+          const { r, g, b } = getDemandRgb(point.demandLevel);
+          // Use weight (already normalized by screen logic) to drive intensity/size.
+          const w = typeof point.weight === "number" ? point.weight : 0.5;
+          const fillAlpha = Math.max(0.15, Math.min(0.8, opacity * w));
+          const strokeAlpha = Math.max(0.35, Math.min(0.95, fillAlpha + 0.35));
+          const radiusScale = 0.8 + w * 0.6;
           return (
             <Circle
               key={`circle-${index}`}
               center={{ latitude: point.lat, longitude: point.lng }}
-              radius={radius}
-              fillColor={colors.fillColor}
-              strokeColor={colors.strokeColor}
+              radius={radius * radiusScale}
+              fillColor={`rgba(${r}, ${g}, ${b}, ${fillAlpha})`}
+              strokeColor={`rgba(${r}, ${g}, ${b}, ${strokeAlpha})`}
               strokeWidth={2}
             />
           );
@@ -298,9 +431,18 @@ export default function HeatMap({
             if (!point.eta) return null;
             return (
               <ETAOverlay
-                key={`eta-${index}`}
-                coordinate={{ latitude: point.lat, longitude: point.lng }}
+                key={`eta-${point.lat}-${point.lng}-${index}`}
+                lat={point.lat}
+                lng={point.lng}
                 eta={point.eta}
+                demandLevel={point.demandLevel}
+                isSelected={isAndroid && selectedMarkerIndex === index}
+                onMarkerPress={() => {
+                  if (isAndroid) {
+                    setSelectedMarkerIndex(index);
+                    setTimeout(() => setSelectedMarkerIndex(null), 5000);
+                  }
+                }}
               />
             );
           })}
@@ -318,6 +460,29 @@ export default function HeatMap({
 
       {/* Legend overlay */}
       <Legend />
+
+      {/* Custom ETA overlay for Android when circle is tapped */}
+      {isAndroid &&
+        showETALabels &&
+        selectedMarkerIndex !== null &&
+        heatmapData[selectedMarkerIndex]?.eta && (
+          <View style={styles.customEtaOverlay}>
+            <View style={styles.customEtaBubble}>
+              <Text style={styles.customEtaText}>
+                ETA: {heatmapData[selectedMarkerIndex].eta}
+              </Text>
+            </View>
+          </View>
+        )}
+
+      {/* Android footer hint - tell users to tap on circles to view ETA */}
+      {isAndroid && showETALabels && heatmapData.some((p) => p.eta) && (
+        <View style={styles.androidFooter}>
+          <Text style={styles.androidFooterText}>
+            Tap on a circle to view ETA
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -332,8 +497,9 @@ const styles = StyleSheet.create({
   etaLabel: {
     backgroundColor: "rgba(0, 0, 0, 0.7)",
     borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: "center",
   },
   etaText: {
     color: "white",
@@ -378,5 +544,86 @@ const styles = StyleSheet.create({
   },
   legendColorLow: {
     backgroundColor: "#38DD38",
+  },
+  // Android-specific styles
+  androidMarkerContainer: {
+    width: 400,
+    height: 400,
+    justifyContent: "center",
+    alignItems: "center",
+    // Transparent hit area for easier tapping
+    backgroundColor: "white",
+  },
+  androidMarkerDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 3,
+    borderColor: "white",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  androidMarkerDotSelected: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 4,
+    elevation: 8,
+  },
+  calloutContainer: {
+    backgroundColor: "transparent",
+  },
+  calloutBubble: {
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 80,
+  },
+  calloutText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  androidFooter: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  androidFooterText: {
+    color: "white",
+    fontSize: 13,
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  customEtaOverlay: {
+    position: "absolute",
+    top: "47%",
+    left: "57%",
+    transform: [{ translateX: -80 }],
+    zIndex: 10000,
+  },
+  customEtaBubble: {
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  customEtaText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });

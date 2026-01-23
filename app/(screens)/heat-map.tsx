@@ -4,10 +4,14 @@ import MapLoading from "@/components/MapLoading";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { HEATMAP_ENDPOINTS } from "@/constants/endpoints";
-import { HEATMAP_REFRESH_INTERVAL_MS, API_CLIENT_TYPES } from "@/constants/global";
+import {
+  API_CLIENT_TYPES,
+  HEATMAP_DEMAND_WEIGHTS,
+  HEATMAP_REFRESH_INTERVAL_MS,
+} from "@/constants/global";
 import { usePost } from "@/hooks/usePost";
-import { buildRequest } from "@/utils/requestBuilder";
 import { calculateETA, getCurrentLocation, logger } from "@/utils/helpers";
+import { buildRequest } from "@/utils/requestBuilder";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
@@ -23,14 +27,13 @@ export interface HeatmapDataPoint {
 
 // Define the API response structure from DB action
 interface HeatmapDbResponse {
-  success?: boolean;
   data?: {
     jHeader?: {
       responseCode?: string | number;
       message?: string;
     };
     jData?: {
-      contents?: any; // Heatmap coordinates data from database
+      heatmapCoordinates?: HeatmapCoordinate[];
     };
   };
   jHeader?: {
@@ -38,20 +41,15 @@ interface HeatmapDbResponse {
     message?: string;
   };
   jData?: {
-    contents?: any; // Heatmap coordinates data from database
+    heatmapCoordinates?: HeatmapCoordinate[];
   };
   message?: string;
 }
 
-// Define expected structure from database contents
 interface HeatmapCoordinate {
-  latitude?: number | string;
-  longitude?: number | string;
-  lat?: number | string;
-  lng?: number | string;
-  weight?: number | string;
+  lat?: number;
+  lng?: number;
   demandLevel?: "high" | "medium" | "low" | string;
-  demand_level?: "high" | "medium" | "low" | string;
   [key: string]: any; // Allow other fields
 }
 
@@ -74,134 +72,6 @@ export default function HeatMapScreen() {
     API_CLIENT_TYPES.SETTINGS
   );
 
-  // Dummy heatmap data for now - will be replaced with real API call
-  const dummyHeatmapData: HeatmapDataPoint[] = [
-    {
-      // JFK Airport - High demand
-      lat: 40.6413,
-      lng: -73.7781,
-      weight: 0.9,
-      demandLevel: "high",
-    },
-    {
-      // LaGuardia Airport - Medium demand
-      lat: 40.7769,
-      lng: -73.8740,
-      weight: 0.7,
-      demandLevel: "medium",
-    },
-    {
-      // Manhattan - Low demand
-      lat: 40.7831,
-      lng: -73.9712,
-      weight: 0.3,
-      demandLevel: "low",
-    },
-  ];
-
-  /**
-   * Transform database response to heatmap data points
-   */
-  const transformDbResponseToHeatmapData = (
-    contents: any,
-    currentUserLocation: { latitude: number; longitude: number } | null
-  ): HeatmapDataPoint[] => {
-    if (!contents) {
-      return [];
-    }
-
-    // Handle different possible response structures
-    let coordinates: HeatmapCoordinate[] = [];
-
-    // If contents is an array
-    if (Array.isArray(contents)) {
-      coordinates = contents;
-    }
-    // If contents is an object with a data/coordinates/points array
-    else if (contents.data && Array.isArray(contents.data)) {
-      coordinates = contents.data;
-    } else if (contents.coordinates && Array.isArray(contents.coordinates)) {
-      coordinates = contents.coordinates;
-    } else if (contents.points && Array.isArray(contents.points)) {
-      coordinates = contents.points;
-    }
-    // If contents is an object with coordinate properties
-    else if (typeof contents === "object") {
-      // Try to extract coordinates from object structure
-      const keys = Object.keys(contents);
-      if (keys.length > 0) {
-        // Check if first value is an array
-        const firstValue = contents[keys[0]];
-        if (Array.isArray(firstValue)) {
-          coordinates = firstValue;
-        } else {
-          // Single coordinate object
-          coordinates = [contents];
-        }
-      }
-    }
-
-    // Transform coordinates to HeatmapDataPoint format
-    const heatmapPoints: HeatmapDataPoint[] = coordinates
-      .map((coord: HeatmapCoordinate): HeatmapDataPoint | null => {
-        // Extract latitude and longitude (handle different field names)
-        const lat =
-          coord.lat !== undefined
-            ? Number(coord.lat)
-            : coord.latitude !== undefined
-            ? Number(coord.latitude)
-            : null;
-        const lng =
-          coord.lng !== undefined
-            ? Number(coord.lng)
-            : coord.longitude !== undefined
-            ? Number(coord.longitude)
-            : null;
-
-        // Skip if coordinates are invalid
-        if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
-          return null;
-        }
-
-        // Extract weight (demand intensity)
-        const weight =
-          coord.weight !== undefined
-            ? Number(coord.weight)
-            : coord.demandLevel === "high" || coord.demand_level === "high"
-            ? 0.9
-            : coord.demandLevel === "medium" || coord.demand_level === "medium"
-            ? 0.7
-            : coord.demandLevel === "low" || coord.demand_level === "low"
-            ? 0.3
-            : 0.5; // Default weight
-
-        // Extract demand level
-        const demandLevel =
-          coord.demandLevel || coord.demand_level || "medium";
-
-        // Calculate ETA if user location is available
-        let eta: string | undefined;
-        if (currentUserLocation) {
-          eta = calculateETA(
-            currentUserLocation,
-            { lat, lng },
-            demandLevel as "high" | "medium" | "low"
-          );
-        }
-
-        return {
-          lat,
-          lng,
-          weight: Math.max(0, Math.min(1, weight)), // Clamp between 0 and 1
-          eta,
-          demandLevel: demandLevel as "high" | "medium" | "low",
-        };
-      })
-      .filter((point): point is HeatmapDataPoint => point !== null);
-
-    return heatmapPoints;
-  };
-
   // Fetch heatmap data from API
   const fetchHeatmapData = async () => {
     try {
@@ -212,14 +82,25 @@ export default function HeatMapScreen() {
       let currentUserLocation = userLocation;
       if (!currentUserLocation) {
         try {
-          const location = await getCurrentLocation();
+          // Always provide a fallback so ETA labels can still render
+          // (matching HeatMap component behavior)
+          const fallbackRegion = {
+            latitude: 40.7128,
+            longitude: -74.006,
+            latitudeDelta: 0.3,
+            longitudeDelta: 0.3,
+          };
+          const location = await getCurrentLocation(fallbackRegion);
           currentUserLocation = {
             latitude: location.latitude,
             longitude: location.longitude,
           };
           setUserLocation(currentUserLocation);
         } catch (locationError) {
-          log("Could not get user location:", locationError);
+          console.log("Could not get user location:", locationError);
+          // Fallback to default coordinates for ETA calculation
+          currentUserLocation = { latitude: 40.7128, longitude: -74.006 };
+          setUserLocation(currentUserLocation);
         }
       }
 
@@ -243,77 +124,88 @@ export default function HeatMapScreen() {
       // Call the API
       const response = await fetchHeatmapApi(requestBody);
 
-      // The usePost hook extracts response.data.data or response.data
-      // So response here is the DB response object: { jHeader, jData: { contents } }
-      // OR it could be wrapped: { success: true, data: { jHeader, jData: { contents } } }
-      
-      // Handle both response structures
-      const dbResponse = (response as any)?.data || response;
-      const responseCode =
-        dbResponse?.jHeader?.responseCode ?? response?.jHeader?.responseCode;
-      const isSuccess =
-        responseCode === "0" || responseCode === 0 || responseCode === undefined;
+      // `usePost` returns `response.data.data ?? response.data`, so `response` is usually the DB response:
+      // { jHeader, jData: { heatmapCoordinates } }
+      const dbResponse = (response as any)?.jData ? (response as any) : (response as any)?.data;
 
+      const responseCode = dbResponse?.jHeader?.responseCode;
+      const isSuccess = responseCode === "0" || responseCode === 0 || responseCode === undefined;
       if (!isSuccess) {
-        const errorMessage =
-          dbResponse?.jHeader?.message ||
-          response?.jHeader?.message ||
-          (response as any)?.message ||
-          "Failed to load heatmap data";
-        throw new Error(errorMessage);
+        throw new Error(dbResponse?.jHeader?.message || "Failed to load heatmap data");
       }
 
-      // Extract contents from response
-      const contents =
-        dbResponse?.jData?.contents || response?.jData?.contents;
+      const coords: HeatmapCoordinate[] =
+        dbResponse?.jData?.heatmapCoordinates ?? [];
 
-      // Transform database response to heatmap data points
-      let processedData = transformDbResponseToHeatmapData(
-        contents,
-        currentUserLocation
-      );
+      if (!Array.isArray(coords) || coords.length === 0) {
+        setHeatmapData([]);
+        setError("NO HEATMAP data is available right now.");
+        return;
+      }
 
-      // If no data from API, fallback to dummy data
-      if (processedData.length === 0) {
-        log("[HeatMapScreen] No data from API, using dummy data");
-        processedData = dummyHeatmapData;
-        if (currentUserLocation) {
-          processedData = processedData.map((point) => ({
-            ...point,
-            eta: calculateETA(
-              currentUserLocation!,
-              { lat: point.lat, lng: point.lng },
-              point.demandLevel
-            ),
-          }));
+      // De-duplicate points by lat/lng (DB may return multiple entries at same coords with different demandLevel),
+      // and keep the highest demand for that coordinate to avoid color/weight overlap.
+      const demandRank = (d: "high" | "medium" | "low") =>
+        d === "high" ? 3 : d === "medium" ? 2 : 1;
+
+      const bestByCoord = new Map<
+        string,
+        { lat: number; lng: number; demandLevel: "high" | "medium" | "low" }
+      >();
+
+      for (const coord of coords) {
+        const lat = coord?.lat;
+        const lng = coord?.lng;
+        if (typeof lat !== "number" || typeof lng !== "number") continue;
+
+        const levelRaw = (coord?.demandLevel ?? "medium")
+          .toString()
+          .toUpperCase();
+        const demandLevel: "high" | "medium" | "low" =
+          levelRaw === "HIGH"
+            ? "high"
+            : levelRaw === "MEDIUM"
+              ? "medium"
+              : levelRaw === "LOW"
+                ? "low"
+                : "medium";
+
+        const key = `${lat.toFixed(5)}|${lng.toFixed(5)}`;
+        const existing = bestByCoord.get(key);
+        if (!existing || demandRank(demandLevel) > demandRank(existing.demandLevel)) {
+          bestByCoord.set(key, { lat, lng, demandLevel });
         }
       }
 
-      setHeatmapData(processedData);
-      log(
-        "[HeatMapScreen] Heatmap data loaded:",
-        processedData.length,
-        "points"
-      );
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      setError(errorMessage);
-      log("[HeatMapScreen] Error fetching heatmap data:", errorMessage);
+      const processedData: HeatmapDataPoint[] = Array.from(bestByCoord.values()).map(
+        ({ lat, lng, demandLevel }) => {
+          const weight: number =
+            demandLevel === "high"
+              ? HEATMAP_DEMAND_WEIGHTS.HIGH
+              : demandLevel === "medium"
+                ? HEATMAP_DEMAND_WEIGHTS.MEDIUM
+                : demandLevel === "low"
+                  ? HEATMAP_DEMAND_WEIGHTS.LOW
+                  : HEATMAP_DEMAND_WEIGHTS.DEFAULT;
 
-      // Fallback to dummy data in case of error
-      let fallbackData = dummyHeatmapData;
-      if (userLocation) {
-        fallbackData = fallbackData.map((point) => ({
-          ...point,
-          eta: calculateETA(
-            userLocation,
-            { lat: point.lat, lng: point.lng },
-            point.demandLevel
-          ),
-        }));
+          const eta = calculateETA(currentUserLocation!, { lat, lng }, demandLevel);
+          return { lat, lng, weight, eta, demandLevel };
+        }
+      );
+
+      if (processedData.length === 0) {
+        setHeatmapData([]);
+        setError("NO HEATMAP data is available right now.");
+        return;
       }
-      setHeatmapData(fallbackData);
+
+      setHeatmapData(processedData);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      log("[HeatMapScreen] Error fetching heatmap data:", errorMessage);
+      setHeatmapData([]);
+      setError("NO HEATMAP data is available right now.");
     } finally {
       setIsLoading(false);
     }
@@ -368,22 +260,6 @@ export default function HeatMapScreen() {
     );
   }
 
-  if (error && heatmapData.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header title="Heat Map" onBackPress={handleGoBack} />
-        <View style={styles.errorContainer}>
-          <Typography type="bodyLarge" style={styles.errorText}>
-            {error}
-          </Typography>
-          <Typography type="bodyMedium" style={styles.errorSubtext}>
-            Please check your connection and try again.
-          </Typography>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <Header title="Heat Map" onBackPress={handleGoBack} />
@@ -399,14 +275,14 @@ export default function HeatMapScreen() {
             showETALabels: true,
           }}
         />
+        {heatmapData.length === 0 && (
+          <View style={styles.emptyOverlay}>
+            <Typography type="bodyMedium" style={styles.emptyOverlayText}>
+              No data is available right now.
+            </Typography>
+          </View>
+        )}
       </View>
-      {error && (
-        <View style={styles.errorBanner}>
-          <Typography type="bodySmall" style={styles.bannerText}>
-            ⚠️ Using cached data - connection issues detected
-          </Typography>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -419,31 +295,20 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    backgroundColor: textColors.grey100,
+  emptyOverlay: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    top: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderWidth: 1,
+    borderColor: textColors.grey200,
   },
-  errorText: {
-    color: textColors.red600,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  errorSubtext: {
-    color: textColors.grey600,
-    textAlign: "center",
-  },
-  errorBanner: {
-    backgroundColor: textColors.yellow100,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderTopWidth: 1,
-    borderTopColor: textColors.yellow200,
-  },
-  bannerText: {
-    color: textColors.yellow800,
+  emptyOverlayText: {
+    color: textColors.grey800,
     textAlign: "center",
   },
 });

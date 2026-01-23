@@ -8,8 +8,9 @@ import JobDetails from "@/components/JobDetails";
 import RideAction from "@/components/RideAction";
 import RideLocations from "@/components/RideLocations";
 import RideMap from "@/components/RideMap";
+import { activeTripApiClient } from "@/config/apiConfig";
 import { textColors } from "@/constants/colors";
-import { openPhoneDialer, openWhatsApp } from "@/utils/helpers";
+import { openPhoneDialer, openWhatsApp, transformTripDetailsFromDb, transformTripDetailsToJobOffer } from "@/utils/helpers";
 
 import AddTollBottomSheet from "@/components/AddTollBottomSheet";
 import { useToast } from "@/components/Toast";
@@ -89,7 +90,7 @@ export default function ActiveRideScreen() {
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
   const { clearNonDemoBroadcastOffers } = useBroadcastJobOffers();
-  const { openChat, customerInfo } = useChat();
+  const { openChat, customerInfo, loadCustomerInfo } = useChat();
   const { showToast } = useToast();
 
   // Active trip socket connection
@@ -199,6 +200,70 @@ export default function ActiveRideScreen() {
     API_CLIENT_TYPES.ACTIVE_TRIP
   );
 
+  // Fetch driver ETA
+  const [driverETA, setDriverETA] = useState<{ eta: number; note?: string } | null>(null);
+  const { execute: fetchETA, loading: isFetchingETA } = useFetch(
+    ACTIVE_TRIP_ROUTES.GET_ETA,
+    API_CLIENT_TYPES.ACTIVE_TRIP
+  );
+
+  // Function to fetch driver ETA
+  const loadDriverETA = useCallback(async () => {
+    if (!driverId || !jobOfferData?.id) {
+      console.log('⚠️ [Get ETA] Missing required data:', { driverId, jobOfferId: jobOfferData?.id });
+      return;
+    }
+
+    try {
+      // Use tripNumber if available, otherwise use id
+      const tripIdToSend = jobOfferData.tripNumber || jobOfferData.tripId || jobOfferData.id;
+
+      const response = await fetchETA({
+        tripId: tripIdToSend,
+        driverId,
+      });
+
+      // Check DB response format: jHeader.responseCode === 0 means success
+      const responseCode = response?.jHeader?.responseCode;
+      const isSuccess =
+        responseCode === 0 ||
+        responseCode === "0" ||
+        responseCode === undefined;
+
+      if (isSuccess && response?.jData) {
+        // Extract ETA and note from jData
+        // Response structure: { driver_eta_in_minutes: number, driver_eta_notes: string }
+        console.log('📥 [Get ETA] Response jData:', response.jData);
+
+        const eta = response.jData.driver_eta_in_minutes;
+        const note = response.jData.driver_eta_notes;
+
+        if (eta !== undefined && eta !== null) {
+          const etaNumber = typeof eta === 'string' ? parseInt(eta, 10) : Number(eta);
+          const finalNote = note && note.trim() !== '' ? note : undefined;
+
+          setDriverETA({
+            eta: etaNumber,
+            note: finalNote,
+          });
+        } else {
+          // If no ETA found, set to null
+          console.log('⚠️ [Get ETA] No ETA found in response');
+          setDriverETA(null);
+        }
+      } else {
+        console.log('⚠️ [Get ETA] Response not successful or missing jData:', {
+          isSuccess,
+          hasJData: !!response?.jData,
+          responseCode: response?.jHeader?.responseCode,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching ETA:", error);
+      // Don't set error state, just log it
+    }
+  }, [driverId, jobOfferData?.id, fetchETA]);
+
   // Load ride state on component mount
   useEffect(() => {
     const loadRideState = async () => {
@@ -300,10 +365,122 @@ export default function ActiveRideScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.activeTripData, driverId]);
 
+  // Load customer info when screen renders
+  useEffect(() => {
+    if (driverId) {
+      loadCustomerInfo(driverId);
+    }
+  }, [driverId, loadCustomerInfo]);
+
+  // Fetch ETA when job offer data is available
+  useEffect(() => {
+    if (jobOfferData?.id && driverId) {
+      loadDriverETA();
+    }
+  }, [jobOfferData?.id, driverId, loadDriverETA]);
+
+  // Fetch trip details when switching to details view
+  const [tripDetailsFetched, setTripDetailsFetched] = useState(false);
+
+  useEffect(() => {
+    const loadTripDetailsForDetailsView = async () => {
+      // Only fetch when toggle is switched to DETAILS view
+      if (toggleValue !== RIDE_TOGGLE_LABELS.DETAILS) {
+        // Reset fetch flag when switching away from details
+        if (tripDetailsFetched) {
+          setTripDetailsFetched(false);
+        }
+        return;
+      }
+
+      // If already fetched for this session, skip
+      if (tripDetailsFetched) {
+        console.log("📥 [ActiveRide] Trip details already fetched in this session, skipping");
+        return;
+      }
+
+      // If jobOfferData doesn't exist yet, wait
+      if (!jobOfferData) {
+        console.log("📥 [ActiveRide] Job offer data not available yet, waiting...");
+        return;
+      }
+
+      // If jobOfferData already has complete details, skip fetching
+      if (jobOfferData?.fareDetails && jobOfferData?.customerDetails && Array.isArray(jobOfferData.fareDetails) && jobOfferData.fareDetails.length > 0) {
+        console.log("📥 [ActiveRide] Trip details already available in jobOfferData, skipping fetch");
+        setTripDetailsFetched(true);
+        return;
+      }
+
+      try {
+        // Get tripNumber from jobOfferData or tripId
+        const { tripId: storedTripId } = await getTripId();
+        const tripNumber =
+          jobOfferData?.tripNumber ||
+          jobOfferData?.trip_number ||
+          jobOfferData?.id ||
+          storedTripId;
+
+        if (!tripNumber) {
+          console.warn("📥 [ActiveRide] No trip number available for fetching details");
+          return;
+        }
+
+        // Skip if tripNumber looks like a UUID (contains dashes and is long)
+        if (tripNumber.includes("-") && tripNumber.length > 20) {
+          console.warn("📥 [ActiveRide] Trip number appears to be UUID, skipping fetch");
+          return;
+        }
+
+        const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${tripNumber}`;
+        const response = await activeTripApiClient.get(endpoint);
+        const responseData = response.data as any;
+
+        const responseCode = responseData?.jHeader?.responseCode;
+        const isSuccess = responseCode === 0 || responseCode === "0" || responseCode === undefined;
+
+        if (isSuccess && responseData?.data) {
+          const transformed = transformTripDetailsFromDb(responseData.data);
+
+          if (transformed) {
+            const fetchedJobOffer = transformTripDetailsToJobOffer(transformed);
+
+            // Merge fetched data with existing jobOfferData, preserving existing fields
+            const mergedJobOffer = {
+              ...jobOfferData,
+              ...fetchedJobOffer,
+              // Preserve critical fields that might be different
+              id: jobOfferData?.id || fetchedJobOffer.id,
+              pickupAddress: jobOfferData?.pickupAddress || fetchedJobOffer.pickupAddress,
+              dropoffAddress: jobOfferData?.dropoffAddress || fetchedJobOffer.dropoffAddress,
+              // Use fetched details if available, otherwise keep existing
+              fareDetails: fetchedJobOffer.fareDetails || jobOfferData?.fareDetails,
+              customerDetails: fetchedJobOffer.customerDetails || jobOfferData?.customerDetails,
+              driverInstructions: fetchedJobOffer.driverInstructions || jobOfferData?.driverInstructions,
+            };
+
+            setJobOfferData(mergedJobOffer);
+            setTripDetailsFetched(true);
+            console.log("✅ [ActiveRide] Trip details loaded and merged successfully!");
+          } else {
+            console.error("❌ [ActiveRide] Failed to transform trip data");
+          }
+        } else {
+          const errorMsg = responseData?.jHeader?.message || "Failed to fetch trip details";
+          console.error("❌ [ActiveRide] API Error:", errorMsg);
+          console.error("❌ [ActiveRide] Response Code:", responseCode);
+        }
+      } catch (err: any) {
+        console.error("❌ [ActiveRide] Error Response Status:", err.response.status);
+      }
+    };
+
+    loadTripDetailsForDetailsView();
+  }, [toggleValue, jobOfferData, getTripId, tripDetailsFetched]);
+
   // Handle API data when fetched
   useEffect(() => {
     if (apiData && !apiLoading && !params.activeTripData) {
-      console.log("Using data from API:", apiData);
       const transformedData = transformServerDataToJobOffer(apiData);
       setJobOfferData(transformedData);
       setIsLoadingData(false);
@@ -575,13 +752,34 @@ export default function ActiveRideScreen() {
     setCancelRideSheetOpen(true);
   };
 
-  const handleUpdateETA = () => {
+  const handleUpdateETA = async () => {
+    // Fetch current ETA before opening the sheet
+    await loadDriverETA();
     setUpdateETASheetOpen(true);
   };
 
   const handleAddToll = () => {
     setAddTollSheetOpen(true);
   };
+
+  const handleCircling = async () => {
+    if (isActionLoading) return;
+    const success = await handleDriverAction(DRIVER_ACTIONS.CIRCLING);
+    if (success) {
+      showToast(
+        "The customer has been notified that you are circling.",
+        "success",
+        "top"
+      );
+    } else {
+      showToast(
+        "Failed to set circling status. Please try again.",
+        "error",
+        "top"
+      );
+    }
+  };
+
   const handleDetails = () => {
     setToggleValue(RIDE_TOGGLE_LABELS.DETAILS);
   };
@@ -721,10 +919,16 @@ export default function ActiveRideScreen() {
 
       // Redirect to feedback screen with trip data
       console.log("Redirecting to feedback screen...");
+      // Extract trip number from tripId if it's a trip number format (not UUID)
+      const tripNumberForFeedback = tripIdForFeedback && !tripIdForFeedback.includes("-")
+        ? tripIdForFeedback
+        : jobOfferData?.tripNumber || "";
+
       router.replace({
         pathname: "/(screens)/feedback",
         params: {
           tripId: tripIdForFeedback || "",
+          tripNumber: tripNumberForFeedback,
           customerId: customerIdForFeedback || "",
         },
       });
@@ -757,6 +961,8 @@ export default function ActiveRideScreen() {
 
   const closeUpdateETASheet = useCallback(() => {
     setUpdateETASheetOpen(false);
+    // Don't reset ETA data - keep it for the map display
+    // ETA will be persisted and shown on the map
   }, []);
 
   const closeAddTollSheet = useCallback(() => {
@@ -791,16 +997,9 @@ export default function ActiveRideScreen() {
     },
     {
       icon: "circling.png",
-      onPress: () => {
-        console.log("Circling");
-        showToast(
-          "The customer has been notified that you are circling.",
-          "success",
-          "top"
-        );
-      },
+      onPress: handleCircling,
       key: "circling",
-      disabled: isCompletingRide,
+      disabled: isActionLoading || isCompletingRide,
     },
     {
       icon: "cancel-ride.png",
@@ -829,6 +1028,7 @@ export default function ActiveRideScreen() {
   ];
 
   // Get customer phone number from ChatContext (same as chat modal)
+  // ChatContext provides customerInfo with structure: { name: string, phone: string }
   const customerPhone = customerInfo?.phone || "";
 
   // Contact action functions
@@ -962,7 +1162,7 @@ export default function ActiveRideScreen() {
       if (response?.success === false) {
         throw new Error(response?.error || response?.message || "Failed to cancel trip");
       }
-      
+
       // If we get here, either success is true or the hook extracted nested data (meaning success)
 
       console.log("✅ Trip cancelled successfully in database");
@@ -1035,23 +1235,40 @@ export default function ActiveRideScreen() {
           note: note || undefined, // Only include note if provided
         });
 
-        if (response?.success) {
+        // Check DB response format: jHeader.responseCode === 0 means success
+        const responseCode = response?.jHeader?.responseCode;
+        const isSuccess =
+          responseCode === 0 ||
+          responseCode === "0" ||
+          responseCode === undefined;
+
+        if (isSuccess) {
           showToast("ETA updated successfully", "success", "top");
+          // Re-fetch ETA from DB to get the updated values (including note)
+          try {
+            await loadDriverETA();
+            // Small delay to ensure state update propagates before closing sheet
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (error) {
+            console.error("Error re-fetching ETA after update:", error);
+            // Still close the sheet even if re-fetch fails
+            // Update local state optimistically
+            setDriverETA({ eta, note: note || undefined });
+          }
           closeUpdateETASheet();
         } else {
           console.error("Failed to update ETA:", response);
-          showToast(
-            response?.error || "Failed to update ETA. Please try again.",
-            "error",
-            "top"
-          );
+          const errorMessage =
+            response?.jHeader?.message ||
+            "Failed to update ETA. Please try again.";
+          showToast(errorMessage, "error", "top");
         }
       } catch (error) {
         console.error("Error updating ETA:", error);
         showToast("An error occurred while updating ETA. Please try again.", "error", "top");
       }
     },
-    [driverId, jobOfferData?.id, updateETA, showToast, closeUpdateETASheet]
+    [driverId, jobOfferData?.id, updateETA, showToast, closeUpdateETASheet, loadDriverETA]
   );
 
   // Add Toll handler
@@ -1177,7 +1394,7 @@ export default function ActiveRideScreen() {
       <Header
         title={
           RIDE_HEADER_TITLES[
-            currentRideState as keyof typeof RIDE_HEADER_TITLES
+          currentRideState as keyof typeof RIDE_HEADER_TITLES
           ] || "En Route"
         }
         rightAccessory={
@@ -1283,11 +1500,17 @@ export default function ActiveRideScreen() {
           dropoffAddress={jobOfferData?.dropoffAddress || "Loading address..."}
           pickupCoordinates={mapCoordinates.pickupCoords}
           dropoffCoordinates={mapCoordinates.dropoffCoords}
-          eta={isDriverReachedOnPickup ? "" : "10 mins"}
+          eta={
+            isDriverReachedOnPickup
+              ? ""
+              : driverETA?.eta
+                ? `${driverETA.eta} mins`
+                : ""
+          }
           showWazeButton={true}
           rideStatus={
             RIDE_HEADER_TITLES[
-              currentRideState as keyof typeof RIDE_HEADER_TITLES
+            currentRideState as keyof typeof RIDE_HEADER_TITLES
             ] || "En Route"
           }
           onMapReady={() => {
@@ -1322,14 +1545,7 @@ export default function ActiveRideScreen() {
               }
             }}
             disabled={isActionLoading || isCompletingRide || !isMapReady || isLoadingData}
-            onLeftPress={() => {
-              console.log("Circling");
-              showToast(
-                "The customer has been notified that you are circling.",
-                "success",
-                "top"
-              );
-            }}
+            onLeftPress={handleCircling}
             onRightPress={handleContactCustomer}
             rightComponent={
               <Image
@@ -1600,7 +1816,9 @@ export default function ActiveRideScreen() {
         description="Let the rider know if your arrival time has changed."
         showNoteSection={true}
         buttonText="Update ETA"
-        isLoading={isUpdatingETA}
+        isLoading={isUpdatingETA || isFetchingETA}
+        initialEta={driverETA?.eta}
+        initialNote={driverETA?.note}
       />
 
       {/* Add Toll Bottom Sheet */}

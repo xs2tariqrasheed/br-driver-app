@@ -42,12 +42,12 @@ export const isDevEnvironment = (): boolean => {
  */
 export const logger =
   () =>
-  (...args: unknown[]) => {
-    if (isDevEnvironment()) {
-      // eslint-disable-next-line no-console
-      console.log(...args);
-    }
-  };
+    (...args: unknown[]) => {
+      if (isDevEnvironment()) {
+        // eslint-disable-next-line no-console
+        console.log(...args);
+      }
+    };
 
 /**
  * Persists a string value in AsyncStorage.
@@ -460,9 +460,8 @@ export const generateMapHTML = (
               gestureHandling: 'greedy'
             });
 
-            ${
-              autoSelectCurrentLocation
-                ? `
+            ${autoSelectCurrentLocation
+      ? `
             // Auto-select user's current location using passed data
             const userLocationData = ${JSON.stringify(userLocation)};
             if (userLocationData && userLocationData.latitude && userLocationData.longitude) {
@@ -551,8 +550,8 @@ export const generateMapHTML = (
               console.log('No user location provided, skipping auto-selection');
             }
             `
-                : ""
-            }
+      : ""
+    }
 
             // Add click listener to map
             map.addListener('click', function(event) {
@@ -855,23 +854,21 @@ export const generateHeatmapHTML = (
                   fillOpacity: 0.4,
                   map: map,
                   center: { lat: point.lat, lng: point.lng },
-                  radius: ${
-                    radius * 10
-                  } // Convert to meters (radius was in pixels for heatmap)
+                  radius: ${radius * 10
+    } // Convert to meters (radius was in pixels for heatmap)
                 });
                 
                 demandCircles.push(demandCircle);
                 
-                ${
-                  showETALabels
-                    ? `
+                ${showETALabels
+      ? `
                 // Add ETA label for each demand area
                 if (point.eta) {
                   addETALabel(point);
                 }
                 `
-                    : ""
-                }
+      : ""
+    }
               });
             }
 
@@ -1024,16 +1021,15 @@ export const generateHeatmapHTML = (
               
               demandCircles.push(demandCircle);
               
-              ${
-                showETALabels
-                  ? `
+              ${showETALabels
+      ? `
               // Add ETA label for each demand area
               if (point.eta) {
                 addETALabel(point);
               }
               `
-                  : ""
-              }
+      : ""
+    }
             });
           }
 
@@ -1096,9 +1092,9 @@ export const calculateDistance = (
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) *
+    Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -1246,42 +1242,42 @@ export const handleWebViewLocationMessage = (
  */
 export const extractZipCodeFromAddress = (address: string): string => {
   if (!address) return '';
-  
+
   // Common postal code patterns:
   // US: 5 digits (12345) or 5+4 (12345-6789)
   // UK: SW1A 1AA format
   // Canada: A1A 1A1 format
   // Pakistan: 5 digits (54000)
   // Generic: 4-6 digits
-  
+
   // Try Pakistan format first (5 digits)
   const pakistanPattern = /\b\d{5}\b/;
   const pakMatch = address.match(pakistanPattern);
   if (pakMatch) {
     return pakMatch[0];
   }
-  
+
   // Try US format (5 digits or 5-4)
   const usPattern = /\b\d{5}(?:-\d{4})?\b/;
   const usMatch = address.match(usPattern);
   if (usMatch) {
     return usMatch[0];
   }
-  
+
   // Try UK format (SW1A 1AA)
   const ukPattern = /\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/i;
   const ukMatch = address.match(ukPattern);
   if (ukMatch) {
     return ukMatch[0].replace(/\s+/g, '');
   }
-  
+
   // Try generic 4-6 digit pattern
   const genericPattern = /\b\d{4,6}\b/;
   const genericMatch = address.match(genericPattern);
   if (genericMatch) {
     return genericMatch[0];
   }
-  
+
   return '';
 };
 
@@ -1502,7 +1498,7 @@ export const openPhoneDialer = async (phoneNumber: string): Promise<void> => {
 
     const message = isSimulator()
       ? "Phone calls are not available in the simulator. On a real device, this would open the phone dialer with: " +
-        phoneNumber
+      phoneNumber
       : "Unable to open phone dialer. Please manually dial: " + phoneNumber;
     Alert.alert("Phone Not Available", message);
   }
@@ -1551,7 +1547,7 @@ export const openSMSApp = async (phoneNumber: string): Promise<void> => {
 
     const message = isSimulator()
       ? "SMS is not available in the simulator. On a real device, this would open the messaging app with: " +
-        phoneNumber
+      phoneNumber
       : "Unable to open SMS app. Please manually text: " + phoneNumber;
     Alert.alert("SMS Not Available", message);
   }
@@ -1613,4 +1609,254 @@ export function calculateProgressTimerDuration(
   }
 
   return durationMs;
+}
+
+/**
+ * System Suggested Bid interface
+ */
+export interface SystemSuggestedBid {
+  amount: number;
+  driverEarn: number;
+}
+
+/**
+ * Transformed bid prices data
+ */
+export interface TransformedBidPrices {
+  systemSuggestedBids: SystemSuggestedBid[];
+  boostedPrices: number[];
+  bidsOnThisJob: string | null;
+  driverPayoutPercentage: number | null;
+}
+
+/**
+ * Transform system suggested bid prices from DB response to mobile app format
+ * 
+ * @param systemSuggestedPrices - The system_suggested_prices object from DB response
+ * @returns Transformed bid prices with systemSuggestedBids and boostedPrices arrays
+ * 
+ * @example
+ * const prices = transformBidPrices(response.jData.system_suggested_prices);
+ * // Returns: { systemSuggestedBids: [...], boostedPrices: [...] }
+ */
+export const transformBidPrices = (
+  systemSuggestedPrices: Record<string, any> | null | undefined
+): TransformedBidPrices => {
+  const result: TransformedBidPrices = {
+    systemSuggestedBids: [],
+    boostedPrices: [],
+    bidsOnThisJob: null,
+    driverPayoutPercentage: null,
+  };
+
+  if (!systemSuggestedPrices || typeof systemSuggestedPrices !== 'object') {
+    return result;
+  }
+
+  // Extract bids_on_this_job
+  if (systemSuggestedPrices.bids_on_this_job !== undefined && systemSuggestedPrices.bids_on_this_job !== null) {
+    result.bidsOnThisJob = String(systemSuggestedPrices.bids_on_this_job);
+  }
+
+  // Extract driver_payout_percentage
+  if (systemSuggestedPrices.driver_payout_percentage !== undefined && systemSuggestedPrices.driver_payout_percentage !== null) {
+    const payoutPercentage = Number(systemSuggestedPrices.driver_payout_percentage);
+    if (!isNaN(payoutPercentage)) {
+      result.driverPayoutPercentage = payoutPercentage;
+    }
+  }
+
+  // Extract boost amounts (boost_bid_amount_1, boost_bid_amount_2, etc.)
+  for (let i = 1; i <= 4; i++) {
+    const boostAmount = systemSuggestedPrices[`boost_bid_amount_${i}`];
+    if (boostAmount !== undefined && boostAmount !== null) {
+      const amount = Number(boostAmount);
+      if (!isNaN(amount)) {
+        result.boostedPrices.push(amount);
+      }
+    }
+  }
+
+  // Extract bid percentage options and convert to bid amounts with driver earnings
+  // The percentage options represent bid amounts
+  // driver_payout_percentage is the system charge percentage, so driver earns: bidAmount * (1 - driver_payout_percentage / 100)
+  const systemChargePercentage = result.driverPayoutPercentage !== null
+    ? result.driverPayoutPercentage / 100
+    : 0.15; // Default 15% system charge (85% driver payout)
+
+  for (let i = 1; i <= 5; i++) {
+    const percentageOption = systemSuggestedPrices[`bid_percentage_option_${i}`];
+    if (percentageOption !== undefined && percentageOption !== null) {
+      const amount = Number(percentageOption);
+      if (!isNaN(amount)) {
+        // Calculate driver earnings: bidAmount - (bidAmount * systemChargePercentage)
+        // Example: $20 bid with 2.5% charge = $20 - $0.50 = $19.50
+        const driverEarn = Math.round(amount * (1 - systemChargePercentage) * 100) / 100;
+        result.systemSuggestedBids.push({ amount, driverEarn });
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Transform DB trip response to mobile app format for trip details and feedback screens
+ * 
+ * @param dbResponse - The jData object from TRP.S.TRIP_BY_NUMBER response
+ * @returns Transformed trip data in mobile app format
+ */
+export function transformTripDetailsFromDb(dbResponse: any): any {
+  if (!dbResponse || !dbResponse.trip) {
+    return null;
+  }
+
+  const trip = dbResponse.trip;
+
+  // Format dateTime
+  const dateTime = trip.dateTime
+    ? new Date(trip.dateTime).toISOString()
+    : new Date().toISOString();
+
+  // Format scheduledPickupTime
+  const scheduledPickupTime = trip.scheduledPickupTime
+    ? new Date(trip.scheduledPickupTime).toISOString()
+    : dateTime;
+
+  // Transform fare details
+  const fareDetails = trip.fareDetails ? {
+    ridePrice: trip.fareDetails.ridePrice || 0,
+    tolls: trip.fareDetails.tolls || 0,
+    tips: trip.fareDetails.tips || 0,
+    discount: trip.fareDetails.discount || 0,
+    serviceCharges: trip.fareDetails.serviceCharges || 0,
+    fuelSurcharge: trip.fareDetails.fuelSurcharge || 0,
+    nycCongestionSurcharge: trip.fareDetails.nycCongestionSurcharge || 0,
+    unbilledTolls: trip.fareDetails.unbilledTolls || 0,
+    extraWaitTime: trip.fareDetails.extraWaitTime || 0,
+    additionalStops: trip.fareDetails.additionalStops || 0,
+  } : {};
+
+  // Transform customer details
+  const customerDetails = trip.customerDetails ? {
+    customerName: trip.customerDetails.customerName || "Customer",
+    requiredCarType: trip.customerDetails.requiredCarType || "",
+    offerPrice: trip.customerDetails.offerPrice || 0,
+    accountNumber: trip.customerDetails.accountNumber || "",
+    profileNumber: trip.customerDetails.profileNumber || "",
+  } : {};
+
+  return {
+    tripId: trip.tripId || trip.trip_number || trip.trips_rec_id?.toString() || "",
+    tripNumber: trip.tripNumber || trip.trip_number || "",
+    dateTime,
+    rideType: trip.rideType || trip.trip_type || "ONE_WAY",
+    peopleCount: trip.peopleCount || trip.people_count || 1,
+    rating: trip.rating || 0,
+    carType: trip.carType || trip.car_type || "",
+    expiredAt: trip.expiredAt || trip.expired_at || null,
+    hasSpecialRequirements: trip.hasSpecialRequirements || trip.has_special_requirements || false,
+    hasPackage: trip.hasPackage || trip.has_package || false,
+    pickupTime: trip.pickupTime || trip.pickup_time || 0,
+    pickupDistance: trip.pickupDistance || trip.pickup_distance || 0,
+    pickupAddress: trip.pickupAddress || trip.pickup_address || "",
+    scheduledPickupTime,
+    dropoffTime: trip.dropoffTime || trip.dropoff_time || 0,
+    dropoffDistance: trip.dropoffDistance || trip.dropoff_distance || 0,
+    dropoffAddress: trip.dropoffAddress || trip.dropoff_address || "",
+    rideTime: trip.rideTime || trip.ride_time || 0,
+    rideDistance: trip.rideDistance || trip.ride_distance || 0,
+    totalPrice: trip.totalPrice || trip.total_price || 0,
+    driverEarn: trip.driverEarn || trip.driver_earn || 0,
+    driverInstructions: trip.driverInstructions || trip.driver_instructions || "",
+    fareDetails,
+    customerDetails,
+  };
+}
+
+/**
+ * Transform trip details to JobDetails component format
+ */
+export function transformTripDetailsToJobOffer(tripDetails: any): any {
+  if (!tripDetails) return null;
+
+  // Format dateTime for display
+  const formattedDateTime = tripDetails.dateTime
+    ? new Date(tripDetails.dateTime).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+    : "";
+
+  // Transform fare details to InfoTable format
+  const fareDetailsItems = tripDetails.fareDetails ? [
+    { label: "Ride Price", value: `$${(tripDetails.fareDetails.ridePrice || 0).toFixed(2)}` },
+    { label: "Tolls (EZ Pass)", value: `$${(tripDetails.fareDetails.tolls || 0).toFixed(2)}` },
+    { label: "Tips", value: `$${(tripDetails.fareDetails.tips || 0).toFixed(2)}` },
+    { label: "Discount", value: `$${(tripDetails.fareDetails.discount || 0).toFixed(2)}` },
+    { label: "Service Charges", value: `$${(tripDetails.fareDetails.serviceCharges || 0).toFixed(2)}` },
+    { label: "Fuel Surcharge", value: `$${(tripDetails.fareDetails.fuelSurcharge || 0).toFixed(2)}` },
+    { label: "NYC Congestion Surcharge", value: `$${(tripDetails.fareDetails.nycCongestionSurcharge || 0).toFixed(2)}` },
+  ] : [];
+
+  // Transform customer details to InfoTable format
+  const customerDetailsItems = tripDetails.customerDetails ? [
+    { label: "Name", value: tripDetails.customerDetails.customerName || "Customer" },
+    { label: "Required Car Type", value: tripDetails.customerDetails.requiredCarType || "" },
+    { label: "Offer Price", value: `$${(tripDetails.customerDetails.offerPrice || 0).toFixed(2)}` },
+    { label: "Account No.", value: tripDetails.customerDetails.accountNumber || "" },
+    { label: "Profile No.", value: tripDetails.customerDetails.profileNumber || "" },
+  ] : [];
+
+  return {
+    id: tripDetails.tripId || tripDetails.tripNumber || "",
+    dateTime: formattedDateTime,
+    rideType: tripDetails.rideType,
+    peopleCount: tripDetails.peopleCount,
+    rating: tripDetails.rating,
+    hasSpecialRequirements: tripDetails.hasSpecialRequirements,
+    onPressSpecialRequirements: () => { },
+    hasPackage: tripDetails.hasPackage,
+    onPressPackage: () => { },
+    pickupTime: tripDetails.pickupTime,
+    pickupDistance: tripDetails.pickupDistance,
+    pickupAddress: tripDetails.pickupAddress,
+    dropoffTime: tripDetails.dropoffTime,
+    dropoffDistance: tripDetails.dropoffDistance,
+    dropoffAddress: tripDetails.dropoffAddress,
+    rideTime: tripDetails.rideTime,
+    rideDistance: tripDetails.rideDistance,
+    totalPrice: tripDetails.totalPrice,
+    driverEarn: tripDetails.driverEarn,
+    driverInstructions: tripDetails.driverInstructions,
+    fareDetails: fareDetailsItems,
+    customerDetails: customerDetailsItems,
+    carType: tripDetails.carType,
+    expiredAt: tripDetails.expiredAt,
+    showActionBar: false,
+  };
+}
+
+/**
+ * Transform trip details to feedback screen fare summary format
+ */
+export function transformTripDetailsToFareSummary(tripDetails: any): Array<{ label: string; value: string }> {
+  if (!tripDetails || !tripDetails.fareDetails) {
+    return [];
+  }
+
+  const fare = tripDetails.fareDetails;
+  return [
+    { label: "Ride Price", value: `$${(fare.ridePrice || 0).toFixed(2)}` },
+    { label: "Tolls", value: `$${(fare.tolls || 0).toFixed(2)}` },
+    { label: "Discount", value: `$${(fare.discount || 0).toFixed(2)}` },
+    { label: "UnBilled Tolls", value: `$${(fare.unbilledTolls || 0).toFixed(2)}` },
+    { label: "Extra Wait Time", value: `$${(fare.extraWaitTime || 0).toFixed(2)}` },
+    { label: "Additional Stops", value: `$${(fare.additionalStops || 0).toFixed(2)}` },
+  ];
 }

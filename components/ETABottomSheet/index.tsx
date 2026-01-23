@@ -24,6 +24,9 @@ export interface ETABottomSheetProps {
   showNoteSection?: boolean;
   buttonText?: string;
   headerTitle?: string;
+  // Initial values for update variant
+  initialEta?: number;
+  initialNote?: string;
 }
 
 /**
@@ -48,6 +51,8 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(({
   buttonText = "Submit",
   headerTitle = "Provide ETA",
   snapPointsWhenKeyboardVisible,
+  initialEta,
+  initialNote,
 }) => {
   /**
    * IMPORTANT (iOS): keep controlled TextInput state OUTSIDE the BottomSheet component tree root.
@@ -58,26 +63,34 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(({
    */
   const SheetContent = memo(function SheetContent() {
     // Keep latest values in refs so submit can read both without forcing parent rerenders
-    const etaRef = useRef<number>(15);
-    const noteRef = useRef<string>("");
+    const defaultEta = initialEta ?? 15;
+    const etaRef = useRef<number>(defaultEta);
+    const noteRef = useRef<string>(initialNote || "");
 
     const EtaSection = memo(function EtaSection({
       open,
       disabled,
       onEtaChange,
+      initialValue,
     }: {
       open: boolean;
       disabled: boolean;
       onEtaChange: (eta: number) => void;
+      initialValue?: number;
     }) {
-      const [eta, setEta] = useState(15);
+      const [eta, setEta] = useState(initialValue ?? 15);
 
       useEffect(() => {
         if (!open) {
-          setEta(15);
-          onEtaChange(15);
+          const resetValue = initialValue ?? 15;
+          setEta(resetValue);
+          onEtaChange(resetValue);
+        } else if (initialValue !== undefined) {
+          // When sheet opens, set to initial value if provided
+          setEta(initialValue);
+          onEtaChange(initialValue);
         }
-      }, [open, onEtaChange]);
+      }, [open, onEtaChange, initialValue]);
 
       const handleEtaChange = useCallback(
         (next: number) => {
@@ -129,19 +142,26 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(({
       open,
       disabled,
       onNoteChange,
+      initialValue,
     }: {
       open: boolean;
       disabled: boolean;
       onNoteChange: (note: string) => void;
+      initialValue?: string;
     }) {
-      const [note, setNote] = useState("");
+      const [note, setNote] = useState(initialValue || "");
 
       useEffect(() => {
         if (!open) {
-          setNote("");
-          onNoteChange("");
+          const resetValue = initialValue || "";
+          setNote(resetValue);
+          onNoteChange(resetValue);
+        } else if (initialValue !== undefined) {
+          // When sheet opens, set to initial value if provided
+          setNote(initialValue);
+          onNoteChange(initialValue);
         }
-      }, [open, onNoteChange]);
+      }, [open, onNoteChange, initialValue]);
 
       const handleNoteChange = useCallback(
         (text: string) => {
@@ -210,6 +230,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(({
           open={open}
           disabled={isLoading}
           onEtaChange={handleEtaRefChange}
+          initialValue={initialEta}
         />
 
         {/* Note Section (isolated so pressing +/- doesn't re-render the TextArea) */}
@@ -217,6 +238,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(({
           open={open}
           disabled={isLoading}
           onNoteChange={handleNoteRefChange}
+          initialValue={initialNote}
         />
 
         {/* Submit Button */}

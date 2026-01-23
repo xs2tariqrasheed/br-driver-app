@@ -74,6 +74,15 @@ export const URLS = {
   earningsPortal: "https://google.com",
 };
 
+// DB action defaults for driver app (aligned with @br-backend/constants DbActionDefaults)
+// Used when the backend does not provide company/affiliate in the user (e.g. base-office contact-details)
+// Prefer auth.user.company_id / auth.user.affiliate_num when the API returns them
+export const DB_ACTION_DEFAULTS = {
+  COMPANY_ID: 1,
+  AFFILIATE_NUM: 101,
+  APP_NAME: "driver-ios",
+} as const;
+
 // OTP / Verification
 // Default countdown seconds before allowing resend. Can be updated centrally.
 export const OTP_RESEND_SECONDS = 40;
@@ -178,6 +187,14 @@ export const GOOGLE_MAPS_API_KEY =
 // Heatmap configuration
 // Auto-refresh interval for heatmap data in milliseconds
 export const HEATMAP_REFRESH_INTERVAL_MS = 120000; // 2 minutes
+
+// Heatmap demand weights (do not use API-provided weight)
+export const HEATMAP_DEMAND_WEIGHTS = {
+  HIGH: 0.9,
+  MEDIUM: 0.7,
+  LOW: 0.3,
+  DEFAULT: 0.5,
+} as const;
 
 // Ride Types
 export const RIDE_TYPES = {
@@ -422,6 +439,7 @@ export const DRIVER_ACTIONS = {
   STOP: "stop",
   ARRIVED: "arrived",
   PICKED_UP: "picked_up",
+  CIRCLING: "circling",
   COMPLETED: "completed",
 } as const;
 
@@ -480,19 +498,20 @@ export const NETWORK_MONITORING = {
 export type NetworkQuality =
   (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];
 
+const BASE_URL = "http://3.84.108.176";
 // Testing purpose constant for all the services
 // When IS_TESTING is true, these URLs will be used instead of environment variables
 // All URLs should include the http:// protocol prefix for local testing
 export const SERVICES_TESTING_URLS = {
-  "auth": "http://3.84.108.176:3001",
-  "auction": "http://3.84.108.176:3002",
-  "online-drivers": "http://3.84.108.176:3003",
-  "settings": "http://3.84.108.176:3004",
-  "active-trip": "http://3.84.108.176:3005",
-  "notifications": "http://3.84.108.176:3006", // Notifications service on port 3006
-  "me": "http://3.84.108.176:3001", // Shares with auth service
-  "offers-socket": "http://3.84.108.176:3002", // Shares with auction service
-  "active-trip-socket": "http://3.84.108.176:3005", // Shares with active-trip service
+  "auth": `${BASE_URL}:3001`,
+  "auction": `${BASE_URL}:3002`,
+  "online-drivers": `${BASE_URL}:3003`,
+  "settings": `${BASE_URL}:3004`,
+  "active-trip": `${BASE_URL}:3005`,
+  "notifications": `${BASE_URL}:3006`, // Notifications service on port 3006
+  "me": `${BASE_URL}:3001`, // Shares with auth service
+  "offers-socket": `${BASE_URL}:3002`, // Shares with auction service
+  "active-trip-socket": `${BASE_URL}:3005`, // Shares with active-trip service
 } as const;
 
 // DB Request Format Constants

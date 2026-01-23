@@ -24,6 +24,11 @@ export const HEATMAP_ENDPOINTS = {
   getHeatmapCoordinates: "/settings-service/heatmap/coordinates",
 } as const;
 
+export const BASE_OFFICE_ENDPOINTS = {
+  /** Get base office contact details */
+  getContactDetails: "/settings-service/base-office/contact-details",
+} as const;
+
 export const LIVE_JOB_ENDPOINTS = {
   /** Get live job offers */
   getLiveJobs: "/auction/trip-offers",
@@ -47,6 +52,8 @@ export const LIVE_JOB_ENDPOINTS = {
   customerBidResponse: "/auction/trip-offers/customer-bid-response",
   /** Publish test offer */
   publishTest: "/auction/trip-offers/publish-test",
+  /** Get system suggested bid prices */
+  getSystemSuggestedBidPrices: "/auction/trip-offers/system-suggested-bid-prices",
 } as const;
 
 export const DRIVER_ENDPOINTS = {
@@ -116,5 +123,7 @@ export const ACTIVE_TRIP_ROUTES = {
   ADD_STOP: "/active-trips/active-trips/add-stop",
   CANCEL: "/active-trips/active-trips/cancel",
   UPDATE_ETA: "/active-trips/active-trips/update-eta",
+  GET_ETA: "/active-trips/active-trips/get-eta",
   SUBMIT_FEEDBACK: "/active-trips/active-trips/submit-feedback",
+  GET_TRIP_BY_NUMBER: "/active-trips/active-trips/trip-by-number",
 } as const;
