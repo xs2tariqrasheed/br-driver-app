@@ -44,7 +44,12 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 export default function VerifyOtpScreen() {
   const router = useRouter();
   const log = logger();
-  const { context, loginData: loginDataParam, email: emailParam, companyId: companyIdParam } = useLocalSearchParams<{ 
+  const {
+    context,
+    loginData: loginDataParam,
+    email: emailParam,
+    companyId: companyIdParam,
+  } = useLocalSearchParams<{
     context?: string;
     loginData?: string;
     email?: string;
@@ -83,7 +88,7 @@ export default function VerifyOtpScreen() {
 
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation } = useDelete(
-    DRIVER_ENDPOINTS.markOffline(currentAuth?.user?.id || "")
+    DRIVER_ENDPOINTS.markOffline(currentAuth?.user?.id || ""),
   );
 
   const disabled = verifying || resending || loading;
@@ -100,7 +105,8 @@ export default function VerifyOtpScreen() {
       try {
         log("[VerifyOtpScreen] Calling delete profile API");
         const { settingsApiClient } = await import("@/config/apiConfig");
-        const { DRIVER_SETTINGS_ENDPOINTS } = await import("@/constants/endpoints");
+        const { DRIVER_SETTINGS_ENDPOINTS } =
+          await import("@/constants/endpoints");
 
         const response = await settingsApiClient.delete(
           DRIVER_SETTINGS_ENDPOINTS.deleteProfile,
@@ -108,7 +114,7 @@ export default function VerifyOtpScreen() {
             data: {
               otp: otp,
             },
-          } as any
+          } as any,
         );
 
         // Check if the response indicates success
@@ -120,7 +126,11 @@ export default function VerifyOtpScreen() {
           dbResponseCode === "0" ||
           dbResponseCode === 0;
 
-        if (responseData?.success === false || !isDbSuccess || !hasSuccessFlag) {
+        if (
+          responseData?.success === false ||
+          !isDbSuccess ||
+          !hasSuccessFlag
+        ) {
           const errorMessage =
             responseData?.message ||
             responseData?.data?.jHeader?.message ||
@@ -130,7 +140,9 @@ export default function VerifyOtpScreen() {
           throw new Error(errorMessage);
         }
 
-        log("[VerifyOtpScreen] Driver profile deleted successfully from database");
+        log(
+          "[VerifyOtpScreen] Driver profile deleted successfully from database",
+        );
       } catch (apiError: any) {
         const errorMessage =
           apiError?.response?.data?.message ||
@@ -191,7 +203,7 @@ export default function VerifyOtpScreen() {
       await clearStorage();
       await setAuth(null);
       await setDriver(null);
-      
+
       showToast("Profile deleted successfully.", {
         variant: "success",
         position: "top",
@@ -250,7 +262,7 @@ export default function VerifyOtpScreen() {
           duration: 500,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     caretAnimRef.current.start();
     return () => {
@@ -300,7 +312,7 @@ export default function VerifyOtpScreen() {
         if (context === "forgot-user-id") {
           showToast(
             "Success! We've reset your User ID and sent the new one to your email. Use it to log in next time.",
-            { variant: "success", position: "top" }
+            { variant: "success", position: "top" },
           );
           router.replace("/(screens)/auth/login");
         } else if (context === "delete-profile") {
@@ -333,13 +345,16 @@ export default function VerifyOtpScreen() {
     // For delete-profile context, skip resend as it requires loginId/companyId
     // which are not available in the authenticated context
     if (context === "delete-profile") {
-      showToast("Please use the OTP you received. If you didn't receive it, please contact support.", {
-        variant: "warning",
-        position: "top",
-      });
+      showToast(
+        "Please use the OTP you received. If you didn't receive it, please contact support.",
+        {
+          variant: "warning",
+          position: "top",
+        },
+      );
       return;
     }
-    
+
     try {
       const response = await resendOtp({});
       showToast(response?.message || "OTP resent", {
@@ -399,23 +414,30 @@ export default function VerifyOtpScreen() {
       }
 
       const user = loginResponse.user;
-      
-      // Extract driver ID from driver_rec_id
-      const driverId = user.driver_rec_id;
-      
+
+      // Extract driver ID from driver_rec_id (convert to string if it's a number)
+      const driverId =
+        user.driver_rec_id != null ? String(user.driver_rec_id) : "";
+
       // Extract driver name from personal_information
       const firstName = user.personal_information?.first_name || "";
       const lastName = user.personal_information?.last_name || "";
       const driverName = `${firstName} ${lastName}`.trim() || "Driver";
-      
+
       // Extract driver type from driver_type field
       // Map backend driver_type to app DRIVER_TYPES
       let driverType: string = DRIVER_TYPES.INDEPENDENT_OPERATOR; // default
       if (user.driver_type) {
         const backendDriverType = user.driver_type.toUpperCase();
-        if (backendDriverType.includes("NETWORK_IO") || backendDriverType.includes("IO")) {
+        if (
+          backendDriverType.includes("NETWORK_IO") ||
+          backendDriverType.includes("IO")
+        ) {
           driverType = DRIVER_TYPES.INDEPENDENT_OPERATOR;
-        } else if (backendDriverType.includes("NETWORK") || backendDriverType.includes("EMPLOYEE")) {
+        } else if (
+          backendDriverType.includes("NETWORK") ||
+          backendDriverType.includes("EMPLOYEE")
+        ) {
           driverType = DRIVER_TYPES.HIRED; // Use HIRED for network/employee drivers
         }
       }
@@ -451,6 +473,7 @@ export default function VerifyOtpScreen() {
 
       // Fetch driver settings from backend
       try {
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for 500ms to ensure token is set before fetching settings
         await fetchSettings();
         log("Driver settings fetched successfully");
       } catch (error) {

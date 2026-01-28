@@ -42,12 +42,12 @@ export const isDevEnvironment = (): boolean => {
  */
 export const logger =
   () =>
-    (...args: unknown[]) => {
-      if (isDevEnvironment()) {
-        // eslint-disable-next-line no-console
-        console.log(...args);
-      }
-    };
+  (...args: unknown[]) => {
+    if (isDevEnvironment()) {
+      // eslint-disable-next-line no-console
+      console.log(...args);
+    }
+  };
 
 /**
  * Persists a string value in AsyncStorage.
@@ -58,7 +58,7 @@ export const logger =
  */
 export const setStorageItem = async (
   key: string,
-  value: StorageValue
+  value: StorageValue,
 ): Promise<void> => {
   await AsyncStorage.setItem(key, value);
 };
@@ -105,16 +105,14 @@ export const clearStorage = async (): Promise<void> => {
  * ```
  */
 export const clearStorageSelectively = async (
-  keysToPreserve: string[] = []
+  keysToPreserve: string[] = [],
 ): Promise<void> => {
   try {
     // Get all storage keys
     const allKeys = await getAllStorageKeys();
 
     // Filter out keys to preserve
-    const keysToRemove = allKeys.filter(
-      (key) => !keysToPreserve.includes(key)
-    );
+    const keysToRemove = allKeys.filter((key) => !keysToPreserve.includes(key));
 
     // Remove keys in batch if there are any to remove
     if (keysToRemove.length > 0) {
@@ -144,7 +142,7 @@ export const getAllStorageKeys = async (): Promise<readonly string[]> => {
  * @returns {Promise<void>} Resolves when all pairs are saved.
  */
 export const multiSetStorageItems = async (
-  entries: Array<[string, StorageValue]>
+  entries: Array<[string, StorageValue]>,
 ): Promise<void> => {
   await AsyncStorage.multiSet(entries);
 };
@@ -156,7 +154,7 @@ export const multiSetStorageItems = async (
  * @returns {Promise<ReadonlyArray<[string, string | null]>>} Array of [key, value] tuples.
  */
 export const multiGetStorageItems = async (
-  keys: readonly string[]
+  keys: readonly string[],
 ): Promise<ReadonlyArray<[string, string | null]>> => {
   return AsyncStorage.multiGet(keys);
 };
@@ -246,14 +244,14 @@ export interface WebViewMessageData {
  * ```
  */
 export const getCurrentLocation = async (
-  fallbackRegion?: MapRegion
+  fallbackRegion?: MapRegion,
 ): Promise<MapRegion> => {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
         "Permission denied",
-        "Location permission is required to show your current location."
+        "Location permission is required to show your current location.",
       );
       if (fallbackRegion) {
         return fallbackRegion;
@@ -294,11 +292,11 @@ export const getCurrentLocation = async (
 export const reverseGeocode = async (
   latitude: number,
   longitude: number,
-  apiKey: string
+  apiKey: string,
 ): Promise<string> => {
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
     );
     const data = await response.json();
 
@@ -329,13 +327,13 @@ export const reverseGeocode = async (
  */
 export const geocodeAddress = async (
   address: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<LocationCoordinates | null> => {
   try {
     const response = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        address
-      )}&key=${apiKey}`
+        address,
+      )}&key=${apiKey}`,
     );
     const data = await response.json();
 
@@ -372,11 +370,11 @@ export const geocodeAddress = async (
 export const getDirections = async (
   origin: LocationCoordinates,
   destination: LocationCoordinates,
-  apiKey: string
+  apiKey: string,
 ): Promise<any> => {
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`
+      `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`,
     );
     const data = await response.json();
 
@@ -409,7 +407,7 @@ export const generateMapHTML = (
   apiKey: string,
   autoSelectCurrentLocation: boolean = true,
   pickupIconUrl: string = "",
-  userLocation: LocationCoordinates | null = null
+  userLocation: LocationCoordinates | null = null,
 ): string => {
   const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
 
@@ -460,8 +458,9 @@ export const generateMapHTML = (
               gestureHandling: 'greedy'
             });
 
-            ${autoSelectCurrentLocation
-      ? `
+            ${
+              autoSelectCurrentLocation
+                ? `
             // Auto-select user's current location using passed data
             const userLocationData = ${JSON.stringify(userLocation)};
             if (userLocationData && userLocationData.latitude && userLocationData.longitude) {
@@ -550,8 +549,8 @@ export const generateMapHTML = (
               console.log('No user location provided, skipping auto-selection');
             }
             `
-      : ""
-    }
+                : ""
+            }
 
             // Add click listener to map
             map.addListener('click', function(event) {
@@ -709,7 +708,7 @@ export const generateHeatmapHTML = (
   heatmapData: HeatmapDataPoint[] = [],
   options: HeatmapOptions = {},
   pickupIconUrl: string = "",
-  userLocation: LocationCoordinates | null = null
+  userLocation: LocationCoordinates | null = null,
 ): string => {
   const { latitude, longitude } = region;
   const { radius = 50, opacity = 0.7, showETALabels = true } = options;
@@ -854,21 +853,23 @@ export const generateHeatmapHTML = (
                   fillOpacity: 0.4,
                   map: map,
                   center: { lat: point.lat, lng: point.lng },
-                  radius: ${radius * 10
-    } // Convert to meters (radius was in pixels for heatmap)
+                  radius: ${
+                    radius * 10
+                  } // Convert to meters (radius was in pixels for heatmap)
                 });
                 
                 demandCircles.push(demandCircle);
                 
-                ${showETALabels
-      ? `
+                ${
+                  showETALabels
+                    ? `
                 // Add ETA label for each demand area
                 if (point.eta) {
                   addETALabel(point);
                 }
                 `
-      : ""
-    }
+                    : ""
+                }
               });
             }
 
@@ -1021,15 +1022,16 @@ export const generateHeatmapHTML = (
               
               demandCircles.push(demandCircle);
               
-              ${showETALabels
-      ? `
+              ${
+                showETALabels
+                  ? `
               // Add ETA label for each demand area
               if (point.eta) {
                 addETALabel(point);
               }
               `
-      : ""
-    }
+                  : ""
+              }
             });
           }
 
@@ -1084,7 +1086,7 @@ export const calculateDistance = (
   lat1: number,
   lng1: number,
   lat2: number,
-  lng2: number
+  lng2: number,
 ): number => {
   const R = 6371; // Earth's radius in kilometers
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -1092,9 +1094,9 @@ export const calculateDistance = (
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) *
-    Math.sin(dLng / 2);
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -1104,7 +1106,7 @@ export const calculateDistance = (
  */
 export const calculateDistanceMeters = (
   prev: { lat: number; lng: number } | null,
-  curr: { lat: number; lng: number } | null
+  curr: { lat: number; lng: number } | null,
 ): number => {
   if (!prev || !curr) return Number.POSITIVE_INFINITY;
   const km = calculateDistance(prev.lat, prev.lng, curr.lat, curr.lng);
@@ -1118,7 +1120,7 @@ export const calculateDistanceMeters = (
 export const computeDeltaMetersAgainstThreshold = (
   prev: { lat: number; lng: number } | null,
   curr: { lat: number; lng: number } | null,
-  mentionedDistanceMeters: number
+  mentionedDistanceMeters: number,
 ): number => {
   const meters = calculateDistanceMeters(prev, curr);
   if (!isFinite(meters)) return Number.POSITIVE_INFINITY;
@@ -1135,13 +1137,13 @@ export const computeDeltaMetersAgainstThreshold = (
 export const calculateETA = (
   userLocation: LocationCoordinates,
   demandLocation: { lat: number; lng: number },
-  demandLevel: "high" | "medium" | "low" = "medium"
+  demandLevel: "high" | "medium" | "low" = "medium",
 ): string => {
   const distance = calculateDistance(
     userLocation.latitude,
     userLocation.longitude,
     demandLocation.lat,
-    demandLocation.lng
+    demandLocation.lng,
   );
 
   // Average speed assumptions based on demand level (traffic conditions)
@@ -1196,7 +1198,7 @@ export const calculateETA = (
 export const handleWebViewLocationMessage = (
   event: any,
   onLocationSelect: (data: LocationSelectData) => void,
-  onMapPress?: (latitude: number, longitude: number) => void
+  onMapPress?: (latitude: number, longitude: number) => void,
 ): void => {
   const log = logger();
 
@@ -1207,7 +1209,14 @@ export const handleWebViewLocationMessage = (
     if (data.type === "location_selected") {
       // If address is provided, use it directly; otherwise, fall back to coordinates
       if (data.address) {
-        log("Calling onLocationSelect with address:", data.address, "placeId:", data.placeId, "zipCode:", data.zipCode);
+        log(
+          "Calling onLocationSelect with address:",
+          data.address,
+          "placeId:",
+          data.placeId,
+          "zipCode:",
+          data.zipCode,
+        );
         onLocationSelect({
           address: data.address,
           coordinates: {
@@ -1241,7 +1250,7 @@ export const handleWebViewLocationMessage = (
  * @returns {string} The extracted postal code or empty string if not found
  */
 export const extractZipCodeFromAddress = (address: string): string => {
-  if (!address) return '';
+  if (!address) return "";
 
   // Common postal code patterns:
   // US: 5 digits (12345) or 5+4 (12345-6789)
@@ -1268,7 +1277,7 @@ export const extractZipCodeFromAddress = (address: string): string => {
   const ukPattern = /\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/i;
   const ukMatch = address.match(ukPattern);
   if (ukMatch) {
-    return ukMatch[0].replace(/\s+/g, '');
+    return ukMatch[0].replace(/\s+/g, "");
   }
 
   // Try generic 4-6 digit pattern
@@ -1278,7 +1287,7 @@ export const extractZipCodeFromAddress = (address: string): string => {
     return genericMatch[0];
   }
 
-  return '';
+  return "";
 };
 
 /**
@@ -1375,7 +1384,7 @@ export function filterExpiredDestinations(destinations: DesiredDestination[]): {
  * ```
  */
 export function getValidDestinations(
-  destinations: DesiredDestination[]
+  destinations: DesiredDestination[],
 ): DesiredDestination[] {
   return destinations.filter((dest) => !isDestinationExpired(dest.expired_at));
 }
@@ -1416,7 +1425,9 @@ export function formatExpirationTime(expiredAt: string): string {
  * @param timestamp - ISO timestamp string
  * @returns string - Formatted date string (MM/DD/YYYY hh:mm A)
  */
-export const formatDateTimestamp = (timestamp: string | number | null | undefined): string => {
+export const formatDateTimestamp = (
+  timestamp: string | number | null | undefined,
+): string => {
   try {
     if (timestamp == null) return dayjs().format("MM/DD/YYYY hh:mm A");
     // Support numeric epoch seconds or milliseconds
@@ -1433,7 +1444,9 @@ export const formatDateTimestamp = (timestamp: string | number | null | undefine
       return dayjs(ms).format("MM/DD/YYYY hh:mm A");
     }
     const d = dayjs(trimmed);
-    return d.isValid() ? d.format("MM/DD/YYYY hh:mm A") : dayjs().format("MM/DD/YYYY hh:mm A");
+    return d.isValid()
+      ? d.format("MM/DD/YYYY hh:mm A")
+      : dayjs().format("MM/DD/YYYY hh:mm A");
   } catch {
     return dayjs().format("MM/DD/YYYY hh:mm A");
   }
@@ -1498,7 +1511,7 @@ export const openPhoneDialer = async (phoneNumber: string): Promise<void> => {
 
     const message = isSimulator()
       ? "Phone calls are not available in the simulator. On a real device, this would open the phone dialer with: " +
-      phoneNumber
+        phoneNumber
       : "Unable to open phone dialer. Please manually dial: " + phoneNumber;
     Alert.alert("Phone Not Available", message);
   }
@@ -1526,7 +1539,7 @@ export const openSMSApp = async (phoneNumber: string): Promise<void> => {
           "android.intent.action.SENDTO",
           {
             data: `sms:${phoneNumber}`,
-          }
+          },
         );
         console.log("SMS app opened via IntentLauncher");
         return;
@@ -1547,7 +1560,7 @@ export const openSMSApp = async (phoneNumber: string): Promise<void> => {
 
     const message = isSimulator()
       ? "SMS is not available in the simulator. On a real device, this would open the messaging app with: " +
-      phoneNumber
+        phoneNumber
       : "Unable to open SMS app. Please manually text: " + phoneNumber;
     Alert.alert("SMS Not Available", message);
   }
@@ -1593,7 +1606,7 @@ export const openWhatsApp = async (phoneNumber: string): Promise<void> => {
  * @returns Duration in milliseconds, or null if expiredAt is invalid
  */
 export function calculateProgressTimerDuration(
-  expiredAt: string | Date | null | undefined
+  expiredAt: string | Date | null | undefined,
 ): number | null {
   if (!expiredAt) {
     return null;
@@ -1631,16 +1644,16 @@ export interface TransformedBidPrices {
 
 /**
  * Transform system suggested bid prices from DB response to mobile app format
- * 
+ *
  * @param systemSuggestedPrices - The system_suggested_prices object from DB response
  * @returns Transformed bid prices with systemSuggestedBids and boostedPrices arrays
- * 
+ *
  * @example
  * const prices = transformBidPrices(response.jData.system_suggested_prices);
  * // Returns: { systemSuggestedBids: [...], boostedPrices: [...] }
  */
 export const transformBidPrices = (
-  systemSuggestedPrices: Record<string, any> | null | undefined
+  systemSuggestedPrices: Record<string, any> | null | undefined,
 ): TransformedBidPrices => {
   const result: TransformedBidPrices = {
     systemSuggestedBids: [],
@@ -1649,18 +1662,26 @@ export const transformBidPrices = (
     driverPayoutPercentage: null,
   };
 
-  if (!systemSuggestedPrices || typeof systemSuggestedPrices !== 'object') {
+  if (!systemSuggestedPrices || typeof systemSuggestedPrices !== "object") {
     return result;
   }
 
   // Extract bids_on_this_job
-  if (systemSuggestedPrices.bids_on_this_job !== undefined && systemSuggestedPrices.bids_on_this_job !== null) {
+  if (
+    systemSuggestedPrices.bids_on_this_job !== undefined &&
+    systemSuggestedPrices.bids_on_this_job !== null
+  ) {
     result.bidsOnThisJob = String(systemSuggestedPrices.bids_on_this_job);
   }
 
   // Extract driver_payout_percentage
-  if (systemSuggestedPrices.driver_payout_percentage !== undefined && systemSuggestedPrices.driver_payout_percentage !== null) {
-    const payoutPercentage = Number(systemSuggestedPrices.driver_payout_percentage);
+  if (
+    systemSuggestedPrices.driver_payout_percentage !== undefined &&
+    systemSuggestedPrices.driver_payout_percentage !== null
+  ) {
+    const payoutPercentage = Number(
+      systemSuggestedPrices.driver_payout_percentage,
+    );
     if (!isNaN(payoutPercentage)) {
       result.driverPayoutPercentage = payoutPercentage;
     }
@@ -1680,29 +1701,32 @@ export const transformBidPrices = (
   // Extract bid percentage options and convert to bid amounts with driver earnings
   // The percentage options represent bid amounts
   // driver_payout_percentage is the system charge percentage, so driver earns: bidAmount * (1 - driver_payout_percentage / 100)
-  const systemChargePercentage = result.driverPayoutPercentage !== null
-    ? result.driverPayoutPercentage / 100
-    : 0.15; // Default 15% system charge (85% driver payout)
+  const systemChargePercentage =
+    result.driverPayoutPercentage !== null
+      ? result.driverPayoutPercentage / 100
+      : 0.15; // Default 15% system charge (85% driver payout)
 
   for (let i = 1; i <= 5; i++) {
-    const percentageOption = systemSuggestedPrices[`bid_percentage_option_${i}`];
+    const percentageOption =
+      systemSuggestedPrices[`bid_percentage_option_${i}`];
     if (percentageOption !== undefined && percentageOption !== null) {
       const amount = Number(percentageOption);
       if (!isNaN(amount)) {
         // Calculate driver earnings: bidAmount - (bidAmount * systemChargePercentage)
         // Example: $20 bid with 2.5% charge = $20 - $0.50 = $19.50
-        const driverEarn = Math.round(amount * (1 - systemChargePercentage) * 100) / 100;
+        const driverEarn =
+          Math.round(amount * (1 - systemChargePercentage) * 100) / 100;
         result.systemSuggestedBids.push({ amount, driverEarn });
       }
     }
   }
 
   return result;
-}
+};
 
 /**
  * Transform DB trip response to mobile app format for trip details and feedback screens
- * 
+ *
  * @param dbResponse - The jData object from TRP.S.TRIP_BY_NUMBER response
  * @returns Transformed trip data in mobile app format
  */
@@ -1724,30 +1748,35 @@ export function transformTripDetailsFromDb(dbResponse: any): any {
     : dateTime;
 
   // Transform fare details
-  const fareDetails = trip.fareDetails ? {
-    ridePrice: trip.fareDetails.ridePrice || 0,
-    tolls: trip.fareDetails.tolls || 0,
-    tips: trip.fareDetails.tips || 0,
-    discount: trip.fareDetails.discount || 0,
-    serviceCharges: trip.fareDetails.serviceCharges || 0,
-    fuelSurcharge: trip.fareDetails.fuelSurcharge || 0,
-    nycCongestionSurcharge: trip.fareDetails.nycCongestionSurcharge || 0,
-    unbilledTolls: trip.fareDetails.unbilledTolls || 0,
-    extraWaitTime: trip.fareDetails.extraWaitTime || 0,
-    additionalStops: trip.fareDetails.additionalStops || 0,
-  } : {};
+  const fareDetails = trip.fareDetails
+    ? {
+        ridePrice: trip.fareDetails.ridePrice || 0,
+        tolls: trip.fareDetails.tolls || 0,
+        tips: trip.fareDetails.tips || 0,
+        discount: trip.fareDetails.discount || 0,
+        serviceCharges: trip.fareDetails.serviceCharges || 0,
+        fuelSurcharge: trip.fareDetails.fuelSurcharge || 0,
+        nycCongestionSurcharge: trip.fareDetails.nycCongestionSurcharge || 0,
+        unbilledTolls: trip.fareDetails.unbilledTolls || 0,
+        extraWaitTime: trip.fareDetails.extraWaitTime || 0,
+        additionalStops: trip.fareDetails.additionalStops || 0,
+      }
+    : {};
 
   // Transform customer details
-  const customerDetails = trip.customerDetails ? {
-    customerName: trip.customerDetails.customerName || "Customer",
-    requiredCarType: trip.customerDetails.requiredCarType || "",
-    offerPrice: trip.customerDetails.offerPrice || 0,
-    accountNumber: trip.customerDetails.accountNumber || "",
-    profileNumber: trip.customerDetails.profileNumber || "",
-  } : {};
+  const customerDetails = trip.customerDetails
+    ? {
+        customerName: trip.customerDetails.customerName || "Customer",
+        requiredCarType: trip.customerDetails.requiredCarType || "",
+        offerPrice: trip.customerDetails.offerPrice || 0,
+        accountNumber: trip.customerDetails.accountNumber || "",
+        profileNumber: trip.customerDetails.profileNumber || "",
+      }
+    : {};
 
   return {
-    tripId: trip.tripId || trip.trip_number || trip.trips_rec_id?.toString() || "",
+    tripId:
+      trip.tripId || trip.trip_number || trip.trips_rec_id?.toString() || "",
     tripNumber: trip.tripNumber || trip.trip_number || "",
     dateTime,
     rideType: trip.rideType || trip.trip_type || "ONE_WAY",
@@ -1755,7 +1784,8 @@ export function transformTripDetailsFromDb(dbResponse: any): any {
     rating: trip.rating || 0,
     carType: trip.carType || trip.car_type || "",
     expiredAt: trip.expiredAt || trip.expired_at || null,
-    hasSpecialRequirements: trip.hasSpecialRequirements || trip.has_special_requirements || false,
+    hasSpecialRequirements:
+      trip.hasSpecialRequirements || trip.has_special_requirements || false,
     hasPackage: trip.hasPackage || trip.has_package || false,
     pickupTime: trip.pickupTime || trip.pickup_time || 0,
     pickupDistance: trip.pickupDistance || trip.pickup_distance || 0,
@@ -1768,7 +1798,8 @@ export function transformTripDetailsFromDb(dbResponse: any): any {
     rideDistance: trip.rideDistance || trip.ride_distance || 0,
     totalPrice: trip.totalPrice || trip.total_price || 0,
     driverEarn: trip.driverEarn || trip.driver_earn || 0,
-    driverInstructions: trip.driverInstructions || trip.driver_instructions || "",
+    driverInstructions:
+      trip.driverInstructions || trip.driver_instructions || "",
     fareDetails,
     customerDetails,
   };
@@ -1783,35 +1814,75 @@ export function transformTripDetailsToJobOffer(tripDetails: any): any {
   // Format dateTime for display
   const formattedDateTime = tripDetails.dateTime
     ? new Date(tripDetails.dateTime).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })
+        weekday: "long",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
     : "";
 
   // Transform fare details to InfoTable format
-  const fareDetailsItems = tripDetails.fareDetails ? [
-    { label: "Ride Price", value: `$${(tripDetails.fareDetails.ridePrice || 0).toFixed(2)}` },
-    { label: "Tolls (EZ Pass)", value: `$${(tripDetails.fareDetails.tolls || 0).toFixed(2)}` },
-    { label: "Tips", value: `$${(tripDetails.fareDetails.tips || 0).toFixed(2)}` },
-    { label: "Discount", value: `$${(tripDetails.fareDetails.discount || 0).toFixed(2)}` },
-    { label: "Service Charges", value: `$${(tripDetails.fareDetails.serviceCharges || 0).toFixed(2)}` },
-    { label: "Fuel Surcharge", value: `$${(tripDetails.fareDetails.fuelSurcharge || 0).toFixed(2)}` },
-    { label: "NYC Congestion Surcharge", value: `$${(tripDetails.fareDetails.nycCongestionSurcharge || 0).toFixed(2)}` },
-  ] : [];
+  const fareDetailsItems = tripDetails.fareDetails
+    ? [
+        {
+          label: "Ride Price",
+          value: `$${(tripDetails.fareDetails.ridePrice || 0).toFixed(2)}`,
+        },
+        {
+          label: "Tolls (EZ Pass)",
+          value: `$${(tripDetails.fareDetails.tolls || 0).toFixed(2)}`,
+        },
+        {
+          label: "Tips",
+          value: `$${(tripDetails.fareDetails.tips || 0).toFixed(2)}`,
+        },
+        {
+          label: "Discount",
+          value: `$${(tripDetails.fareDetails.discount || 0).toFixed(2)}`,
+        },
+        {
+          label: "Service Charges",
+          value: `$${(tripDetails.fareDetails.serviceCharges || 0).toFixed(2)}`,
+        },
+        {
+          label: "Fuel Surcharge",
+          value: `$${(tripDetails.fareDetails.fuelSurcharge || 0).toFixed(2)}`,
+        },
+        {
+          label: "NYC Congestion Surcharge",
+          value: `$${(tripDetails.fareDetails.nycCongestionSurcharge || 0).toFixed(2)}`,
+        },
+      ]
+    : [];
 
   // Transform customer details to InfoTable format
-  const customerDetailsItems = tripDetails.customerDetails ? [
-    { label: "Name", value: tripDetails.customerDetails.customerName || "Customer" },
-    { label: "Required Car Type", value: tripDetails.customerDetails.requiredCarType || "" },
-    { label: "Offer Price", value: `$${(tripDetails.customerDetails.offerPrice || 0).toFixed(2)}` },
-    { label: "Account No.", value: tripDetails.customerDetails.accountNumber || "" },
-    { label: "Profile No.", value: tripDetails.customerDetails.profileNumber || "" },
-  ] : [];
+  const customerDetailsItems = tripDetails.customerDetails
+    ? [
+        {
+          label: "Name",
+          value: tripDetails.customerDetails.customerName || "Customer",
+        },
+        {
+          label: "Required Car Type",
+          value: tripDetails.customerDetails.requiredCarType || "",
+        },
+        {
+          label: "Offer Price",
+          value: `$${(tripDetails.customerDetails.offerPrice || 0).toFixed(2)}`,
+        },
+        {
+          label: "Account No.",
+          value: tripDetails.customerDetails.accountNumber || "",
+        },
+        {
+          label: "Profile No.",
+          value: tripDetails.customerDetails.profileNumber || "",
+        },
+      ]
+    : [];
 
   return {
     id: tripDetails.tripId || tripDetails.tripNumber || "",
@@ -1820,9 +1891,9 @@ export function transformTripDetailsToJobOffer(tripDetails: any): any {
     peopleCount: tripDetails.peopleCount,
     rating: tripDetails.rating,
     hasSpecialRequirements: tripDetails.hasSpecialRequirements,
-    onPressSpecialRequirements: () => { },
+    onPressSpecialRequirements: () => {},
     hasPackage: tripDetails.hasPackage,
-    onPressPackage: () => { },
+    onPressPackage: () => {},
     pickupTime: tripDetails.pickupTime,
     pickupDistance: tripDetails.pickupDistance,
     pickupAddress: tripDetails.pickupAddress,
@@ -1845,7 +1916,9 @@ export function transformTripDetailsToJobOffer(tripDetails: any): any {
 /**
  * Transform trip details to feedback screen fare summary format
  */
-export function transformTripDetailsToFareSummary(tripDetails: any): Array<{ label: string; value: string }> {
+export function transformTripDetailsToFareSummary(
+  tripDetails: any,
+): Array<{ label: string; value: string }> {
   if (!tripDetails || !tripDetails.fareDetails) {
     return [];
   }
@@ -1855,8 +1928,36 @@ export function transformTripDetailsToFareSummary(tripDetails: any): Array<{ lab
     { label: "Ride Price", value: `$${(fare.ridePrice || 0).toFixed(2)}` },
     { label: "Tolls", value: `$${(fare.tolls || 0).toFixed(2)}` },
     { label: "Discount", value: `$${(fare.discount || 0).toFixed(2)}` },
-    { label: "UnBilled Tolls", value: `$${(fare.unbilledTolls || 0).toFixed(2)}` },
-    { label: "Extra Wait Time", value: `$${(fare.extraWaitTime || 0).toFixed(2)}` },
-    { label: "Additional Stops", value: `$${(fare.additionalStops || 0).toFixed(2)}` },
+    {
+      label: "UnBilled Tolls",
+      value: `$${(fare.unbilledTolls || 0).toFixed(2)}`,
+    },
+    {
+      label: "Extra Wait Time",
+      value: `$${(fare.extraWaitTime || 0).toFixed(2)}`,
+    },
+    {
+      label: "Additional Stops",
+      value: `$${(fare.additionalStops || 0).toFixed(2)}`,
+    },
   ];
+}
+
+/**
+ * Extracts and converts a driver ID to a numeric value.
+ * Handles both string and number inputs, and extracts numeric part from formatted strings (e.g., "d-1" -> 1).
+ * Returns 0 if the driver ID is invalid or cannot be converted.
+ */
+export function getNumericDriverId(
+  driverId: string | number | undefined,
+): number {
+  if (!driverId) {
+    return 0;
+  }
+  if (typeof driverId === "number") {
+    return driverId;
+  }
+  const driverIdStr = String(driverId);
+  const numericId = driverIdStr.match(/(\d+)$/)?.[1] || driverIdStr;
+  return Number(numericId) || 0;
 }
