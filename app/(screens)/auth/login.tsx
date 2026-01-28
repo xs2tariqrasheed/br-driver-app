@@ -36,7 +36,7 @@ type LoginFormValues = {
 };
 
 const LOGIN_DEFAULT_VALUES: LoginFormValues = {
-  companyId: "4",
+  companyId: "1",
   loginId: "ali.khan@example.com",
   password: "112233",
 };
@@ -68,7 +68,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const log = logger();
   const [auth, setAuth] = useAuth() as any;
-  const [settings, , { fetchSettings }] = useSettings();
+  const [settings, , { fetchSettings, isLoading: isSettingsLoading }] =
+    useSettings();
   const {
     control,
     handleSubmit,
@@ -78,6 +79,7 @@ export default function LoginScreen() {
     defaultValues: LOGIN_DEFAULT_VALUES,
     mode: "onChange",
   });
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // API: login
   const {
@@ -112,14 +114,22 @@ export default function LoginScreen() {
     const apiPayload = {
       email: data.loginId.trim(), // loginId is actually emailOrPhone
       password: data.password,
-      companyId: data.companyId ? (isNaN(Number(data.companyId)) ? data.companyId : Number(data.companyId)) : undefined,
+      companyId: data.companyId
+        ? isNaN(Number(data.companyId))
+          ? data.companyId
+          : Number(data.companyId)
+        : undefined,
     };
+
+    // Keep the UI in a continuous loading state for the whole auth flow
+    setIsLoggingIn(true);
 
     try {
       await submitLogin(apiPayload);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Login failed";
       showToast(message, { variant: "error", position: "top" });
+      setIsLoggingIn(false);
     }
   };
 
@@ -130,21 +140,12 @@ export default function LoginScreen() {
       ...existingAuth,
       token: loginResponse.token,
     } as any);
-    
-    // Fetch settings from backend after successful login
-    try {
-      await fetchSettings();
-      log("Settings fetched successfully after login");
-    } catch (error) {
-      log("Failed to fetch settings after login:", error);
-      // Continue with local settings if fetch fails
-    }
-    
+
     // After login successful login, require OTP verification before granting access
     // Pass login response data to verify-otp screen
     router.push({
       pathname: "/(screens)/auth/verify-otp",
-      params: { 
+      params: {
         context: "login",
         loginData: JSON.stringify(loginResponse),
       },
@@ -165,7 +166,7 @@ export default function LoginScreen() {
       log("No token found, skipping settings fetch on login screen");
     }
   }, []); // Only run once on mount
-  
+
   // Log current settings state for debugging
   useEffect(() => {
     log("Login screen - Current settings state:", {
@@ -183,11 +184,20 @@ export default function LoginScreen() {
   useEffect(() => {
     console.log("Login data", loginData);
     if (loginData?.token) {
-      handleLoginSuccess(loginData);
+      // Bridge the gap between login and settings loading by
+      // keeping isLoggingIn true until post-login side-effects complete
+      (async () => {
+        try {
+          await handleLoginSuccess(loginData);
+        } finally {
+          setIsLoggingIn(false);
+        }
+      })();
     }
 
     if (submitError) {
       showToast(submitError, { variant: "error", position: "top" });
+      setIsLoggingIn(false);
     }
   }, [submitError, loginData]);
 
@@ -223,7 +233,7 @@ export default function LoginScreen() {
   useFocusEffect(
     useCallback(() => {
       reset(LOGIN_DEFAULT_VALUES);
-    }, [reset])
+    }, [reset]),
   );
 
   /**
@@ -235,7 +245,7 @@ export default function LoginScreen() {
       setBiometricDescription(description);
       setBiometricSheetOpen(true);
     },
-    []
+    [],
   );
 
   /** Closes the biometric bottom sheet. */
@@ -311,6 +321,16 @@ export default function LoginScreen() {
           disableDeviceFallback: false,
         });
         if (result?.success) {
+          // For biometric login, fetch settings after successful auth
+          try {
+            await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure token/context are settled
+            await fetchSettings();
+            log("Settings fetched successfully after biometric login");
+          } catch (error) {
+            log("Failed to fetch settings after biometric login:", error);
+            // Continue with local settings if fetch fails
+          }
+
           // Skip identity verified sheet for biometric login and go home directly
           router.replace("/(tabs)");
         }
@@ -319,7 +339,7 @@ export default function LoginScreen() {
         openBiometricSheet(title, description);
       }
     },
-    [openBiometricSheet]
+    [openBiometricSheet],
   );
 
   /** On mount, read supported device biometric types. */
@@ -342,12 +362,12 @@ export default function LoginScreen() {
     if (!supportedTypes || supportedTypes.length === 0) return false;
     if (method === "fingerprint") {
       return supportedTypes.includes(
-        LocalAuthentication.AuthenticationType.FINGERPRINT
+        LocalAuthentication.AuthenticationType.FINGERPRINT,
       );
     }
     // Both Face ID and Face Recognition map to FACIAL_RECOGNITION at the API level
     return supportedTypes.includes(
-      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION
+      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION,
     );
   };
   return (
@@ -416,17 +436,21 @@ export default function LoginScreen() {
                 validate: (value: string) => {
                   const trimmed = value.trim();
                   if (!trimmed) return "Login ID is required";
-                  
+
                   // Login ID can be email or phone number
                   // Check if it's an email
                   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                   // Check if it's a phone number (basic validation - digits, may have +, spaces, dashes, parentheses)
-                  const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
-                  
-                  if (emailRegex.test(trimmed) || phoneRegex.test(trimmed.replace(/[\s\-\(\)]/g, ''))) {
+                  const phoneRegex =
+                    /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
+
+                  if (
+                    emailRegex.test(trimmed) ||
+                    phoneRegex.test(trimmed.replace(/[\s\-\(\)]/g, ""))
+                  ) {
                     return true;
                   }
-                  
+
                   return "Please enter a valid email address or phone number";
                 },
               }}
@@ -471,7 +495,10 @@ export default function LoginScreen() {
             />
 
             <View style={styles.alignEndRow}>
-              <TouchableOpacity onPress={openForgotSheet} disabled={submitting}>
+              <TouchableOpacity
+                onPress={openForgotSheet}
+                disabled={submitting || isSettingsLoading}
+              >
                 <Typography
                   type="bodyMedium"
                   weight="semibold"
@@ -486,10 +513,14 @@ export default function LoginScreen() {
               variant="primary"
               rounded="half"
               onPress={handleSubmit(onSubmit)}
-              loading={submitting}
-              disabled={submitting}
+              loading={isLoggingIn || isSettingsLoading}
+              disabled={isLoggingIn || isSettingsLoading}
             >
-              Sign In
+              {isLoggingIn
+                ? "Signing in..."
+                : isSettingsLoading
+                  ? "Loading settings..."
+                  : "Sign In"}
             </Button>
           </View>
 
@@ -562,12 +593,12 @@ export default function LoginScreen() {
                             void checkAndPromptBiometrics(option.method);
                           } else {
                             const { title, description } = getUnsupportedCopy(
-                              option.method
+                              option.method,
                             );
                             openBiometricSheet(title, description);
                           }
                         }}
-                        disabled={submitting}
+                        disabled={isLoggingIn || isSettingsLoading}
                       >
                         <Image source={option.icon} style={iconStyle as any} />
                         <Typography
@@ -607,7 +638,7 @@ export default function LoginScreen() {
           <Button
             variant="primary"
             rounded="half"
-            disabled={submitting}
+            disabled={isLoggingIn}
             onPress={() => Linking.openURL(URLS.requestRegistration)}
           >
             Request Registration
@@ -643,7 +674,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 key={item.label}
                 style={styles.sheetRow}
-                disabled={submitting}
+                disabled={isLoggingIn || isSettingsLoading}
                 onPress={item.onPress}
               >
                 <Typography
@@ -684,7 +715,7 @@ export default function LoginScreen() {
             variant="primary"
             rounded="half"
             onPress={handleOpenSettings}
-            disabled={submitting}
+            disabled={isLoggingIn || isSettingsLoading}
           >
             Open Settings
           </Button>

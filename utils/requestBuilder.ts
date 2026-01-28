@@ -1,14 +1,19 @@
 /**
  * Request Builder Utility for DB Request Format
- * 
+ *
  * Builds requests in the format required by the backend:
  * { jHeader, jMetaData, jData }
- * 
+ *
  * Similar to BR-Backend/apps/fe-admin/src/utils/dbRequest.ts
  * Adapted for React Native/Expo environment
  */
 
-import { API_VERSION, CLIENT_VERSION, DEFAULT_ACCESS_KEY, DEFAULT_ACCESS_TOKEN } from "@/constants/global";
+import {
+  API_VERSION,
+  CLIENT_VERSION,
+  DEFAULT_ACCESS_KEY,
+  DEFAULT_ACCESS_TOKEN,
+} from "@/constants/global";
 import type { DbRequestJson, GpsData, JHeader } from "@/types/dbRequest";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
@@ -34,7 +39,7 @@ export async function getDeviceId(): Promise<string> {
     // Generate a unique device ID
     // Use Device.osInternalBuildId if available, otherwise generate UUID-like string
     let deviceId: string;
-    
+
     if (Device.osInternalBuildId) {
       deviceId = Device.osInternalBuildId;
     } else if (Device.modelId) {
@@ -60,25 +65,25 @@ export async function getDeviceId(): Promise<string> {
 export function getDeviceInfo(): string {
   try {
     const parts: string[] = [];
-    
+
     if (Device.manufacturer) {
       parts.push(Device.manufacturer);
     }
-    
+
     if (Device.modelName) {
       parts.push(Device.modelName);
     } else if (Device.modelId) {
       parts.push(Device.modelId);
     }
-    
+
     if (Device.osName) {
       parts.push(Device.osName);
     }
-    
+
     if (Device.osVersion) {
       parts.push(Device.osVersion);
     }
-    
+
     return parts.length > 0 ? parts.join(" ") : "Unknown Device";
   } catch (error) {
     log("Error getting device info:", error);
@@ -107,7 +112,9 @@ export function getClientIP(): string {
  * Handles permissions and timeouts gracefully
  * Returns null if unavailable (doesn't block request)
  */
-export async function getGPSData(timeoutMs: number = 4000): Promise<GpsData | null> {
+export async function getGPSData(
+  timeoutMs: number = 4000,
+): Promise<GpsData | null> {
   try {
     // Check if location services are available
     const isAvailable = await Location.hasServicesEnabledAsync();
@@ -129,7 +136,7 @@ export async function getGPSData(timeoutMs: number = 4000): Promise<GpsData | nu
         accuracy: Location.Accuracy.Balanced,
       }),
       new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), timeoutMs)
+        setTimeout(() => resolve(null), timeoutMs),
       ),
     ]);
 
@@ -159,7 +166,7 @@ async function getOrInitToken(key: string, fallback: string): Promise<string> {
   try {
     const existing = await AsyncStorage.getItem(key);
     if (existing) return existing;
-    
+
     await AsyncStorage.setItem(key, fallback);
     return fallback;
   } catch (error) {
@@ -208,7 +215,7 @@ export function getRequestedURL(): string {
 
 /**
  * Builds the base jHeader for DB requests
- * 
+ *
  * @param viewName - The view/action name (usually matches actionCode)
  * @param source - Source identifier (default: "NativeApp")
  * @param options - Optional configuration
@@ -220,25 +227,25 @@ export async function buildRequestHeader(
   options?: {
     actionCode?: string;
     includeGPS?: boolean;
-  }
+  },
 ): Promise<JHeader> {
   const includeGPS = options?.includeGPS !== false; // Default to true
   const clientIP = getClientIP();
-  
+
   // Get device info
   const deviceId = await getDeviceId();
   const deviceInfo = getDeviceInfo();
   const deviceType = getDeviceType();
-  
+
   // Get tokens
   const accessToken = await getAccessToken();
   const accessKey = await getAccessKey();
-  
+
   // Get versions
   const clientVersion = getClientVersion();
   const apiVersion = getAPIVersion();
   const requestedURL = getRequestedURL();
-  
+
   // Build base header
   const jHeader: JHeader = {
     client: "BlinkRide",
@@ -256,7 +263,7 @@ export async function buildRequestHeader(
     requestedURL,
     debug: "false",
   };
-  
+
   // Add GPS data if requested and available
   if (includeGPS) {
     const gps = await getGPSData();
@@ -271,13 +278,13 @@ export async function buildRequestHeader(
       }
     }
   }
-  
+
   return jHeader;
 }
 
 /**
  * Builds a complete DB request with jHeader, jMetaData, and jData
- * 
+ *
  * @param actionCode - The DB action code (e.g., "DRV.S.LOGIN_DRIVER")
  * @param jData - The jData parameters
  * @param options - Optional configuration
@@ -291,7 +298,7 @@ export async function buildRequest(
     jMetaData?: Record<string, any>;
     includeGPS?: boolean;
     includeActionCode?: boolean; // Whether to include P_ACTION_CODE in jData (default: true)
-  }
+  },
 ): Promise<DbRequestJson> {
   const jHeader = await buildRequestHeader(
     actionCode, // viewName matches actionCode
@@ -299,9 +306,9 @@ export async function buildRequest(
     {
       actionCode,
       includeGPS: options?.includeGPS,
-    }
+    },
   );
-  
+
   // Build final jData
   // Note: All mobile app services use callDbAction() which removes P_ACTION_CODE
   // and uses their own hardcoded value. The /settings-service/db-action endpoint
@@ -317,7 +324,7 @@ export async function buildRequest(
     // Default: remove P_ACTION_CODE since backend services handle it
     delete finalJData.P_ACTION_CODE;
   }
-  
+
   return {
     jHeader,
     jMetaData: options?.jMetaData || {},
@@ -327,19 +334,19 @@ export async function buildRequest(
 
 /**
  * Builds a login request in DB format
- * 
+ *
  * @param input - Login credentials and options
  * @returns Promise resolving to complete DbRequestJson for login
  */
 export async function buildLoginRequest(input: {
-  emailOrPhone: string;
+  loginId: string;
   password: string;
   appName?: string;
   affiliateNum?: number;
   companyId?: number;
 }): Promise<DbRequestJson> {
   const actionCode = "DRV.S.LOGIN_DRIVER";
-  
+
   // Note: The backend auth service (/auth/signin) removes P_ACTION_CODE from jData
   // and uses its own hardcoded action code. Since includeActionCode defaults to false,
   // we don't need to specify it explicitly.
@@ -347,13 +354,41 @@ export async function buildLoginRequest(input: {
     P_APP_NAME: input.appName || "driver-ios",
     P_AFFILIATE_NUM: input.affiliateNum ?? 101,
     P_COMPANY_ID: input.companyId ?? 1,
-    P_EMAIL_OR_PHONE: input.emailOrPhone,
+    P_LOGIN_ID: input.loginId,
     P_PASSWORD: input.password,
   };
-  
+
   return buildRequest(actionCode, jData, {
     source: "NativeApp",
     includeGPS: true, // Include GPS for login
     // includeActionCode defaults to false - backend handles it
+  });
+}
+
+/**
+ * Builds a forgot user ID request in DB format.
+ *
+ * IMPORTANT: Backend expects P_EMAIL_OR_PHONE for this endpoint (not P_LOGIN_ID).
+ */
+export async function buildForgotUserIdRequest(input: {
+  emailOrPhone: string;
+  phone: string;
+  companyId?: number;
+  appName?: string;
+  affiliateNum?: number;
+}): Promise<DbRequestJson> {
+  const actionCode = "CMN.S.GET_USERNAME";
+
+  const jData: Record<string, any> = {
+    P_APP_NAME: input.appName || "driver-ios",
+    P_AFFILIATE_NUM: input.affiliateNum ?? 101,
+    P_COMPANY_ID: input.companyId ?? 1,
+    P_EMAIL_OR_PHONE: input.emailOrPhone,
+    P_PHONE: input.phone,
+  };
+
+  return buildRequest(actionCode, jData, {
+    source: "NativeApp",
+    includeGPS: true,
   });
 }

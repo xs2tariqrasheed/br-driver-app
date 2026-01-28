@@ -1,4 +1,3 @@
-import React from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   KeyboardAvoidingView,
@@ -46,7 +45,7 @@ export default function ForgotUserIdScreen() {
 
   const { execute: requestOtp, loading } = usePost<any, ForgotUserIdFormValues>(
     AUTH_ENDPOINTS.requestOtpForUserId,
-    API_CLIENT_TYPES.AUTH
+    API_CLIENT_TYPES.AUTH,
   );
 
   /**
@@ -55,7 +54,14 @@ export default function ForgotUserIdScreen() {
    */
   const onSubmit = async (data: ForgotUserIdFormValues) => {
     try {
-      const response = await requestOtp(data);
+      // Backend validates this endpoint as:
+      //   { companyId, email, phone }
+      // and internally maps email -> P_EMAIL_OR_PHONE when calling DB.
+      const response = await requestOtp({
+        companyId: data.companyId,
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+      });
 
       showToast(response?.message || "OTP sent successfully", {
         variant: "success",

@@ -19,7 +19,12 @@ import { AUTH_STORAGE_KEY } from "@/constants/global";
 import type { DbRequestJson, DbResponse } from "@/types/dbRequest";
 import { getStorageItem, logger } from "@/utils/helpers";
 import { buildLoginRequest } from "@/utils/requestBuilder";
-import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from "axios";
 import { getServiceUrl, setCustomBaseUrl } from "./urlResolver";
 const log = logger();
 
@@ -55,7 +60,7 @@ const createApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "online-drivers",
       process.env.EXPO_PUBLIC_BASE_URL,
-      "https://djh0g1zn5pc6f.cloudfront.net"
+      "https://djh0g1zn5pc6f.cloudfront.net",
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -83,7 +88,9 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     async (config) => {
       const completeURL = `${config.baseURL || ""}${config.url || ""}`;
-      console.log(`🚀 [auctionApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(
+        `🚀 [auctionApiClient] ${config.method?.toUpperCase()} ${completeURL}`,
+      );
       console.log(`🚀 [auctionApiClient] Base URL: ${config.baseURL}`);
       log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
       const dynamicBaseUrl = config.baseURL;
@@ -92,16 +99,15 @@ const createApiClient = (): AxiosInstance => {
       const token = data ? JSON.parse(data).token : null;
       if (token) {
         config.headers = config.headers || {};
-        (config.headers as Record<string, string>)[
-          "Authorization"
-        ] = `Bearer ${token}`;
+        (config.headers as Record<string, string>)["Authorization"] =
+          `Bearer ${token}`;
       }
       return config;
     },
     (error) => {
       log("❌ Request Error:", error);
       return Promise.reject(error);
-    }
+    },
   );
 
   /**
@@ -123,7 +129,7 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       // Log successful response for debugging (remove in production)
-      log(`✅ API Response: ${response.status} ${response.config.url}`);
+      console.log(`✅ API Response: ${response.status} ${response.config.url}`);
       return response;
     },
     (error: AxiosError) => {
@@ -155,7 +161,7 @@ const createApiClient = (): AxiosInstance => {
 
       log("❌ API Error:", errorMessage);
       return Promise.reject(new Error(errorMessage));
-    }
+    },
   );
 
   return client;
@@ -181,7 +187,7 @@ const createAuctionApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "auction",
       process.env.EXPO_PUBLIC_BASE_URL,
-      "https://djh0g1zn5pc6f.cloudfront.net"
+      "https://djh0g1zn5pc6f.cloudfront.net",
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -215,16 +221,15 @@ const createAuctionApiClient = (): AxiosInstance => {
       const token = data ? JSON.parse(data).token : null;
       if (token) {
         config.headers = config.headers || {};
-        (config.headers as Record<string, string>)[
-          "Authorization"
-        ] = `Bearer ${token}`;
+        (config.headers as Record<string, string>)["Authorization"] =
+          `Bearer ${token}`;
       }
       return config;
     },
     (error) => {
       log("❌ Request Error:", error);
       return Promise.reject(error);
-    }
+    },
   );
 
   /**
@@ -278,7 +283,7 @@ const createAuctionApiClient = (): AxiosInstance => {
 
       log("❌ API Error:", errorMessage);
       return Promise.reject(new Error(errorMessage));
-    }
+    },
   );
 
   return client;
@@ -305,7 +310,7 @@ const createAuthApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "auth",
       process.env.EXPO_PUBLIC_BASE_URL,
-      "https://djh0g1zn5pc6f.cloudfront.net"
+      "https://djh0g1zn5pc6f.cloudfront.net",
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -335,16 +340,18 @@ const createAuthApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
       const completeURL = `${config.baseURL || ""}${config.url || ""}`;
-      console.log(`🚀 [authApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(
+        `🚀 [authApiClient] ${config.method?.toUpperCase()} ${completeURL}`,
+      );
       console.log(`🚀 [authApiClient] Base URL: ${config.baseURL}`);
       log(`🚀 Auth API Request: ${config.method?.toUpperCase()} ${config.url}`);
-      
+
       // Check if this endpoint needs DB request format transformation
       if (shouldTransformToDbFormat(config.url || "", config.method || "")) {
         try {
           const transformed = await transformRequestToDbFormat(
             config.data,
-            config.url || ""
+            config.url || "",
           );
           if (transformed) {
             config.data = transformed;
@@ -355,13 +362,13 @@ const createAuthApiClient = (): AxiosInstance => {
           // Continue with original request if transformation fails
         }
       }
-      
+
       return config;
     },
     (error) => {
       log("❌ Request Error:", error);
       return Promise.reject(error);
-    }
+    },
   );
 
   /**
@@ -383,7 +390,7 @@ const createAuthApiClient = (): AxiosInstance => {
     (response: AxiosResponse) => {
       // Log successful response for debugging (remove in production)
       log(`✅ Auth API Response: ${response.status} ${response.config.url}`);
-      
+
       // Handle DB response format if present
       const transformedResponse = transformDbResponse(response);
       return transformedResponse;
@@ -391,27 +398,46 @@ const createAuthApiClient = (): AxiosInstance => {
     (error: AxiosError) => {
       // Handle authentication-specific error scenarios
       let errorMessage: string = "An unexpected error occurred";
-      
+
       // First, handle network errors (common on iOS when there's no response)
       if (!error.response) {
         // Network error - no response received
         if (error.code === "ECONNABORTED") {
-          errorMessage = "Request timed out. Please check your connection and try again.";
-        } else if (error.code === "ECONNREFUSED" || error.code === "ERR_CONNECTION_REFUSED") {
-          errorMessage = "Unable to connect to server. Please check your connection and try again.";
-        } else if (error.code === "ENOTFOUND" || error.code === "ERR_NAME_NOT_RESOLVED") {
-          errorMessage = "Unable to reach server. Please check your internet connection.";
-        } else if (error.code === "ERR_NETWORK" || error.code === "NETWORK_ERROR") {
-          errorMessage = "Network error. Please check your internet connection and try again.";
-        } else if (error.message && error.message.includes("Network request failed")) {
-          errorMessage = "Network request failed. Please check your internet connection and try again.";
+          errorMessage =
+            "Request timed out. Please check your connection and try again.";
+        } else if (
+          error.code === "ECONNREFUSED" ||
+          error.code === "ERR_CONNECTION_REFUSED"
+        ) {
+          errorMessage =
+            "Unable to connect to server. Please check your connection and try again.";
+        } else if (
+          error.code === "ENOTFOUND" ||
+          error.code === "ERR_NAME_NOT_RESOLVED"
+        ) {
+          errorMessage =
+            "Unable to reach server. Please check your internet connection.";
+        } else if (
+          error.code === "ERR_NETWORK" ||
+          error.code === "NETWORK_ERROR"
+        ) {
+          errorMessage =
+            "Network error. Please check your internet connection and try again.";
+        } else if (
+          error.message &&
+          error.message.includes("Network request failed")
+        ) {
+          errorMessage =
+            "Network request failed. Please check your internet connection and try again.";
         } else if (error.message && error.message.includes("timeout")) {
-          errorMessage = "Request timed out. Please check your connection and try again.";
+          errorMessage =
+            "Request timed out. Please check your connection and try again.";
         } else if (error.message) {
           // Use the error message if available
           errorMessage = error.message;
         } else {
-          errorMessage = "Unable to connect to server. Please check your internet connection and try again.";
+          errorMessage =
+            "Unable to connect to server. Please check your internet connection and try again.";
         }
       } else if (error.response?.status === 400) {
         errorMessage = "Invalid credentials. Please check your login details.";
@@ -447,7 +473,7 @@ const createAuthApiClient = (): AxiosInstance => {
         originalError: error.message,
       });
       return Promise.reject(new Error(errorMessage));
-    }
+    },
   );
 
   return client;
@@ -473,7 +499,7 @@ const createMeApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "me",
       process.env.EXPO_PUBLIC_BASE_URL,
-      "http://3.84.108.176:3001"
+      "http://3.84.108.176:3001",
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -501,7 +527,9 @@ const createMeApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     async (config) => {
       const completeURL = `${config.baseURL || ""}${config.url || ""}`;
-      console.log(`🚀 [meApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(
+        `🚀 [meApiClient] ${config.method?.toUpperCase()} ${completeURL}`,
+      );
       console.log(`🚀 [meApiClient] Base URL: ${config.baseURL}`);
       log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
       const data = await getStorageItem(AUTH_STORAGE_KEY);
@@ -510,16 +538,15 @@ const createMeApiClient = (): AxiosInstance => {
       log("BASE URL FOR ME API", config.baseURL);
       if (token) {
         config.headers = config.headers || {};
-        (config.headers as Record<string, string>)[
-          "Authorization"
-        ] = `Bearer ${token}`;
+        (config.headers as Record<string, string>)["Authorization"] =
+          `Bearer ${token}`;
       }
       return config;
     },
     (error) => {
       log("❌ Request Error:", error);
       return Promise.reject(error);
-    }
+    },
   );
 
   /**
@@ -573,7 +600,7 @@ const createMeApiClient = (): AxiosInstance => {
 
       log("❌ API Error:", errorMessage);
       return Promise.reject(new Error(errorMessage));
-    }
+    },
   );
 
   return client;
@@ -599,7 +626,7 @@ const createSettingsApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "settings",
       process.env.EXPO_PUBLIC_SETTINGS_BASE_URL,
-      "http://3.84.108.176:3004"
+      "http://3.84.108.176:3004",
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -627,10 +654,12 @@ const createSettingsApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     async (config) => {
       const completeURL = `${config.baseURL || ""}${config.url || ""}`;
-      console.log(`🚀 [settingsApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(
+        `🚀 [settingsApiClient] ${config.method?.toUpperCase()} ${completeURL}`,
+      );
       console.log(`🚀 [settingsApiClient] Base URL: ${config.baseURL}`);
       log(
-        `🚀 Settings API Request: ${config.method?.toUpperCase()} ${config.url}`
+        `🚀 Settings API Request: ${config.method?.toUpperCase()} ${config.url}`,
       );
       const dynamicBaseUrl = config.baseURL;
       log(`🚀 Settings Dynamic Base URL: ${dynamicBaseUrl}`);
@@ -638,16 +667,15 @@ const createSettingsApiClient = (): AxiosInstance => {
       const token = data ? JSON.parse(data).token : null;
       if (token) {
         config.headers = config.headers || {};
-        (config.headers as Record<string, string>)[
-          "Authorization"
-        ] = `Bearer ${token}`;
+        (config.headers as Record<string, string>)["Authorization"] =
+          `Bearer ${token}`;
       }
       return config;
     },
     (error) => {
       log("❌ Settings Request Error:", error);
       return Promise.reject(error);
-    }
+    },
   );
 
   /**
@@ -668,7 +696,7 @@ const createSettingsApiClient = (): AxiosInstance => {
     (response: AxiosResponse) => {
       // Log successful response for debugging (remove in production)
       log(
-        `✅ Settings API Response: ${response.status} ${response.config.url}`
+        `✅ Settings API Response: ${response.status} ${response.config.url}`,
       );
       return response;
     },
@@ -704,7 +732,7 @@ const createSettingsApiClient = (): AxiosInstance => {
 
       log("❌ Settings API Error:", errorMessage);
       return Promise.reject(new Error(errorMessage));
-    }
+    },
   );
 
   return client;
@@ -730,7 +758,7 @@ const createActiveTripApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "active-trip",
       process.env.EXPO_PUBLIC_BASE_URL,
-      "https://djh0g1zn5pc6f.cloudfront.net"
+      "https://djh0g1zn5pc6f.cloudfront.net",
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -758,12 +786,14 @@ const createActiveTripApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     async (config) => {
       const completeURL = `${config.baseURL || ""}${config.url || ""}`;
-      console.log(`🚀 [activeTripApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(
+        `🚀 [activeTripApiClient] ${config.method?.toUpperCase()} ${completeURL}`,
+      );
       console.log(`🚀 [activeTripApiClient] Base URL: ${config.baseURL}`);
       log(
         `🚀 Active Trip API Request: ${config.method?.toUpperCase()} ${
           config.url
-        }`
+        }`,
       );
       const dynamicBaseUrl = config.baseURL;
       log(`🚀 Active Trip Dynamic Base URL: ${dynamicBaseUrl}`);
@@ -771,16 +801,15 @@ const createActiveTripApiClient = (): AxiosInstance => {
       const token = data ? JSON.parse(data).token : null;
       if (token) {
         config.headers = config.headers || {};
-        (config.headers as Record<string, string>)[
-          "Authorization"
-        ] = `Bearer ${token}`;
+        (config.headers as Record<string, string>)["Authorization"] =
+          `Bearer ${token}`;
       }
       return config;
     },
     (error) => {
       log("❌ Active Trip Request Error:", error);
       return Promise.reject(error);
-    }
+    },
   );
 
   /**
@@ -801,7 +830,7 @@ const createActiveTripApiClient = (): AxiosInstance => {
     (response: AxiosResponse) => {
       // Log successful response for debugging (remove in production)
       log(
-        `✅ Active Trip API Response: ${response.status} ${response.config.url}`
+        `✅ Active Trip API Response: ${response.status} ${response.config.url}`,
       );
       return response;
     },
@@ -837,7 +866,7 @@ const createActiveTripApiClient = (): AxiosInstance => {
 
       log("❌ Active Trip API Error:", errorMessage);
       return Promise.reject(new Error(errorMessage));
-    }
+    },
   );
 
   return client;
@@ -846,7 +875,7 @@ const createActiveTripApiClient = (): AxiosInstance => {
 // Create the main API clients instance
 /**
  * Helper function to determine if a request should be transformed to DB format
- * 
+ *
  * @param url - Request URL
  * @param method - HTTP method
  * @returns true if request should be transformed
@@ -865,33 +894,45 @@ function shouldTransformToDbFormat(url: string, method: string): boolean {
 
 /**
  * Transforms a request body to DB format (jHeader, jMetaData, jData)
- * 
+ *
  * @param data - Original request body
  * @param url - Request URL
  * @returns Transformed request body in DB format, or null if transformation not needed
  */
 async function transformRequestToDbFormat(
   data: any,
-  url: string
+  url: string,
 ): Promise<DbRequestJson | null> {
   // Skip if already in DB format
-  if (data && typeof data === "object" && "jHeader" in data && "jData" in data) {
+  if (
+    data &&
+    typeof data === "object" &&
+    "jHeader" in data &&
+    "jData" in data
+  ) {
     return null; // Already transformed
   }
 
   // Transform login request
   if (url.includes("/auth/signin")) {
     // Check if it's a legacy format (email/password at root)
-    if (data && typeof data === "object" && ("email" in data || "password" in data)) {
+    if (
+      data &&
+      typeof data === "object" &&
+      ("email" in data || "password" in data)
+    ) {
       const email = data.email || "";
       const password = data.password || "";
-      const companyId = data.companyId !== undefined 
-        ? (typeof data.companyId === 'string' ? parseInt(data.companyId, 10) : data.companyId)
-        : undefined;
-      
+      const companyId =
+        data.companyId !== undefined
+          ? typeof data.companyId === "string"
+            ? parseInt(data.companyId, 10)
+            : data.companyId
+          : undefined;
+
       if (email && password) {
         return await buildLoginRequest({
-          emailOrPhone: email,
+          loginId: email,
           password: password,
           companyId: companyId,
         });
@@ -906,7 +947,7 @@ async function transformRequestToDbFormat(
 /**
  * Transforms DB response format to a consistent structure
  * Handles nested response structure and validates responseCode
- * 
+ *
  * @param response - Axios response
  * @returns Transformed response
  */
@@ -915,15 +956,23 @@ function transformDbResponse(response: AxiosResponse): AxiosResponse {
     const data = response.data;
 
     // Check if response has nested structure: { success: true, data: { jHeader, jData, jMetaData } }
-    if (data && typeof data === "object" && "success" in data && "data" in data) {
+    if (
+      data &&
+      typeof data === "object" &&
+      "success" in data &&
+      "data" in data
+    ) {
       const dbResponse = data.data as DbResponse;
-      
+
       // Validate responseCode (0 = success, others = error)
       if (dbResponse?.jHeader?.responseCode !== undefined) {
         const responseCode = dbResponse.jHeader.responseCode;
         if (responseCode !== "0" && responseCode !== 0) {
-          const errorMessage = dbResponse.jHeader.message || "Database operation failed";
-          log(`⚠️ DB Response error: ${errorMessage} (responseCode: ${responseCode})`);
+          const errorMessage =
+            dbResponse.jHeader.message || "Database operation failed";
+          log(
+            `⚠️ DB Response error: ${errorMessage} (responseCode: ${responseCode})`,
+          );
           // Note: We don't throw here - let the error handler process it
           // The backend may still return 200 with error in responseCode
         }
@@ -944,13 +993,16 @@ function transformDbResponse(response: AxiosResponse): AxiosResponse {
     // Check if response has direct DB format: { jHeader, jData, jMetaData }
     if (data && typeof data === "object" && "jHeader" in data) {
       const dbResponse = data as DbResponse;
-      
+
       // Validate responseCode
       if (dbResponse.jHeader?.responseCode !== undefined) {
         const responseCode = dbResponse.jHeader.responseCode;
         if (responseCode !== "0" && responseCode !== 0) {
-          const errorMessage = dbResponse.jHeader.message || "Database operation failed";
-          log(`⚠️ DB Response error: ${errorMessage} (responseCode: ${responseCode})`);
+          const errorMessage =
+            dbResponse.jHeader.message || "Database operation failed";
+          log(
+            `⚠️ DB Response error: ${errorMessage} (responseCode: ${responseCode})`,
+          );
         }
       }
 
@@ -984,7 +1036,7 @@ const createNotificationsApiClient = (): AxiosInstance => {
     BASE_URL: getServiceUrl(
       "notifications",
       process.env.EXPO_PUBLIC_NOTIFICATIONS_BASE_URL,
-      "http://3.84.108.176:3006"
+      "http://3.84.108.176:3006",
     ),
     HEADERS: {
       "Content-Type": "application/json",
@@ -1012,10 +1064,12 @@ const createNotificationsApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     async (config) => {
       const completeURL = `${config.baseURL || ""}${config.url || ""}`;
-      console.log(`🚀 [notificationsApiClient] ${config.method?.toUpperCase()} ${completeURL}`);
+      console.log(
+        `🚀 [notificationsApiClient] ${config.method?.toUpperCase()} ${completeURL}`,
+      );
       console.log(`🚀 [notificationsApiClient] Base URL: ${config.baseURL}`);
       log(
-        `🚀 Notifications API Request: ${config.method?.toUpperCase()} ${config.url}`
+        `🚀 Notifications API Request: ${config.method?.toUpperCase()} ${config.url}`,
       );
       const dynamicBaseUrl = config.baseURL;
       log(`🚀 Notifications Dynamic Base URL: ${dynamicBaseUrl}`);
@@ -1023,16 +1077,15 @@ const createNotificationsApiClient = (): AxiosInstance => {
       const token = data ? JSON.parse(data).token : null;
       if (token) {
         config.headers = config.headers || {};
-        (config.headers as Record<string, string>)[
-          "Authorization"
-        ] = `Bearer ${token}`;
+        (config.headers as Record<string, string>)["Authorization"] =
+          `Bearer ${token}`;
       }
       return config;
     },
     (error) => {
       log("❌ Notifications Request Error:", error);
       return Promise.reject(error);
-    }
+    },
   );
 
   /**
@@ -1053,7 +1106,7 @@ const createNotificationsApiClient = (): AxiosInstance => {
     (response: AxiosResponse) => {
       // Log successful response for debugging (remove in production)
       log(
-        `✅ Notifications API Response: ${response.status} ${response.config.url}`
+        `✅ Notifications API Response: ${response.status} ${response.config.url}`,
       );
       return response;
     },
@@ -1089,7 +1142,7 @@ const createNotificationsApiClient = (): AxiosInstance => {
 
       log("❌ Notifications API Error:", errorMessage);
       return Promise.reject(new Error(errorMessage));
-    }
+    },
   );
 
   return client;
@@ -1106,7 +1159,7 @@ export const notificationsApiClient = createNotificationsApiClient();
 /**
  * Updates the base URL for all API clients.
  * This is used when the user enters a deployed base URL on app startup.
- * 
+ *
  * @param baseUrl - The new base URL to use for all services
  */
 export const updateBaseUrls = (baseUrl: string) => {
@@ -1117,7 +1170,7 @@ export const updateBaseUrls = (baseUrl: string) => {
 
   // Remove trailing slash if present
   const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-  
+
   // Update the global custom base URL in urlResolver (store without port)
   // This ensures getServiceUrl will return the custom URL for any future calls
   setCustomBaseUrl(cleanBaseUrl);
@@ -1133,13 +1186,17 @@ export const updateBaseUrls = (baseUrl: string) => {
     { name: "auctionApiClient", client: auctionApiClient, port: 3002 }, // auction
     { name: "settingsApiClient", client: settingsApiClient, port: 3004 }, // settings
     { name: "activeTripApiClient", client: activeTripApiClient, port: 3005 }, // active-trip
-    { name: "notificationsApiClient", client: notificationsApiClient, port: 3006 } // notifications
+    {
+      name: "notificationsApiClient",
+      client: notificationsApiClient,
+      port: 3006,
+    }, // notifications
   ];
 
   console.log("🌐 ========== UPDATING ALL API CLIENTS ==========");
   console.log(`🌐 Custom Base URL (stored): ${cleanBaseUrl}`);
   console.log(`🌐 Base URL without port: ${baseUrlWithoutPort}`);
-  
+
   clients.forEach(({ name, client, port }) => {
     const oldBaseURL = client.defaults.baseURL;
     const newBaseURL = `${baseUrlWithoutPort}:${port}`;
