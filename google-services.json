@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "603328084257",
-    "project_id": "br-driver-app",
-    "storage_bucket": "br-driver-app.firebasestorage.app"
+    "project_number": "129705935713",
+    "project_id": "br-driver-app-3c0b1",
+    "storage_bucket": "br-driver-app-3c0b1.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:603328084257:android:5651c86b6cf8f71e3b2660",
+        "mobilesdk_app_id": "1:129705935713:android:5cae9a557e262b3f427b20",
         "android_client_info": {
           "package_name": "com.mujahidforeaims.brdriverapp"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC7PvDB1BbcBdl9wLLLAfeydJ-TAPOjVFo"
+          "current_key": "AIzaSyDbY1h9i63ne411L-cbfxgH120TAVT0hQI"
         }
       ],
       "services": {

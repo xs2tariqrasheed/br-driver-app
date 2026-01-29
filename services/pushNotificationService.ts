@@ -1,7 +1,7 @@
 import { getStorageItem, setStorageItem } from "@/utils/helpers";
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
-import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 const STORAGE_KEY_PREFIX = "@expoPushToken:";
@@ -131,4 +131,3 @@ export async function registerTokenIfNeeded(userId: string): Promise<boolean> {
     return false;
   }
 }
-
