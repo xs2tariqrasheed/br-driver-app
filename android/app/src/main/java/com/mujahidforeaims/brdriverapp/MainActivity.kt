@@ -1,4 +1,4 @@
-package com.saadforeaims.brdriverapp
+package com.mujahidforeaims.brdriverapp
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

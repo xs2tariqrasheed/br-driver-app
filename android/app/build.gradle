@@ -88,9 +88,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.saadforeaims.brdriverapp'
+    namespace 'com.mujahidforeaims.brdriverapp'
     defaultConfig {
-        applicationId 'com.saadforeaims.brdriverapp'
+        applicationId 'com.mujahidforeaims.brdriverapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

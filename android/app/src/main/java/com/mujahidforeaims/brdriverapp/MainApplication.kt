@@ -1,4 +1,4 @@
-package com.saadforeaims.brdriverapp
+package com.mujahidforeaims.brdriverapp
 
 import android.app.Application
 import android.content.res.Configuration
