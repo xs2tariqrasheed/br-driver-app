@@ -51,6 +51,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.saadforeaims.brdriverapp",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
@@ -78,6 +79,14 @@
           "imageWidth": 150,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/app-icon-1024.png",
+          "color": "#ffffff",
+          "mode": "production"
         }
       ]
     ],

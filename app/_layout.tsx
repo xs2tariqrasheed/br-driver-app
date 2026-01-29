@@ -26,13 +26,19 @@ import { PackageInfoProvider } from "@/context/PackageInfoContext";
 import { RideOfferProvider } from "@/context/RideOfferContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { SpecialRequirementsProvider } from "@/context/SpecialRequirementsContext";
+import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
+import { useAuth } from "@/context/AuthContext";
+import { useRideOffer } from "@/context/RideOfferContext";
+import { registerTokenIfNeeded } from "@/services/pushNotificationService";
+import { coerceTripId } from "@/types/pushNotifications";
 import { getStorageItem } from "@/utils/helpers";
 import { speechManager } from "@/utils/speechManager";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
-import { SplashScreen, Stack } from "expo-router";
+import { SplashScreen, Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import * as Notifications from "expo-notifications";
+import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Host } from "react-native-portalize";
@@ -40,6 +46,94 @@ import "react-native-reanimated";
 
 // Keep the native splash screen visible while we load resources
 SplashScreen.preventAutoHideAsync();
+
+function PushNotificationsBootstrap() {
+  const router = useRouter();
+  const [auth] = useAuth();
+  const { broadcastOffers } = useBroadcastJobOffers();
+  const { getTemporaryRideByTripId, showRideOfferModal } = useRideOffer();
+
+  const responseSub = useRef<Notifications.Subscription | null>(null);
+  const handledInitialResponse = useRef(false);
+  const tokenRegistrationAttempted = useRef(false);
+
+  const handleResponse = async (response: Notifications.NotificationResponse) => {
+    const data = response.notification.request.content.data;
+    const tripId = coerceTripId(data);
+
+    if (tripId) {
+      // Best effort:
+      // 1) If the app process is still alive, we might already have the offer in memory.
+      // 2) If not, route to tabs so sockets can reconnect and deliver the offer.
+      const tempRide = getTemporaryRideByTripId(tripId);
+      if (tempRide) {
+        showRideOfferModal(tempRide as any);
+        return;
+      }
+
+      const broadcastOffer = broadcastOffers.find(
+        (o) => String(o.tripOffer?.tripId) === String(tripId),
+      );
+      if (broadcastOffer) {
+        showRideOfferModal(broadcastOffer as any);
+        return;
+      }
+
+      router.replace("/(tabs)");
+      return;
+    }
+
+    router.push("/(screens)/notifications");
+  };
+
+  useEffect(() => {
+    if (!responseSub.current) {
+      responseSub.current =
+        Notifications.addNotificationResponseReceivedListener(handleResponse);
+    }
+
+    (async () => {
+      if (handledInitialResponse.current) return;
+      handledInitialResponse.current = true;
+      try {
+        const last = await Notifications.getLastNotificationResponseAsync();
+        if (last) {
+          await handleResponse(last);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      if (responseSub.current) {
+        Notifications.removeNotificationSubscription(responseSub.current);
+        responseSub.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const userId = auth?.user?.id;
+    if (!userId) {
+      tokenRegistrationAttempted.current = false;
+      return;
+    }
+    if (tokenRegistrationAttempted.current) return;
+    tokenRegistrationAttempted.current = true;
+
+    (async () => {
+      try {
+        await registerTokenIfNeeded(String(userId));
+      } catch {
+        tokenRegistrationAttempted.current = false;
+      }
+    })();
+  }, [auth?.user?.id]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -170,6 +264,7 @@ export default function RootLayout() {
                                                     />
                                                   </Stack>
                                                   <StatusBar style="auto" />
+                                                  <PushNotificationsBootstrap />
                                                   {/* Global Socket Listener */}
                                                   <GlobalSocketListener />
                                                   {/* Global Active Trip Socket Listener */}
