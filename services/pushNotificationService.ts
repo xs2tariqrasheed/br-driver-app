@@ -62,7 +62,10 @@ async function storeToken(userId: string, token: string): Promise<void> {
 }
 
 export async function getExpoPushTokenAsync(): Promise<string | null> {
-  if (!Device.isDevice) return null;
+  if (!Device.isDevice) {
+    console.log("Push notifications not supported on simulator/emulator");
+    return null;
+  }
   try {
     await ensureAndroidChannelAsync();
     const settings = await Notifications.getPermissionsAsync();
@@ -71,14 +74,23 @@ export async function getExpoPushTokenAsync(): Promise<string | null> {
       const requested = await Notifications.requestPermissionsAsync();
       status = requested.status;
     }
-    if (status !== "granted") return null;
+    if (status !== "granted") {
+      console.log("Push notification permission not granted:", status);
+      return null;
+    }
 
     const projectId = getExpoProjectId();
-    if (!projectId) return null;
+    console.log("Using EAS Project ID:", projectId);
+    if (!projectId) {
+      console.log("EAS Project ID not found in app config");
+      return null;
+    }
 
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    console.log("ExponentPushToken:", tokenData.data);
     return tokenData.data;
-  } catch {
+  } catch (error) {
+    console.log("Error getting push token:", error);
     return null;
   }
 }
@@ -91,18 +103,31 @@ async function registerTokenWithBackend(_userId: string, _token: string) {
 }
 
 export async function registerTokenIfNeeded(userId: string): Promise<boolean> {
+  console.log("registerTokenIfNeeded called for userId:", userId);
   try {
     const [stored, current] = await Promise.all([
       getStoredToken(userId),
       getExpoPushTokenAsync(),
     ]);
-    if (!current) return false;
-    if (stored === current) return true;
+    if (!current) {
+      console.log("No push token available for registration");
+      return false;
+    }
+    if (stored === current) {
+      console.log("Push token already registered for this user");
+      return true;
+    }
 
     const ok = await registerTokenWithBackend(userId, current);
-    if (ok) await storeToken(userId, current);
+    if (ok) {
+      console.log("Push token registered successfully with backend");
+      await storeToken(userId, current);
+    } else {
+      console.log("Failed to register push token with backend");
+    }
     return ok;
-  } catch {
+  } catch (error) {
+    console.log("Error in registerTokenIfNeeded:", error);
     return false;
   }
 }

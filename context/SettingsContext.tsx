@@ -67,7 +67,12 @@ type SetAction = { type: "SET"; payload: SettingsObject };
 type ClearAction = { type: "CLEAR" };
 type SetLoadingAction = { type: "SET_LOADING"; payload: boolean };
 type SetErrorAction = { type: "SET_ERROR"; payload: string | null };
-type SettingsAction = HydrateAction | SetAction | ClearAction | SetLoadingAction | SetErrorAction;
+type SettingsAction =
+  | HydrateAction
+  | SetAction
+  | ClearAction
+  | SetLoadingAction
+  | SetErrorAction;
 
 export const DEFAULT_SETTINGS: SettingsObject = {
   loginSettings: {
@@ -100,8 +105,8 @@ export const DEFAULT_SETTINGS: SettingsObject = {
   autoBidStrategy: null,
 };
 
-const initialState: SettingsState = { 
-  settings: null, 
+const initialState: SettingsState = {
+  settings: null,
   isHydrated: false,
   isLoading: false,
   error: null,
@@ -132,11 +137,11 @@ type SettingsContextValue = [
     error: string | null;
     clearError: () => void;
     fetchSettings: () => Promise<void>;
-  }
+  },
 ];
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(
-  undefined
+  undefined,
 );
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -184,7 +189,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-
   const setSettings = useCallback(
     async (next: SettingsObject) => {
       // Capture current settings for revert if needed
@@ -206,11 +210,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         // Sync with backend API
         const { settingsApiClient } = await import("@/config/apiConfig");
-        const { DRIVER_SETTINGS_ENDPOINTS } = await import("@/constants/endpoints");
+        const { DRIVER_SETTINGS_ENDPOINTS } =
+          await import("@/constants/endpoints");
 
         const response = await settingsApiClient.post(
           DRIVER_SETTINGS_ENDPOINTS.updateSettings,
-          next
+          next,
         );
 
         // Check if the response indicates success or failure
@@ -223,7 +228,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           dbResponseCode === 0;
 
         // If any check fails, throw error
-        if (responseData?.success === false || !isDbSuccess || !hasSuccessFlag) {
+        if (
+          responseData?.success === false ||
+          !isDbSuccess ||
+          !hasSuccessFlag
+        ) {
           const errorMessage =
             responseData?.message ||
             responseData?.data?.jHeader?.message ||
@@ -242,7 +251,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           try {
             await setStorageItem(
               SETTINGS_STORAGE_KEY,
-              JSON.stringify(previousSettings)
+              JSON.stringify(previousSettings),
             );
           } catch (storageErr) {
             // ignore revert failures for local storage
@@ -266,7 +275,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [state.settings]
+    [state.settings],
   );
 
   const clearError = useCallback(() => {
@@ -274,99 +283,119 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Transform DB response to mobile app settings format
-  const transformDbResponseToSettings = useCallback((dbData: any): SettingsObject => {
-    const settings: SettingsObject = { ...DEFAULT_SETTINGS };
+  const transformDbResponseToSettings = useCallback(
+    (dbData: any): SettingsObject => {
+      const settings: SettingsObject = { ...DEFAULT_SETTINGS };
 
-    // The API returns data nested in driverSettings object
-    const driverSettings = dbData.driverSettings || dbData;
+      // The API returns data nested in driverSettings object
+      const driverSettings = dbData.driverSettings || dbData;
 
-    // Transform trip vehicle preferences
-    const vehiclePref = driverSettings.tripVehiclePreference || driverSettings.P_TRIP_VEHICLE_PREFERENCE;
-    if (vehiclePref) {
-      settings.ridePreferences.rideTypes = {
-        economy: vehiclePref.ECONOMY === 'YES' || vehiclePref.ECONOMY === true,
-        sedan: vehiclePref.SEDAN === 'YES' || vehiclePref.SEDAN === true,
-        suv: vehiclePref.SUV === 'YES' || vehiclePref.SUV === true,
-        luxury: false, // Not in DB response
-      };
-    }
+      // Transform trip vehicle preferences
+      const vehiclePref =
+        driverSettings.tripVehiclePreference ||
+        driverSettings.P_TRIP_VEHICLE_PREFERENCE;
+      if (vehiclePref) {
+        settings.ridePreferences.rideTypes = {
+          economy:
+            vehiclePref.ECONOMY === "YES" || vehiclePref.ECONOMY === true,
+          sedan: vehiclePref.SEDAN === "YES" || vehiclePref.SEDAN === true,
+          suv: vehiclePref.SUV === "YES" || vehiclePref.SUV === true,
+          luxury: false, // Not in DB response
+        };
+      }
 
-    // Transform trip type preferences
-    const typePref = driverSettings.tripTypePreference || driverSettings.P_TRIP_TYPE_PREFERENCE;
-    if (typePref) {
-      settings.ridePreferences.homePage = {
-        liveJobs: typePref.LIVE_JOBS === 'YES' || typePref.LIVE_JOBS === true,
-        futureReservations: typePref.FUTURE_RESERVATIONS === 'YES' || typePref.FUTURE_RESERVATIONS === true,
-        longDistanceIntercity: typePref.LONG_DISTANCE_INTERCITY === 'YES' || typePref.LONG_DISTANCE_INTERCITY === true,
-        pets: typePref.PETS === 'YES' || typePref.PETS === true,
-        package: typePref.PACKAGE === 'YES' || typePref.PACKAGE === true,
-      };
-    }
+      // Transform trip type preferences
+      const typePref =
+        driverSettings.tripTypePreference ||
+        driverSettings.P_TRIP_TYPE_PREFERENCE;
+      if (typePref) {
+        settings.ridePreferences.homePage = {
+          liveJobs: typePref.LIVE_JOBS === "YES" || typePref.LIVE_JOBS === true,
+          futureReservations:
+            typePref.FUTURE_RESERVATIONS === "YES" ||
+            typePref.FUTURE_RESERVATIONS === true,
+          longDistanceIntercity:
+            typePref.LONG_DISTANCE_INTERCITY === "YES" ||
+            typePref.LONG_DISTANCE_INTERCITY === true,
+          pets: typePref.PETS === "YES" || typePref.PETS === true,
+          package: typePref.PACKAGE === "YES" || typePref.PACKAGE === true,
+        };
+      }
 
-    // Transform login settings
-    // The API uses camelCase field names: isFingerprintEnabled, isFaceIdEnabled, isFaceRecognitionEnabled
-    // But also support the P_ prefix format for backward compatibility
-    const isFingerprintEnabled = driverSettings.isFingerprintEnabled || driverSettings.P_IS_FINGERPRINT_ENABLED;
-    const isFaceIdEnabled = driverSettings.isFaceIdEnabled || driverSettings.P_IS_FACE_ID_ENABLED;
-    const isFaceRecognitionEnabled = driverSettings.isFaceRecognitionEnabled || driverSettings.P_IS_FACE_RECOGNITION_ENABLED;
-    
-    // Log each field to debug
-    console.log("[SettingsContext] Transforming login settings from DB:", {
-      isFingerprintEnabled,
-      isFaceIdEnabled,
-      isFaceRecognitionEnabled,
-      driverSettingsKeys: Object.keys(driverSettings),
-    });
-    
-    if (isFaceRecognitionEnabled !== undefined) {
-      settings.loginSettings.enableFaceRecognition = 
-        isFaceRecognitionEnabled === 'YES' || isFaceRecognitionEnabled === true;
-    }
-    if (isFaceIdEnabled !== undefined) {
-      settings.loginSettings.enableFaceId = 
-        isFaceIdEnabled === 'YES' || isFaceIdEnabled === true;
-    }
-    if (isFingerprintEnabled !== undefined) {
-      settings.loginSettings.enableFingerprint = 
-        isFingerprintEnabled === 'YES' || isFingerprintEnabled === true;
-    }
-    
-    // Log after transformation
-    console.log("[SettingsContext] After transformation:", {
-      enableFaceRecognition: settings.loginSettings.enableFaceRecognition,
-      enableFaceId: settings.loginSettings.enableFaceId,
-      enableFingerprint: settings.loginSettings.enableFingerprint,
-    });
+      // Transform login settings
+      // The API uses camelCase field names: isFingerprintEnabled, isFaceIdEnabled, isFaceRecognitionEnabled
+      // But also support the P_ prefix format for backward compatibility
+      const isFingerprintEnabled =
+        driverSettings.isFingerprintEnabled ||
+        driverSettings.P_IS_FINGERPRINT_ENABLED;
+      const isFaceIdEnabled =
+        driverSettings.isFaceIdEnabled || driverSettings.P_IS_FACE_ID_ENABLED;
+      const isFaceRecognitionEnabled =
+        driverSettings.isFaceRecognitionEnabled ||
+        driverSettings.P_IS_FACE_RECOGNITION_ENABLED;
 
-    // Transform featured driver and auto-bid settings
-    const featuredDriverPrice = driverSettings.featuredDriverPriceUsd || driverSettings.P_FEATURED_DRIVER_PRICE_USD;
-    if (featuredDriverPrice !== undefined) {
-      settings.featuredDriverPriceUSD = typeof featuredDriverPrice === 'number' 
-        ? featuredDriverPrice 
-        : parseFloat(featuredDriverPrice) || 0;
-    }
-    
-    const etaBuffer = driverSettings.etaBufferMinutes || driverSettings.addExtraTimeToEtaAmount || driverSettings.P_ETA_BUFFER_MINUTES;
-    if (etaBuffer !== undefined) {
-      settings.etaBufferMinutes = typeof etaBuffer === 'number'
-        ? etaBuffer
-        : parseInt(etaBuffer, 10) || 0;
-    }
-    
-    const isAutoBidEnabled = driverSettings.isAutoBidEnabled || driverSettings.P_IS_AUTO_BID_ENABLED;
-    if (isAutoBidEnabled !== undefined) {
-      settings.autoBidEnabled = 
-        isAutoBidEnabled === 'YES' || isAutoBidEnabled === true;
-    }
-    
-    const autoBidAmount = driverSettings.autoBidOnRideOffersAmount || driverSettings.P_AUTO_BID_ON_RIDE_OFFERS_AMOUNT;
-    if (autoBidAmount !== undefined) {
-      // Map amount to strategy (simplified - can be enhanced)
-      settings.autoBidStrategy = autoBidAmount?.toString() || null;
-    }
+      if (isFaceRecognitionEnabled !== undefined) {
+        settings.loginSettings.enableFaceRecognition =
+          isFaceRecognitionEnabled === "YES" ||
+          isFaceRecognitionEnabled === true;
+      }
+      if (isFaceIdEnabled !== undefined) {
+        settings.loginSettings.enableFaceId =
+          isFaceIdEnabled === "YES" || isFaceIdEnabled === true;
+      }
+      if (isFingerprintEnabled !== undefined) {
+        settings.loginSettings.enableFingerprint =
+          isFingerprintEnabled === "YES" || isFingerprintEnabled === true;
+      }
 
-    return settings;
-  }, []);
+      // Log after transformation
+      console.log("[SettingsContext] After transformation:", {
+        enableFaceRecognition: settings.loginSettings.enableFaceRecognition,
+        enableFaceId: settings.loginSettings.enableFaceId,
+        enableFingerprint: settings.loginSettings.enableFingerprint,
+      });
+
+      // Transform featured driver and auto-bid settings
+      const featuredDriverPrice =
+        driverSettings.featuredDriverPriceUsd ||
+        driverSettings.P_FEATURED_DRIVER_PRICE_USD;
+      if (featuredDriverPrice !== undefined) {
+        settings.featuredDriverPriceUSD =
+          typeof featuredDriverPrice === "number"
+            ? featuredDriverPrice
+            : parseFloat(featuredDriverPrice) || 0;
+      }
+
+      const etaBuffer =
+        driverSettings.etaBufferMinutes ||
+        driverSettings.addExtraTimeToEtaAmount ||
+        driverSettings.P_ETA_BUFFER_MINUTES;
+      if (etaBuffer !== undefined) {
+        settings.etaBufferMinutes =
+          typeof etaBuffer === "number"
+            ? etaBuffer
+            : parseInt(etaBuffer, 10) || 0;
+      }
+
+      const isAutoBidEnabled =
+        driverSettings.isAutoBidEnabled || driverSettings.P_IS_AUTO_BID_ENABLED;
+      if (isAutoBidEnabled !== undefined) {
+        settings.autoBidEnabled =
+          isAutoBidEnabled === "YES" || isAutoBidEnabled === true;
+      }
+
+      const autoBidAmount =
+        driverSettings.autoBidOnRideOffersAmount ||
+        driverSettings.P_AUTO_BID_ON_RIDE_OFFERS_AMOUNT;
+      if (autoBidAmount !== undefined) {
+        // Map amount to strategy (simplified - can be enhanced)
+        settings.autoBidStrategy = autoBidAmount?.toString() || null;
+      }
+
+      return settings;
+    },
+    [],
+  );
 
   // Fetch settings from backend
   const fetchSettings = useCallback(async () => {
@@ -375,12 +404,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "SET_ERROR", payload: null });
 
       const { settingsApiClient } = await import("@/config/apiConfig");
-      const { DRIVER_SETTINGS_ENDPOINTS } = await import("@/constants/endpoints");
+      const { DRIVER_SETTINGS_ENDPOINTS } =
+        await import("@/constants/endpoints");
 
-      const response = await settingsApiClient.get(DRIVER_SETTINGS_ENDPOINTS.getSettings);
-
-      // Log the full API response for debugging
-      console.log("[SettingsContext] Full API Response:", JSON.stringify(response?.data, null, 2));
+      const response = await settingsApiClient.get(
+        DRIVER_SETTINGS_ENDPOINTS.getSettings,
+      );
 
       // Check if the response indicates success or failure
       const responseData = response?.data;
@@ -404,31 +433,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
       // Transform DB response to mobile app format
       const dbData = responseData?.data?.jData || {};
-      
-      // Log the raw DB data before transformation
-      console.log("[SettingsContext] Raw DB Data (jData):", JSON.stringify(dbData, null, 2));
-      
-      // Check if data is nested in driverSettings
-      if (dbData.driverSettings) {
-        console.log("[SettingsContext] Found driverSettings object:", JSON.stringify(dbData.driverSettings, null, 2));
-        console.log("[SettingsContext] isFingerprintEnabled value:", dbData.driverSettings.isFingerprintEnabled);
-        console.log("[SettingsContext] isFaceIdEnabled value:", dbData.driverSettings.isFaceIdEnabled);
-        console.log("[SettingsContext] isFaceRecognitionEnabled value:", dbData.driverSettings.isFaceRecognitionEnabled);
-      } else {
-        console.log("[SettingsContext] No driverSettings found, checking root level");
-        console.log("[SettingsContext] P_IS_FINGERPRINT_ENABLED value:", dbData.P_IS_FINGERPRINT_ENABLED);
-        console.log("[SettingsContext] P_IS_FACE_ID_ENABLED value:", dbData.P_IS_FACE_ID_ENABLED);
-        console.log("[SettingsContext] P_IS_FACE_RECOGNITION_ENABLED value:", dbData.P_IS_FACE_RECOGNITION_ENABLED);
-      }
-      
       const transformedSettings = transformDbResponseToSettings(dbData);
-      
-      // Log the transformed settings
-      console.log("[SettingsContext] Transformed Settings:", JSON.stringify(transformedSettings, null, 2));
-      console.log("[SettingsContext] enableFingerprint:", transformedSettings.loginSettings.enableFingerprint);
-      console.log("[SettingsContext] enableFaceId:", transformedSettings.loginSettings.enableFaceId);
-      console.log("[SettingsContext] enableFaceRecognition:", transformedSettings.loginSettings.enableFaceRecognition);
-
       // Merge with defaults to ensure all keys are present
       const mergedSettings: SettingsObject = {
         ...DEFAULT_SETTINGS,
@@ -458,7 +463,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // Update state and local storage
       dispatch({ type: "SET", payload: mergedSettings });
       try {
-        await setStorageItem(SETTINGS_STORAGE_KEY, JSON.stringify(mergedSettings));
+        await setStorageItem(
+          SETTINGS_STORAGE_KEY,
+          JSON.stringify(mergedSettings),
+        );
       } catch (storageErr) {
         console.warn("Local storage save failed:", storageErr);
       }
@@ -482,19 +490,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [transformDbResponseToSettings]);
 
-
   const contextValue = useMemo<SettingsContextValue>(() => {
     return [
-      state.settings ?? DEFAULT_SETTINGS, 
+      state.settings ?? DEFAULT_SETTINGS,
       setSettings,
       {
         isLoading: state.isLoading,
         error: state.error,
         clearError,
         fetchSettings,
-      }
+      },
     ];
-  }, [state.settings, state.isLoading, state.error, setSettings, clearError, fetchSettings]);
+  }, [
+    state.settings,
+    state.isLoading,
+    state.error,
+    setSettings,
+    clearError,
+    fetchSettings,
+  ]);
 
   if (!state.isHydrated) return null;
 
