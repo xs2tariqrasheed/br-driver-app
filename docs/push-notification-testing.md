@@ -141,7 +141,7 @@ If you see `Error getting push token: ... SERVICE_NOT_AVAILABLE` on a **physical
    - **Important:** Use the fingerprints from the **EAS** keystore (the one that signed the APK you installed). Do not use `~/.android/debug.keystore` unless you run a local debug build.
 
 2. **Add both SHA-1 and SHA-256 to Firebase**
-   - Go to [Firebase Console](https://console.firebase.google.com) → project **br-driver-app** (the same project as in your `google-services.json`).
+   - Go to [Firebase Console](https://console.firebase.google.com) → select the **exact** project that appears in your `google-services.json` as **project_id** (e.g. **br-driver-app-3c0b1**). If you have multiple Firebase projects, adding fingerprints to the wrong one will still cause SERVICE_NOT_AVAILABLE.
    - **Project settings** (gear) → **Your apps** → select the Android app with package **`com.mujahidforeaims.brdriverapp`**.
    - Click **Add fingerprint**, paste **SHA-1**, Save. Then **Add fingerprint** again, paste **SHA-256**, Save.
 
@@ -151,10 +151,17 @@ If you see `Error getting push token: ... SERVICE_NOT_AVAILABLE` on a **physical
    - Open the app again, log in, and check logs for `ExponentPushToken: ...`. The app will also retry once after 12 seconds if the first request fails with SERVICE_NOT_AVAILABLE.
 
 4. **If it still fails, double-check**
-   - **Same Firebase project:** The **project_id** in `google-services.json` (e.g. `br-driver-app`) must match the Firebase project where you added the fingerprints.
+   - **Same Firebase project:** The **project_id** in `google-services.json` (e.g. **br-driver-app-3c0b1**) must be the project where you added the fingerprints. If you added them to a different project (e.g. br-driver-app), add them again to the project that matches your app’s `google-services.json`.
+   - **Same keystore:** If you build with EAS profile **development** or **preview**, get SHA-1/SHA-256 from **Credentials → Android → that profile** in Expo Dashboard (or `eas credentials --platform android` and select that profile). Production builds use a different keystore; add those SHAs too if you test production builds.
    - **Cloud Messaging:** Firebase Console → Project settings → **Cloud Messaging** tab — ensure it’s enabled (no need to create a new server key for Expo).
    - **Google Play Services:** On the device, Play Store → My apps → **Google Play Services** → Update if available.
    - **Network:** Try without VPN; ensure the device can reach Google (e.g. open google.com in the browser).
+
+5. **Still SERVICE_NOT_AVAILABLE after everything is correct?**
+   - **Google Cloud (not just Firebase):** In [Google Cloud Console](https://console.cloud.google.com) → project **br-driver-app-3c0b1** → **APIs & Services** → **Library**, search for **Firebase Cloud Messaging API** and ensure it is **Enabled**. FCM can return SERVICE_NOT_AVAILABLE if this API is off in the linked GCP project.
+   - **Full reinstall:** Uninstall the app, reboot the device, reinstall the APK, then open the app and try again (clears FCM cache).
+   - **Different network:** Try mobile data instead of Wi‑Fi (or the other way around); avoid VPN.
+   - **Transient:** SERVICE_NOT_AVAILABLE can be temporary. The app now retries up to 3 times with a delay; if it still fails, try again later.
 
 ### 8.2 Fix FIS_AUTH_ERROR (Android)
 

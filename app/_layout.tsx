@@ -28,6 +28,7 @@ import { SettingsProvider } from "@/context/SettingsContext";
 import { SpecialRequirementsProvider } from "@/context/SpecialRequirementsContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useAuth } from "@/context/AuthContext";
+import { useChat } from "@/context/ChatContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { registerTokenIfNeeded } from "@/services/pushNotificationService";
 import { coerceTripId } from "@/types/pushNotifications";
@@ -50,6 +51,7 @@ SplashScreen.preventAutoHideAsync();
 function PushNotificationsBootstrap() {
   const router = useRouter();
   const [auth] = useAuth();
+  const { openChat } = useChat();
   const { broadcastOffers } = useBroadcastJobOffers();
   const { getTemporaryRideByTripId, showRideOfferModal } = useRideOffer();
 
@@ -59,7 +61,17 @@ function PushNotificationsBootstrap() {
 
   const handleResponse = async (response: Notifications.NotificationResponse) => {
     const data = response.notification.request.content.data;
+    const type = (data as any)?.type as string | undefined;
     const tripId = coerceTripId(data);
+
+    if (type === "chat-message") {
+      try {
+        openChat?.();
+      } catch {
+        router.push("/(screens)/chat");
+      }
+      return;
+    }
 
     if (tripId) {
       // Best effort:

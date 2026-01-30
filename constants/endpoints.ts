@@ -119,6 +119,8 @@ export const NOTIFICATIONS_ENDPOINTS = {
     `/notifications/notifications/${id}/read`,
   /** Reply to an actionable notification */
   reply: (id: string | number) => `/notifications/notifications/${id}/reply`,
+  /** Register (upsert) Expo push token for this device */
+  registerPushToken: "/notifications/push-tokens",
 } as const;
 
 // Active Trip API Routes

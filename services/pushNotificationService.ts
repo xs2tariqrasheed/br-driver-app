@@ -3,6 +3,9 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { notificationsApiClient } from "@/config/apiConfig";
+import { getDeviceId } from "@/utils/requestBuilder";
+import { NOTIFICATIONS_ENDPOINTS } from "@/constants/endpoints";
 
 const STORAGE_KEY_PREFIX = "@expoPushToken:";
 
@@ -86,9 +89,30 @@ export async function getExpoPushTokenAsync(): Promise<string | null> {
       return null;
     }
 
-    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-    console.log("ExponentPushToken:", tokenData.data);
-    return tokenData.data;
+    const maxRetries = 3;
+    const retryDelayMs = 4000;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+        console.log("ExponentPushToken:", tokenData.data);
+        return tokenData.data;
+      } catch (err) {
+        lastError = err;
+        const msg = err instanceof Error ? err.message : String(err);
+        const isServiceUnavailable =
+          Platform.OS === "android" && typeof msg === "string" && msg.includes("SERVICE_NOT_AVAILABLE");
+        if (isServiceUnavailable && attempt < maxRetries) {
+          console.log(`Push token attempt ${attempt}/${maxRetries} failed (SERVICE_NOT_AVAILABLE), retrying in ${retryDelayMs / 1000}s...`);
+          await new Promise((r) => setTimeout(r, retryDelayMs));
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    throw lastError;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.log("Error getting push token:", error);
@@ -107,11 +131,31 @@ export async function getExpoPushTokenAsync(): Promise<string | null> {
   }
 }
 
-// Backend placeholder: safe no-op until backend endpoint exists.
-async function registerTokenWithBackend(_userId: string, _token: string) {
-  // Intentionally left as a safe stub.
-  // When backend is ready, implement an authenticated upsert endpoint and call it here.
-  return true;
+async function registerTokenWithBackend(_userId: string, token: string) {
+  try {
+    if (Platform.OS !== "ios" && Platform.OS !== "android") {
+      // Not a supported push platform for this app.
+      return false;
+    }
+
+    const deviceId = await getDeviceId();
+    const appVersion =
+      (Constants as any)?.expoConfig?.version ||
+      (Constants as any)?.manifest2?.extra?.expoClient?.version ||
+      undefined;
+
+    const res = await notificationsApiClient.post(NOTIFICATIONS_ENDPOINTS.registerPushToken, {
+      pushToken: token,
+      deviceId,
+      platform: Platform.OS,
+      appVersion,
+    });
+
+    return res.status >= 200 && res.status < 300;
+  } catch (error) {
+    console.log("Error registering push token with backend:", error);
+    return false;
+  }
 }
 
 export async function registerTokenIfNeeded(userId: string): Promise<boolean> {
