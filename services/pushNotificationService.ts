@@ -89,8 +89,20 @@ export async function getExpoPushTokenAsync(): Promise<string | null> {
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     console.log("ExponentPushToken:", tokenData.data);
     return tokenData.data;
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.log("Error getting push token:", error);
+    if (Platform.OS === "android" && typeof message === "string") {
+      if (message.includes("FIS_AUTH_ERROR")) {
+        console.log(
+          "→ FIS_AUTH_ERROR: Enable Firebase Installation API in Google Cloud and ensure API key is not restricted. See docs/push-notification-testing.md §8.2"
+        );
+      } else if (message.includes("SERVICE_NOT_AVAILABLE")) {
+        console.log(
+          "→ Add SHA-1 and SHA-256 from EAS Credentials to Firebase. See docs/push-notification-testing.md §8.1"
+        );
+      }
+    }
     return null;
   }
 }
