@@ -158,7 +158,7 @@ If you see `Error getting push token: ... SERVICE_NOT_AVAILABLE` on a **physical
 
 ### 8.2 Fix FIS_AUTH_ERROR (Android)
 
-If you see `Error getting push token: ... FIS_AUTH_ERROR`, the **Firebase Installation Service** cannot get an auth token. Common causes: **Firebase Installation API** not enabled in Google Cloud, or the **API key** in your app is restricted so it cannot call Firebase APIs.
+If you see `Error getting push token: ... FIS_AUTH_ERROR`, the **Firebase Installation Service** cannot get an auth token. Common causes: **Firebase Installation API** not enabled in Google Cloud, the **API key** in your app is restricted, or **two different `google-services.json` files** point to different Firebase projects (see step 3 below).
 
 **Steps:**
 
@@ -176,9 +176,9 @@ If you see `Error getting push token: ... FIS_AUTH_ERROR`, the **Firebase Instal
      - **Firebase Cloud Messaging API** (or relevant Firebase/Google APIs)
    - Easiest fix for development: set **API restrictions** to **Don’t restrict key** (or add the two APIs above). Do not over-restrict the key so that Firebase SDK cannot call these APIs.
 
-3. **Use a fresh `google-services.json`**
-   - In [Firebase Console](https://console.firebase.google.com) → your project → **Project settings** → **Your apps** → select the Android app (`com.mujahidforeaims.brdriverapp`).
-   - Download **google-services.json** again and replace the file in your project (`./google-services.json` and `./android/app/google-services.json` if you use a native `android` folder). Rebuild the app if you change native config.
+3. **Keep both `google-services.json` files in sync**
+   - The app has two copies: `./google-services.json` (used by Expo config) and `./android/app/google-services.json` (used by the native Android build). **They must be identical.** If they point to different Firebase projects or API keys, the APK will use the one in `android/app/` and you may get FIS_AUTH_ERROR even after fixing the API key in the other project.
+   - Copy the contents of `./google-services.json` to `./android/app/google-services.json`, or download **google-services.json** once from [Firebase Console](https://console.firebase.google.com) → your project → **Project settings** → **Your apps** → Android app → and replace **both** files. Then rebuild the app.
 
 4. **Clear app data and retry**
    - On the device: **Settings → Apps → BR Driver → Storage → Clear storage** (or reinstall). Then open the app, log in, and check logs again.
