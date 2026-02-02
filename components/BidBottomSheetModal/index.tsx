@@ -367,6 +367,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
               </View>
             ) : (
               <Counter
+                editable={true}
                 value={selectedBid}
                 onChange={setSelectedBid}
                 //NOTE: HIDDEN MIN AND MAX VALUES FOR NOW WILL BE ADDED BACK LATER
@@ -410,6 +411,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                 </View>
               ) : (
                 <Counter
+                  editable={true}
                   containerStyle={styles.etaCounterContainer}
                   value={eta}
                   onChange={setEta}
@@ -512,6 +514,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                     {/* Boost Counter */}
                     <View style={styles.counterSection}>
                       <Counter
+                        editable={true}
                         value={boostAmount}
                         onChange={setBoostAmount}
                         min={1}

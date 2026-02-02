@@ -1,8 +1,15 @@
 import { IconButton } from "@/components/Button";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import { Image, StyleSheet, TextStyle, View, ViewStyle } from "react-native";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Image,
+  StyleSheet,
+  TextInput,
+  TextStyle,
+  View,
+  ViewStyle,
+} from "react-native";
 
 export type CounterProps = {
   value: number;
@@ -12,6 +19,8 @@ export type CounterProps = {
   step?: number;
   formatLabel?: (value: number) => string;
   disabled?: boolean;
+  /** When true, the value can be edited by tapping and typing (input-style). */
+  editable?: boolean;
   containerStyle?: ViewStyle;
   valueContainerStyle?: ViewStyle;
   valueTextStyle?: TextStyle;
@@ -27,6 +36,7 @@ export default function Counter({
   step = 1,
   formatLabel,
   disabled = false,
+  editable = false,
   containerStyle,
   valueContainerStyle,
   valueTextStyle,
@@ -34,17 +44,19 @@ export default function Counter({
   incrementButtonStyle,
 }: CounterProps) {
   // Keep latest value in a ref so button handlers can stay stable
-  // (avoids iOS "blink" caused by re-rendering Pressable buttons on every tap).
   const valueRef = useRef<number>(value);
   useEffect(() => {
     valueRef.current = value;
   }, [value]);
 
+  // When editable: local string while user is typing; null when showing formatted value
+  const [editingValue, setEditingValue] = useState<string | null>(null);
+  const isEditing = editingValue !== null;
+
   const canDecrement = !disabled && value - step >= min;
   const canIncrement = !disabled && value + step <= max;
 
   const handleDec = useCallback(() => {
-    // Re-check against latest value
     const current = valueRef.current;
     if (disabled) return;
     if (current - step < min) return;
@@ -60,7 +72,28 @@ export default function Counter({
     onChange(next);
   }, [disabled, max, onChange, step]);
 
-  const label = formatLabel ? formatLabel(value) : String(value);
+  const commitEdit = useCallback(() => {
+    if (!isEditing) return;
+    const parsed = parseFloat(editingValue ?? "");
+    const num = Number.isNaN(parsed) ? value : parsed;
+    const clamped = Math.min(max, Math.max(min, num));
+    const stepped = step === 1 ? Math.round(clamped) : Math.round(clamped / step) * step;
+    const final = Math.min(max, Math.max(min, stepped));
+    onChange(final);
+    setEditingValue(null);
+  }, [editingValue, isEditing, min, max, step, value, onChange]);
+
+  const handleFocus = useCallback(() => {
+    if (disabled || !editable) return;
+    setEditingValue(String(value));
+  }, [disabled, editable, value]);
+
+  const handleBlur = useCallback(() => {
+    commitEdit();
+  }, [commitEdit]);
+
+  const displayLabel = formatLabel ? formatLabel(value) : String(value);
+  const inputValue = isEditing ? (editingValue ?? "") : displayLabel;
 
   const minusIcon = useMemo(
     () => (
@@ -132,13 +165,29 @@ export default function Counter({
       <DecrementButton isDisabled={!canDecrement} />
 
       <View style={[styles.counterValueWrap, valueContainerStyle]}>
-        <Typography
-          type="bodyLarge"
-          weight="medium"
-          style={[styles.counterText, valueTextStyle]}
-        >
-          {label}
-        </Typography>
+        {editable ? (
+          <TextInput
+            value={inputValue}
+            onChangeText={(text) => setEditingValue(text)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onSubmitEditing={handleBlur}
+            editable={!disabled}
+            keyboardType="decimal-pad"
+            selectTextOnFocus
+            style={[styles.counterText, styles.input, valueTextStyle]}
+            placeholder={displayLabel}
+            placeholderTextColor={textColors.grey400}
+          />
+        ) : (
+          <Typography
+            type="bodyLarge"
+            weight="medium"
+            style={[styles.counterText, valueTextStyle]}
+          >
+            {displayLabel}
+          </Typography>
+        )}
       </View>
 
       <IncrementButton isDisabled={!canIncrement} />
@@ -172,4 +221,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   counterText: { color: textColors.black },
+  input: {
+    width: "100%",
+    height: "100%",
+    paddingHorizontal: 12,
+    textAlign: "center",
+    fontSize: 16,
+  },
 });
