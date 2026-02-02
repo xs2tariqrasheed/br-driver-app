@@ -1961,3 +1961,16 @@ export function getNumericDriverId(
   const numericId = driverIdStr.match(/(\d+)$/)?.[1] || driverIdStr;
   return Number(numericId) || 0;
 }
+
+/**
+ * Parse autoBidStrategy to a percentage number for calculations.
+ * Backend may return numeric string ("5", "-5", "0") or future string ("+5", "-5").
+ * Used to compute adjusted bid amount from offer price, e.g. $55 + 5% = $57.75.
+ */
+export function getPercentFromAutoBidStrategy(
+  str: string | null | undefined
+): number {
+  if (str == null || str === "") return 0;
+  const n = parseInt(String(str).trim(), 10);
+  return Number.isNaN(n) ? 0 : n;
+}

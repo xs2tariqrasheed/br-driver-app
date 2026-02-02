@@ -1,22 +1,25 @@
 import BidWaitingTimerModal from "@/components/BidWaitingTimerModal";
-import { BID_WAITING_TIMER_DURATION_MS, API_CLIENT_TYPES } from "@/constants/global";
+import { showToast } from "@/components/Toast";
+import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
+import {
+  API_CLIENT_TYPES,
+  BID_WAITING_TIMER_DURATION_MS,
+} from "@/constants/global";
+import { useAuth } from "@/context/AuthContext";
+import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
 import { useBidExpired } from "@/context/BidExpiredContext";
+import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useModalManager } from "@/context/ModalManagerContext";
 import { useRideOffer } from "@/context/RideOfferContext";
-import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
-import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
-import { useAuth } from "@/context/AuthContext";
 import { usePost } from "@/hooks/usePost";
-import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
-import { showToast } from "@/components/Toast";
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
-  useCallback,
 } from "react";
 
 interface BidWaitingTimerContextType {
@@ -65,7 +68,8 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     showBidExpiredRef.current = showBidExpired;
   }, [showBidExpired]);
-  const { registerModal, unregisterModal, requestOpen, requestClose } = useModalManager();
+  const { registerModal, unregisterModal, requestOpen, requestClose } =
+    useModalManager();
   const [auth] = useAuth();
   const { execute: cancelBid, loading: isCancelLoading } = usePost(
     LIVE_JOB_ENDPOINTS.cancelBid,
@@ -94,7 +98,13 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
     };
     registerModal("bidWaitingTimer", handleClose);
     return () => unregisterModal("bidWaitingTimer");
-  }, [registerModal, unregisterModal, hideBidWaitingTimer, isCanceling, isConfirming]);
+  }, [
+    registerModal,
+    unregisterModal,
+    hideBidWaitingTimer,
+    isCanceling,
+    isConfirming,
+  ]);
 
   // Compute remaining ms without causing provider re-renders
   const getRemainingMs = () => {
@@ -130,13 +140,13 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
   const handleCompleteProgress = async () => {
     // Exit confirming mode if active and proceed to default completion
     if (isConfirming) setIsConfirming(false);
-    
+
     // Update broadcast offer status to "expired" locally when timer completes
     // This ensures button shows "Re-bid" immediately, even before socket response
     const offer = currentOfferRef.current;
     const tripId = offer?.tripOffer?.tripId || offer?.tripId;
     const driverId = auth?.driverId;
-    
+
     if (tripId && driverId) {
       // Call API to mark bid as expired in database
       try {
@@ -144,12 +154,17 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
           driverId,
           tripId,
         });
-        console.log(`[BidWaitingTimer] Called expire bid API for trip ${tripId}`);
+        console.log(
+          `[BidWaitingTimer] Called expire bid API for trip ${tripId}`
+        );
       } catch (error) {
-        console.error(`[BidWaitingTimer] Failed to expire bid for trip ${tripId}:`, error);
+        console.error(
+          `[BidWaitingTimer] Failed to expire bid for trip ${tripId}:`,
+          error
+        );
         // Continue with local state update even if API call fails
       }
-      
+
       // Update local state
       if (tripId) {
         const offerToUpdate = broadcastOffers.find(
@@ -159,11 +174,13 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
           updateBroadcastOffer(offerToUpdate.id, {
             status: "expired" as any,
           });
-          console.log(`[BidWaitingTimer] Updated offer ${offerToUpdate.id} status to "expired" when timer completed`);
+          console.log(
+            `[BidWaitingTimer] Updated offer ${offerToUpdate.id} status to "expired" when timer completed`
+          );
         }
       }
     }
-    
+
     if (onCompleteProgressRef.current) {
       onCompleteProgressRef.current();
     } else {
@@ -183,10 +200,22 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
 
   const handleConfirmCancel = async () => {
     if (isTransitioningRef.current || isCanceling) return;
-    
+
     const offer = currentOfferRef.current;
     if (!offer) {
-      console.error("No offer found to cancel bid");
+      // NOTE: Demo offer path for testing – hide timer modal and reopen bid bottom sheet
+      setIsCanceling(true);
+      setIsConfirming(false);
+      setIsTimerActive(false);
+      startTimestampRef.current = null;
+      // NOTE: This is to simulate the canceling process, it will not affect the actual offer
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setIsCanceling(false);
+      hideBidWaitingTimer();
+      try {
+        requestClose("bidWaitingTimer");
+      } catch {}
+      reopenLastBidBottomSheet();
       return;
     }
 
@@ -199,7 +228,7 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
     isTransitioningRef.current = true;
     setIsCanceling(true);
     setIsConfirming(false);
-    
+
     // Cancel the timer immediately
     setIsTimerActive(false);
     startTimestampRef.current = null;
@@ -207,7 +236,7 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
     try {
       // Get driver ID from auth context
       const driverId = auth?.user?.id;
-      
+
       if (!driverId) {
         throw new Error("Driver ID not found. Please log in again.");
       }
@@ -245,7 +274,7 @@ export function BidWaitingTimerProvider({ children }: { children: ReactNode }) {
       reopenLastBidBottomSheet();
     } catch (error) {
       console.error("Error canceling bid:", error);
-      
+
       // Show error toast
       showToast(
         error instanceof Error ? error.message : "Failed to cancel bid",

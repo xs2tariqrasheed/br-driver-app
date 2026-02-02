@@ -17,8 +17,8 @@ import {
   FEATURED_DRIVER_PRICE_MIN,
 } from "@/constants/global";
 import { useSettings } from "@/context/SettingsContext";
-import { Stack, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -52,6 +52,22 @@ export default function SettingsScreen() {
 
   const openSheet = () => setSheetOpen(true);
   const closeSheet = () => setSheetOpen(false);
+
+  // Sync local state from context whenever screen is focused so we show latest
+  // values (including after save, when driver comes back to the screen)
+  useFocusEffect(
+    useCallback(() => {
+      setFeatured(settings.featuredDriverPriceUSD ?? 0);
+      setEtaMinutes(settings.etaBufferMinutes ?? 0);
+      setAutoBidEnabled(settings.autoBidEnabled ?? false);
+      setStrategy(settings.autoBidStrategy ?? null);
+    }, [
+      settings.featuredDriverPriceUSD,
+      settings.etaBufferMinutes,
+      settings.autoBidEnabled,
+      settings.autoBidStrategy,
+    ])
+  );
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -196,7 +212,7 @@ export default function SettingsScreen() {
             <TouchableOpacity
               accessibilityRole="button"
               onPress={openSheet}
-              style={[styles.dropdown, isLoading && styles.disabled]}
+              style={[styles.dropdown, isLoading && styles.disabledBtn]}
               disabled={isLoading}
             >
               <Typography
@@ -217,13 +233,13 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button 
-          rounded="half" 
-          variant="primary" 
+        <Button
+          rounded="half"
+          variant="primary"
           onPress={handleSave}
           disabled={isLoading}
         >
-          {isLoading ? "Saving..." : "Save"}
+          Save
         </Button>
       </View>
 

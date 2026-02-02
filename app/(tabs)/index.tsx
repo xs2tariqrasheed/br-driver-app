@@ -22,10 +22,7 @@ import {
   type DriverStatusLabel,
 } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
-import {
-  createDemoNotifications,
-  useDriver,
-} from "@/context/DriverContext";
+import { createDemoNotifications, useDriver } from "@/context/DriverContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
@@ -33,8 +30,8 @@ import { usePost } from "@/hooks/usePost";
 import { useSocket } from "@/hooks/useSocket";
 import { logger, removeStorageItem, setStorageItem } from "@/utils/helpers";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -50,11 +47,21 @@ export default function HomeScreen() {
   const router = useRouter();
   const [auth] = useAuth();
   const [driver, setDriver] = useDriver();
-  const { notifications, getRetrievalId, addNotifications, removeRetrievalId, removeTripId } = useDriver();
+  const {
+    notifications,
+    getRetrievalId,
+    addNotifications,
+    removeRetrievalId,
+    removeTripId,
+  } = useDriver();
   const { hasAnyActiveOffer, setHasAnyActiveOffer } = useRideOffer();
   const settingsContext = useSettings();
   const [settings, setSettings, status] = settingsContext;
-  const { isLoading: isSavingSettings, error: settingsError, clearError: clearSettingsError } = status;
+  const {
+    isLoading: isSavingSettings,
+    error: settingsError,
+    clearError: clearSettingsError,
+  } = status;
   const { connectSocket, disconnectSocket } = useSocket({
     driverId: auth?.user?.id,
   });
@@ -90,7 +97,7 @@ export default function HomeScreen() {
       DRIVER_STATUS.OFFLINE.length,
       DRIVER_STATUS.ONLINE.length
     );
-    
+
     // Font size is 12px (from Toggle component: fontSize: 12)
     // Average character width is approximately 7-8px for 12px font
     // Add extra padding for spacing: 16px padding per side + gap between labels
@@ -98,21 +105,21 @@ export default function HomeScreen() {
     const horizontalPadding = 40; // Increased from 32 to 40 for better spacing
     const labelGap = 12; // Increased from 8 to 12 for better separation
     const baseWidth = maxLabelLength * charWidth + horizontalPadding + labelGap;
-    
+
     // Minimum width ensures readability - increased for small devices
     const minWidth = screenWidth < 375 ? 140 : 130; // Higher min for small screens
     // Maximum width: don't exceed 45% of screen width (leaves room for header elements)
     const maxWidth = Math.min(screenWidth * 0.45, 220);
-    
+
     // For smaller screens (< 375px), add extra padding to ensure text doesn't get cut off
     const isSmallScreen = screenWidth < 375;
-    const width = isSmallScreen 
+    const width = isSmallScreen
       ? Math.max(baseWidth * 1.4, minWidth) // Increased multiplier from 1.25 to 1.4
       : Math.max(baseWidth * 1.15, minWidth); // Slight increase for all screens
-    
+
     // Clamp width between min and max
     const finalWidth = Math.min(Math.max(width, minWidth), maxWidth);
-    
+
     return {
       width: finalWidth,
       height: 28, // Keep height consistent with original design
@@ -140,13 +147,13 @@ export default function HomeScreen() {
   type SortKey = "time" | "distance";
   const [sortBy, setSortBy] = useState<SortKey>("distance"); // Temporary selection in sheet
   const [activeSortBy, setActiveSortBy] = useState<SortKey>("distance"); // Active sorting applied to offers
-  
+
   const openSortSheet = () => {
     // Reset sortBy to current activeSortBy when opening sheet
     setSortBy(activeSortBy);
     setSortSheetOpen(true);
   };
-  
+
   const closeSortSheet = () => {
     // Reset sortBy to activeSortBy when closing without applying
     setSortBy(activeSortBy);
@@ -162,7 +169,7 @@ export default function HomeScreen() {
     suv: boolean;
     luxury: boolean;
   } | null>(null);
-  
+
   const openRideTypes = () => {
     // Store initial states when opening the sheet
     initialToggleStatesRef.current = {
@@ -244,7 +251,7 @@ export default function HomeScreen() {
   // Determine which ride types are enabled based on car type
   const getRideTypeDisabled = useMemo(() => {
     const carType = driver?.carType;
-    
+
     if (!carType) {
       // If no car type, allow all (fallback)
       return {
@@ -334,7 +341,7 @@ export default function HomeScreen() {
         setSuv(initialToggleStatesRef.current.suv);
         setLuxury(initialToggleStatesRef.current.luxury);
       }
-      
+
       // Error is handled by context and shown via useEffect
       const errorMessage =
         error?.message || "Failed to save offer type preferences";
@@ -470,7 +477,7 @@ export default function HomeScreen() {
         }
 
         log("[HomeScreen] Marking driver as offline via API");
-        
+
         // Update driver status to offline in database
         log("[HomeScreen] Updating driver status to offline");
         const statusResponse = await updateDriverStatus({ isOnline: false });
@@ -621,6 +628,23 @@ export default function HomeScreen() {
       }
     }
   };
+
+  // Sync local state from context whenever screen is focused so we show latest
+  // values (including after save, when driver comes back to the screen)
+  useFocusEffect(
+    useCallback(() => {
+      setEconomy(settings.ridePreferences.rideTypes.economy ?? false);
+      setSedan(settings.ridePreferences.rideTypes.sedan ?? false);
+      setSuv(settings.ridePreferences.rideTypes.suv ?? false);
+      setLuxury(settings.ridePreferences.rideTypes.luxury ?? false);
+    }, [
+      settings.ridePreferences.rideTypes.economy,
+      settings.ridePreferences.rideTypes.sedan,
+      settings.ridePreferences.rideTypes.suv,
+      settings.ridePreferences.rideTypes.luxury,
+      sheetOpen
+    ])
+  );
 
   return (
     <PermissionGate>

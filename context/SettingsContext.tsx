@@ -137,6 +137,8 @@ type SettingsContextValue = [
     error: string | null;
     clearError: () => void;
     fetchSettings: () => Promise<void>;
+    /** Update only notification settings (context + storage). No API call. */
+    updateNotificationSettings: (notifications: NotificationsSettings) => Promise<void>;
   },
 ];
 
@@ -281,6 +283,28 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const clearError = useCallback(() => {
     dispatch({ type: "SET_ERROR", payload: null });
   }, []);
+
+  /** Update only notification settings (context + storage). No API call. For FE-only mute. */
+  const updateNotificationSettings = useCallback(
+    async (notifications: NotificationsSettings) => {
+      const current = state.settings ?? DEFAULT_SETTINGS;
+      const next: SettingsObject = {
+        ...current,
+        notifications: {
+          ...current.notifications,
+          ...notifications,
+        },
+      };
+      dispatch({ type: "SET", payload: next });
+      try {
+        await setStorageItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+      } catch (storageErr) {
+        console.warn("Local storage save failed:", storageErr);
+        throw storageErr;
+      }
+    },
+    [state.settings]
+  );
 
   // Transform DB response to mobile app settings format
   const transformDbResponseToSettings = useCallback(
@@ -499,6 +523,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         error: state.error,
         clearError,
         fetchSettings,
+        updateNotificationSettings,
       },
     ];
   }, [
@@ -508,6 +533,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings,
     clearError,
     fetchSettings,
+    updateNotificationSettings,
   ]);
 
   if (!state.isHydrated) return null;

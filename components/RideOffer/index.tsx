@@ -161,15 +161,16 @@ export default function RideOfferModal({
   };
 
   // Calculate map height dynamically (remaining space after header)
-  const mapHeight = headerHeight > 0 ? windowHeight - headerHeight : windowHeight;
+  const mapHeight =
+    headerHeight > 0 ? windowHeight - headerHeight : windowHeight;
 
   // Calculate overlay card height based on screen size
   // For small devices (< 700px), increase the overlay height to ensure buttons are visible
   const isSmallDevice = windowHeight < 700;
-  const overlayMaxHeight = isSmallDevice 
+  const overlayMaxHeight = isSmallDevice
     ? windowHeight * 0.75 // 75% for small devices
     : windowHeight * 0.6; // 60% for larger devices
-  
+
   // Minimum height to ensure buttons are always visible (estimated: ~250px for content + buttons)
   const overlayMinHeight = Math.max(250, windowHeight * 0.35);
 
@@ -177,9 +178,9 @@ export default function RideOfferModal({
   const { showBidBottomSheet, hideBidBottomSheet } = useBidBottomSheet();
   const { showBidWaitingTimer, hideBidWaitingTimer } = useBidWaitingTimer();
   const { closeAllModals } = useModalManager();
-  const { 
-    submitBid, 
-    setHasAnyActiveOffer, 
+  const {
+    submitBid,
+    setHasAnyActiveOffer,
     isSubmitBidLoading,
     currentOffer,
     updateCurrentOfferStatus,
@@ -202,7 +203,7 @@ export default function RideOfferModal({
     const boostedPrices = [2, 4, 6];
 
     return {
-      amount: baseAmount,
+      amount: offer?.fare || offer?.tripOffer?.fare,
       bosstedAmount: baseAmount + boostedPrices[0],
       driverEarn: Math.round(baseAmount * 0.85),
       numberOfBids: Math.floor(Math.random() * 5) + 1,
@@ -277,8 +278,8 @@ export default function RideOfferModal({
     offer?.expiredAt instanceof Date
       ? offer.expiredAt.getTime()
       : offer?.expiredAt
-        ? new Date(offer.expiredAt).getTime()
-        : undefined;
+      ? new Date(offer.expiredAt).getTime()
+      : undefined;
   const isExpiredByTime =
     typeof expiredAtMs === "number" &&
     !Number.isNaN(expiredAtMs) &&
@@ -294,7 +295,9 @@ export default function RideOfferModal({
   const isRejected = offer?.status === LIVE_JOB_STATUS.REJECTED && bidable;
 
   const isOffered =
-    offer?.status === LIVE_JOB_STATUS.OFFERED && !isExpiredByTime && !isOfferExpired;
+    offer?.status === LIVE_JOB_STATUS.OFFERED &&
+    !isExpiredByTime &&
+    !isOfferExpired;
 
   // Allow rebidding for rejected or bid-expired bids
   const canBid = isOffered || isBidExpired || isRejected;
@@ -310,7 +313,10 @@ export default function RideOfferModal({
     }
     // As a screen, keep Ride Offer visible and open the Bid sheet on top
     const bidData = buildMockBidData();
-    showBidBottomSheet(bidData, handleBidSubmitted);
+    showBidBottomSheet(
+      { ...bidData, amount: offer?.fare || offer?.tripOffer?.fare },
+      handleBidSubmitted
+    );
   };
 
   // Handle bid submission success
@@ -349,7 +355,9 @@ export default function RideOfferModal({
     // Only mark as expired if offer is still in "offered" state
     // If driver has performed any action (bid, accept, etc.), status would have changed
     if (offer && offer.status === LIVE_JOB_STATUS.OFFERED) {
-      console.log(`[RideOffer] Timer completed for sequential offer ${offer.id} - marking as expired`);
+      console.log(
+        `[RideOffer] Timer completed for sequential offer ${offer.id} - marking as expired`
+      );
       const tripId = offer.tripOffer?.tripId;
 
       // Case 1 rule: only expire when still "offered" (no action taken)
@@ -404,190 +412,201 @@ export default function RideOfferModal({
         {/* Full Screen Map */}
         {mapHeight > 0 && (
           <View style={[styles.mapSection, { height: mapHeight }]}>
-          <MapView
-            ref={mapRef}
-            style={[styles.map, { height: mapHeight }]}
-            provider={PROVIDER_GOOGLE}
-            initialRegion={region}
-            showsUserLocation={false}
-            showsMyLocationButton={false}
-            showsCompass={false}
-            showsScale={false}
-          >
-            {/* Route */}
-            {offer?.tripOffer && GOOGLE_MAPS_API_KEY && (
-              <MapViewDirections
-                apikey={GOOGLE_MAPS_API_KEY}
-                origin={{
-                  latitude: offer.tripOffer.pickup.lat,
-                  longitude: offer.tripOffer.pickup.lng,
-                }}
-                destination={{
-                  latitude: offer.tripOffer.dropoff.lat,
-                  longitude: offer.tripOffer.dropoff.lng,
-                }}
-                strokeWidth={4}
-                strokeColor={textColors.blue600}
-              />
-            )}
-
-            {/* Pickup Marker */}
-            {offer?.tripOffer && (
-              <Marker
-                coordinate={{
-                  latitude: offer.tripOffer.pickup.lat,
-                  longitude: offer.tripOffer.pickup.lng,
-                }}
-                title="Pickup Location"
-                description={offer.pickupAddress}
-                icon={{
-                  uri: pickupIconUrl,
-                  width: 30,
-                  height: 60,
-                }}
-              />
-            )}
-
-            {/* Dropoff Marker */}
-            {offer?.tripOffer && (
-              <Marker
-                coordinate={{
-                  latitude: offer.tripOffer.dropoff.lat,
-                  longitude: offer.tripOffer.dropoff.lng,
-                }}
-                title="Dropoff Location"
-                description={offer.dropoffAddress}
-                icon={{
-                  uri: dropoffIconUrl,
-                  width: 30,
-                  height: 60,
-                }}
-              />
-            )}
-          </MapView>
-
-          {/* Overlay Card with Rounded Top Corners */}
-          <View style={[
-            styles.overlayCard,
-            {
-              maxHeight: overlayMaxHeight,
-              minHeight: overlayMinHeight,
-            }
-          ]}>
-            <ScrollView
-              style={styles.overlayScrollView}
-              contentContainerStyle={styles.overlayContent}
-              showsVerticalScrollIndicator={false}
-              nestedScrollEnabled={true}
+            <MapView
+              ref={mapRef}
+              style={[styles.map, { height: mapHeight }]}
+              provider={PROVIDER_GOOGLE}
+              initialRegion={region}
+              showsUserLocation={false}
+              showsMyLocationButton={false}
+              showsCompass={false}
+              showsScale={false}
             >
-              {/* Ride Offer Tile */}
-              <View style={styles.offerSection}>
-                <LiveRideOfferItem
-                  id={offer?.id || ""}
-                  rideType={offer?.rideType || RIDE_TYPES.ONE_WAY}
-                  peopleCount={offer?.peopleCount || 0}
-                  rating={offer?.rating || 0}
-                  hasSpecialRequirements={offer?.hasSpecialRequirements || false}
-                  onPressSpecialRequirements={() => {
-                    handleShowSpecialRequirements(offer?.specialRequirements);
+              {/* Route */}
+              {offer?.tripOffer && GOOGLE_MAPS_API_KEY && (
+                <MapViewDirections
+                  apikey={GOOGLE_MAPS_API_KEY}
+                  origin={{
+                    latitude: offer.tripOffer.pickup.lat,
+                    longitude: offer.tripOffer.pickup.lng,
                   }}
-                  hasPackage={offer?.hasPackage || false}
-                  onPressPackage={() => {
-                    handleShowPackage(offer?.packageInfo);
+                  destination={{
+                    latitude: offer.tripOffer.dropoff.lat,
+                    longitude: offer.tripOffer.dropoff.lng,
                   }}
-                  bidable={bidable}
-                  pickupTime={offer?.pickupTime || 0}
-                  pickupDistance={offer?.pickupDistance || 0}
-                  pickupAddress={offer?.pickupAddress || ""}
-                  dropoffTime={offer?.dropoffTime || 0}
-                  dropoffDistance={offer?.dropoffDistance || 0}
-                  dropoffAddress={offer?.dropoffAddress || ""}
-                  rideTime={offer?.rideTime || 0}
-                  rideDistance={offer?.rideDistance || 0}
-                  totalPrice={offer?.totalPrice || offer?.tripOffer?.fare || 0}
-                  driverEarn={offer?.driverEarn || 0}
-                  onButtonClick={() => {}}
-                  itemStatus={offer?.status as any}
-                  hideActionButton={true}
-                  removeFlex
-                  disabled
-                  carType={offer?.carType}
-                  expiredAt={offer?.expiredAt}
-                  onTimerComplete={handleTimerComplete}
+                  strokeWidth={4}
+                  strokeColor={textColors.blue600}
                 />
-              </View>
+              )}
 
-              {/* Action Buttons or Expired UI */}
-              {!isOfferExpired && (isOffered || isBidExpired || isRejected || isBidding) && (
-                <View
-                  style={styles.buttonContainer}
-                  onStartShouldSetResponder={() => false}
-                >
-                  <Button
-                    variant="outlined"
-                    block={false}
-                    rounded="half"
-                    style={styles.hideButton}
-                    onPress={onHide}
-                    disabled={shouldDisabled || isBidding}
-                    loading={isHideLoading}
-                  >
-                    Hide
-                  </Button>
+              {/* Pickup Marker */}
+              {offer?.tripOffer && (
+                <Marker
+                  coordinate={{
+                    latitude: offer.tripOffer.pickup.lat,
+                    longitude: offer.tripOffer.pickup.lng,
+                  }}
+                  title="Pickup Location"
+                  description={offer.pickupAddress}
+                  icon={{
+                    uri: pickupIconUrl,
+                    width: 30,
+                    height: 60,
+                  }}
+                />
+              )}
 
-                  <Button
-                    variant="outlined"
-                    block={false}
-                    rounded="half"
-                    style={styles.skipButton}
-                    onPress={onSkipPrice}
-                    disabled={shouldDisabled || isBidding}
-                    loading={isSkipLoading}
-                  >
-                    Skip Price
-                  </Button>
+              {/* Dropoff Marker */}
+              {offer?.tripOffer && (
+                <Marker
+                  coordinate={{
+                    latitude: offer.tripOffer.dropoff.lat,
+                    longitude: offer.tripOffer.dropoff.lng,
+                  }}
+                  title="Dropoff Location"
+                  description={offer.dropoffAddress}
+                  icon={{
+                    uri: dropoffIconUrl,
+                    width: 30,
+                    height: 60,
+                  }}
+                />
+              )}
+            </MapView>
 
-                  {bidable ? (
-                    <Button
-                      variant="primary"
-                      block={false}
-                      rounded="half"
-                      style={styles.acceptButton}
-                      onPress={() => {
-                        if (isBidding) return;
-                        handleBidClick();
-                      }}
-                      disabled={shouldDisabled || isBidding}
-                      loading={isSubmitBidLoading}
+            {/* Overlay Card with Rounded Top Corners */}
+            <View
+              style={[
+                styles.overlayCard,
+                {
+                  maxHeight: overlayMaxHeight,
+                  minHeight: overlayMinHeight,
+                },
+              ]}
+            >
+              <ScrollView
+                style={styles.overlayScrollView}
+                contentContainerStyle={styles.overlayContent}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+              >
+                {/* Ride Offer Tile */}
+                <View style={styles.offerSection}>
+                  <LiveRideOfferItem
+                    id={offer?.id || ""}
+                    rideType={offer?.rideType || RIDE_TYPES.ONE_WAY}
+                    peopleCount={offer?.peopleCount || 0}
+                    rating={offer?.rating || 0}
+                    hasSpecialRequirements={
+                      offer?.hasSpecialRequirements || false
+                    }
+                    onPressSpecialRequirements={() => {
+                      handleShowSpecialRequirements(offer?.specialRequirements);
+                    }}
+                    hasPackage={offer?.hasPackage || false}
+                    onPressPackage={() => {
+                      handleShowPackage(offer?.packageInfo);
+                    }}
+                    bidable={bidable}
+                    pickupTime={offer?.pickupTime || 0}
+                    pickupDistance={offer?.pickupDistance || 0}
+                    pickupAddress={offer?.pickupAddress || ""}
+                    dropoffTime={offer?.dropoffTime || 0}
+                    dropoffDistance={offer?.dropoffDistance || 0}
+                    dropoffAddress={offer?.dropoffAddress || ""}
+                    rideTime={offer?.rideTime || 0}
+                    rideDistance={offer?.rideDistance || 0}
+                    totalPrice={
+                      offer?.totalPrice || offer?.tripOffer?.fare || 0
+                    }
+                    driverEarn={offer?.driverEarn || 0}
+                    onButtonClick={() => {}}
+                    itemStatus={offer?.status as any}
+                    hideActionButton={true}
+                    removeFlex
+                    disabled
+                    carType={offer?.carType}
+                    expiredAt={offer?.expiredAt}
+                    onTimerComplete={handleTimerComplete}
+                  />
+                </View>
+
+                {/* Action Buttons or Expired UI */}
+                {!isOfferExpired &&
+                  (isOffered || isBidExpired || isRejected || isBidding) && (
+                    <View
+                      style={styles.buttonContainer}
+                      onStartShouldSetResponder={() => false}
                     >
-                      {isBidding ? "Waiting..." : isBidExpired || isRejected ? "Re-bid" : "Bid"}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      block={false}
-                      rounded="half"
-                      style={styles.acceptButton}
-                      onPress={onAccept}
-                      disabled={shouldDisabled || isBidding}
-                    >
-                      Accept
-                    </Button>
+                      <Button
+                        variant="outlined"
+                        block={false}
+                        rounded="half"
+                        style={styles.hideButton}
+                        onPress={onHide}
+                        disabled={shouldDisabled || isBidding}
+                        loading={isHideLoading}
+                      >
+                        Hide
+                      </Button>
+
+                      <Button
+                        variant="outlined"
+                        block={false}
+                        rounded="half"
+                        style={styles.skipButton}
+                        onPress={onSkipPrice}
+                        disabled={shouldDisabled || isBidding}
+                        loading={isSkipLoading}
+                      >
+                        Skip Price
+                      </Button>
+
+                      {bidable ? (
+                        <Button
+                          variant="primary"
+                          block={false}
+                          rounded="half"
+                          style={styles.acceptButton}
+                          onPress={() => {
+                            if (isBidding) return;
+                            handleBidClick();
+                          }}
+                          disabled={shouldDisabled || isBidding}
+                          loading={isSubmitBidLoading}
+                        >
+                          {isBidding
+                            ? "Waiting..."
+                            : isBidExpired || isRejected
+                            ? "Re-bid"
+                            : "Bid"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          block={false}
+                          rounded="half"
+                          style={styles.acceptButton}
+                          onPress={onAccept}
+                          disabled={shouldDisabled || isBidding}
+                        >
+                          Accept
+                        </Button>
+                      )}
+                    </View>
                   )}
-                </View>
-              )}
 
-              {isOfferExpired && (
-                <View style={styles.expiredContainer}>
-                  <View style={styles.expiredAlert}>
-                    <Text style={styles.expiredText}>
-                      This offer has expired
-                    </Text>
+                {isOfferExpired && (
+                  <View style={styles.expiredContainer}>
+                    <View style={styles.expiredAlert}>
+                      <Text style={styles.expiredText}>
+                        This offer has expired
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              )}
-            </ScrollView>
-          </View>
+                )}
+              </ScrollView>
+            </View>
           </View>
         )}
       </Animated.View>

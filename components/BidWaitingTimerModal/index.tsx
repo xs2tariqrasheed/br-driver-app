@@ -1,6 +1,4 @@
 import { textColors } from "@/constants/colors";
-import { useBidExpired } from "@/context/BidExpiredContext";
-import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import React, { useCallback } from "react";
 import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Button from "../Button";
@@ -142,7 +140,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                     disabled={isCanceling}
                     loading={isCanceling}
                   >
-                    Cancel Bid
+                    {isCanceling ? "Canceling..." : "Cancel Bid"}
                   </Button>
                 </View>
               </View>
@@ -154,7 +152,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                   style={styles.cancelButton}
                   disabled={isCanceling}
                 >
-                  Cancel
+                  {isCanceling ? "Canceling..." : "Cancel"}
                 </Button>
               </View>
             )}

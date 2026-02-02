@@ -2,7 +2,6 @@ import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
 import Counter from "@/components/Counter";
 import DesiredLocationItem from "@/components/DesiredLocationItem";
-import Divider from "@/components/Divider";
 import Input from "@/components/Form/Input";
 import Header from "@/components/Header";
 import Loader from "@/components/Loader";
@@ -20,7 +19,7 @@ import {
   logger,
 } from "@/utils/helpers";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -336,7 +335,7 @@ export default function DesiredDestinationsScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Offer a Commission
+              Offer Extra Commission
             </Typography>
             <Typography
               type="bodyMedium"
@@ -451,8 +450,8 @@ export default function DesiredDestinationsScreen() {
                       address: newDest.address,
                       expired_at: newDest.expired_at,
                       googleReferenceNumber: selectedPlaceId,
-                      latitude: selectedCoordinates.latitude,
-                      longitude: selectedCoordinates.longitude,
+                      latitude: selectedCoordinates?.latitude || 0,
+                      longitude: selectedCoordinates?.longitude || 0,
                       targetZipCode: finalZipCode,
                       commissionPercentage: commission,
                     } as any);

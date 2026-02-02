@@ -2,6 +2,7 @@ import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
 import Toggle from "@/components/Form/Toggle";
 import Typography from "@/components/Typography";
+import { showToast } from "@/components/Toast";
 import { textColors } from "@/constants/colors";
 import { useSettings } from "@/context/SettingsContext";
 import { useEffect, useState } from "react";
@@ -16,33 +17,32 @@ export default function MuteNotificationsSheet({
   open,
   onClose,
 }: MuteNotificationsSheetProps) {
-  const [settings, setSettings] = useSettings();
+  const [settings, , { updateNotificationSettings }] = useSettings();
 
-  // Local state for toggles
-  const [muteJobOffers, setMuteJobOffers] = useState<boolean>(
-    settings.notifications.muteJobOffers
-  );
-  const [muteAll, setMuteAll] = useState<boolean>(
-    settings.notifications.muteAll
-  );
+  const storedMuteJobOffers = settings.notifications.muteJobOffers;
+  const storedMuteAll = settings.notifications.muteAll;
 
-  // Update local state when settings change or sheet opens
+  // Local state for toggles; prepopulate from context (context is hydrated from localStorage on app load)
+  const [muteJobOffers, setMuteJobOffers] = useState<boolean>(storedMuteJobOffers);
+  const [muteAll, setMuteAll] = useState<boolean>(storedMuteAll);
+
+  // Whenever the sheet opens, sync local state from stored values (context + localStorage)
   useEffect(() => {
     if (open) {
-      setMuteJobOffers(settings.notifications.muteJobOffers);
-      setMuteAll(settings.notifications.muteAll);
+      setMuteJobOffers(storedMuteJobOffers);
+      setMuteAll(storedMuteAll);
     }
-  }, [open, settings]);
+  }, [open, storedMuteJobOffers, storedMuteAll]);
 
-  // Handle save button
+  // Handle save: update context + storage only (no API), show success message
   const handleSave = async () => {
-    await setSettings({
-      ...settings,
-      notifications: {
-        muteJobOffers,
-        muteAll,
-      },
-    });
+    await updateNotificationSettings({ muteJobOffers, muteAll });
+    const message = muteAll
+      ? "All notifications muted"
+      : muteJobOffers
+        ? "Job offers muted"
+        : "Notification settings saved";
+    showToast(message, { variant: "success", position: "top" });
     onClose();
   };
 

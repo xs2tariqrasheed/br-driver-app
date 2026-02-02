@@ -314,17 +314,16 @@ export default function LiveJobOffersScreen({
         showToast("Waiting for customer response...", { variant: "warning", position: "top" });
         return;
       }
-
       if (job.bidable) {
         // Store the selected job for bid submission
         setSelectedJobForBid(job);
 
         // Handle bidable offers - show bid bottom sheet
         const bidData = {
-          amount: 20, // Default bid amount - this should come from the job data
+          amount: job?.fare || job?.tripOffer?.fare, // Default bid amount - this should come from the job data
           bosstedAmount: 5,
-          driverEarn: job.driverEarn,
-          numberOfBids: 4,
+          driverEarn: job?.driverEarn,
+          numberOfBids: job?.peopleCount,
           systemEta: 5,
           systemSuggestedBids: [
             { amount: 10, driverEarn: 8.38 },
@@ -383,7 +382,7 @@ export default function LiveJobOffersScreen({
         // Call the submit bid API with the selected bid amount, eta, boostAmount and tripId
         const result = await submitBidForBroadcastOffer(
           jobToUse.tripOffer.tripId,
-          bidData.selectedBid,
+          bidData.selectedBid || jobToUse.fare || jobToUse.tripOffer?.fare,
           bidData.eta,
           bidData.isBoosted ? bidData.boostAmount : undefined
         );
