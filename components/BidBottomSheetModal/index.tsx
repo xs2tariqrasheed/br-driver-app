@@ -15,6 +15,7 @@ import {
 } from "@/utils/helpers";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Dimensions,
   Image,
   Modal,
   Pressable,
@@ -73,6 +74,10 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
     boostedPrices: initialBoostedPrices,
     numberOfBids,
   } = bid;
+
+  const { height: screenHeight } = Dimensions.get("window");
+  const MAX_HEIGHT = screenHeight * 0.85;
+  
   // Fetch system suggested bid prices
   const { execute: fetchBidPrices, loading: isLoadingPrices } = useFetch(
     LIVE_JOB_ENDPOINTS.getSystemSuggestedBidPrices,
@@ -97,7 +102,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
     fetchedSystemSuggestedBids || initialSystemSuggestedBids;
   const boostedPrices = fetchedBoostedPrices || initialBoostedPrices;
 
-  const [selectedBid, setSelectedBid] = useState(amount) ;
+  const [selectedBid, setSelectedBid] = useState(amount);
   const [eta, setEta] = useState(systemEta);
   const [isBoosted, setIsBoosted] = useState(false);
   const [boostAmount, setBoostAmount] = useState(boostedPrices[0] || 0);
@@ -251,7 +256,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
         onPress={onClose}
       >
         <View
-          style={styles.container}
+          style={[styles.container, { maxHeight: MAX_HEIGHT }]}
           onStartShouldSetResponder={() => true}
           onResponderGrant={(e) => e.stopPropagation()}
         >
@@ -462,7 +467,10 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                 <>
                   <View style={styles.boostButtonsContainer}>
                     {[1, 2, 3, 4].map((index) => (
-                      <View key={`boost-skeleton-${index}`} style={styles.bidButton}>
+                      <View
+                        key={`boost-skeleton-${index}`}
+                        style={styles.bidButton}
+                      >
                         <SkeletonLoader
                           width="100%"
                           height={20}
@@ -561,7 +569,6 @@ const styles = StyleSheet.create({
     backgroundColor: textColors.white,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    maxHeight: "85%",
   },
   content: {
     paddingHorizontal: 10,

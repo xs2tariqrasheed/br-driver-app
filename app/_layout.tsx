@@ -25,6 +25,7 @@ import { NotificationProvider } from "@/context/NotificationContext";
 import { PackageInfoProvider } from "@/context/PackageInfoContext";
 import { RideOfferProvider } from "@/context/RideOfferContext";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { OverlayInsetsProvider } from "@/context/OverlayInsetsContext";
 import { SpecialRequirementsProvider } from "@/context/SpecialRequirementsContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useAuth } from "@/context/AuthContext";
@@ -187,6 +188,7 @@ export default function RootLayout() {
     <>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Host>
+          <OverlayInsetsProvider>
           <BottomSheetModalProvider>
             <ContentProvider>
               <AuthProvider>
@@ -308,6 +310,7 @@ export default function RootLayout() {
               </AuthProvider>
             </ContentProvider>
           </BottomSheetModalProvider>
+          </OverlayInsetsProvider>
         </Host>
       </GestureHandlerRootView>
     </>

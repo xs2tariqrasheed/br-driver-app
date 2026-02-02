@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import Header from "@/components/Header";
+import Loader from "@/components/Loader";
 import Logo from "@/components/Logo";
 import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
@@ -58,7 +59,7 @@ export default function VerifyOtpScreen() {
   const [currentAuth, setAuth] = useAuth();
   const [driver, setDriver] = useDriver();
   const { removeRetrievalId, removeTripId } = useDriver();
-  const [, , { fetchSettings }] = useSettings();
+  const [, , { fetchSettings, isLoading: isFetchingSettings }] = useSettings();
   const [otp, setOtp] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [verified, setVerified] = useState<boolean>(false);
@@ -88,7 +89,7 @@ export default function VerifyOtpScreen() {
 
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation } = useDelete(
-    DRIVER_ENDPOINTS.markOffline(currentAuth?.user?.id || ""),
+    DRIVER_ENDPOINTS.markOffline(currentAuth?.user?.id || "")
   );
 
   const disabled = verifying || resending || loading;
@@ -105,8 +106,9 @@ export default function VerifyOtpScreen() {
       try {
         log("[VerifyOtpScreen] Calling delete profile API");
         const { settingsApiClient } = await import("@/config/apiConfig");
-        const { DRIVER_SETTINGS_ENDPOINTS } =
-          await import("@/constants/endpoints");
+        const { DRIVER_SETTINGS_ENDPOINTS } = await import(
+          "@/constants/endpoints"
+        );
 
         const response = await settingsApiClient.delete(
           DRIVER_SETTINGS_ENDPOINTS.deleteProfile,
@@ -114,7 +116,7 @@ export default function VerifyOtpScreen() {
             data: {
               otp: otp,
             },
-          } as any,
+          } as any
         );
 
         // Check if the response indicates success
@@ -141,7 +143,7 @@ export default function VerifyOtpScreen() {
         }
 
         log(
-          "[VerifyOtpScreen] Driver profile deleted successfully from database",
+          "[VerifyOtpScreen] Driver profile deleted successfully from database"
         );
       } catch (apiError: any) {
         const errorMessage =
@@ -262,7 +264,7 @@ export default function VerifyOtpScreen() {
           duration: 500,
           useNativeDriver: true,
         }),
-      ]),
+      ])
     );
     caretAnimRef.current.start();
     return () => {
@@ -312,7 +314,7 @@ export default function VerifyOtpScreen() {
         if (context === "forgot-user-id") {
           showToast(
             "Success! We've reset your User ID and sent the new one to your email. Use it to log in next time.",
-            { variant: "success", position: "top" },
+            { variant: "success", position: "top" }
           );
           router.replace("/(screens)/auth/login");
         } else if (context === "delete-profile") {
@@ -350,7 +352,7 @@ export default function VerifyOtpScreen() {
         {
           variant: "warning",
           position: "top",
-        },
+        }
       );
       return;
     }
@@ -480,11 +482,6 @@ export default function VerifyOtpScreen() {
         log("Error fetching driver settings:", error);
         // Continue with login even if settings fetch fails
       }
-
-      showToast("Logged in successfully", {
-        variant: "success",
-        position: "top",
-      });
       router.replace("/(tabs)");
     } catch (error) {
       log("Error completing login after OTP:", error);
@@ -511,6 +508,14 @@ export default function VerifyOtpScreen() {
     <SafeAreaView style={styles.container}>
       <Header title="Verify OTP" onBackPress={() => router.back()} />
 
+      {isFetchingSettings && (
+        <View style={styles.loadingOverlay}>
+          <Loader size="medium" />
+          <Typography type="bodyMedium" style={styles.loadingText}>
+            Please wait we are logging you in...
+          </Typography>
+        </View>
+      )}
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -550,7 +555,7 @@ export default function VerifyOtpScreen() {
               inputRef.current?.focus();
               setIsFocused(true);
             }}
-            disabled={disabled}
+            disabled={disabled || isFetchingSettings}
           >
             <View style={styles.otpRow}>
               {boxes.map((_, i) => {
@@ -725,5 +730,20 @@ const styles = StyleSheet.create({
     width: 2,
     height: 24,
     backgroundColor: textColors.black,
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: textColors.black,
   },
 });

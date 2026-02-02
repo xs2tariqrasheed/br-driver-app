@@ -2,8 +2,9 @@ import Button from "@/components/Button";
 import Divider from "@/components/Divider";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import { useModalManager } from "@/context/ModalManagerContext";
+import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
 import React from "react";
 import {
   Dimensions,
@@ -25,6 +26,7 @@ const { height: screenHeight } = Dimensions.get("window");
 const SpecialRequirementsModal: React.FC = () => {
   const { isOpen, data, closeSpecialRequirements } = useSpecialRequirements();
   const { registerModal, unregisterModal } = useModalManager();
+  const { overlayBottomInset } = useOverlayInsets();
 
   // Register with Modal Manager
   React.useEffect(() => {
@@ -82,6 +84,7 @@ const SpecialRequirementsModal: React.FC = () => {
           {/* Content */}
           <ScrollView
             style={styles.content}
+            contentContainerStyle={{ paddingBottom: 20 + overlayBottomInset }}
             showsVerticalScrollIndicator={false}
           >
             {/* Section 1: Rider Details */}

@@ -2,6 +2,7 @@ import Button from "@/components/Button";
 import Counter from "@/components/Counter";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import React, { useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -23,6 +24,7 @@ const ETAModal: React.FC<ETAModalProps> = ({
   onSubmit,
   isLoading = false,
 }) => {
+  const { overlayBottomInset } = useOverlayInsets();
   const [eta, setEta] = useState(15); // Default 15 minutes
 
   const handleSubmit = () => {
@@ -66,7 +68,7 @@ const ETAModal: React.FC<ETAModalProps> = ({
           </View>
 
           {/* Content */}
-          <View style={styles.content}>
+          <View style={[styles.content, { paddingBottom: overlayBottomInset -20 }]}>
             {/* ETA Section */}
             <View style={styles.etaSection}>
               <Typography
@@ -162,7 +164,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 20,
   },
   etaSection: {
     flexDirection: "column",

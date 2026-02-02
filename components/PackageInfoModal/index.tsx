@@ -1,8 +1,9 @@
 import Button from "@/components/Button";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import { usePackageInfo } from "@/context/PackageInfoContext";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import { useModalManager } from "@/context/ModalManagerContext";
+import { usePackageInfo } from "@/context/PackageInfoContext";
 import React from "react";
 import {
   Dimensions,
@@ -22,6 +23,7 @@ const { height: screenHeight } = Dimensions.get("window");
 const PackageInfoModal: React.FC = () => {
   const { isOpen, data, closePackageInfo } = usePackageInfo();
   const { registerModal, unregisterModal } = useModalManager();
+  const { overlayBottomInset } = useOverlayInsets();
 
   // Register with Modal Manager
   React.useEffect(() => {
@@ -77,6 +79,7 @@ const PackageInfoModal: React.FC = () => {
           {/* Content */}
           <ScrollView
             style={styles.content}
+            contentContainerStyle={{ paddingBottom: 20 + overlayBottomInset }}
             showsVerticalScrollIndicator={false}
           >
             {/* Number of Packages */}

@@ -3,6 +3,7 @@ import MapLoading from "@/components/MapLoading";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { GOOGLE_MAPS_API_KEY } from "@/constants/global";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import { geocodeAddress, LocationCoordinates, logger } from "@/utils/helpers";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -104,7 +105,7 @@ export default function RideMap({
   const mapRef = useRef<MapView>(null);
   const markerRef = useRef<any>(null);
   const log = logger();
-
+  const { overlayBottomInset } = useOverlayInsets();
   // State for locations
   const [currentLocation, setCurrentLocation] =
     useState<LocationCoordinates | null>(null);
@@ -378,7 +379,7 @@ export default function RideMap({
         }, UPDATE_THROTTLE - (now - lastUpdate));
         return;
       }
-      
+
       const lat = (latRef as any)._value;
       const lng = (lngRef as any)._value;
       animatedCarRegionRef.current.setValue({
@@ -554,7 +555,9 @@ export default function RideMap({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         };
-        log(`Device location obtained: ${current.latitude}, ${current.longitude}`);
+        log(
+          `Device location obtained: ${current.latitude}, ${current.longitude}`
+        );
       } catch (locationError) {
         log(`Error getting device location: ${locationError}, using fallback`);
         // Fallback to Lahore coordinates if location fails
@@ -589,7 +592,9 @@ export default function RideMap({
           latitude: pickupCoordinates.lat,
           longitude: pickupCoordinates.lng,
         };
-        log(`Using API pickup coordinates: ${pickup.latitude}, ${pickup.longitude}`);
+        log(
+          `Using API pickup coordinates: ${pickup.latitude}, ${pickup.longitude}`
+        );
       } else {
         pickup = await geocodeAddress(pickupAddress, GOOGLE_MAPS_API_KEY);
         if (!pickup) {
@@ -609,7 +614,9 @@ export default function RideMap({
           latitude: dropoffCoordinates.lat,
           longitude: dropoffCoordinates.lng,
         };
-        log(`Using API dropoff coordinates: ${dropoff.latitude}, ${dropoff.longitude}`);
+        log(
+          `Using API dropoff coordinates: ${dropoff.latitude}, ${dropoff.longitude}`
+        );
       } else {
         dropoff = await geocodeAddress(dropoffAddress, GOOGLE_MAPS_API_KEY);
         if (!dropoff) {
@@ -863,15 +870,14 @@ export default function RideMap({
     const nextPoint = route[index + 1];
     const distance = getDistance(currentPoint, nextPoint);
     // iOS needs longer duration for smoother movement
-    const baseDuration = Platform.OS === "ios" 
-      ? Math.max(500, (distance / SPEED) * 1000)
-      : Math.max(300, (distance / SPEED) * 1000);
+    const baseDuration =
+      Platform.OS === "ios"
+        ? Math.max(500, (distance / SPEED) * 1000)
+        : Math.max(300, (distance / SPEED) * 1000);
     const bearing = calculateBearing(currentPoint, nextPoint);
 
     // iOS needs easing for smoother animation
-    const easing = Platform.OS === "ios" 
-      ? Easing.out(Easing.quad)
-      : undefined;
+    const easing = Platform.OS === "ios" ? Easing.out(Easing.quad) : undefined;
 
     const animations = [
       Animated.timing(animatedLatitude.current, {
@@ -889,9 +895,7 @@ export default function RideMap({
       Animated.timing(animatedRotation.current, {
         toValue: bearing,
         duration: baseDuration * (Platform.OS === "ios" ? 1.0 : 1.2), // Same duration on iOS for smoother rotation
-        easing: Platform.OS === "ios" 
-          ? Easing.out(Easing.quad)
-          : undefined,
+        easing: Platform.OS === "ios" ? Easing.out(Easing.quad) : undefined,
         useNativeDriver: false,
       }),
     ];
@@ -903,7 +907,7 @@ export default function RideMap({
       }
 
       setCurrentLocation(nextPoint);
-      
+
       if (isDropoff) {
         setCurrentDropoffIndex(index + 1);
       } else {
@@ -951,7 +955,7 @@ export default function RideMap({
     if (initialLocationRef.current) {
       const initialLoc = initialLocationRef.current;
       setCurrentLocation(initialLoc);
-      
+
       // Reset animated values
       animatedLatitude.current.setValue(initialLoc.latitude);
       animatedLongitude.current.setValue(initialLoc.longitude);
@@ -961,7 +965,7 @@ export default function RideMap({
         latitudeDelta: 0,
         longitudeDelta: 0,
       });
-      
+
       // Reset route indices
       setCurrentPickupIndex(0);
       setCurrentDropoffIndex(0);
@@ -1005,7 +1009,7 @@ export default function RideMap({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: overlayBottomInset + 5 }]}>
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -1067,7 +1071,11 @@ export default function RideMap({
             ref={markerRef}
             coordinate={animatedCarRegionRef.current as any}
             anchor={{ x: 0.5, y: 0.5 }}
-            rotation={Platform.OS === "ios" ? carRotation : (animatedRotation.current as any)}
+            rotation={
+              Platform.OS === "ios"
+                ? carRotation
+                : (animatedRotation.current as any)
+            }
             flat={true}
             zIndex={1000}
             tracksViewChanges={carTracksViewChanges}
@@ -1153,7 +1161,7 @@ export default function RideMap({
       {/* Waze Button */}
       {showWazeButton && (
         <TouchableOpacity
-          style={styles.wazeButton}
+          style={[styles.wazeButton, { bottom: overlayBottomInset + 16 }]}
           onPress={handleWazePress}
           activeOpacity={0.8}
         >
@@ -1239,7 +1247,6 @@ const styles = StyleSheet.create({
   },
   wazeButton: {
     position: "absolute",
-    bottom: 20,
     left: 0,
     width: 50,
     height: 50,
@@ -1260,8 +1267,8 @@ const styles = StyleSheet.create({
   },
   testingControls: {
     position: "absolute",
-    top: 70,
-    right: 20,
+    bottom: 70,
+    right: 16,
     backgroundColor: "rgba(255, 255, 255, 0.9)",
     padding: 12,
     borderRadius: 8,

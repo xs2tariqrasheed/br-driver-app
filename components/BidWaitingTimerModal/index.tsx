@@ -1,4 +1,5 @@
 import { textColors } from "@/constants/colors";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import React, { useCallback } from "react";
 import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Button from "../Button";
@@ -52,6 +53,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
   onKeepWaiting,
   onConfirmCancel,
 }) => {
+  const { overlayBottomInset } = useOverlayInsets();
   const handleCompleteProgress = useCallback(() => {
     // onCompleteProgress from context already handles showing expired sheet and hiding timer
     onCompleteProgress();
@@ -97,7 +99,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
           </View>
 
           {/* Content */}
-          <View style={styles.content}>
+          <View style={[styles.content, { paddingBottom: 20 + overlayBottomInset }]}>
             {/* Description */}
             <Typography
               type="bodyLarge"

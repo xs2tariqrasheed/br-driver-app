@@ -1,4 +1,5 @@
 import { textColors } from "@/constants/colors";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
@@ -6,7 +7,14 @@ import BottomSheet, {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import React, { useEffect, useRef, useState } from "react";
-import { Image, Keyboard, Platform, StyleSheet, View, ViewProps } from "react-native";
+import {
+  Image,
+  Keyboard,
+  Platform,
+  StyleSheet,
+  View,
+  ViewProps,
+} from "react-native";
 import { Portal } from "react-native-portalize";
 import { logger } from "../../utils/helpers";
 import { IconButton } from "../Button";
@@ -142,6 +150,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
   ...props
 }) => {
   const log = logger();
+  const { overlayBottomInset } = useOverlayInsets();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const bottomSheetRef = useRef<React.ElementRef<typeof BottomSheet>>(null);
@@ -177,20 +186,23 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
         log("keyboardDidShow");
         setIsKeyboardVisible(true);
         // Snap to highest index when keyboard appears (with small delay for iOS)
-        setTimeout(() => {
-          if (
-            bottomSheetRef.current &&
-            snapPointsWhenKeyboardVisible &&
-            snapPointsWhenKeyboardVisible.length > 0
-          ) {
-            const maxIndex = snapPointsWhenKeyboardVisible.length - 1;
-            try {
-              bottomSheetRef.current.snapToIndex(maxIndex);
-            } catch (error) {
-              log("Error snapping to index:", error);
+        setTimeout(
+          () => {
+            if (
+              bottomSheetRef.current &&
+              snapPointsWhenKeyboardVisible &&
+              snapPointsWhenKeyboardVisible.length > 0
+            ) {
+              const maxIndex = snapPointsWhenKeyboardVisible.length - 1;
+              try {
+                bottomSheetRef.current.snapToIndex(maxIndex);
+              } catch (error) {
+                log("Error snapping to index:", error);
+              }
             }
-          }
-        }, Platform.OS === "ios" ? 100 : 0);
+          },
+          Platform.OS === "ios" ? 100 : 0
+        );
       }
     );
     const keyboardDidHideListener = Keyboard.addListener(
@@ -296,7 +308,10 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
                   backgroundColor: customBackgroundColor,
                 },
               ]}
-              contentContainerStyle={styles.scrollableContentContainer}
+              contentContainerStyle={[
+                styles.scrollableContentContainer,
+                { paddingBottom: 80 + (overlayBottomInset ?? 0) },
+              ]}
               showsVerticalScrollIndicator={false}
               {...(props as React.ComponentProps<typeof BottomSheetScrollView>)}
             >
@@ -315,6 +330,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
             <View
               style={[
                 styles.contentContainer,
+                { paddingBottom: overlayBottomInset + 10 },
                 customBackgroundColor && {
                   backgroundColor: customBackgroundColor || textColors.white,
                 },

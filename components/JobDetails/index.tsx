@@ -19,13 +19,14 @@
 
 import { textColors } from "@/constants/colors";
 import { ACTION_ICON_SOURCE_MAP, type RideType } from "@/constants/global";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    ViewStyle,
+  Image,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  ViewStyle,
 } from "react-native";
 import Divider from "../Divider";
 import InfoTable, { type InfoTableDataItem } from "../InfoTable";
@@ -203,6 +204,7 @@ export default function JobDetails({
     carType,
   } = jobOffer;
 
+  const { overlayBottomInset } = useOverlayInsets();
   // Determine if action bar should be shown
   const shouldShowActionBar =
     typeof showActionBar === "boolean"
@@ -211,8 +213,9 @@ export default function JobDetails({
 
   return (
     <ScrollView
-      style={[styles.container, style]}
+      style={styles.container}
       showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: overlayBottomInset + 5 }}
     >
       {/* Action Bar - Only show if actionButtons are provided */}
       {actionButtons.length > 0 && shouldShowActionBar && (

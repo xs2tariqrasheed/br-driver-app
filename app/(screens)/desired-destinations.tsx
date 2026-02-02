@@ -367,8 +367,8 @@ export default function DesiredDestinationsScreen() {
                 (editingIndex === null && commission === 0) ||
                 (editingIndex === null &&
                   destinations.length >= MAX_DESIRED_LOCATIONS) ||
-                isLoadingDestinations ||
-                isFetchingDestinations ||
+                // isLoadingDestinations ||
+                // isFetchingDestinations ||
                 isSaving
               }
               onPress={async () => {

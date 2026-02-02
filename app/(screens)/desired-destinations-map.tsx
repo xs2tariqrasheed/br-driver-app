@@ -4,13 +4,19 @@ import { Header } from "@/components/Header";
 import CustomMap from "@/components/MapWebView";
 import { textColors } from "@/constants/colors";
 import { COORDINATE_REGEX, GOOGLE_MAPS_API_KEY } from "@/constants/global";
-import { extractZipCodeFromAddress, logger, reverseGeocode } from "@/utils/helpers";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
+import {
+  extractZipCodeFromAddress,
+  logger,
+  reverseGeocode,
+} from "@/utils/helpers";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
 
 export default function DesiredDestinationsMapScreen() {
   const router = useRouter();
+  const { overlayBottomInset } = useOverlayInsets();
   const [address, setAddress] = useState<string>("");
   const [selectedCoordinates, setSelectedCoordinates] = useState<{
     latitude: number;
@@ -105,7 +111,9 @@ export default function DesiredDestinationsMapScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { paddingBottom: overlayBottomInset - 10 }]}
+    >
       <Stack.Screen options={{ headerShown: false }} />
       <Header title="Add Destination" onBackPress={() => router.back()} />
       <View style={styles.mapContainer}>

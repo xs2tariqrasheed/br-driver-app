@@ -16,6 +16,7 @@ import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
 import Input from "@/components/Form/Input";
 import Header from "@/components/Header";
+import Loader from "@/components/Loader";
 import Logo from "@/components/Logo";
 import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
@@ -23,6 +24,7 @@ import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import { API_CLIENT_TYPES, BiometricMethod, URLS } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import { useSettings } from "@/context/SettingsContext";
 import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
@@ -68,8 +70,11 @@ export default function LoginScreen() {
   const router = useRouter();
   const log = logger();
   const [auth, setAuth] = useAuth() as any;
-  const [settings, , { fetchSettings, isLoading: isSettingsLoading }] =
-    useSettings();
+  const { overlayBottomInset } = useOverlayInsets();
+  const [isFetchingSettings, setIsFetchingSettings] = useState(false);
+
+  const [settings, , { fetchSettings }] = useSettings();
+
   const {
     control,
     handleSubmit,
@@ -233,7 +238,7 @@ export default function LoginScreen() {
   useFocusEffect(
     useCallback(() => {
       reset(LOGIN_DEFAULT_VALUES);
-    }, [reset]),
+    }, [reset])
   );
 
   /**
@@ -245,7 +250,7 @@ export default function LoginScreen() {
       setBiometricDescription(description);
       setBiometricSheetOpen(true);
     },
-    [],
+    []
   );
 
   /** Closes the biometric bottom sheet. */
@@ -323,14 +328,17 @@ export default function LoginScreen() {
         if (result?.success) {
           // For biometric login, fetch settings after successful auth
           try {
+            setIsFetchingSettings(true);
             await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure token/context are settled
             await fetchSettings();
             log("Settings fetched successfully after biometric login");
           } catch (error) {
+            setIsFetchingSettings(false);
             log("Failed to fetch settings after biometric login:", error);
             // Continue with local settings if fetch fails
+          } finally {
+            setIsFetchingSettings(false);
           }
-
           // Skip identity verified sheet for biometric login and go home directly
           router.replace("/(tabs)");
         }
@@ -339,7 +347,7 @@ export default function LoginScreen() {
         openBiometricSheet(title, description);
       }
     },
-    [openBiometricSheet],
+    [openBiometricSheet]
   );
 
   /** On mount, read supported device biometric types. */
@@ -362,17 +370,28 @@ export default function LoginScreen() {
     if (!supportedTypes || supportedTypes.length === 0) return false;
     if (method === "fingerprint") {
       return supportedTypes.includes(
-        LocalAuthentication.AuthenticationType.FINGERPRINT,
+        LocalAuthentication.AuthenticationType.FINGERPRINT
       );
     }
     // Both Face ID and Face Recognition map to FACIAL_RECOGNITION at the API level
     return supportedTypes.includes(
-      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION,
+      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION
     );
   };
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { paddingBottom: overlayBottomInset }]}
+    >
       <Header title="Login" hideBackIcon onBackPress={undefined} />
+
+      {isFetchingSettings && (
+        <View style={styles.loadingOverlay}>
+          <Loader size="medium" />
+          <Typography type="bodyMedium" style={styles.loadingText}>
+            Please wait we are logging you in...
+          </Typography>
+        </View>
+      )}
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
@@ -495,10 +514,7 @@ export default function LoginScreen() {
             />
 
             <View style={styles.alignEndRow}>
-              <TouchableOpacity
-                onPress={openForgotSheet}
-                disabled={submitting || isSettingsLoading}
-              >
+              <TouchableOpacity onPress={openForgotSheet} disabled={submitting}>
                 <Typography
                   type="bodyMedium"
                   weight="semibold"
@@ -513,14 +529,10 @@ export default function LoginScreen() {
               variant="primary"
               rounded="half"
               onPress={handleSubmit(onSubmit)}
-              loading={isLoggingIn || isSettingsLoading}
-              disabled={isLoggingIn || isSettingsLoading}
+              loading={isLoggingIn}
+              disabled={isLoggingIn}
             >
-              {isLoggingIn
-                ? "Signing in..."
-                : isSettingsLoading
-                  ? "Loading settings..."
-                  : "Sign In"}
+              {isLoggingIn ? "Signing in..." : "Sign In"}
             </Button>
           </View>
 
@@ -593,12 +605,12 @@ export default function LoginScreen() {
                             void checkAndPromptBiometrics(option.method);
                           } else {
                             const { title, description } = getUnsupportedCopy(
-                              option.method,
+                              option.method
                             );
                             openBiometricSheet(title, description);
                           }
                         }}
-                        disabled={isLoggingIn || isSettingsLoading}
+                        disabled={isLoggingIn}
                       >
                         <Image source={option.icon} style={iconStyle as any} />
                         <Typography
@@ -674,7 +686,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 key={item.label}
                 style={styles.sheetRow}
-                disabled={isLoggingIn || isSettingsLoading}
+                disabled={isLoggingIn}
                 onPress={item.onPress}
               >
                 <Typography
@@ -715,7 +727,7 @@ export default function LoginScreen() {
             variant="primary"
             rounded="half"
             onPress={handleOpenSettings}
-            disabled={isLoggingIn || isSettingsLoading}
+            disabled={isLoggingIn}
           >
             Open Settings
           </Button>
@@ -937,6 +949,22 @@ const styles = StyleSheet.create({
   },
   successDescription: {
     fontSize: 16,
+    color: textColors.black,
+  },
+
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
     color: textColors.black,
   },
 });

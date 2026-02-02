@@ -1,6 +1,12 @@
 import { textColors } from "@/constants/colors";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View, type ViewStyle } from "react-native";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  type ViewStyle,
+} from "react-native";
 import { SwipeableButton } from "../Button/SwipeButton";
 
 export interface RideActionProps {
@@ -40,20 +46,36 @@ const RideAction: React.FC<RideActionProps> = ({
   onLeftPress,
   onRightPress,
 }) => {
+  const { overlayBottomInset } = useOverlayInsets();
   // Render a placeholder to preserve layout and keep the center truly centered
   const Left = (
-    <TouchableOpacity onPress={onLeftPress} disabled={disabled} style={leftComponent ? styles.sideBox : styles.sideEmpty}>
+    <TouchableOpacity
+      onPress={onLeftPress}
+      disabled={disabled}
+      style={leftComponent ? styles.sideBox : styles.sideEmpty}
+    >
       {leftComponent ?? <View style={styles.sideFiller} />}
     </TouchableOpacity>
   );
   const Right = (
-    <TouchableOpacity onPress={onRightPress} disabled={disabled} style={rightComponent ? styles.sideBox : styles.sideEmpty}>
+    <TouchableOpacity
+      onPress={onRightPress}
+      disabled={disabled}
+      style={rightComponent ? styles.sideBox : styles.sideEmpty}
+    >
       {rightComponent ?? <View style={styles.sideFiller} />}
     </TouchableOpacity>
   );
 
   return (
-    <View style={[styles.container, sticky && styles.sticky, style]}>
+    <View
+      style={[
+        styles.container,
+        sticky && styles.sticky,
+        style,
+        { paddingBottom: overlayBottomInset + 5 },
+      ]}
+    >
       <View style={styles.row}>
         {Left}
 
@@ -80,7 +102,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 12,
-    paddingBottom: 20,
     paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: textColors.grey300,

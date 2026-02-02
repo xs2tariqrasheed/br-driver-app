@@ -1,5 +1,7 @@
 import Typography from "@/components/Typography";
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import { Tabs, usePathname } from "expo-router";
+import { useEffect } from "react";
 import { Image, ImageProps, Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -23,6 +25,7 @@ const TAB_HIDDEN_PATHS = [
 
 export default function TabLayout() {
   const pathname = usePathname();
+  const { setTabBarHeight } = useOverlayInsets();
   // Hide tabs only on active ride related screens
   // Show tabs on all other screens including notifications, settings, desired-destinations, etc.
   const hideTabs = TAB_HIDDEN_PATHS.some((route) =>
@@ -39,6 +42,12 @@ export default function TabLayout() {
     baseTabHeight + minPadding,
     baseTabHeight + insets.bottom + minPadding
   );
+
+  // Expose tab bar height to overlays (modals/bottom sheets) so they can add bottom padding
+  useEffect(() => {
+    setTabBarHeight(hideTabs ? 0 : tabBarHeight);
+    return () => setTabBarHeight(0);
+  }, [hideTabs, tabBarHeight, setTabBarHeight]);
 
   return (
     <Tabs

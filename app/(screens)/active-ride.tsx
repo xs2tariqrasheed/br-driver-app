@@ -10,7 +10,12 @@ import RideLocations from "@/components/RideLocations";
 import RideMap from "@/components/RideMap";
 import { activeTripApiClient } from "@/config/apiConfig";
 import { textColors } from "@/constants/colors";
-import { openPhoneDialer, openWhatsApp, transformTripDetailsFromDb, transformTripDetailsToJobOffer } from "@/utils/helpers";
+import {
+  openPhoneDialer,
+  openWhatsApp,
+  transformTripDetailsFromDb,
+  transformTripDetailsToJobOffer,
+} from "@/utils/helpers";
 
 import AddTollBottomSheet from "@/components/AddTollBottomSheet";
 import { useToast } from "@/components/Toast";
@@ -54,7 +59,7 @@ import {
   Text,
   TouchableOpacity,
   useWindowDimensions,
-  View
+  View,
 } from "react-native";
 
 export default function ActiveRideScreen() {
@@ -158,7 +163,8 @@ export default function ActiveRideScreen() {
 
   // Swipe button visibility + animation
   const swipeOpacity = useRef(new Animated.Value(0)).current;
-  const showSwipe = !isActionLoading && !isCompletingRide && isMapReady && !isLoadingData;
+  const showSwipe =
+    !isActionLoading && !isCompletingRide && isMapReady && !isLoadingData;
   useEffect(() => {
     if (showSwipe) {
       swipeOpacity.setValue(0);
@@ -201,7 +207,11 @@ export default function ActiveRideScreen() {
   );
 
   // Fetch driver ETA
-  const [driverETA, setDriverETA] = useState<{ eta: number; note?: string } | null>(null);
+  const [driverETA, setDriverETA] = useState<{
+    eta: number;
+    note?: string;
+  } | null>(null);
+
   const { execute: fetchETA, loading: isFetchingETA } = useFetch(
     ACTIVE_TRIP_ROUTES.GET_ETA,
     API_CLIENT_TYPES.ACTIVE_TRIP
@@ -210,13 +220,17 @@ export default function ActiveRideScreen() {
   // Function to fetch driver ETA
   const loadDriverETA = useCallback(async () => {
     if (!driverId || !jobOfferData?.id) {
-      console.log('⚠️ [Get ETA] Missing required data:', { driverId, jobOfferId: jobOfferData?.id });
+      console.log("⚠️ [Get ETA] Missing required data:", {
+        driverId,
+        jobOfferId: jobOfferData?.id,
+      });
       return;
     }
 
     try {
       // Use tripNumber if available, otherwise use id
-      const tripIdToSend = jobOfferData.tripNumber || jobOfferData.tripId || jobOfferData.id;
+      const tripIdToSend =
+        jobOfferData.tripNumber || jobOfferData.tripId || jobOfferData.id;
 
       const response = await fetchETA({
         tripId: tripIdToSend,
@@ -233,14 +247,15 @@ export default function ActiveRideScreen() {
       if (isSuccess && response?.jData) {
         // Extract ETA and note from jData
         // Response structure: { driver_eta_in_minutes: number, driver_eta_notes: string }
-        console.log('📥 [Get ETA] Response jData:', response.jData);
+        console.log("📥 [Get ETA] Response jData:", response.jData);
 
         const eta = response.jData.driver_eta_in_minutes;
         const note = response.jData.driver_eta_notes;
 
         if (eta !== undefined && eta !== null) {
-          const etaNumber = typeof eta === 'string' ? parseInt(eta, 10) : Number(eta);
-          const finalNote = note && note.trim() !== '' ? note : undefined;
+          const etaNumber =
+            typeof eta === "string" ? parseInt(eta, 10) : Number(eta);
+          const finalNote = note && note.trim() !== "" ? note : undefined;
 
           setDriverETA({
             eta: etaNumber,
@@ -248,11 +263,11 @@ export default function ActiveRideScreen() {
           });
         } else {
           // If no ETA found, set to null
-          console.log('⚠️ [Get ETA] No ETA found in response');
+          console.log("⚠️ [Get ETA] No ETA found in response");
           setDriverETA(null);
         }
       } else {
-        console.log('⚠️ [Get ETA] Response not successful or missing jData:', {
+        console.log("⚠️ [Get ETA] Response not successful or missing jData:", {
           isSuccess,
           hasJData: !!response?.jData,
           responseCode: response?.jHeader?.responseCode,
@@ -395,19 +410,30 @@ export default function ActiveRideScreen() {
 
       // If already fetched for this session, skip
       if (tripDetailsFetched) {
-        console.log("📥 [ActiveRide] Trip details already fetched in this session, skipping");
+        console.log(
+          "📥 [ActiveRide] Trip details already fetched in this session, skipping"
+        );
         return;
       }
 
       // If jobOfferData doesn't exist yet, wait
       if (!jobOfferData) {
-        console.log("📥 [ActiveRide] Job offer data not available yet, waiting...");
+        console.log(
+          "📥 [ActiveRide] Job offer data not available yet, waiting..."
+        );
         return;
       }
 
       // If jobOfferData already has complete details, skip fetching
-      if (jobOfferData?.fareDetails && jobOfferData?.customerDetails && Array.isArray(jobOfferData.fareDetails) && jobOfferData.fareDetails.length > 0) {
-        console.log("📥 [ActiveRide] Trip details already available in jobOfferData, skipping fetch");
+      if (
+        jobOfferData?.fareDetails &&
+        jobOfferData?.customerDetails &&
+        Array.isArray(jobOfferData.fareDetails) &&
+        jobOfferData.fareDetails.length > 0
+      ) {
+        console.log(
+          "📥 [ActiveRide] Trip details already available in jobOfferData, skipping fetch"
+        );
         setTripDetailsFetched(true);
         return;
       }
@@ -422,13 +448,17 @@ export default function ActiveRideScreen() {
           storedTripId;
 
         if (!tripNumber) {
-          console.warn("📥 [ActiveRide] No trip number available for fetching details");
+          console.warn(
+            "📥 [ActiveRide] No trip number available for fetching details"
+          );
           return;
         }
 
         // Skip if tripNumber looks like a UUID (contains dashes and is long)
         if (tripNumber.includes("-") && tripNumber.length > 20) {
-          console.warn("📥 [ActiveRide] Trip number appears to be UUID, skipping fetch");
+          console.warn(
+            "📥 [ActiveRide] Trip number appears to be UUID, skipping fetch"
+          );
           return;
         }
 
@@ -437,7 +467,10 @@ export default function ActiveRideScreen() {
         const responseData = response.data as any;
 
         const responseCode = responseData?.jHeader?.responseCode;
-        const isSuccess = responseCode === 0 || responseCode === "0" || responseCode === undefined;
+        const isSuccess =
+          responseCode === 0 ||
+          responseCode === "0" ||
+          responseCode === undefined;
 
         if (isSuccess && responseData?.data) {
           const transformed = transformTripDetailsFromDb(responseData.data);
@@ -451,27 +484,40 @@ export default function ActiveRideScreen() {
               ...fetchedJobOffer,
               // Preserve critical fields that might be different
               id: jobOfferData?.id || fetchedJobOffer.id,
-              pickupAddress: jobOfferData?.pickupAddress || fetchedJobOffer.pickupAddress,
-              dropoffAddress: jobOfferData?.dropoffAddress || fetchedJobOffer.dropoffAddress,
+              pickupAddress:
+                jobOfferData?.pickupAddress || fetchedJobOffer.pickupAddress,
+              dropoffAddress:
+                jobOfferData?.dropoffAddress || fetchedJobOffer.dropoffAddress,
               // Use fetched details if available, otherwise keep existing
-              fareDetails: fetchedJobOffer.fareDetails || jobOfferData?.fareDetails,
-              customerDetails: fetchedJobOffer.customerDetails || jobOfferData?.customerDetails,
-              driverInstructions: fetchedJobOffer.driverInstructions || jobOfferData?.driverInstructions,
+              fareDetails:
+                fetchedJobOffer.fareDetails || jobOfferData?.fareDetails,
+              customerDetails:
+                fetchedJobOffer.customerDetails ||
+                jobOfferData?.customerDetails,
+              driverInstructions:
+                fetchedJobOffer.driverInstructions ||
+                jobOfferData?.driverInstructions,
             };
 
             setJobOfferData(mergedJobOffer);
             setTripDetailsFetched(true);
-            console.log("✅ [ActiveRide] Trip details loaded and merged successfully!");
+            console.log(
+              "✅ [ActiveRide] Trip details loaded and merged successfully!"
+            );
           } else {
             console.error("❌ [ActiveRide] Failed to transform trip data");
           }
         } else {
-          const errorMsg = responseData?.jHeader?.message || "Failed to fetch trip details";
+          const errorMsg =
+            responseData?.jHeader?.message || "Failed to fetch trip details";
           console.error("❌ [ActiveRide] API Error:", errorMsg);
           console.error("❌ [ActiveRide] Response Code:", responseCode);
         }
       } catch (err: any) {
-        console.error("❌ [ActiveRide] Error Response Status:", err.response.status);
+        console.error(
+          "❌ [ActiveRide] Error Response Status:",
+          err.response.status
+        );
       }
     };
 
@@ -753,9 +799,9 @@ export default function ActiveRideScreen() {
   };
 
   const handleUpdateETA = async () => {
-    // Fetch current ETA before opening the sheet
-    await loadDriverETA();
+    // Fetch current ETA after opening the sheet
     setUpdateETASheetOpen(true);
+    await loadDriverETA();
   };
 
   const handleAddToll = () => {
@@ -895,8 +941,10 @@ export default function ActiveRideScreen() {
 
       // Get tripId and customerId before clearing them
       const { tripId: storedTripId } = await getTripId();
-      const tripIdForFeedback = storedTripId || jobOfferData?.tripId || jobOfferData?.id;
-      const customerIdForFeedback = jobOfferData?.customerId || jobOfferData?.activeTrip?.customerId;
+      const tripIdForFeedback =
+        storedTripId || jobOfferData?.tripId || jobOfferData?.id;
+      const customerIdForFeedback =
+        jobOfferData?.customerId || jobOfferData?.activeTrip?.customerId;
 
       // Disconnect active trip socket
       console.log("🔌 Disconnecting active trip socket...");
@@ -920,9 +968,10 @@ export default function ActiveRideScreen() {
       // Redirect to feedback screen with trip data
       console.log("Redirecting to feedback screen...");
       // Extract trip number from tripId if it's a trip number format (not UUID)
-      const tripNumberForFeedback = tripIdForFeedback && !tripIdForFeedback.includes("-")
-        ? tripIdForFeedback
-        : jobOfferData?.tripNumber || "";
+      const tripNumberForFeedback =
+        tripIdForFeedback && !tripIdForFeedback.includes("-")
+          ? tripIdForFeedback
+          : jobOfferData?.tripNumber || "";
 
       router.replace({
         pathname: "/(screens)/feedback",
@@ -1132,7 +1181,7 @@ export default function ActiveRideScreen() {
         "Wrong Address": "WRONG_ADDRESS",
         "Safety Concern": "SAFETY_CONCERN",
         "Personal Emergency": "PERSONAL_EMERGENCY",
-        "Other": "OTHER",
+        Other: "OTHER",
       };
 
       const dbReason = reasonMap[selectedReason] || "OTHER";
@@ -1160,7 +1209,9 @@ export default function ActiveRideScreen() {
       // So if success field is missing, the API call succeeded (no error thrown)
       const response = cancelResponse as any;
       if (response?.success === false) {
-        throw new Error(response?.error || response?.message || "Failed to cancel trip");
+        throw new Error(
+          response?.error || response?.message || "Failed to cancel trip"
+        );
       }
 
       // If we get here, either success is true or the hook extracted nested data (meaning success)
@@ -1198,7 +1249,7 @@ export default function ActiveRideScreen() {
       showToast("Trip cancelled successfully", "success", "top");
 
       // Small delay to ensure context updates propagate before navigation
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Navigate to home
       router.replace("/(tabs)");
@@ -1223,7 +1274,11 @@ export default function ActiveRideScreen() {
     async (eta: number, note?: string) => {
       if (!driverId || !jobOfferData?.id) {
         console.error("Missing driverId or tripId for ETA update");
-        showToast("Unable to update ETA. Missing trip information.", "error", "top");
+        showToast(
+          "Unable to update ETA. Missing trip information.",
+          "error",
+          "top"
+        );
         return;
       }
 
@@ -1248,7 +1303,7 @@ export default function ActiveRideScreen() {
           try {
             await loadDriverETA();
             // Small delay to ensure state update propagates before closing sheet
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
           } catch (error) {
             console.error("Error re-fetching ETA after update:", error);
             // Still close the sheet even if re-fetch fails
@@ -1265,10 +1320,21 @@ export default function ActiveRideScreen() {
         }
       } catch (error) {
         console.error("Error updating ETA:", error);
-        showToast("An error occurred while updating ETA. Please try again.", "error", "top");
+        showToast(
+          "An error occurred while updating ETA. Please try again.",
+          "error",
+          "top"
+        );
       }
     },
-    [driverId, jobOfferData?.id, updateETA, showToast, closeUpdateETASheet, loadDriverETA]
+    [
+      driverId,
+      jobOfferData?.id,
+      updateETA,
+      showToast,
+      closeUpdateETASheet,
+      loadDriverETA,
+    ]
   );
 
   // Add Toll handler
@@ -1394,7 +1460,7 @@ export default function ActiveRideScreen() {
       <Header
         title={
           RIDE_HEADER_TITLES[
-          currentRideState as keyof typeof RIDE_HEADER_TITLES
+            currentRideState as keyof typeof RIDE_HEADER_TITLES
           ] || "En Route"
         }
         rightAccessory={
@@ -1410,7 +1476,12 @@ export default function ActiveRideScreen() {
         }
         onBackPress={() => router.replace("/(tabs)")}
       />
-      <View style={[styles.actionBarContainer, (!isMapReady || isLoadingData) && { opacity: 0.5 }]}>
+      <View
+        style={[
+          styles.actionBarContainer,
+          (!isMapReady || isLoadingData) && { opacity: 0.5 },
+        ]}
+      >
         {/* Action Bar */}
         {actionButtons.length > 0 && (
           <ScrollView
@@ -1427,7 +1498,12 @@ export default function ActiveRideScreen() {
                   button.disabled && styles.actionButtonDisabled,
                 ]}
                 onPress={button.onPress}
-                disabled={!button.onPress || button.disabled || !isMapReady || isLoadingData}
+                disabled={
+                  !button.onPress ||
+                  button.disabled ||
+                  !isMapReady ||
+                  isLoadingData
+                }
               >
                 <View
                   style={[
@@ -1504,13 +1580,13 @@ export default function ActiveRideScreen() {
             isDriverReachedOnPickup
               ? ""
               : driverETA?.eta
-                ? `${driverETA.eta} mins`
-                : ""
+              ? `${driverETA.eta} mins`
+              : ""
           }
           showWazeButton={true}
           rideStatus={
             RIDE_HEADER_TITLES[
-            currentRideState as keyof typeof RIDE_HEADER_TITLES
+              currentRideState as keyof typeof RIDE_HEADER_TITLES
             ] || "En Route"
           }
           onMapReady={() => {
@@ -1544,7 +1620,12 @@ export default function ActiveRideScreen() {
                 handleSwipeComplete();
               }
             }}
-            disabled={isActionLoading || isCompletingRide || !isMapReady || isLoadingData}
+            disabled={
+              isActionLoading ||
+              isCompletingRide ||
+              !isMapReady ||
+              isLoadingData
+            }
             onLeftPress={handleCircling}
             onRightPress={handleContactCustomer}
             rightComponent={
@@ -1815,7 +1896,13 @@ export default function ActiveRideScreen() {
         headerTitle="Update ETA"
         description="Let the rider know if your arrival time has changed."
         showNoteSection={true}
-        buttonText="Update ETA"
+        buttonText={
+          isFetchingETA
+            ? "Fetching ETA..."
+            : isUpdatingETA
+            ? "Updating ETA..."
+            : "Update ETA"
+        }
         isLoading={isUpdatingETA || isFetchingETA}
         initialEta={driverETA?.eta}
         initialNote={driverETA?.note}
