@@ -68,7 +68,9 @@ const ETAModal: React.FC<ETAModalProps> = ({
           </View>
 
           {/* Content */}
-          <View style={[styles.content, { paddingBottom: overlayBottomInset -20 }]}>
+          <View
+            style={[styles.content, { paddingBottom: overlayBottomInset - 20 }]}
+          >
             {/* ETA Section */}
             <View style={styles.etaSection}>
               <Typography

@@ -37,8 +37,8 @@ import { useRideOffer } from "@/context/RideOfferContext";
 import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
 import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
-import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -101,6 +101,7 @@ export default function LiveJobOffersScreen({
   const [selectedJobForAccept, setSelectedJobForAccept] = useState<any>(null);
   const [selectedJobForBid, setSelectedJobForBid] = useState<any>(null);
   const [isSubmitETALoading, setIsSubmitETALoading] = useState<boolean>(false);
+  const isNavigatingToTripDetailsRef = useRef(false);
 
   // API hook for submitting driver response for broadcast offers
   const { execute: submitDriverResponse } = usePost(
@@ -119,6 +120,13 @@ export default function LiveJobOffersScreen({
     const hasActiveTrip = !!driver?.retrievalId && !!driver?.tripId;
     setIsAnyTripInProgress(hasActiveTrip);
   }, [driver?.retrievalId, driver?.tripId]);
+
+  // Reset navigation guard when this screen gains focus (e.g. after returning from trip-details)
+  useFocusEffect(
+    useCallback(() => {
+      isNavigatingToTripDetailsRef.current = false;
+    }, [])
+  );
 
   // Track which offer is being processed (skip/hide operation)
   const [processingOfferId, setProcessingOfferId] = useState<string | null>(
@@ -148,7 +156,8 @@ export default function LiveJobOffersScreen({
   const filteredJobs = useMemo(() => {
     log(`[LiveJobOffersScreen] filteredJobs useMemo triggered`);
     log(
-      `[LiveJobOffersScreen] broadcastOffers length: ${broadcastOffers?.length || 0
+      `[LiveJobOffersScreen] broadcastOffers length: ${
+        broadcastOffers?.length || 0
       }`
     );
     log(`[LiveJobOffersScreen] showHiddenJobs: ${showHiddenJobs}`);
@@ -221,7 +230,16 @@ export default function LiveJobOffersScreen({
 
   // Get item status for each job
   const getItemStatus = useCallback(
-    (jobId: string): LocalJobStatus | "expired" | "accepted" | "offered" | "rejected" | "bidding" | "offer-expired" => {
+    (
+      jobId: string
+    ):
+      | LocalJobStatus
+      | "expired"
+      | "accepted"
+      | "offered"
+      | "rejected"
+      | "bidding"
+      | "offer-expired" => {
       const hiddenOffer = getLiveOfferStatus(jobId);
       const broadcastOffer = broadcastOffers.find(
         (offer) => offer.id === jobId
@@ -300,7 +318,7 @@ export default function LiveJobOffersScreen({
       const isBidding = job.status === "bidding";
 
       // Allow rebidding for rejected or expired bids
-      // This check must come BEFORE the isBidding check to handle cases where 
+      // This check must come BEFORE the isBidding check to handle cases where
       // the status might be stuck or transitioning
       if ((isExpired || isRejected) && job.bidable) {
         log(
@@ -310,8 +328,13 @@ export default function LiveJobOffersScreen({
         updateBroadcastOffer(jobId, { status: "offered" });
         // Proceed with opening the bid sheet
       } else if (isBidding) {
-        log(`[LiveJobOffersScreen] Job ${jobId} is already in bidding state, waiting for customer`);
-        showToast("Waiting for customer response...", { variant: "warning", position: "top" });
+        log(
+          `[LiveJobOffersScreen] Job ${jobId} is already in bidding state, waiting for customer`
+        );
+        showToast("Waiting for customer response...", {
+          variant: "warning",
+          position: "top",
+        });
         return;
       }
       if (job.bidable) {
@@ -367,8 +390,13 @@ export default function LiveJobOffersScreen({
         }
 
         // Skip API call for demo offers
-        if (jobToUse.id?.startsWith("demo-") || jobToUse.tripOffer?.tripId?.startsWith("demo-")) {
-          log("[LiveJobOffersScreen] Demo offer detected - skipping API call for bid");
+        if (
+          jobToUse.id?.startsWith("demo-") ||
+          jobToUse.tripOffer?.tripId?.startsWith("demo-")
+        ) {
+          log(
+            "[LiveJobOffersScreen] Demo offer detected - skipping API call for bid"
+          );
           showToast("Demo offer: Bid submitted locally (no API call)", {
             variant: "success",
             position: "top",
@@ -395,7 +423,9 @@ export default function LiveJobOffersScreen({
           updateBroadcastOffer(jobToUse.tripOffer.tripId, {
             status: "bidding" as any, // Set status to bidding to prevent expiration
           });
-          log("[LiveJobOffersScreen] Updated offer status to 'bidding' to prevent expiration");
+          log(
+            "[LiveJobOffersScreen] Updated offer status to 'bidding' to prevent expiration"
+          );
 
           // For broadcast offers, don't change status to "accepted" immediately
           // The offer should remain bidable until customer accepts or offer expires
@@ -421,7 +451,9 @@ export default function LiveJobOffersScreen({
         if (errorMessage.toLowerCase().includes("expired")) {
           if (jobToUse?.id) {
             removeBroadcastOffer(jobToUse.id);
-            log(`[LiveJobOffersScreen] Removed expired offer ${jobToUse.id} after failed bid`);
+            log(
+              `[LiveJobOffersScreen] Removed expired offer ${jobToUse.id} after failed bid`
+            );
           }
         }
       }
@@ -456,8 +488,13 @@ export default function LiveJobOffersScreen({
       }
 
       // Skip API call for demo offers
-      if (selectedJobForAccept.id?.startsWith("demo-") || tripId?.startsWith("demo-")) {
-        log("[LiveJobOffersScreen] Demo offer detected - skipping API call for ETA");
+      if (
+        selectedJobForAccept.id?.startsWith("demo-") ||
+        tripId?.startsWith("demo-")
+      ) {
+        log(
+          "[LiveJobOffersScreen] Demo offer detected - skipping API call for ETA"
+        );
         showToast("Demo offer: Ride accepted locally (no API call)", {
           variant: "success",
           position: "top",
@@ -492,7 +529,9 @@ export default function LiveJobOffersScreen({
           eta: eta, // ETA is sent but will be ignored by backend for non-biddable offers
         });
 
-        log("[LiveJobOffersScreen] ETA submitted successfully for broadcast offer");
+        log(
+          "[LiveJobOffersScreen] ETA submitted successfully for broadcast offer"
+        );
 
         // Mark the offer as accepted in the context
         updateBroadcastOffer(selectedJobForAccept.id, { status: "accepted" });
@@ -512,13 +551,17 @@ export default function LiveJobOffersScreen({
 
         // Add a small delay before redirecting to allow backend to initialize the trip
         // This prevents "Active trip resource not found" error
-        log("[LiveJobOffersScreen] Waiting for backend to initialize trip before redirecting...");
+        log(
+          "[LiveJobOffersScreen] Waiting for backend to initialize trip before redirecting..."
+        );
         await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
 
         // Non-blocking: Try to update ETA in the database (don't block navigation if it fails)
         // This is for non-biddable offers where ETA was provided but may not be stored in DB
         try {
-          log("[LiveJobOffersScreen] Attempting to update ETA in database (non-blocking)...");
+          log(
+            "[LiveJobOffersScreen] Attempting to update ETA in database (non-blocking)..."
+          );
           await updateETA({
             tripId: tripId,
             driverId: driverId,
@@ -527,7 +570,10 @@ export default function LiveJobOffersScreen({
           log("[LiveJobOffersScreen] ✅ ETA updated in database successfully");
         } catch (etaError) {
           // Don't block the user - just notify them that ETA update failed
-          log("[LiveJobOffersScreen] ⚠️ Failed to update ETA in database (non-blocking):", etaError);
+          log(
+            "[LiveJobOffersScreen] ⚠️ Failed to update ETA in database (non-blocking):",
+            etaError
+          );
           showToast(
             "Ride accepted! ETA update failed. You can update it later during the active ride.",
             {
@@ -541,7 +587,10 @@ export default function LiveJobOffersScreen({
         log("[LiveJobOffersScreen] Redirecting to active-ride screen");
         router.replace("/(screens)/active-ride");
       } catch (error) {
-        log("[LiveJobOffersScreen] Failed to submit ETA for broadcast offer:", error);
+        log(
+          "[LiveJobOffersScreen] Failed to submit ETA for broadcast offer:",
+          error
+        );
         const errorMessage =
           error instanceof Error
             ? error.message
@@ -555,7 +604,9 @@ export default function LiveJobOffersScreen({
         if (errorMessage.toLowerCase().includes("expired")) {
           if (selectedJobForAccept?.id) {
             removeBroadcastOffer(selectedJobForAccept.id);
-            log(`[LiveJobOffersScreen] Removed expired offer ${selectedJobForAccept.id} after failed ETA`);
+            log(
+              `[LiveJobOffersScreen] Removed expired offer ${selectedJobForAccept.id} after failed ETA`
+            );
           }
           setIsETAModalOpen(false);
           setSelectedJobForAccept(null);
@@ -565,7 +616,16 @@ export default function LiveJobOffersScreen({
         setIsSubmitETALoading(false);
       }
     },
-    [selectedJobForAccept, auth, submitDriverResponse, updateBroadcastOffer, removeBroadcastOffer, updateETA, showToast, log]
+    [
+      selectedJobForAccept,
+      auth,
+      submitDriverResponse,
+      updateBroadcastOffer,
+      removeBroadcastOffer,
+      updateETA,
+      showToast,
+      log,
+    ]
   );
 
   // Handle "Click here to view +X more" click
@@ -882,9 +942,11 @@ export default function LiveJobOffersScreen({
     }
 
     // Handle item press to navigate to trip details
-    // Only navigate if not disabled and not pressing the button area
+    // Only navigate if not disabled; block rapid taps to avoid stacking duplicate trip-details screens
     const handleItemPress = () => {
+      if (isNavigatingToTripDetailsRef.current) return;
       if (!isDisabled) {
+        isNavigatingToTripDetailsRef.current = true;
         router.push({
           pathname: "/(screens)/trip-details",
           params: { offerId: item.id },
@@ -950,7 +1012,12 @@ export default function LiveJobOffersScreen({
           keyExtractor={(item) => item.id}
           renderItem={(props) => renderJobItem({ ...props, isScrolling })}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: Platform.OS === "ios" && showAllJobs ? "20%" : 20 }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingBottom: Platform.OS === "ios" && showAllJobs ? "20%" : 20,
+            },
+          ]}
           ListFooterComponent={hasMoreJobs ? renderViewMoreIndicator : null}
           onScrollBeginDrag={handleScrollBeginDrag}
           onScrollEndDrag={handleScrollEndDrag}
