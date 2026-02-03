@@ -4,8 +4,8 @@
  * This component renders:
  * - User count with user icon
  * - Rating with rating icon
- * - Special requirements icon (TouchableOpacity, conditional)
- * - Package icon (TouchableOpacity)
+ * - Special requirements icon (fixed slot; hidden when none, space reserved)
+ * - Package icon (fixed slot; hidden when none, space reserved)
  * - Car type with typography
  *
  * All icons are 20x20 and arranged horizontally with auto gap spacing.
@@ -91,35 +91,43 @@ export default function RideOfferItemHeader({
         </Typography>
       </View>
 
-      {/* Special requirements icon (conditional) */}
-      {hasSpecialRequirements && (
-        <TouchableOpacity
-          style={styles.iconContainer}
-          onPress={onPressSpecialRequirements}
-          activeOpacity={0.7}
-        >
-          <Image
-            source={require("@/assets/images/special-requirment.png")}
-            style={styles.icon}
-            contentFit="contain"
-          />
-        </TouchableOpacity>
-      )}
+      {/* Special requirements icon - fixed slot so position is same for all car types */}
+      <View style={styles.iconSlot}>
+        {hasSpecialRequirements ? (
+          <TouchableOpacity
+            style={styles.iconContainer}
+            onPress={onPressSpecialRequirements}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require("@/assets/images/special-requirment.png")}
+              style={styles.icon}
+              contentFit="contain"
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconPlaceholder} />
+        )}
+      </View>
 
-      {/* Package icon */}
-      {hasPackage && (
-        <TouchableOpacity
-          style={styles.iconContainer}
-          onPress={hasPackage ? onPressPackage : () => {}}
-          activeOpacity={0.7}
-        >
-          <Image
-            source={require("@/assets/images/package-icon.png")}
-            style={styles.icon}
-            contentFit="contain"
-          />
-        </TouchableOpacity>
-      )}
+      {/* Package icon - fixed slot so position is same for all car types */}
+      <View style={styles.iconSlot}>
+        {hasPackage ? (
+          <TouchableOpacity
+            style={styles.iconContainer}
+            onPress={onPressPackage}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require("@/assets/images/package-icon.png")}
+              style={styles.icon}
+              contentFit="contain"
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconPlaceholder} />
+        )}
+      </View>
 
       {/* Car type */}
       <Typography type="bodyMedium" weight="black" style={styles.carTypeText}>
@@ -140,6 +148,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  /** Fixed-size slot so special requirements and package icons stay at same position (Economy vs Luxury) */
+  iconSlot: {
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  /** Invisible placeholder to reserve space when icon is hidden */
+  iconPlaceholder: {
+    width: 20,
+    height: 20,
   },
   iconContainer: {
     alignItems: "center",

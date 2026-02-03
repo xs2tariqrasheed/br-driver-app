@@ -40,7 +40,7 @@ type LoginFormValues = {
 const LOGIN_DEFAULT_VALUES: LoginFormValues = {
   companyId: "1",
   loginId: "ali.khan@example.com",
-  password: "112233",
+  password: "123456",
 };
 
 /**
@@ -651,7 +651,15 @@ export default function LoginScreen() {
             variant="primary"
             rounded="half"
             disabled={isLoggingIn}
-            onPress={() => Linking.openURL(URLS.requestRegistration)}
+            onPress={() =>
+              router.push({
+                pathname: "/(screens)/in-app-webview",
+                params: {
+                  url: URLS.requestRegistration,
+                  title: "Request Registration",
+                },
+              })
+            }
           >
             Request Registration
           </Button>

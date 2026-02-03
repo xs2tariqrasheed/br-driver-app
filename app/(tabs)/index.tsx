@@ -35,12 +35,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
-  Linking,
   Image as RNImage,
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 export default function HomeScreen() {
@@ -383,11 +382,14 @@ export default function HomeScreen() {
   const handleDriverStatusToggle = async (next: string) => {
     const isGoingOnline = next === DRIVER_STATUS.ONLINE;
     const isGoingOffline = next === DRIVER_STATUS.OFFLINE;
+    const previousOnline = driver?.online ?? false;
 
-    // If going online, call API first with current location
+    // If going online, update UI immediately (optimistic) so first tap moves the toggle
     if (isGoingOnline) {
       try {
-        setIsTogglingOnline(true); // Start loading immediately
+        // Optimistic update: move toggle to Online immediately so first tap is visible
+        await setDriver({ ...(driver ?? {}), online: true });
+        setIsTogglingOnline(true);
 
         // Get current location for first post (permission already granted by PermissionGate)
         const first = await Location.getCurrentPositionAsync({});
@@ -439,27 +441,25 @@ export default function HomeScreen() {
           log("[HomeScreen] Failed to connect socket:", error);
         }
 
-        // ONLY set driver online if everything above succeeded
-        await setDriver({ ...(driver ?? {}), online: true });
         showToast("You are now Online", { variant: "success" });
-
         // Interval loop is managed centrally in OnlineLocationTracker
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to go online.";
         log("[HomeScreen] Error going online:", error);
         showToast(message, { variant: "error" });
-        // Don't set driver online if API fails
+        // Revert optimistic update on failure
+        await setDriver({ ...(driver ?? {}), online: previousOnline });
       } finally {
         setIsTogglingOnline(false); // Stop loading
       }
       return;
     }
 
-    // If going offline, check for active ride first
+    // If going offline, check for active ride first then update UI optimistically
     if (isGoingOffline) {
       try {
-        // Check if driver has an active ride
+        // Check if driver has an active ride (must complete before going offline)
         const { retrievalId } = await getRetrievalId();
         if (retrievalId) {
           Alert.alert(
@@ -476,7 +476,9 @@ export default function HomeScreen() {
           return; // Prevent going offline
         }
 
-        log("[HomeScreen] Marking driver as offline via API");
+        // Optimistic update: move toggle to Offline immediately so first tap is visible
+        setHasAnyActiveOffer(false);
+        await setDriver({ ...(driver ?? {}), online: false });
 
         // Update driver status to offline in database
         log("[HomeScreen] Updating driver status to offline");
@@ -517,13 +519,6 @@ export default function HomeScreen() {
           log("[HomeScreen] Error disconnecting socket:", error);
         }
 
-        // ONLY update driver state if everything above succeeded
-        setHasAnyActiveOffer(false);
-        await setDriver({
-          ...(driver ?? {}),
-          online: false,
-        });
-
         showToast("You are now Offline", { variant: "success" });
         log("[HomeScreen] Driver successfully marked as offline");
       } catch (error) {
@@ -533,6 +528,8 @@ export default function HomeScreen() {
             : "Failed to go offline. Please try again.";
         showToast(message, { variant: "error" });
         log("[HomeScreen] Error marking driver offline:", error);
+        // Revert optimistic update on failure
+        await setDriver({ ...(driver ?? {}), online: previousOnline });
       }
     }
   };
@@ -622,7 +619,10 @@ export default function HomeScreen() {
       } else if (iconKey === "settings") {
         router.push("/(tabs)/settings" as any);
       } else if (iconKey === "jump-portal") {
-        void Linking.openURL(URLS.driverPortal);
+        router.push({
+          pathname: "/(screens)/in-app-webview",
+          params: { url: URLS.driverPortal, title: "Driver Portal" },
+        });
       } else if (iconKey === "mute-notifications") {
         openMuteSheet();
       }

@@ -556,36 +556,33 @@ export default function LiveJobOffersScreen({
         );
         await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
 
-        // Non-blocking: Try to update ETA in the database (don't block navigation if it fails)
-        // This is for non-biddable offers where ETA was provided but may not be stored in DB
-        try {
-          log(
-            "[LiveJobOffersScreen] Attempting to update ETA in database (non-blocking)..."
-          );
-          await updateETA({
-            tripId: tripId,
-            driverId: driverId,
-            eta: eta,
-          });
-          log("[LiveJobOffersScreen] ✅ ETA updated in database successfully");
-        } catch (etaError) {
-          // Don't block the user - just notify them that ETA update failed
-          log(
-            "[LiveJobOffersScreen] ⚠️ Failed to update ETA in database (non-blocking):",
-            etaError
-          );
-          showToast(
-            "Ride accepted! ETA update failed. You can update it later during the active ride.",
-            {
-              variant: "error",
-              position: "top",
-            }
-          );
-        }
-
-        // Redirect to active ride screen
+        // Redirect to active ride screen first so driver always lands there after accept (non-biddable)
         log("[LiveJobOffersScreen] Redirecting to active-ride screen");
         router.replace("/(screens)/active-ride");
+
+        // Non-blocking: Try to update ETA in the database after redirect (don't block or prevent navigation)
+        // This is for non-biddable offers where ETA was provided but may not be stored in DB
+        updateETA({
+          tripId: tripId,
+          driverId: driverId,
+          eta: eta,
+        })
+          .then(() => {
+            log("[LiveJobOffersScreen] ✅ ETA updated in database successfully");
+          })
+          .catch((etaError) => {
+            log(
+              "[LiveJobOffersScreen] ⚠️ Failed to update ETA in database (non-blocking):",
+              etaError
+            );
+            showToast(
+              "Ride accepted! ETA update failed. You can update it later during the active ride.",
+              {
+                variant: "error",
+                position: "top",
+              }
+            );
+          });
       } catch (error) {
         log(
           "[LiveJobOffersScreen] Failed to submit ETA for broadcast offer:",

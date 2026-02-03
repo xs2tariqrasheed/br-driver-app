@@ -276,6 +276,12 @@ export default function RootLayout() {
                                                             : "fullScreenModal",
                                                       }}
                                                     />
+                                                    <Stack.Screen
+                                                      name="(screens)/in-app-webview"
+                                                      options={{
+                                                        headerShown: false,
+                                                      }}
+                                                    />
                                                   </Stack>
                                                   <StatusBar style="auto" />
                                                   <PushNotificationsBootstrap />
