@@ -1820,8 +1820,18 @@ export function transformTripDetailsFromDb(dbResponse: any): any {
     tripNumber: trip.tripNumber || trip.trip_number || "",
     dateTime,
     rideType: trip.rideType || trip.trip_type || "ONE_WAY",
-    peopleCount: trip.peopleCount || trip.people_count || 1,
-    rating: trip.rating || 0,
+    peopleCount:
+      trip.noOfPassengers ??
+      trip.peopleCount ??
+      trip.people_count ??
+      1,
+    rating: (() => {
+      const r = trip.passengerRating ?? trip.passenger_rating ?? trip.rating;
+      if (r == null) return 0;
+      if (typeof r === "number") return Number.isNaN(r) ? 0 : r;
+      const n = parseFloat(String(r).trim());
+      return Number.isNaN(n) ? 0 : n;
+    })(),
     carType: trip.carType || trip.car_type || "",
     expiredAt: trip.expiredAt || trip.expired_at || null,
     hasSpecialRequirements:
@@ -2032,10 +2042,22 @@ export function tripDetailsApiResponseToJobOffer(apiData: any): any {
     ? formatDateTimeToReadableFormat(trip.dateTime)
     : "";
 
+  const peopleCount =
+    trip.noOfPassengers ?? trip.peopleCount ?? trip.people_count ?? 1;
+  const rating = (() => {
+    const r = trip.passengerRating ?? trip.passenger_rating ?? trip.rating;
+    if (r == null) return 0;
+    if (typeof r === "number") return Number.isNaN(r) ? 0 : r;
+    const n = parseFloat(String(r).trim());
+    return Number.isNaN(n) ? 0 : n;
+  })();
+
   return {
     ...trip,
     id,
     dateTime,
+    peopleCount,
+    rating,
     fareDetails,
     customerDetails,
     onPressSpecialRequirements: trip.onPressSpecialRequirements ?? (() => {}),

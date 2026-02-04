@@ -19,6 +19,9 @@ interface ServerSocketData {
     tripType?: "ONE_WAY" | "ROUND_TRIP" | "HOURLY";
     tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE";
     serviceType?: "ECONOMY_LITE" | "ECONOMY" | "SEDAN" | "SUV";
+    /** Passenger count (1–5) and rating ("1.0" to "5.0") from API/socket */
+    noOfPassengers?: number;
+    passengerRating?: string;
     /** Dynamic values from backend (when available) */
     pickupTime?: number;
     pickupDistance?: number;
@@ -381,8 +384,14 @@ export function formatSocketDataToTripOffer(
     rideDetails: {
       id: tripOffer.tripId,
       rideType: rideType,
-      peopleCount: DEFAULT_VALUES.peopleCount,
-      rating: DEFAULT_VALUES.rating,
+      peopleCount:
+        tripOffer.noOfPassengers ?? DEFAULT_VALUES.peopleCount,
+      rating: (() => {
+        const r = tripOffer.passengerRating;
+        if (r == null || r === "") return DEFAULT_VALUES.rating;
+        const n = parseFloat(String(r).trim());
+        return Number.isNaN(n) ? DEFAULT_VALUES.rating : n;
+      })(),
       hasSpecialRequirements: hasSpecialRequirements,
       hasPackage: hasPackage,
       pickupTime: tripOffer.pickupTime ?? DEFAULT_VALUES.pickupTime,

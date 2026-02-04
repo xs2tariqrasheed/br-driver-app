@@ -276,10 +276,10 @@ export default function ActiveRideScreen() {
             lastBid &&
             currentTripId &&
             (String(lastBid.tripId) === String(currentTripId) ||
-              String(lastBid.tripId) === String((jobOfferData as any)?.tripOffer?.tripId));
+              String(lastBid.tripId) ===
+                String((jobOfferData as any)?.tripOffer?.tripId));
 
           if (tripIdsMatch && lastBid) {
-            console.log("📥 [Get ETA] Using stored bid ETA:", lastBid.eta, "mins");
             setDriverETA({ eta: lastBid.eta });
             clearLastBidETA(lastBid.tripId);
             updateETA({
@@ -429,15 +429,15 @@ export default function ActiveRideScreen() {
   }, [jobOfferData?.id, driverId, loadDriverETA]);
 
   // Fetch full trip details from API on load (same as trip-details screen: GET trip-by-number)
-  const [tripDetailsFetchedOnLoad, setTripDetailsFetchedOnLoad] = useState(false);
+  const [tripDetailsFetchedOnLoad, setTripDetailsFetchedOnLoad] =
+    useState(false);
+  const tripDetailsLoadedFromApiRef = useRef(false);
   useEffect(() => {
     const fetchTripDetailsOnLoad = async () => {
       if (!jobOfferData || tripDetailsFetchedOnLoad) return;
 
       const tripNumber =
-        jobOfferData.tripNumber ||
-        jobOfferData.trip_number ||
-        jobOfferData.id;
+        jobOfferData.tripNumber || jobOfferData.trip_number || jobOfferData.id;
 
       if (!tripNumber) {
         setTripDetailsFetchedOnLoad(true);
@@ -459,9 +459,10 @@ export default function ActiveRideScreen() {
           responseCode === 0 ||
           responseCode === "0" ||
           responseCode === undefined;
-
         if (isSuccess && responseData?.data) {
-          const fetchedJobOffer = tripDetailsApiResponseToJobOffer(responseData.data);
+          const fetchedJobOffer = tripDetailsApiResponseToJobOffer(
+            responseData.data
+          );
           if (fetchedJobOffer) {
             const mergedJobOffer = {
               ...jobOfferData,
@@ -471,20 +472,36 @@ export default function ActiveRideScreen() {
                 jobOfferData?.pickupAddress ?? fetchedJobOffer.pickupAddress,
               dropoffAddress:
                 jobOfferData?.dropoffAddress ?? fetchedJobOffer.dropoffAddress,
-                totalPrice: jobOfferData?.totalPrice ?? fetchedJobOffer.totalPrice,
-                driverEarn: jobOfferData?.driverEarn ?? fetchedJobOffer.driverEarn,
-                rideType: jobOfferData?.rideType ?? fetchedJobOffer.rideType,
-                carType: jobOfferData?.carType ?? fetchedJobOffer.carType,
-                hasSpecialRequirements: jobOfferData?.hasSpecialRequirements ?? fetchedJobOffer.hasSpecialRequirements,
-                hasPackage: jobOfferData?.hasPackage ?? fetchedJobOffer.hasPackage,
-                pickupTime: jobOfferData?.pickupTime ?? fetchedJobOffer.pickupTime,
-                pickupDistance: jobOfferData?.pickupDistance ?? fetchedJobOffer.pickupDistance,
-                dropoffTime: jobOfferData?.dropoffTime ?? fetchedJobOffer.dropoffTime,
-                dropoffDistance: jobOfferData?.dropoffDistance ?? fetchedJobOffer.dropoffDistance,
-                rideTime: jobOfferData?.rideTime ?? fetchedJobOffer.rideTime,
-                rideDistance: jobOfferData?.rideDistance ?? fetchedJobOffer.rideDistance,
+              totalPrice:
+                jobOfferData?.totalPrice ?? fetchedJobOffer.totalPrice,
+              driverEarn:
+                jobOfferData?.driverEarn ?? fetchedJobOffer.driverEarn,
+              rideType: jobOfferData?.rideType ?? fetchedJobOffer.rideType,
+              carType: jobOfferData?.carType ?? fetchedJobOffer.carType,
+              hasSpecialRequirements:
+                jobOfferData?.hasSpecialRequirements ??
+                fetchedJobOffer.hasSpecialRequirements,
+              hasPackage:
+                jobOfferData?.hasPackage ?? fetchedJobOffer.hasPackage,
+              pickupTime:
+                jobOfferData?.pickupTime ?? fetchedJobOffer.pickupTime,
+              pickupDistance:
+                jobOfferData?.pickupDistance ?? fetchedJobOffer.pickupDistance,
+              dropoffTime:
+                jobOfferData?.dropoffTime ?? fetchedJobOffer.dropoffTime,
+              dropoffDistance:
+                jobOfferData?.dropoffDistance ??
+                fetchedJobOffer.dropoffDistance,
+              rideTime: jobOfferData?.rideTime ?? fetchedJobOffer.rideTime,
+              rideDistance:
+                jobOfferData?.rideDistance ?? fetchedJobOffer.rideDistance,
+              peopleCount:
+                jobOfferData.peopleCount ?? fetchedJobOffer?.peopleCount,
+              rating: jobOfferData.rating ?? fetchedJobOffer?.rating,
+              dateTime: jobOfferData.dateTime ?? fetchedJobOffer?.dateTime,
             };
             setJobOfferData(mergedJobOffer);
+            tripDetailsLoadedFromApiRef.current = true;
           }
         }
       } catch (err) {
@@ -530,16 +547,8 @@ export default function ActiveRideScreen() {
         return;
       }
 
-      // If jobOfferData already has complete details, skip fetching
-      if (
-        jobOfferData?.fareDetails &&
-        jobOfferData?.customerDetails &&
-        Array.isArray(jobOfferData.fareDetails) &&
-        jobOfferData.fareDetails.length > 0
-      ) {
-        console.log(
-          "📥 [ActiveRide] Trip details already available in jobOfferData, skipping fetch"
-        );
+      // If we already loaded full details from API (on load or when Details tab fetched), skip
+      if (tripDetailsLoadedFromApiRef.current) {
         setTripDetailsFetched(true);
         return;
       }
@@ -579,7 +588,9 @@ export default function ActiveRideScreen() {
           responseCode === undefined;
 
         if (isSuccess && responseData?.data) {
-          const fetchedJobOffer = tripDetailsApiResponseToJobOffer(responseData.data);
+          const fetchedJobOffer = tripDetailsApiResponseToJobOffer(
+            responseData.data
+          );
 
           if (fetchedJobOffer) {
             const mergedJobOffer = {
@@ -590,10 +601,14 @@ export default function ActiveRideScreen() {
                 jobOfferData?.pickupAddress ?? fetchedJobOffer.pickupAddress,
               dropoffAddress:
                 jobOfferData?.dropoffAddress ?? fetchedJobOffer.dropoffAddress,
+              peopleCount:
+                fetchedJobOffer.peopleCount ?? jobOfferData?.peopleCount,
+              rating: fetchedJobOffer.rating ?? jobOfferData?.rating,
             };
 
             setJobOfferData(mergedJobOffer);
             setTripDetailsFetched(true);
+            tripDetailsLoadedFromApiRef.current = true;
           }
         } else {
           const errorMsg =
@@ -604,7 +619,7 @@ export default function ActiveRideScreen() {
       } catch (err: any) {
         console.error(
           "❌ [ActiveRide] Error Response Status:",
-          err.response.status
+          err?.response?.status ?? err
         );
       }
     };
@@ -793,12 +808,32 @@ export default function ActiveRideScreen() {
             ? serviceTypeToCarType[activeTrip.serviceType.toUpperCase()]
             : CAR_TYPE.SEDAN;
         const carTypeDisplay =
-          activeTrip.serviceType && serviceTypeToCarType[activeTrip.serviceType.toUpperCase()]
+          activeTrip.serviceType &&
+          serviceTypeToCarType[activeTrip.serviceType.toUpperCase()]
             ? serviceTypeToCarType[activeTrip.serviceType.toUpperCase()]
             : CAR_TYPE.SEDAN;
         const carTypeDisplayLabel =
           carTypeDisplay.charAt(0).toUpperCase() +
           carTypeDisplay.slice(1).toLowerCase();
+
+        const peopleCount =
+          activeTrip.noOfPassengers ??
+          activeTrip.peopleCount ??
+          activeTrip.people_count ??
+          2;
+        const ratingRaw =
+          activeTrip.passengerRating ??
+          activeTrip.passenger_rating ??
+          activeTrip.rating;
+        const rating =
+          typeof ratingRaw === "number"
+            ? ratingRaw
+            : ratingRaw != null && ratingRaw !== ""
+            ? (() => {
+                const n = parseFloat(String(ratingRaw).trim());
+                return Number.isNaN(n) ? 4.8 : n;
+              })()
+            : 4.8;
 
         return {
           id: activeTrip.tripId,
@@ -813,11 +848,14 @@ export default function ActiveRideScreen() {
           }),
           rideType,
           carType,
-          peopleCount: 2,
-          rating: 4.8,
-          hasSpecialRequirements: false,
+          peopleCount,
+          rating,
+          hasSpecialRequirements:
+            activeTrip.hasSpecialRequirements ??
+            activeTrip.has_special_requirements ??
+            false,
           onPressSpecialRequirements: () => console.log("Special requirements"),
-          hasPackage: false,
+          hasPackage: activeTrip.hasPackage ?? activeTrip.has_package ?? false,
           onPressPackage: () => console.log("Package pressed"),
           pickupTime,
           pickupDistance,
