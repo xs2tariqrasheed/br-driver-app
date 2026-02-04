@@ -1,4 +1,7 @@
-import { LIVE_JOB_ENDPOINTS, NOTIFICATIONS_ENDPOINTS } from "@/constants/endpoints";
+import {
+  LIVE_JOB_ENDPOINTS,
+  NOTIFICATIONS_ENDPOINTS,
+} from "@/constants/endpoints";
 import {
   API_CLIENT_TYPES,
   DRIVER_STORAGE_KEY,
@@ -121,7 +124,11 @@ type DriverContextValue = [
   notifications: NotificationItem[];
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
-  replyToNotification: (notificationId: string, reply: string, affiliateNumber?: string) => Promise<any>;
+  replyToNotification: (
+    notificationId: string,
+    reply: string,
+    affiliateNumber?: string
+  ) => Promise<any>;
   addNotification: (notification: NotificationItem) => Promise<void>;
   addNotifications: (notifications: NotificationItem[]) => Promise<void>;
   getNotificationById: (id: string) => NotificationItem | undefined;
@@ -151,6 +158,10 @@ type DriverContextValue = [
     loading: boolean;
   }>;
   removeTripId: () => Promise<void>;
+  // Last bid ETA (for biddable offers: show ETA on active-ride when backend has not stored it yet)
+  setLastBidETA: (tripId: string, eta: number) => void;
+  getLastBidETA: () => { tripId: string; eta: number } | null;
+  clearLastBidETA: (tripId?: string) => void;
   // Ride state functions
   setRideState: (rideState: string) => Promise<void>;
   getRideState: () => Promise<{
@@ -160,9 +171,11 @@ type DriverContextValue = [
   removeRideState: () => Promise<void>;
   // Desired destinations functions
   fetchDesiredDestinations: () => Promise<void>;
-  createDesiredDestination: (destination: Omit<DesiredDestination, 'id' | 'created_at'>) => Promise<DesiredDestination>;
+  createDesiredDestination: (
+    destination: Omit<DesiredDestination, "id" | "created_at">
+  ) => Promise<DesiredDestination>;
   updateDesiredDestination: (destination: DesiredDestination) => Promise<void>;
-  deleteDesiredDestination: (id: number) => Promise<void>;
+  deleteDesiredDestination: (id: string) => Promise<void>;
   isLoadingDestinations: boolean;
   destinationsError: string | null;
 };
@@ -184,7 +197,8 @@ export function createDemoNotifications(): NotificationItem[] {
     {
       id: "demo-notification-1",
       messageTitle: "Special Ride Offer Available",
-      messageBody: "A new premium ride offer is available near your location. Tap to view details and accept.",
+      messageBody:
+        "A new premium ride offer is available near your location. Tap to view details and accept.",
       dateTime: oneHourAgo.toISOString(),
       messageType: "unread" as const, // Will be computed based on readNotificationIds
       notificationType: NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER,
@@ -193,7 +207,8 @@ export function createDemoNotifications(): NotificationItem[] {
     {
       id: "demo-notification-2",
       messageTitle: "Authorization Required",
-      messageBody: "Please make a stop as requested by the customer and wait 8 mins. You will be paid extra for this stop.",
+      messageBody:
+        "Please make a stop as requested by the customer and wait 8 mins. You will be paid extra for this stop.",
       dateTime: twoHoursAgo.toISOString(),
       messageType: "unread" as const, // Will be computed based on readNotificationIds
       notificationType: NOTIFICATION_TYPES.AUTHORIZATION,
@@ -202,7 +217,8 @@ export function createDemoNotifications(): NotificationItem[] {
     {
       id: "demo-notification-3",
       messageTitle: "System Update",
-      messageBody: "Your driver app has been updated with new features. Please restart the app to apply changes.",
+      messageBody:
+        "Your driver app has been updated with new features. Please restart the app to apply changes.",
       dateTime: threeHoursAgo.toISOString(),
       messageType: "unread" as const, // Will be computed based on readNotificationIds
       notificationType: NOTIFICATION_TYPES.INFO,
@@ -211,7 +227,8 @@ export function createDemoNotifications(): NotificationItem[] {
     {
       id: "demo-notification-4",
       messageTitle: "Ride Completed Successfully",
-      messageBody: "Your ride with customer John Doe has been completed. Payment of $45.50 has been processed.",
+      messageBody:
+        "Your ride with customer John Doe has been completed. Payment of $45.50 has been processed.",
       dateTime: oneDayAgo.toISOString(),
       messageType: "unread" as const, // Will be computed based on readNotificationIds
       notificationType: NOTIFICATION_TYPES.SUCCESS,
@@ -220,7 +237,8 @@ export function createDemoNotifications(): NotificationItem[] {
     {
       id: "demo-notification-5",
       messageTitle: "New Message Received",
-      messageBody: "You have received a new message from customer. Tap to view and reply.",
+      messageBody:
+        "You have received a new message from customer. Tap to view and reply.",
       dateTime: oneHourAgo.toISOString(),
       messageType: "unread" as const, // Will be computed based on readNotificationIds
       notificationType: NOTIFICATION_TYPES.MESSAGE,
@@ -247,7 +265,8 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
   const [isFetchingNotifications, setIsFetchingNotifications] = useState(false);
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
   const [isDeletingNotification, setIsDeletingNotification] = useState(false);
-  const [isReplyingToNotification, setIsReplyingToNotification] = useState(false);
+  const [isReplyingToNotification, setIsReplyingToNotification] =
+    useState(false);
 
   // API hook for driver responses
   const { execute: submitDriverResponse } = usePost(
@@ -303,36 +322,18 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           log("Notifications restored from backup and backup cleared");
         }
 
-        // Filter out expired destinations if they exist
+        // Keep all destinations (valid + expired) so desired-destinations screen can show expired with "Expired" tag
         if (
           parsed?.desiredDestinations &&
           parsed.desiredDestinations.length > 0
         ) {
-          const { valid, expired } = filterExpiredDestinations(
+          const { expired } = filterExpiredDestinations(
             parsed.desiredDestinations
           );
-
-          // Log expired destinations
-          expired.forEach((dest) => {
-            log(`Desired location has been expired and removed:`, {
-              id: dest.id,
-              address: dest.address,
-              expired_at: dest.expired_at,
-              created_at: dest.created_at,
-            });
-          });
-
-          // Update parsed driver object with only valid destinations
           if (expired.length > 0) {
-            parsed = {
-              ...parsed,
-              desiredDestinations: valid,
-            };
-
-            // Save the updated driver object back to storage
-            if (parsed) {
-              await setStorageItem(DRIVER_STORAGE_KEY, JSON.stringify(parsed));
-            }
+            log(
+              `Desired destinations: ${expired.length} expired (shown in UI for user to delete)`
+            );
           }
         }
 
@@ -440,11 +441,11 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         }
         const demoNotifications = createDemoNotifications();
         // Ensure all demo notifications are unread
-        const unreadDemoNotifications = demoNotifications.map(n => ({
+        const unreadDemoNotifications = demoNotifications.map((n) => ({
           ...n,
           messageType: "unread" as const,
         }));
-        
+
         if (currentDriver) {
           await setDriver({
             ...currentDriver,
@@ -474,17 +475,27 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           responseData.data.length > 0
         ) {
           // Transform backend notifications to app format
-          const backendNotifications: NotificationItem[] = responseData.data.map(
-            (item: any) => ({
-              id: String(item.notification_rec_id || item.id || `notif-${Date.now()}-${Math.random()}`),
-              messageTitle: item.notification_title || item.title || "Notification",
-              messageBody: item.notification_body || item.body || item.message || "",
-              dateTime: item.created_at || item.dateTime || new Date().toISOString(),
-              messageType: item.is_read ? ("read" as const) : ("unread" as const),
+          const backendNotifications: NotificationItem[] =
+            responseData.data.map((item: any) => ({
+              id: String(
+                item.notification_rec_id ||
+                  item.id ||
+                  `notif-${Date.now()}-${Math.random()}`
+              ),
+              messageTitle:
+                item.notification_title || item.title || "Notification",
+              messageBody:
+                item.notification_body || item.body || item.message || "",
+              dateTime:
+                item.created_at || item.dateTime || new Date().toISOString(),
+              messageType: item.is_read
+                ? ("read" as const)
+                : ("unread" as const),
               isSpecial: item.is_special || false,
-              notificationType: item.notification_type as NotificationType | undefined,
-            })
-          );
+              notificationType: item.notification_type as
+                | NotificationType
+                | undefined,
+            }));
 
           // Update read notification IDs based on backend data
           const readIds = backendNotifications
@@ -492,7 +503,10 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
             .map((n) => n.id);
 
           if (currentDriver) {
-            const merged = mergeById(existingNotifications, backendNotifications);
+            const merged = mergeById(
+              existingNotifications,
+              backendNotifications
+            );
             const existingReadIds = currentDriver.readNotificationIds || [];
             await setDriver({
               ...currentDriver,
@@ -508,13 +522,18 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
               readNotificationIds: readIds,
             });
           }
-          log(`Fetched ${backendNotifications.length} notifications from backend`);
+          log(
+            `Fetched ${backendNotifications.length} notifications from backend`
+          );
         } else {
           // Empty response, use demo notifications
           throw new Error("Empty response or invalid format");
         }
       } catch (apiError: any) {
-        log("Error fetching notifications from backend, using demo notifications:", apiError);
+        log(
+          "Error fetching notifications from backend, using demo notifications:",
+          apiError
+        );
         // Fallback: keep existing notifications if we have any; otherwise use demo.
         if (existingNotifications.length > 0) {
           log(
@@ -526,11 +545,11 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
         // Fallback to demo notifications - all unread
         const demoNotifications = createDemoNotifications();
-        const unreadDemoNotifications = demoNotifications.map(n => ({
+        const unreadDemoNotifications = demoNotifications.map((n) => ({
           ...n,
           messageType: "unread" as const,
         }));
-        
+
         if (currentDriver) {
           await setDriver({
             ...currentDriver,
@@ -782,7 +801,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
       // Handle demo offers locally without API call
       if (offerId.startsWith("demo-")) {
-        log(`[DriverContext] Hiding demo offer ${offerId} - local only, skipping API`);
+        log(
+          `[DriverContext] Hiding demo offer ${offerId} - local only, skipping API`
+        );
 
         // Update local state only
         const currentHiddenOffers = currentDriver.hiddenLiveOffers || [];
@@ -892,7 +913,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
       // Handle demo offers locally without API call
       if (offerId.startsWith("demo-")) {
-        log(`[DriverContext] Skipping demo offer ${offerId} - local only, skipping API`);
+        log(
+          `[DriverContext] Skipping demo offer ${offerId} - local only, skipping API`
+        );
 
         // Update local state only
         const currentHiddenOffers = currentDriver.hiddenLiveOffers || [];
@@ -1206,6 +1229,29 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     }
   }, [setDriver, log]);
 
+  // Last bid ETA (in-memory only): when driver submits a bid, we store ETA so active-ride can show it if get-eta returns null
+  const lastBidETARef = React.useRef<{ tripId: string; eta: number } | null>(
+    null
+  );
+  const setLastBidETA = useCallback(
+    (tripId: string, eta: number) => {
+      lastBidETARef.current = { tripId, eta };
+      log(`Stored last bid ETA for trip ${tripId}: ${eta} mins`);
+    },
+    [log]
+  );
+  const getLastBidETA = useCallback(() => lastBidETARef.current, []);
+  const clearLastBidETA = useCallback(
+    (tripId?: string) => {
+      if (tripId === undefined || lastBidETARef.current?.tripId === tripId) {
+        lastBidETARef.current = null;
+        if (tripId !== undefined)
+          log(`Cleared last bid ETA for trip ${tripId}`);
+      }
+    },
+    [log]
+  );
+
   // Ride state functions
   const setRideState = useCallback(
     async (rideState: string) => {
@@ -1280,7 +1326,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
   // Desired destinations functions
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
-  const [destinationsError, setDestinationsError] = useState<string | null>(null);
+  const [destinationsError, setDestinationsError] = useState<string | null>(
+    null
+  );
 
   // Fetch desired destinations from backend
   const fetchDesiredDestinations = useCallback(async () => {
@@ -1292,7 +1340,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const { settingsApiClient } = await import("@/config/apiConfig");
-      const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
+      const { DESIRED_DESTINATIONS_ENDPOINTS } = await import(
+        "@/constants/endpoints"
+      );
 
       const response = await settingsApiClient.get(
         DESIRED_DESTINATIONS_ENDPOINTS.getDestinations
@@ -1302,7 +1352,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       const hasSuccessFlag = responseData?.success === true;
       const dbResponseCode = responseData?.data?.jHeader?.responseCode;
       const isDbSuccess =
-        dbResponseCode === undefined || dbResponseCode === "0" || dbResponseCode === 0;
+        dbResponseCode === undefined ||
+        dbResponseCode === "0" ||
+        dbResponseCode === 0;
 
       if (!hasSuccessFlag || !isDbSuccess) {
         const errorMessage =
@@ -1315,43 +1367,40 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
       // Transform backend destinations to mobile app format
       // Backend returns data in jData.driverDesiredDestinations array
-      const backendDestinations = responseData?.data?.jData?.driverDesiredDestinations || 
-                                  responseData?.data?.jData?.destinations || [];
-      const transformedDestinations: DesiredDestination[] = backendDestinations.map((dest: any) => ({
-        id: dest.driverDesiredDestinationsRecId || 
-            dest.driver_desired_destination_rec_id || 
-            dest.id || 
-            Date.now(),
-        created_at: dest.created_at || new Date().toISOString(),
-        address: dest.desiredDestination || 
-                 dest.desired_destination || 
-                 dest.address,
-        expired_at: dest.expiresAt || 
-                    dest.expires_at || 
-                    dest.expired_at || 
-                    new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
-        // Include additional fields for editing
-        googleReferenceNumber: dest.googleReferenceNumber || 
-                               dest.google_reference_number || 
-                               "",
-        latitude: dest.latitude || null,
-        longitude: dest.longitude || null,
-        targetZipCode: dest.targetZipCode || 
-                       dest.target_zip_code || 
-                       "",
-        commissionPercentage: dest.commissionPercentage || 
-                              dest.commission_percentage || 
-                              0,
-        priority: dest.priority || 1,
-      } as any));
-
-      // Filter out expired destinations
-      const { valid } = filterExpiredDestinations(transformedDestinations);
-
-      // Update driver context with fetched destinations
+      const backendDestinations =
+        responseData?.data?.jData?.driver_desired_destinations || [];
+      console.log(
+        "📥 [DriverContext] Backend destinations:",
+        JSON.stringify(backendDestinations, null, 2)
+      );
+      const transformedDestinations: DesiredDestination[] =
+        backendDestinations.map(
+          (dest: any) =>
+            ({
+              id: dest.desired_destination_id || Date.now(),
+              created_at: dest.created_at || new Date().toISOString(),
+              address: dest.desired_destination || "",
+              expired_at:
+                dest.expires_at ||
+                new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
+              // Include additional fields for editing
+              googleReferenceNumber: dest.google_reference_number || "",
+              latitude: dest.latitude || null,
+              longitude: dest.longitude || null,
+              targetZipCode: dest.target_zip_code || "",
+              commissionPercentage:
+                dest.comission_percentage || dest.commission_percentage || 0,
+              priority: dest.priority || 1,
+            } as any)
+        );
+      console.log(
+        "📥 [DriverContext] Transformed destinations:",
+        JSON.stringify(transformedDestinations, null, 2)
+      );
+      // Keep all destinations (valid + expired) so UI can show expired with "Expired" tag; max 3 valid enforced on screen
       const updatedDriver = {
         ...currentDriver,
-        desiredDestinations: valid,
+        desiredDestinations: transformedDestinations,
       };
       await setDriver(updatedDriver);
     } catch (error: any) {
@@ -1371,7 +1420,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
   // Create desired destination
   const createDesiredDestination = useCallback(
-    async (destination: Omit<DesiredDestination, 'id' | 'created_at'>) => {
+    async (destination: Omit<DesiredDestination, "id" | "created_at">) => {
       const currentDriver = driverRef.current;
       if (!currentDriver) {
         throw new Error("Driver not found");
@@ -1382,7 +1431,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const { settingsApiClient } = await import("@/config/apiConfig");
-        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
+        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import(
+          "@/constants/endpoints"
+        );
 
         // Calculate expiry date (default to 6 hours from now)
         const expiryDate = new Date();
@@ -1393,11 +1444,13 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           {
             address: destination.address,
             expiresAt: destination.expired_at || expiryDate.toISOString(),
-            googleReferenceNumber: (destination as any).googleReferenceNumber || '',
+            googleReferenceNumber:
+              (destination as any).googleReferenceNumber || "",
             latitude: (destination as any).latitude || null,
             longitude: (destination as any).longitude || null,
-            targetZipCode: (destination as any).targetZipCode || '',
-            commissionPercentage: (destination as any).commissionPercentage || 0,
+            targetZipCode: (destination as any).targetZipCode || "",
+            commissionPercentage:
+              (destination as any).commissionPercentage || 0,
           }
         );
 
@@ -1405,7 +1458,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         const hasSuccessFlag = responseData?.success === true;
         const dbResponseCode = responseData?.data?.jHeader?.responseCode;
         const isDbSuccess =
-          dbResponseCode === undefined || dbResponseCode === "0" || dbResponseCode === 0;
+          dbResponseCode === undefined ||
+          dbResponseCode === "0" ||
+          dbResponseCode === 0;
 
         if (!hasSuccessFlag || !isDbSuccess) {
           const errorMessage =
@@ -1418,7 +1473,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
         // Create destination object with ID from backend or generate one
         const createdDestination: DesiredDestination = {
-          id: responseData?.data?.jData?.driver_desired_destination_rec_id || Date.now(),
+          id:
+            responseData?.data?.jData?.driver_desired_destination_rec_id ||
+            Date.now(),
           created_at: new Date().toISOString(),
           address: destination.address,
           expired_at: destination.expired_at || expiryDate.toISOString(),
@@ -1463,7 +1520,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const { settingsApiClient } = await import("@/config/apiConfig");
-        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
+        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import(
+          "@/constants/endpoints"
+        );
 
         const destWithExtras = destination as any;
         const response = await settingsApiClient.put(
@@ -1485,7 +1544,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         const hasSuccessFlag = responseData?.success === true;
         const dbResponseCode = responseData?.data?.jHeader?.responseCode;
         const isDbSuccess =
-          dbResponseCode === undefined || dbResponseCode === "0" || dbResponseCode === 0;
+          dbResponseCode === undefined ||
+          dbResponseCode === "0" ||
+          dbResponseCode === 0;
 
         if (!hasSuccessFlag || !isDbSuccess) {
           const errorMessage =
@@ -1525,7 +1586,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
   // Delete desired destination
   const deleteDesiredDestination = useCallback(
-    async (id: number) => {
+    async (id: string) => {
       const currentDriver = driverRef.current;
       if (!currentDriver) {
         throw new Error("Driver not found");
@@ -1536,7 +1597,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const { settingsApiClient } = await import("@/config/apiConfig");
-        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import("@/constants/endpoints");
+        const { DESIRED_DESTINATIONS_ENDPOINTS } = await import(
+          "@/constants/endpoints"
+        );
 
         const response = await settingsApiClient.delete(
           DESIRED_DESTINATIONS_ENDPOINTS.deleteDestination(id)
@@ -1546,7 +1609,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
         const hasSuccessFlag = responseData?.success === true;
         const dbResponseCode = responseData?.data?.jHeader?.responseCode;
         const isDbSuccess =
-          dbResponseCode === undefined || dbResponseCode === "0" || dbResponseCode === 0;
+          dbResponseCode === undefined ||
+          dbResponseCode === "0" ||
+          dbResponseCode === 0;
 
         if (!hasSuccessFlag || !isDbSuccess) {
           const errorMessage =
@@ -1559,7 +1624,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
 
         // Update local state
         const currentDestinations = currentDriver.desiredDestinations || [];
-        const updatedDestinations = currentDestinations.filter((dest) => dest.id !== id);
+        const updatedDestinations = currentDestinations.filter(
+          (dest) => dest.id !== id
+        );
         const updatedDriver = {
           ...currentDriver,
           desiredDestinations: updatedDestinations,
@@ -1614,6 +1681,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       setTripId,
       getTripId,
       removeTripId,
+      setLastBidETA,
+      getLastBidETA,
+      clearLastBidETA,
       setRideState,
       getRideState,
       removeRideState,
@@ -1651,6 +1721,9 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     setTripId,
     getTripId,
     removeTripId,
+    setLastBidETA,
+    getLastBidETA,
+    clearLastBidETA,
     setRideState,
     getRideState,
     removeRideState,

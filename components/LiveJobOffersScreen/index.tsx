@@ -73,7 +73,7 @@ export default function LiveJobOffersScreen({
   type = OFFER_TYPES.LIVE,
 }: LiveJobOffersScreenProps) {
   const [driver] = useDriver();
-  const { getLiveOfferStatus } = useDriver();
+  const { getLiveOfferStatus, setLastBidETA } = useDriver();
   const [auth] = useAuth();
   const {
     broadcastOffers,
@@ -418,6 +418,9 @@ export default function LiveJobOffersScreen({
         if (result?.success) {
           log("[LiveJobOffersScreen] Bid submitted successfully");
 
+          // Store bid ETA so active-ride can show it if get-eta returns null (biddable flow)
+          setLastBidETA(jobToUse.tripOffer.tripId, bidData.eta);
+
           // Update offer status to "bidding" to prevent expiration
           // This ensures the offer won't expire while waiting for customer response
           updateBroadcastOffer(jobToUse.tripOffer.tripId, {
@@ -464,6 +467,7 @@ export default function LiveJobOffersScreen({
       updateBroadcastOffer,
       removeBroadcastOffer,
       showBidWaitingTimer,
+      setLastBidETA,
     ]
   );
 

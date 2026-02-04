@@ -53,6 +53,8 @@ export type BaseInputProps = {
   inputStyle?: StyleProp<TextStyle>;
   /** Label style override */
   labelStyle?: StyleProp<TextStyle>;
+  /** Whether the input is editable */
+  editable?: boolean;
 } & Omit<TextInputProps, "value" | "onChangeText" | "editable" | "style">;
 
 export type InputProps = BaseInputProps;
@@ -121,6 +123,7 @@ function InnerInput(
     placeholder,
     onBlur: onBlurProp,
     textInputRef,
+    editable = true,
     ...rest
   } = props;
 
@@ -281,7 +284,7 @@ function InnerInput(
             ref={textInputRef}
             value={value}
             onChangeText={onChangeText}
-            editable={!disabled}
+            editable={editable ?? !disabled}
             placeholder={isActive ? undefined : placeholder}
             placeholderTextColor={textColors.grey400}
             onFocus={() => setIsFocused(true)}

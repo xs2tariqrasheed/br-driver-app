@@ -9,6 +9,7 @@
  */
 
 import { RideType } from "@/constants/global";
+import { formatMetersToKmMeters, formatMinutesToHrMins } from "@/utils/helpers";
 import { Image } from "expo-image";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import RideTypeIcons from "../RideTypeIcons";
@@ -114,7 +115,7 @@ export default function RideAddress({
               weight="semibold"
               style={styles.timeDistanceText}
             >
-              {pickupTime} Mins ({pickupDistance}m) Away
+              {formatMinutesToHrMins(pickupTime)} ({formatMetersToKmMeters(pickupDistance)}) Away
             </Typography>
           )}
           <Typography
@@ -135,7 +136,7 @@ export default function RideAddress({
               weight="semibold"
               style={styles.timeDistanceText}
             >
-              {dropoffTime} Mins ({dropoffDistance}m)
+              {formatMinutesToHrMins(dropoffTime)} ({formatMetersToKmMeters(dropoffDistance)})
             </Typography>
           ) : (
             <View style={styles.rideInfoContainer}>
@@ -146,7 +147,7 @@ export default function RideAddress({
                   weight="medium"
                   style={styles.infoText}
                 >
-                  {rideTime} Mins
+                  {formatMinutesToHrMins(rideTime ?? 0)}
                 </Typography>
               </View>
 
@@ -157,7 +158,7 @@ export default function RideAddress({
                   weight="medium"
                   style={styles.infoText}
                 >
-                  {rideDistance}m
+                  {formatMetersToKmMeters(rideDistance ?? 0)}
                 </Typography>
               </View>
 

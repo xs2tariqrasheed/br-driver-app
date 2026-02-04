@@ -11,6 +11,7 @@
 
 import { textColors } from "@/constants/colors";
 import { OFFER_TYPES, type OfferType } from "@/constants/global";
+import { formatMetersToKmMeters, formatMinutesToHrMins } from "@/utils/helpers";
 import { Image } from "expo-image";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import Button from "../Button";
@@ -92,7 +93,7 @@ export default function RideOfferItemFooter({
             contentFit="contain"
           />
           <Typography type="bodySmall" weight="medium" style={styles.infoText}>
-            {rideTime} Mins
+            {formatMinutesToHrMins(rideTime)}
           </Typography>
         </View>
 
@@ -104,7 +105,7 @@ export default function RideOfferItemFooter({
             contentFit="contain"
           />
           <Typography type="bodySmall" weight="medium" style={styles.infoText}>
-            {rideDistance}m
+            {formatMetersToKmMeters(rideDistance)}
           </Typography>
         </View>
 

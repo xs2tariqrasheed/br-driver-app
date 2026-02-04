@@ -124,7 +124,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       dropoffDistance: 12.3,
       dropoffAddress: "456 Broadway, New York, NY",
       rideTime: 20,
-      rideDistance: 9.8,
+      rideDistance: 16.8, // 4.5 + 12.3
       totalPrice: 46,
       driverEarn: 38,
       buttonTitle: "Bid",
@@ -155,13 +155,13 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       hasPackage: true,
       carType: CAR_TYPE.ECONOMY,
       pickupTime: 3,
-      pickupDistance: 0.8,  
+      pickupDistance: 0.8,
       pickupAddress: "789 5th Ave, New York, NY",
       dropoffTime: 18,
       dropoffDistance: 8.5,
       dropoffAddress: "321 1st Ave, New York, NY",
       rideTime: 15,
-      rideDistance: 7.3,
+      rideDistance: 9.3, // 0.8 + 8.5
       totalPrice: 28,
       driverEarn: 24,
       buttonTitle: "Accept",
@@ -198,7 +198,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       dropoffDistance: 2.5,
       dropoffAddress: "456 Broadway, New York, NY",
       rideTime: 60,
-      rideDistance: 25.0,
+      rideDistance: 4.7, // 2.2 + 2.5
       totalPrice: 65,
       driverEarn: 55,
       buttonTitle: "Bid",
@@ -235,7 +235,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       dropoffDistance: 5.2,
       dropoffAddress: "200 Greenwich St, New York, NY",
       rideTime: 12,
-      rideDistance: 3.7,
+      rideDistance: 8.3, // 3.1 + 5.2
       totalPrice: 23,
       driverEarn: 18,
       buttonTitle: "Accept",
@@ -272,7 +272,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       dropoffDistance: 10.8,
       dropoffAddress: "500 Columbus Ave, New York, NY",
       rideTime: 18,
-      rideDistance: 8.7,
+      rideDistance: 12.3, // 1.5 + 10.8
       totalPrice: 35,
       driverEarn: 29,
       buttonTitle: "Bid",
@@ -309,7 +309,7 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       dropoffDistance: 2.5,
       dropoffAddress: "800 Lexington Ave, New York, NY",
       rideTime: 90,
-      rideDistance: 15.0,
+      rideDistance: 7.5, // 5.0 + 2.5
       totalPrice: 18,
       driverEarn: 15,
       buttonTitle: "Accept",

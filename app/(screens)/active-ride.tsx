@@ -13,8 +13,7 @@ import { textColors } from "@/constants/colors";
 import {
   openPhoneDialer,
   openWhatsApp,
-  transformTripDetailsFromDb,
-  transformTripDetailsToJobOffer,
+  tripDetailsApiResponseToJobOffer,
 } from "@/utils/helpers";
 
 import AddTollBottomSheet from "@/components/AddTollBottomSheet";
@@ -26,6 +25,7 @@ import {
   API_CLIENT_TYPES,
   CANCEL_RIDE_REASONS,
   CancelRideReason,
+  CAR_TYPE,
   DRIVER_ACTIONS,
   RIDE_HEADER_TITLES,
   RIDE_STATES,
@@ -91,6 +91,8 @@ export default function ActiveRideScreen() {
     removeRideState,
     removeRetrievalId,
     removeTripId,
+    getLastBidETA,
+    clearLastBidETA,
   } = useDriver();
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
@@ -262,9 +264,32 @@ export default function ActiveRideScreen() {
             note: finalNote,
           });
         } else {
-          // If no ETA found, set to null
-          console.log("⚠️ [Get ETA] No ETA found in response");
-          setDriverETA(null);
+          // No ETA in response (common for biddable offers until backend persists bid ETA).
+          // Use ETA from last submitted bid so the ETA tag still shows on the map.
+          const lastBid = getLastBidETA();
+          const currentTripId =
+            jobOfferData.tripNumber ||
+            jobOfferData.tripId ||
+            jobOfferData.id ||
+            (jobOfferData as any)?.tripOffer?.tripId;
+          const tripIdsMatch =
+            lastBid &&
+            currentTripId &&
+            (String(lastBid.tripId) === String(currentTripId) ||
+              String(lastBid.tripId) === String((jobOfferData as any)?.tripOffer?.tripId));
+
+          if (tripIdsMatch && lastBid) {
+            console.log("📥 [Get ETA] Using stored bid ETA:", lastBid.eta, "mins");
+            setDriverETA({ eta: lastBid.eta });
+            clearLastBidETA(lastBid.tripId);
+            updateETA({
+              tripId: tripIdToSend,
+              driverId: driverId!,
+              eta: lastBid.eta,
+            }).catch(() => {});
+          } else {
+            setDriverETA(null);
+          }
         }
       } else {
         console.log("⚠️ [Get ETA] Response not successful or missing jData:", {
@@ -277,7 +302,16 @@ export default function ActiveRideScreen() {
       console.error("Error fetching ETA:", error);
       // Don't set error state, just log it
     }
-  }, [driverId, jobOfferData?.id, fetchETA]);
+  }, [
+    driverId,
+    jobOfferData?.id,
+    jobOfferData?.tripNumber,
+    jobOfferData?.tripId,
+    fetchETA,
+    getLastBidETA,
+    clearLastBidETA,
+    updateETA,
+  ]);
 
   // Load ride state on component mount
   useEffect(() => {
@@ -394,7 +428,79 @@ export default function ActiveRideScreen() {
     }
   }, [jobOfferData?.id, driverId, loadDriverETA]);
 
-  // Fetch trip details when switching to details view
+  // Fetch full trip details from API on load (same as trip-details screen: GET trip-by-number)
+  const [tripDetailsFetchedOnLoad, setTripDetailsFetchedOnLoad] = useState(false);
+  useEffect(() => {
+    const fetchTripDetailsOnLoad = async () => {
+      if (!jobOfferData || tripDetailsFetchedOnLoad) return;
+
+      const tripNumber =
+        jobOfferData.tripNumber ||
+        jobOfferData.trip_number ||
+        jobOfferData.id;
+
+      if (!tripNumber) {
+        setTripDetailsFetchedOnLoad(true);
+        return;
+      }
+      // Skip if trip number looks like a UUID (API expects numeric trip number)
+      if (tripNumber.includes("-") && tripNumber.length > 20) {
+        setTripDetailsFetchedOnLoad(true);
+        return;
+      }
+
+      try {
+        const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${tripNumber}`;
+        const response = await activeTripApiClient.get(endpoint);
+        const responseData = response.data as any;
+
+        const responseCode = responseData?.jHeader?.responseCode;
+        const isSuccess =
+          responseCode === 0 ||
+          responseCode === "0" ||
+          responseCode === undefined;
+
+        if (isSuccess && responseData?.data) {
+          const fetchedJobOffer = tripDetailsApiResponseToJobOffer(responseData.data);
+          if (fetchedJobOffer) {
+            const mergedJobOffer = {
+              ...jobOfferData,
+              ...fetchedJobOffer,
+              id: jobOfferData?.id ?? fetchedJobOffer.id,
+              pickupAddress:
+                jobOfferData?.pickupAddress ?? fetchedJobOffer.pickupAddress,
+              dropoffAddress:
+                jobOfferData?.dropoffAddress ?? fetchedJobOffer.dropoffAddress,
+                totalPrice: jobOfferData?.totalPrice ?? fetchedJobOffer.totalPrice,
+                driverEarn: jobOfferData?.driverEarn ?? fetchedJobOffer.driverEarn,
+                rideType: jobOfferData?.rideType ?? fetchedJobOffer.rideType,
+                carType: jobOfferData?.carType ?? fetchedJobOffer.carType,
+                hasSpecialRequirements: jobOfferData?.hasSpecialRequirements ?? fetchedJobOffer.hasSpecialRequirements,
+                hasPackage: jobOfferData?.hasPackage ?? fetchedJobOffer.hasPackage,
+                pickupTime: jobOfferData?.pickupTime ?? fetchedJobOffer.pickupTime,
+                pickupDistance: jobOfferData?.pickupDistance ?? fetchedJobOffer.pickupDistance,
+                dropoffTime: jobOfferData?.dropoffTime ?? fetchedJobOffer.dropoffTime,
+                dropoffDistance: jobOfferData?.dropoffDistance ?? fetchedJobOffer.dropoffDistance,
+                rideTime: jobOfferData?.rideTime ?? fetchedJobOffer.rideTime,
+                rideDistance: jobOfferData?.rideDistance ?? fetchedJobOffer.rideDistance,
+            };
+            setJobOfferData(mergedJobOffer);
+          }
+        }
+      } catch (err) {
+        console.warn(
+          "⚠️ [ActiveRide] Could not fetch trip details on load:",
+          err
+        );
+      } finally {
+        setTripDetailsFetchedOnLoad(true);
+      }
+    };
+
+    fetchTripDetailsOnLoad();
+  }, [jobOfferData, tripDetailsFetchedOnLoad]);
+
+  // Fetch trip details when switching to details view (fallback if not yet loaded)
   const [tripDetailsFetched, setTripDetailsFetched] = useState(false);
 
   useEffect(() => {
@@ -473,39 +579,21 @@ export default function ActiveRideScreen() {
           responseCode === undefined;
 
         if (isSuccess && responseData?.data) {
-          const transformed = transformTripDetailsFromDb(responseData.data);
+          const fetchedJobOffer = tripDetailsApiResponseToJobOffer(responseData.data);
 
-          if (transformed) {
-            const fetchedJobOffer = transformTripDetailsToJobOffer(transformed);
-
-            // Merge fetched data with existing jobOfferData, preserving existing fields
+          if (fetchedJobOffer) {
             const mergedJobOffer = {
               ...jobOfferData,
               ...fetchedJobOffer,
-              // Preserve critical fields that might be different
-              id: jobOfferData?.id || fetchedJobOffer.id,
+              id: jobOfferData?.id ?? fetchedJobOffer.id,
               pickupAddress:
-                jobOfferData?.pickupAddress || fetchedJobOffer.pickupAddress,
+                jobOfferData?.pickupAddress ?? fetchedJobOffer.pickupAddress,
               dropoffAddress:
-                jobOfferData?.dropoffAddress || fetchedJobOffer.dropoffAddress,
-              // Use fetched details if available, otherwise keep existing
-              fareDetails:
-                fetchedJobOffer.fareDetails || jobOfferData?.fareDetails,
-              customerDetails:
-                fetchedJobOffer.customerDetails ||
-                jobOfferData?.customerDetails,
-              driverInstructions:
-                fetchedJobOffer.driverInstructions ||
-                jobOfferData?.driverInstructions,
+                jobOfferData?.dropoffAddress ?? fetchedJobOffer.dropoffAddress,
             };
 
             setJobOfferData(mergedJobOffer);
             setTripDetailsFetched(true);
-            console.log(
-              "✅ [ActiveRide] Trip details loaded and merged successfully!"
-            );
-          } else {
-            console.error("❌ [ActiveRide] Failed to transform trip data");
           }
         } else {
           const errorMsg =
@@ -664,9 +752,53 @@ export default function ActiveRideScreen() {
           }
         };
 
-        // Calculate driver earnings (80% of total price - using a default fare for now)
-        const defaultFare = 25.0; // Default fare since it's not in the API response
-        const driverEarn = Math.round(defaultFare * 0.8);
+        // Use fare from API when present, else default for driver earnings
+        const defaultFare = 25.0;
+        const totalPrice = activeTrip.fare ?? defaultFare;
+        const driverEarn = Math.round(totalPrice * 0.8);
+
+        // Use dynamic ride details from API when present (from GET /retrieval-id)
+        const pickupTime = activeTrip.pickupTime ?? 5;
+        const pickupDistance = activeTrip.pickupDistance ?? 0.8;
+        const dropoffTime = activeTrip.dropoffTime ?? 15;
+        const dropoffDistance = activeTrip.dropoffDistance ?? 3.2;
+        const rideTime = activeTrip.rideTime ?? 20;
+        const rideDistance = activeTrip.rideDistance ?? 4.0;
+
+        // Map backend tripType to RIDE_TYPES (one-way, round-trip, hourly)
+        const tripTypeToRideType: Record<
+          string,
+          (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES]
+        > = {
+          ONE_WAY: RIDE_TYPES.ONE_WAY,
+          ROUND_TRIP: RIDE_TYPES.ROUND_TRIP,
+          HOURLY: RIDE_TYPES.HOURLY,
+        };
+        const rideType =
+          activeTrip.tripType && tripTypeToRideType[activeTrip.tripType]
+            ? tripTypeToRideType[activeTrip.tripType]
+            : RIDE_TYPES.ONE_WAY;
+
+        // Map backend serviceType to carType (lowercase for CAR_TYPE)
+        const serviceTypeToCarType: Record<string, string> = {
+          ECONOMY_LITE: CAR_TYPE.ECONOMY,
+          ECONOMY: CAR_TYPE.ECONOMY,
+          SEDAN: CAR_TYPE.SEDAN,
+          SUV: CAR_TYPE.SUV,
+          LUXURY: CAR_TYPE.LUXURY,
+        };
+        const carType =
+          activeTrip.serviceType &&
+          serviceTypeToCarType[activeTrip.serviceType.toUpperCase()]
+            ? serviceTypeToCarType[activeTrip.serviceType.toUpperCase()]
+            : CAR_TYPE.SEDAN;
+        const carTypeDisplay =
+          activeTrip.serviceType && serviceTypeToCarType[activeTrip.serviceType.toUpperCase()]
+            ? serviceTypeToCarType[activeTrip.serviceType.toUpperCase()]
+            : CAR_TYPE.SEDAN;
+        const carTypeDisplayLabel =
+          carTypeDisplay.charAt(0).toUpperCase() +
+          carTypeDisplay.slice(1).toLowerCase();
 
         return {
           id: activeTrip.tripId,
@@ -679,15 +811,16 @@ export default function ActiveRideScreen() {
             minute: "2-digit",
             hour12: true,
           }),
-          rideType: RIDE_TYPES.ONE_WAY,
+          rideType,
+          carType,
           peopleCount: 2,
           rating: 4.8,
           hasSpecialRequirements: false,
           onPressSpecialRequirements: () => console.log("Special requirements"),
           hasPackage: false,
           onPressPackage: () => console.log("Package pressed"),
-          pickupTime: 5,
-          pickupDistance: 0.8,
+          pickupTime,
+          pickupDistance,
           pickupAddress:
             activeTrip.pickup.address ||
             generateAddressFromCoordinates(
@@ -695,8 +828,8 @@ export default function ActiveRideScreen() {
               activeTrip.pickup.lng,
               "pickup"
             ),
-          dropoffTime: 15,
-          dropoffDistance: 3.2,
+          dropoffTime,
+          dropoffDistance,
           dropoffAddress:
             activeTrip.dropoff.address ||
             generateAddressFromCoordinates(
@@ -704,17 +837,17 @@ export default function ActiveRideScreen() {
               activeTrip.dropoff.lng,
               "dropoff"
             ),
-          rideTime: 20,
-          rideDistance: 4.0,
-          totalPrice: defaultFare,
-          driverEarn: driverEarn,
+          rideTime,
+          rideDistance,
+          totalPrice,
+          driverEarn,
           hideActionButton: true,
           onButtonClick: () => console.log("Accept pressed"),
           driverInstructions: "Please call customer when you arrive",
           fareDetails: [
             {
               label: "Ride Price",
-              value: `$${defaultFare.toFixed(2)}`,
+              value: `$${totalPrice.toFixed(2)}`,
             },
             {
               label: "Tolls (EZ Pass)",
@@ -742,11 +875,11 @@ export default function ActiveRideScreen() {
             { label: "Name", value: "John Smith" },
             {
               label: "Required Car Type",
-              value: "Sedan",
+              value: carTypeDisplayLabel,
             },
             {
               label: "Offer Price",
-              value: `$${defaultFare.toFixed(2)}`,
+              value: `$${totalPrice.toFixed(2)}`,
             },
             {
               label: "Account No.",

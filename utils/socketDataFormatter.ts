@@ -19,6 +19,13 @@ interface ServerSocketData {
     tripType?: "ONE_WAY" | "ROUND_TRIP" | "HOURLY";
     tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE";
     serviceType?: "ECONOMY_LITE" | "ECONOMY" | "SEDAN" | "SUV";
+    /** Dynamic values from backend (when available) */
+    pickupTime?: number;
+    pickupDistance?: number;
+    dropoffTime?: number;
+    dropoffDistance?: number;
+    rideTime?: number;
+    rideDistance?: number;
   };
   type: string;
 }
@@ -370,7 +377,7 @@ export function formatSocketDataToTripOffer(
     biddable: tripOffer.biddable,
     type: offerType,
 
-    // Comprehensive ride details
+    // Comprehensive ride details (use server values when provided for dynamic miles/times)
     rideDetails: {
       id: tripOffer.tripId,
       rideType: rideType,
@@ -378,14 +385,14 @@ export function formatSocketDataToTripOffer(
       rating: DEFAULT_VALUES.rating,
       hasSpecialRequirements: hasSpecialRequirements,
       hasPackage: hasPackage,
-      pickupTime: DEFAULT_VALUES.pickupTime,
-      pickupDistance: DEFAULT_VALUES.pickupDistance,
+      pickupTime: tripOffer.pickupTime ?? DEFAULT_VALUES.pickupTime,
+      pickupDistance: tripOffer.pickupDistance ?? DEFAULT_VALUES.pickupDistance,
       pickupAddress,
-      dropoffTime: DEFAULT_VALUES.dropoffTime,
-      dropoffDistance: DEFAULT_VALUES.dropoffDistance,
+      dropoffTime: tripOffer.dropoffTime ?? DEFAULT_VALUES.dropoffTime,
+      dropoffDistance: tripOffer.dropoffDistance ?? DEFAULT_VALUES.dropoffDistance,
       dropoffAddress,
-      rideTime: DEFAULT_VALUES.rideTime,
-      rideDistance: DEFAULT_VALUES.rideDistance,
+      rideTime: tripOffer.rideTime ?? DEFAULT_VALUES.rideTime,
+      rideDistance: tripOffer.rideDistance ?? DEFAULT_VALUES.rideDistance,
       totalPrice: fare,
       driverEarn,
       carType: carType,

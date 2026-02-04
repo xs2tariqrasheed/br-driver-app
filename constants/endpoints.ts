@@ -104,10 +104,10 @@ export const DESIRED_DESTINATIONS_ENDPOINTS = {
   /** Create a new desired destination */
   createDestination: "/settings-service/driver/desired-destinations",
   /** Update a desired destination */
-  updateDestination: (id: number) =>
+  updateDestination: (id: string) =>
     `/settings-service/driver/desired-destinations/${id}`,
   /** Delete a desired destination */
-  deleteDestination: (id: number) =>
+  deleteDestination: (id: string) =>
     `/settings-service/driver/desired-destinations/${id}`,
 } as const;
 

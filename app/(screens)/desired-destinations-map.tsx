@@ -1,6 +1,6 @@
 import Button from "@/components/Button";
-import Input from "@/components/Form/Input";
 import { Header } from "@/components/Header";
+import Typography from "@/components/Typography";
 import CustomMap from "@/components/MapWebView";
 import { textColors } from "@/constants/colors";
 import { COORDINATE_REGEX, GOOGLE_MAPS_API_KEY } from "@/constants/global";
@@ -10,13 +10,19 @@ import {
   logger,
   reverseGeocode,
 } from "@/utils/helpers";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
 
 export default function DesiredDestinationsMapScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    sheetMode?: string;
+    editingIndex?: string;
+  }>();
   const { overlayBottomInset } = useOverlayInsets();
+  const sheetMode = params.sheetMode ?? "add";
+  const editingIndexParam = params.editingIndex ?? "";
   const [address, setAddress] = useState<string>("");
   const [selectedCoordinates, setSelectedCoordinates] = useState<{
     latitude: number;
@@ -97,7 +103,7 @@ export default function DesiredDestinationsMapScreen() {
 
   const handleContinue = () => {
     if (selectedCoordinates) {
-      // Pass the selected address, coordinates, placeId, and zipCode back via navigation state
+      // Pass the selected address, coordinates, placeId, zipCode, and sheet context so desired-destinations reopens the correct sheet (add vs edit)
       router.push({
         pathname: "/(screens)/desired-destinations",
         params: {
@@ -105,6 +111,8 @@ export default function DesiredDestinationsMapScreen() {
           selectedCoordinates: JSON.stringify(selectedCoordinates),
           selectedPlaceId: selectedPlaceId || "",
           selectedZipCode: selectedZipCode || "",
+          sheetMode,
+          editingIndex: editingIndexParam,
         },
       });
     }
@@ -121,12 +129,23 @@ export default function DesiredDestinationsMapScreen() {
       </View>
 
       <View style={styles.bottomBar}>
-        <Input
-          value={address}
-          onChangeText={setAddress}
-          placeholder="Enter a location or address"
-          showSoftInputOnFocus={false}
-        />
+        <View
+          style={[
+            styles.addressDisplayBox,
+            !address.trim() && styles.addressDisplayBoxPlaceholder,
+          ]}
+        >
+          <Typography
+            type="bodyMedium"
+            weight="regular"
+            style={[
+              styles.addressDisplayText,
+              !address.trim() && styles.addressDisplayTextPlaceholder,
+            ]}
+          >
+            {address.trim() || "Enter a location or address"}
+          </Typography>
+        </View>
         <Button
           rounded="half"
           variant="primary"
@@ -149,5 +168,26 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 24,
     backgroundColor: textColors.white,
+  },
+  // Same view-only address display as desired-destinations screen
+  addressDisplayBox: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: textColors.grey200,
+    borderRadius: 8,
+    minHeight: 44,
+    backgroundColor: textColors.grey100,
+    opacity: 0.8,
+  },
+  addressDisplayBoxPlaceholder: {
+    opacity: 0.7,
+  },
+  addressDisplayText: {
+    color: textColors.grey900,
+    flexWrap: "wrap",
+  },
+  addressDisplayTextPlaceholder: {
+    color: textColors.grey900,
   },
 });

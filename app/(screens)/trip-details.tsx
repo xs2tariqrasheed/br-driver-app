@@ -1,36 +1,40 @@
 import Header from "@/components/Header";
 import JobDetails from "@/components/JobDetails";
+import Typography from "@/components/Typography";
 import { activeTripApiClient } from "@/config/apiConfig";
 import { textColors } from "@/constants/colors";
 import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
-import { transformTripDetailsFromDb, transformTripDetailsToJobOffer } from "@/utils/helpers";
+import {
+  formatDateTimeToReadableFormat,
+  tripDetailsApiResponseToJobOffer,
+} from "@/utils/helpers";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
 
 /**
- * Transform broadcast offer to JobDetails format
+ * Transform broadcast offer to JobDetails format for demo details
  */
-function transformBroadcastOfferToJobOffer(broadcastOffer: any) {
+function transformBroadcastOfferToJobOfferForDemo(broadcastOffer: any) {
   return {
     id: broadcastOffer.id,
-    dateTime: new Date(broadcastOffer.timestamp).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }),
+    dateTime: formatDateTimeToReadableFormat(broadcastOffer.timestamp),
     rideType: broadcastOffer.rideType,
     peopleCount: broadcastOffer.peopleCount,
     rating: broadcastOffer.rating,
     hasSpecialRequirements: broadcastOffer.hasSpecialRequirements,
-    onPressSpecialRequirements: () => { },
+    onPressSpecialRequirements: () => {},
     hasPackage: broadcastOffer.hasPackage,
-    onPressPackage: () => { },
+    onPressPackage: () => {},
     pickupTime: broadcastOffer.pickupTime,
     pickupDistance: broadcastOffer.pickupDistance,
     pickupAddress: broadcastOffer.pickupAddress,
@@ -43,8 +47,9 @@ function transformBroadcastOfferToJobOffer(broadcastOffer: any) {
     driverEarn: broadcastOffer.driverEarn,
     buttonTitle: broadcastOffer.buttonTitle,
     disabled: broadcastOffer.status !== "offered",
-    onButtonClick: () => { },
-    driverInstructions: "Please arrive on time and follow customer instructions.",
+    onButtonClick: () => {},
+    driverInstructions:
+      "Please arrive on time and follow customer instructions.",
     fareDetails: [
       {
         label: "Ride Price",
@@ -92,70 +97,106 @@ function transformBroadcastOfferToJobOffer(broadcastOffer: any) {
 }
 
 export default function TripDetailsScreen() {
-  const params = useLocalSearchParams<{ offerId?: string; tripNumber?: string }>();
+  const params = useLocalSearchParams<{
+    offerId?: string;
+    tripNumber?: string;
+  }>();
   const { broadcastOffers } = useBroadcastJobOffers();
   const [jobOfferData, setJobOfferData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Load trip data broadcast offers for demo details
+   */
+  const loadDemoDetails = () => {
+    setJobOfferData(
+      transformBroadcastOfferToJobOfferForDemo(
+        broadcastOffers.find((o) => o.id === params.offerId) ?? {}
+      )
+    );
+    setIsLoading(false);
+  };
+
+  /**
+   * Load trip details from API
+   */
+  const loadTripDetailsFromApi = async () => {
+    // If tripNumber or offerId is provided, fetch from API
+    if (params.tripNumber || params.offerId) {
+      try {
+        const tripNumber = params.tripNumber || params.offerId;
+        setIsLoading(true);
+        setError(null);
+        const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${tripNumber}`;
+
+        const response = await activeTripApiClient.get(endpoint);
+        const responseData = response.data as any;
+
+        const responseCode = responseData?.jHeader?.responseCode;
+        const isSuccess =
+          responseCode === 0 ||
+          responseCode === "0" ||
+          responseCode === undefined;
+
+        if (isSuccess && responseData?.data) {
+          const jobOfferDataFromApi = tripDetailsApiResponseToJobOffer(
+            responseData.data
+          );
+          const jobOfferDataFromBroadcast = broadcastOffers.find(
+            (o) => o.id === tripNumber
+          );
+
+          if (jobOfferDataFromBroadcast || jobOfferDataFromApi) {
+            setJobOfferData({
+              ...jobOfferDataFromBroadcast,
+              fareDetails: jobOfferDataFromApi?.fareDetails,
+              customerDetails: jobOfferDataFromApi?.customerDetails,
+              driverInstructions: jobOfferDataFromApi?.driverInstructions,
+              dateTime: formatDateTimeToReadableFormat(
+                jobOfferDataFromBroadcast?.timestamp ??
+                  jobOfferDataFromApi?.dateTime
+              ),
+            });
+          }
+        } else {
+          const errorMsg =
+            responseData?.jHeader?.message || "Failed to fetch trip details";
+          console.error("❌ [TripDetails] API Error:", errorMsg);
+          console.error("❌ [TripDetails] Response Code:", responseCode);
+          setError(errorMsg);
+        }
+      } catch (err: any) {
+        console.error("❌ [TripDetails] Error Type:", err?.name);
+        if (err?.response) {
+          console.error(
+            "❌ [TripDetails] Error Response Status:",
+            err.response.status
+          );
+        }
+        setError(err?.message || "Failed to load trip details");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+  };
+
   useEffect(() => {
-    const loadTripData = async () => {
-      // Priority 1: If tripNumber is provided, fetch from API
-      if (params.tripNumber) {
-        try {
-          setIsLoading(true);
-          setError(null);
-          const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${params.tripNumber}`;
-
-          const response = await activeTripApiClient.get(endpoint);
-          const responseData = response.data as any;
-
-          const responseCode = responseData?.jHeader?.responseCode;
-          const isSuccess = responseCode === 0 || responseCode === "0" || responseCode === undefined;
-
-          if (isSuccess && responseData?.data) {
-            const transformed = transformTripDetailsFromDb(responseData.data);
-            if (transformed) {
-              const jobOffer = transformTripDetailsToJobOffer(transformed);
-              setJobOfferData(jobOffer);
-            } else {
-              console.error("❌ [TripDetails] Failed to transform trip data");
-              setError("Failed to parse trip data");
-            }
-          } else {
-            const errorMsg = responseData?.jHeader?.message || "Failed to fetch trip details";
-            console.error("❌ [TripDetails] API Error:", errorMsg);
-            console.error("❌ [TripDetails] Response Code:", responseCode);
-            setError(errorMsg);
-          }
-        } catch (err: any) {
-          console.error("❌ [TripDetails] Error Type:", err?.name);
-          if (err?.response) {
-            console.error("❌ [TripDetails] Error Response Status:", err.response.status);
-          }
-          setError(err?.message || "Failed to load trip details");
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      // Priority 2: If offerId is provided, use broadcast offers
-      if (params.offerId) {
-        const offer = broadcastOffers.find((o) => o.id === params.offerId);
-        if (offer) {
-          const transformed = transformBroadcastOfferToJobOffer(offer);
-          setJobOfferData(transformed);
-        }
-      }
-    };
-
-    loadTripData();
+    const isDemoOffer = params?.offerId?.includes("demo-");
+    // If demo offer, set job offer data from broadcast offers for the demo details
+    if (isDemoOffer) {
+      loadDemoDetails();
+    } else {
+      // Otherwise, load trip data from API
+      loadTripDetailsFromApi();
+    }
   }, [params.offerId, params.tripNumber, broadcastOffers]);
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
         <Header title="Trip Details" onBackPress={() => router.back()} />
         <View style={styles.emptyContainer}>
           <ActivityIndicator size="large" color={textColors.teal900} />
@@ -167,9 +208,13 @@ export default function TripDetailsScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
         <Header title="Trip Details" onBackPress={() => router.back()} />
         <View style={styles.emptyContainer}>
-          {/* Could add error message display here */}
+          <Text>Error: {error}</Text>
+          <Pressable  style={styles.retryButton} onPress={() => loadTripDetailsFromApi()} disabled={isLoading} >
+            <Typography type="bodyMedium" weight="semibold" style={styles.retryButtonText}>Retry</Typography>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -178,9 +223,13 @@ export default function TripDetailsScreen() {
   if (!jobOfferData) {
     return (
       <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
         <Header title="Trip Details" onBackPress={() => router.back()} />
         <View style={styles.emptyContainer}>
-          {/* Could add loading or error state here */}
+          <Text>No job offer data found</Text>
+          <Pressable  style={styles.retryButton} onPress={() => loadTripDetailsFromApi()} disabled={isLoading} >
+            <Typography type="bodyMedium" weight="semibold" style={styles.retryButtonText}>Retry</Typography>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -217,5 +266,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  retryButton: {
+    marginTop: 20,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    color: textColors.white,
+  },
 });
-
