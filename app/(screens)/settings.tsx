@@ -10,9 +10,9 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import {
-  AUTO_BID_PRICE_OPTIONS,
   ETA_BUFFER_MINUTES_MAX,
   ETA_BUFFER_MINUTES_MIN,
+  EXTRA_COMMISSION_PRICE_OPTIONS,
   FEATURED_DRIVER_PRICE_MAX,
   FEATURED_DRIVER_PRICE_MIN,
 } from "@/constants/global";
@@ -43,7 +43,7 @@ export default function SettingsScreen() {
   const [autoBidEnabled, setAutoBidEnabled] = useState<boolean>(
     settings.autoBidEnabled ?? false
   );
-  const [strategy, setStrategy] = useState<string | null>(
+  const [strategy, setStrategy] = useState<number | null>(
     settings.autoBidStrategy ?? null
   );
 
@@ -52,6 +52,13 @@ export default function SettingsScreen() {
 
   const openSheet = () => setSheetOpen(true);
   const closeSheet = () => setSheetOpen(false);
+
+  // Display label for selected strategy: 0 → "Customer price", positive → "+10%", negative → "-5%"
+  const getStrategyLabel = (value: number | null): string => {
+    if (value === null) return "Select price for bid";
+    const opt = EXTRA_COMMISSION_PRICE_OPTIONS.find((o) => o.value === value);
+    return opt ? opt.label : value === 0 ? "Customer price" : value > 0 ? `+${value}%` : `${value}%`;
+  };
 
   // Sync local state from context whenever screen is focused so we show latest
   // values (including after save, when driver comes back to the screen)
@@ -218,10 +225,10 @@ export default function SettingsScreen() {
               <Typography
                 type="bodyLarge"
                 weight="medium"
-                style={strategy ? styles.textBlack : styles.placeholder}
+                style={strategy !== null ? styles.textBlack : styles.placeholder}
                 numberOfLines={1}
               >
-                {strategy ?? "Select price for bid"}
+                {getStrategyLabel(strategy)}
               </Typography>
               <Image
                 source={require("@/assets/images/black-down-arrow-icon.png")}
@@ -253,14 +260,14 @@ export default function SettingsScreen() {
         <View style={styles.sheetContainer}>
           <Divider />
 
-          {AUTO_BID_PRICE_OPTIONS.map((opt) => {
-            const selected = strategy === opt;
+          {EXTRA_COMMISSION_PRICE_OPTIONS.map((opt) => {
+            const selected = strategy === opt.value;
             return (
-              <View key={opt}>
+              <View key={opt.value}>
                 <TouchableOpacity
                   style={styles.sheetRow}
                   onPress={() => {
-                    setStrategy(opt);
+                    setStrategy(opt.value);
                     closeSheet();
                   }}
                 >
@@ -269,7 +276,7 @@ export default function SettingsScreen() {
                     weight={selected ? "bold" : "medium"}
                     style={styles.textBlack}
                   >
-                    {opt}
+                    {opt.label}
                   </Typography>
                 </TouchableOpacity>
                 <Divider />

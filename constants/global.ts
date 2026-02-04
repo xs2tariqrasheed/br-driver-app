@@ -156,22 +156,13 @@ export const FEATURED_DRIVER_PRICE_MAX = 30;
 export const ETA_BUFFER_MINUTES_MIN = 0;
 export const ETA_BUFFER_MINUTES_MAX = 20;
 
-// Auto-bid selectable price strategies. Keep labels user-facing for display.
-export const AUTO_BID_PRICE_OPTIONS = [
-  "Customer price +10%",
-  "Customer price +5%",
-  "Customer price",
-  "Customer price -5%",
-  "Customer price -10%",
-] as const;
-
 // Extra commission selectable price strategies. Keep values as numbers for backend.
 export const EXTRA_COMMISSION_PRICE_OPTIONS = [
-  { label: "Customer price +10%", value: "+10" },
-  { label: "Customer price +5%", value: "+5" },
-  { label: "Customer price", value: "0" },
-  { label: "Customer price -5%", value: "-5" },
-  { label: "Customer price -10%", value: "-10" },
+  { label: "Customer price +10%", value: 10 },
+  { label: "Customer price +5%", value: 5 },
+  { label: "Customer price", value: 0 },
+  { label: "Customer price -5%", value: -5 },
+  { label: "Customer price -10%", value: -10 },
 ] as const;
 
 // Desired Destinations
@@ -509,7 +500,7 @@ export const NETWORK_MONITORING = {
 export type NetworkQuality =
   (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];
 
-const BASE_URL = "http://192.168.100.207";
+const BASE_URL = "http://3.84.108.176";
 // Testing purpose constant for all the services
 // When IS_TESTING is true, these URLs will be used instead of environment variables
 // All URLs should include the http:// protocol prefix for local testing

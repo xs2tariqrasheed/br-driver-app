@@ -51,7 +51,7 @@ export type SettingsObject = {
   featuredDriverPriceUSD?: number; // $0 - $10
   etaBufferMinutes?: number; // 0 - 10 minutes
   autoBidEnabled?: boolean;
-  autoBidStrategy?: string | null; // From AUTO_BID_PRICE_OPTIONS
+  autoBidStrategy?: number | null; // From EXTRA_COMMISSION_PRICE_OPTIONS (e.g. 10, 5, 0, -5, -10)
   [key: string]: unknown;
 };
 
@@ -138,12 +138,14 @@ type SettingsContextValue = [
     clearError: () => void;
     fetchSettings: () => Promise<void>;
     /** Update only notification settings (context + storage). No API call. */
-    updateNotificationSettings: (notifications: NotificationsSettings) => Promise<void>;
-  },
+    updateNotificationSettings: (
+      notifications: NotificationsSettings
+    ) => Promise<void>;
+  }
 ];
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(
-  undefined,
+  undefined
 );
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -212,12 +214,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         // Sync with backend API
         const { settingsApiClient } = await import("@/config/apiConfig");
-        const { DRIVER_SETTINGS_ENDPOINTS } =
-          await import("@/constants/endpoints");
+        const { DRIVER_SETTINGS_ENDPOINTS } = await import(
+          "@/constants/endpoints"
+        );
 
         const response = await settingsApiClient.post(
           DRIVER_SETTINGS_ENDPOINTS.updateSettings,
-          next,
+          next
         );
 
         // Check if the response indicates success or failure
@@ -253,7 +256,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           try {
             await setStorageItem(
               SETTINGS_STORAGE_KEY,
-              JSON.stringify(previousSettings),
+              JSON.stringify(previousSettings)
             );
           } catch (storageErr) {
             // ignore revert failures for local storage
@@ -277,7 +280,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [state.settings],
+    [state.settings]
   );
 
   const clearError = useCallback(() => {
@@ -412,13 +415,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         driverSettings.autoBidOnRideOffersAmount ||
         driverSettings.P_AUTO_BID_ON_RIDE_OFFERS_AMOUNT;
       if (autoBidAmount !== undefined) {
-        // Map amount to strategy (simplified - can be enhanced)
-        settings.autoBidStrategy = autoBidAmount?.toString() || null;
+        const num =
+          typeof autoBidAmount === "number"
+            ? autoBidAmount
+            : parseInt(String(autoBidAmount).trim(), 10);
+        settings.autoBidStrategy = Number.isNaN(num) ? null : num;
       }
 
       return settings;
     },
-    [],
+    []
   );
 
   // Fetch settings from backend
@@ -428,11 +434,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "SET_ERROR", payload: null });
 
       const { settingsApiClient } = await import("@/config/apiConfig");
-      const { DRIVER_SETTINGS_ENDPOINTS } =
-        await import("@/constants/endpoints");
+      const { DRIVER_SETTINGS_ENDPOINTS } = await import(
+        "@/constants/endpoints"
+      );
 
       const response = await settingsApiClient.get(
-        DRIVER_SETTINGS_ENDPOINTS.getSettings,
+        DRIVER_SETTINGS_ENDPOINTS.getSettings
       );
 
       // Check if the response indicates success or failure
@@ -489,7 +496,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       try {
         await setStorageItem(
           SETTINGS_STORAGE_KEY,
-          JSON.stringify(mergedSettings),
+          JSON.stringify(mergedSettings)
         );
       } catch (storageErr) {
         console.warn("Local storage save failed:", storageErr);

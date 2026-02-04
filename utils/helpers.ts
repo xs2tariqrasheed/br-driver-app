@@ -12,6 +12,12 @@ export type DesiredDestination = {
   created_at: string; // ISO string
   address: string;
   expired_at: string; // ISO string
+  googleReferenceNumber?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  targetZipCode?: string;
+  commissionPercentage?: number;
+  priority?: number;
 };
 
 type StorageValue = string;
@@ -1350,7 +1356,7 @@ export function createDesiredDestination(address: string): DesiredDestination {
   const id = Date.now();
 
   return {
-    id,
+    id: id.toString(),
     created_at: now.toISOString(),
     address,
     expired_at: expiredAt.toISOString(),
@@ -2089,14 +2095,15 @@ export function getNumericDriverId(
 
 /**
  * Parse autoBidStrategy to a percentage number for calculations.
- * Backend may return numeric string ("5", "-5", "0") or future string ("+5", "-5").
+ * Strategy is from EXTRA_COMMISSION_PRICE_OPTIONS (number: 10, 5, 0, -5, -10).
  * Used to compute adjusted bid amount from offer price, e.g. $55 + 5% = $57.75.
  */
 export function getPercentFromAutoBidStrategy(
-  str: string | null | undefined
+  value: number | string | null | undefined
 ): number {
-  if (str == null || str === "") return 0;
-  const n = parseInt(String(str).trim(), 10);
+  if (value == null || value === "") return 0;
+  if (typeof value === "number" && !Number.isNaN(value)) return value;
+  const n = parseInt(String(value).trim(), 10);
   return Number.isNaN(n) ? 0 : n;
 }
 
