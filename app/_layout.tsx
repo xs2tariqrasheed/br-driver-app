@@ -60,7 +60,10 @@ function PushNotificationsBootstrap() {
   const handledInitialResponse = useRef(false);
   const tokenRegistrationAttempted = useRef(false);
 
-  const handleResponse = async (response: Notifications.NotificationResponse) => {
+  const handleResponse = async (
+    response: Notifications.NotificationResponse,
+    isReplayFromColdStart: boolean,
+  ) => {
     const data = response.notification.request.content.data;
     const type = (data as any)?.type as string | undefined;
     const tripId = coerceTripId(data);
@@ -96,13 +99,20 @@ function PushNotificationsBootstrap() {
       return;
     }
 
-    router.push("/(screens)/notifications");
+    // Only redirect to notifications when the user just tapped a notification.
+    // Skip for cold-start replay: getLastNotificationResponseAsync() can return
+    // a stale response, which would wrongly redirect on every app open/refresh.
+    if (!isReplayFromColdStart) {
+      router.push("/(screens)/notifications");
+    }
   };
 
   useEffect(() => {
     if (!responseSub.current) {
       responseSub.current =
-        Notifications.addNotificationResponseReceivedListener(handleResponse);
+        Notifications.addNotificationResponseReceivedListener((response) =>
+          handleResponse(response, false),
+        );
     }
 
     (async () => {
@@ -111,7 +121,7 @@ function PushNotificationsBootstrap() {
       try {
         const last = await Notifications.getLastNotificationResponseAsync();
         if (last) {
-          await handleResponse(last);
+          await handleResponse(last, true);
         }
       } catch {
         // ignore

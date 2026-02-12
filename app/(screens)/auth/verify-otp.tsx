@@ -8,6 +8,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -352,6 +353,33 @@ export default function VerifyOtpScreen() {
 
   const boxes = useMemo(() => new Array(OTP_LENGTH).fill(0), []);
 
+  // Responsive OTP box size and gap: keep horizontal padding (12) same, fit boxes in remaining width
+  const { width: windowWidth } = useWindowDimensions();
+  const horizontalPadding = 12;
+  const availableWidth = windowWidth - horizontalPadding * 2;
+  const { boxSize, gap } = useMemo(() => {
+    const minBox = 32;
+    const maxBox = 56;
+    const preferredGap = 12;
+    const totalGap = (OTP_LENGTH - 1) * preferredGap;
+    let size = (availableWidth - totalGap) / OTP_LENGTH;
+    let g = preferredGap;
+    if (size < minBox) {
+      size = minBox;
+      g = Math.max(
+        4,
+        (availableWidth - OTP_LENGTH * minBox) / (OTP_LENGTH - 1),
+      );
+    } else if (size > maxBox) {
+      size = maxBox;
+      g = Math.max(
+        4,
+        (availableWidth - OTP_LENGTH * maxBox) / (OTP_LENGTH - 1),
+      );
+    }
+    return { boxSize: size, gap: g };
+  }, [availableWidth]);
+
   /**
    * Normalizes OTP input to digits only and updates state.
    */
@@ -622,7 +650,7 @@ export default function VerifyOtpScreen() {
             }}
             disabled={disabled || isFetchingSettings}
           >
-            <View style={styles.otpRow}>
+            <View style={[styles.otpRow, { gap }]}>
               {boxes.map((_, i) => {
                 const isActive =
                   i === otp.length &&
@@ -635,7 +663,11 @@ export default function VerifyOtpScreen() {
                     key={i}
                     style={[
                       styles.otpBox,
-                      { borderColor: boxBorderColor(i) },
+                      {
+                        width: boxSize,
+                        height: boxSize,
+                        borderColor: boxBorderColor(i),
+                      },
                       disabled && styles.otpBoxDisabled,
                       disabled && styles.otpBoxDisabledBg,
                     ]}
@@ -650,7 +682,13 @@ export default function VerifyOtpScreen() {
                       </Typography>
                     ) : isActive ? (
                       <Animated.View
-                        style={[styles.caret, { opacity: caretOpacity }]}
+                        style={[
+                          styles.caret,
+                          {
+                            height: Math.min(24, boxSize * 0.48),
+                            opacity: caretOpacity,
+                          },
+                        ]}
                       />
                     ) : null}
                   </View>
@@ -754,14 +792,11 @@ const styles = StyleSheet.create({
   },
   otpRow: {
     flexDirection: "row",
-    gap: 12,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
   },
   otpBox: {
-    width: 50,
-    height: 50,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: textColors.black,
