@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   KeyboardAvoidingView,
@@ -20,6 +20,8 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import { API_CLIENT_TYPES } from "@/constants/global";
+import { RESET_PASSWORD_CONTENT_KEYS } from "@/content/(screens)/auth/reset-password-keys";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
@@ -29,8 +31,64 @@ type ResetFormValues = {
 };
 
 export default function ResetPasswordScreen() {
+  const { getContent } = useGetContent();
+
+  const {
+    pageTitle,
+    introTitle,
+    introDescription,
+    formPasswordLabel,
+    formPasswordPlaceholder,
+    formPasswordValidationRequired,
+    formConfirmPasswordLabel,
+    formConfirmPasswordPlaceholder,
+    formConfirmPasswordValidationRequired,
+    formConfirmPasswordValidationMismatch,
+    actionReset,
+    toastErrorMissingParams,
+    toastSuccess,
+    toastError,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      pageTitle: get(RESET_PASSWORD_CONTENT_KEYS.PAGE_TITLE),
+      introTitle: get(RESET_PASSWORD_CONTENT_KEYS.INTRO_TITLE),
+      introDescription: get(RESET_PASSWORD_CONTENT_KEYS.INTRO_DESCRIPTION),
+      formPasswordLabel: get(RESET_PASSWORD_CONTENT_KEYS.FORM_PASSWORD_LABEL),
+      formPasswordPlaceholder: get(
+        RESET_PASSWORD_CONTENT_KEYS.FORM_PASSWORD_PLACEHOLDER,
+      ),
+      formPasswordValidationRequired: get(
+        RESET_PASSWORD_CONTENT_KEYS.FORM_PASSWORD_VALIDATION_REQUIRED,
+      ),
+      formConfirmPasswordLabel: get(
+        RESET_PASSWORD_CONTENT_KEYS.FORM_CONFIRM_PASSWORD_LABEL,
+      ),
+      formConfirmPasswordPlaceholder: get(
+        RESET_PASSWORD_CONTENT_KEYS.FORM_CONFIRM_PASSWORD_PLACEHOLDER,
+      ),
+      formConfirmPasswordValidationRequired: get(
+        RESET_PASSWORD_CONTENT_KEYS.FORM_CONFIRM_PASSWORD_VALIDATION_REQUIRED,
+      ),
+      formConfirmPasswordValidationMismatch: get(
+        RESET_PASSWORD_CONTENT_KEYS.FORM_CONFIRM_PASSWORD_VALIDATION_MISMATCH,
+      ),
+      actionReset: get(RESET_PASSWORD_CONTENT_KEYS.ACTION_RESET),
+      toastErrorMissingParams: get(
+        RESET_PASSWORD_CONTENT_KEYS.TOAST_ERROR_MISSING_PARAMS,
+      ),
+      toastSuccess: get(RESET_PASSWORD_CONTENT_KEYS.TOAST_SUCCESS),
+      toastError: get(RESET_PASSWORD_CONTENT_KEYS.TOAST_ERROR),
+    };
+  }, [getContent]);
+  // Page Content End
+
   const router = useRouter();
-  const { email: emailParam, code: codeParam, companyId: companyIdParam } = useLocalSearchParams<{
+  const {
+    email: emailParam,
+    code: codeParam,
+    companyId: companyIdParam,
+  } = useLocalSearchParams<{
     email?: string;
     code?: string;
     companyId?: string;
@@ -53,10 +111,10 @@ export default function ResetPasswordScreen() {
     loading: submitting,
     error: submitError,
     execute: resetPassword,
-  } = usePost<any, { email: string; code: string; newPassword: string; companyId?: string }>(
-    AUTH_ENDPOINTS.resetPassword,
-    API_CLIENT_TYPES.AUTH
-  );
+  } = usePost<
+    any,
+    { email: string; code: string; newPassword: string; companyId?: string }
+  >(AUTH_ENDPOINTS.resetPassword, API_CLIENT_TYPES.AUTH);
 
   // Manual visibility override for helper panels via Info icon
   // null => follow auto rule (visible when field has value)
@@ -71,7 +129,7 @@ export default function ResetPasswordScreen() {
   const onSubmit = async () => {
     // Validate that we have email, OTP code, and companyId from previous screen
     if (!emailParam || !codeParam || !companyIdParam) {
-      showToast("Missing required information. Please start the password reset process again.", {
+      showToast(toastErrorMissingParams, {
         variant: "error",
         position: "top",
       });
@@ -86,14 +144,13 @@ export default function ResetPasswordScreen() {
         newPassword: passwordValue,
         companyId: companyIdParam, // Required: must be provided
       });
-      showToast(response?.message || "Password reset successfully", {
+      showToast(response?.message || toastSuccess, {
         variant: "success",
         position: "top",
       });
       router.replace("/(screens)/auth/login");
     } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Failed to reset password";
+      const message = e instanceof Error ? e.message : toastError;
       showToast(message, { variant: "error", position: "top" });
     }
   };
@@ -131,7 +188,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Reset Password" onBackPress={() => router.back()} />
+      <Header title={pageTitle} onBackPress={() => router.back()} />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
@@ -153,15 +210,14 @@ export default function ResetPasswordScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Create a New Password
+              {introTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={styles.textBlack}
             >
-              Choose a strong password you haven’t used before. This will
-              replace your old password.
+              {introDescription}
             </Typography>
           </View>
 
@@ -170,12 +226,12 @@ export default function ResetPasswordScreen() {
               control={control}
               name="password"
               rules={{
-                required: "New Password is required.",
+                required: formPasswordValidationRequired,
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="New Password"
-                  placeholder="New Password"
+                  label={formPasswordLabel}
+                  placeholder={formPasswordPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -206,14 +262,15 @@ export default function ResetPasswordScreen() {
               control={control}
               name="confirmPassword"
               rules={{
-                required: "Please confirm your new password.",
+                required: formConfirmPasswordValidationRequired,
                 validate: (val) =>
-                  val === passwordValue || "Passwords do not match.",
+                  val === passwordValue ||
+                  formConfirmPasswordValidationMismatch,
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Confirm New Password"
-                  placeholder="Confirm New Password"
+                  label={formConfirmPasswordLabel}
+                  placeholder={formConfirmPasswordPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -247,7 +304,7 @@ export default function ResetPasswordScreen() {
               loading={submitting}
               disabled={submitting || !canSubmit}
             >
-              Reset Password
+              {actionReset}
             </Button>
           </View>
         </ScrollView>

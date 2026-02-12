@@ -20,6 +20,8 @@
 import { textColors } from "@/constants/colors";
 import { ACTION_ICON_SOURCE_MAP, type RideType } from "@/constants/global";
 import { useOverlayInsets } from "@/context/OverlayInsetsContext";
+import { TRIP_DETAILS_CONTENT_KEYS } from "@/content/trip-details-keys";
+import { useGetContent } from "@/hooks/useGetContent";
 import {
   Image,
   ScrollView,
@@ -205,6 +207,17 @@ export default function JobDetails({
   } = jobOffer;
 
   const { overlayBottomInset } = useOverlayInsets();
+  const { getContent } = useGetContent();
+  const driverInstructionsTitle = getContent(
+    TRIP_DETAILS_CONTENT_KEYS.DRIVER_INSTRUCTIONS_TITLE
+  );
+  const fareDetailTitle = getContent(
+    TRIP_DETAILS_CONTENT_KEYS.FARE_DETAIL_TITLE
+  );
+  const customerDetailTitle = getContent(
+    TRIP_DETAILS_CONTENT_KEYS.CUSTOMER_DETAIL_TITLE
+  );
+
   // Determine if action bar should be shown
   const shouldShowActionBar =
     typeof showActionBar === "boolean"
@@ -305,7 +318,7 @@ export default function JobDetails({
             weight="bold"
             style={styles.instructionsTitle}
           >
-            Driver Instructions
+            {driverInstructionsTitle}
           </Typography>
           <Typography
             type="bodyLarge"
@@ -321,7 +334,7 @@ export default function JobDetails({
       {/* Fare Details - Only show if fareDetails are provided */}
       {fareDetails && fareDetails.length > 0 && (
         <>
-          <InfoTable title="Fare Detail" data={fareDetails} showFooter={true} />
+          <InfoTable title={fareDetailTitle} data={fareDetails} showFooter={true} />
 
           {/* Divider after Fare Details */}
           <Divider height={1} color={textColors.grey200} marginBottom={20} />
@@ -331,7 +344,7 @@ export default function JobDetails({
       {/* Customer Details - Only show if customerDetails are provided */}
       {customerDetails && customerDetails.length > 0 && (
         <InfoTable
-          title="Customer Detail"
+          title={customerDetailTitle}
           data={customerDetails}
           showFooter={false}
         />

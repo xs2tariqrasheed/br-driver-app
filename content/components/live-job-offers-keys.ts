@@ -1,0 +1,20 @@
+export const LIVE_JOB_OFFERS_CONTENT_KEYS = {
+  TOAST_WAITING_CUSTOMER: "driver-app-live-job-offers-toast-waiting-customer",
+  TOAST_BID_FAILED: "driver-app-live-job-offers-toast-bid-failed",
+  TOAST_ACCEPT_UNABLE: "driver-app-live-job-offers-toast-accept-unable",
+  TOAST_ACCEPT_SUCCESS: "driver-app-live-job-offers-toast-accept-success",
+  TOAST_ETA_UPDATE_FAILED: "driver-app-live-job-offers-toast-eta-update-failed",
+  TOAST_ACCEPT_FAILED: "driver-app-live-job-offers-toast-accept-failed",
+  VIEW_MORE_PREFIX: "driver-app-live-job-offers-view-more-prefix",
+  VIEW_MORE_SUFFIX: "driver-app-live-job-offers-view-more-suffix",
+  TRIP_IN_PROGRESS_TITLE: "driver-app-live-job-offers-trip-in-progress-title",
+  TRIP_IN_PROGRESS_MESSAGE:
+    "driver-app-live-job-offers-trip-in-progress-message",
+  TRIP_IN_PROGRESS_BUTTON: "driver-app-live-job-offers-trip-in-progress-button",
+  EMPTY_TITLE: "driver-app-live-job-offers-empty-title",
+  EMPTY_MESSAGE_LIVE: "driver-app-live-job-offers-empty-message-live",
+  EMPTY_MESSAGE_HIRED: "driver-app-live-job-offers-empty-message-hired",
+  ERROR_TITLE: "driver-app-live-job-offers-error-title",
+  ERROR_MESSAGE: "driver-app-live-job-offers-error-message",
+  ERROR_RETRY: "driver-app-live-job-offers-error-retry",
+} as const;

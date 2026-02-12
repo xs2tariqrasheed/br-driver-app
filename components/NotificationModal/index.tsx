@@ -1,17 +1,40 @@
-import { NOTIFICATION_TYPES, SPEECH_MESSAGES } from "@/constants/global";
+import { NOTIFICATION_TYPES } from "@/constants/global";
+import { BID_STATUS_MODAL_CONTENT_KEYS } from "@/content/components/bid-status-modal-keys";
 import { useChat } from "@/context/ChatContext";
 import { useModalManager } from "@/context/ModalManagerContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useSettings } from "@/context/SettingsContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { speechManager } from "@/utils/speechManager";
 import { usePathname } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, TouchableOpacity } from "react-native";
 import { Portal } from "react-native-portalize";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Notification from "../Notification";
 
 const NotificationModal: React.FC = () => {
+  // Get speech message
+  const { getContent } = useGetContent();
+  const {
+    speechNewRideOffer,
+    speechNewBroadcastJob,
+    speechMakeStop,
+    speechNewMessage,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      speechNewRideOffer: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_NEW_RIDE_OFFER,
+      ),
+      speechNewBroadcastJob: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_NEW_BROADCAST_JOB,
+      ),
+      speechMakeStop: get(BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_MAKE_STOP),
+      speechNewMessage: get(BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_NEW_MESSAGE),
+    };
+  }, [getContent]);
+
   const { isOpen, data, hideNotification } = useNotification();
   const [settings] = useSettings();
   const insets = useSafeAreaInsets();
@@ -20,7 +43,7 @@ const NotificationModal: React.FC = () => {
   const { registerModal, unregisterModal } = useModalManager();
   const { isOpen: isChatModalOpen } = useChat();
   const pathname = usePathname();
-  
+
   // Check if driver is on chat screen
   const isOnChatScreen = pathname === "/(screens)/chat";
 
@@ -63,22 +86,22 @@ const NotificationModal: React.FC = () => {
             return; // Skip speaking
           }
 
-          let message: string = SPEECH_MESSAGES.NEW_RIDE_OFFER; // Default message
+          let message: string = speechNewRideOffer; // Default message
 
           // Determine speech message based on notification type
           if (data.type) {
             switch (data.type) {
               case NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER:
-                message = SPEECH_MESSAGES.NEW_BROADCAST_JOB;
+                message = speechNewBroadcastJob;
                 break;
               case NOTIFICATION_TYPES.AUTHORIZATION:
-                message = SPEECH_MESSAGES.MAKE_STOP;
+                message = speechMakeStop;
                 break;
               case NOTIFICATION_TYPES.MESSAGE:
-                message = SPEECH_MESSAGES.NEW_MESSAGE;
+                message = speechNewMessage;
                 break;
               default:
-                message = SPEECH_MESSAGES.NEW_RIDE_OFFER;
+                message = speechNewRideOffer;
             }
           }
 
@@ -116,14 +139,22 @@ const NotificationModal: React.FC = () => {
         useNativeDriver: true,
       }).start();
     }
-  }, [isOpen, data, slideAnim, hideNotification, settings, isChatModalOpen, isOnChatScreen]);
+  }, [
+    isOpen,
+    data,
+    slideAnim,
+    hideNotification,
+    settings,
+    isChatModalOpen,
+    isOnChatScreen,
+  ]);
 
   // Handle manual close (when user clicks close button or backdrop)
   const handleClose = () => {
     console.log(
       "🔔 NotificationModal: User closed notification (modal:",
       data?.modal || false,
-      ")"
+      ")",
     );
     // Stop any current speech
     speechManager.stop();
@@ -157,38 +188,36 @@ const NotificationModal: React.FC = () => {
   }
 
   // Regular notification (slide down from top)
-  return (
-    isOpen ? (
-      <Portal>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={handleClose}
+  return isOpen ? (
+    <Portal>
+      <TouchableOpacity
+        style={styles.backdrop}
+        activeOpacity={1}
+        onPress={handleClose}
+      >
+        <Animated.View
+          style={[
+            styles.container,
+            {
+              top: insets.top + 10,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
         >
-          <Animated.View
-            style={[
-              styles.container,
-              {
-                top: insets.top + 10,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <Notification
-              type={data.type}
-              title={data.title}
-              subtitle={data.subtitle}
-              message={data.message}
-              visible={true}
-              onDismiss={handleClose}
-              showDismissButton={true}
-              modal={false}
-            />
-          </Animated.View>
-        </TouchableOpacity>
-      </Portal>
-    ) : null
-  );
+          <Notification
+            type={data.type}
+            title={data.title}
+            subtitle={data.subtitle}
+            message={data.message}
+            visible={true}
+            onDismiss={handleClose}
+            showDismissButton={true}
+            modal={false}
+          />
+        </Animated.View>
+      </TouchableOpacity>
+    </Portal>
+  ) : null;
 };
 
 const styles = StyleSheet.create({

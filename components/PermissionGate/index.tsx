@@ -1,8 +1,10 @@
 import Button from "@/components/Button";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { PERMISSION_GATE_CONTENT_KEYS } from "@/content/components/permission-gate-keys";
 import useAppPermissions from "@/hooks/useAppPermissions";
-import React, { useEffect } from "react";
+import { useGetContent } from "@/hooks/useGetContent";
+import React, { useEffect, useMemo } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,6 +13,34 @@ type PermissionGateProps = {
 };
 
 const PermissionGate: React.FC<PermissionGateProps> = ({ children }) => {
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const {
+    title,
+    description,
+    locationLabel,
+    notificationsLabel,
+    buttonAllow,
+    buttonOpenSettings,
+    footerIos,
+    footerAndroid,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      title: get(PERMISSION_GATE_CONTENT_KEYS.TITLE),
+      description: get(PERMISSION_GATE_CONTENT_KEYS.DESCRIPTION),
+      locationLabel: get(PERMISSION_GATE_CONTENT_KEYS.LOCATION_LABEL),
+      notificationsLabel: get(PERMISSION_GATE_CONTENT_KEYS.NOTIFICATIONS_LABEL),
+      buttonAllow: get(PERMISSION_GATE_CONTENT_KEYS.BUTTON_ALLOW),
+      buttonOpenSettings: get(
+        PERMISSION_GATE_CONTENT_KEYS.BUTTON_OPEN_SETTINGS,
+      ),
+      footerIos: get(PERMISSION_GATE_CONTENT_KEYS.FOOTER_IOS),
+      footerAndroid: get(PERMISSION_GATE_CONTENT_KEYS.FOOTER_ANDROID),
+    };
+  }, [getContent]);
+  // Page Content End
+
   const insets = useSafeAreaInsets();
   const {
     statuses,
@@ -38,23 +68,22 @@ const PermissionGate: React.FC<PermissionGateProps> = ({ children }) => {
     >
       <View style={styles.card}>
         <Typography type="headingLarge" weight="semibold" style={styles.title}>
-          Permissions Required
+          {title}
         </Typography>
         <Typography type="bodyLarge" style={styles.description}>
-          We require Location and Notifications to operate. Please allow both to
-          continue.
+          {description}
         </Typography>
 
         <View style={styles.statusRow}>
           <View style={styles.bullet} />
           <Typography type="bodyLarge" style={styles.statusText}>
-            Location: {statuses.location}
+            {locationLabel}: {statuses.location}
           </Typography>
         </View>
         <View style={styles.statusRow}>
           <View style={styles.bullet} />
           <Typography type="bodyLarge" style={styles.statusText}>
-            Notifications: {statuses.notifications}
+            {notificationsLabel}: {statuses.notifications}
           </Typography>
         </View>
 
@@ -70,7 +99,7 @@ const PermissionGate: React.FC<PermissionGateProps> = ({ children }) => {
               rounded="half"
               onPress={() => void requestAll()}
             >
-              Allow Permissions
+              {buttonAllow}
             </Button>
             {isAnyDenied && (
               <Button
@@ -79,7 +108,7 @@ const PermissionGate: React.FC<PermissionGateProps> = ({ children }) => {
                 onPress={openSettingsIfDenied}
                 style={{ marginTop: 10 }}
               >
-                Open Settings
+                {buttonOpenSettings}
               </Button>
             )}
           </>
@@ -87,8 +116,8 @@ const PermissionGate: React.FC<PermissionGateProps> = ({ children }) => {
 
         <Typography type="labelSmall" style={styles.footerNote}>
           {Platform.select({
-            ios: "You can also enable them later from iOS Settings.",
-            android: "You can also enable them later from App Settings.",
+            ios: footerIos,
+            android: footerAndroid,
             default: "",
           })}
         </Typography>

@@ -21,11 +21,14 @@ import {
   URLS,
   type DriverStatusLabel,
 } from "@/constants/global";
+import { ACTIVE_JOB_CONTENT_KEYS } from "@/content/(tabs)/active-job-keys";
+import { HOME_CONTENT_KEYS } from "@/content/(tabs)/home-keys";
 import { useAuth } from "@/context/AuthContext";
 import { createDemoNotifications, useDriver } from "@/context/DriverContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { useSocket } from "@/hooks/useSocket";
 import { logger, removeStorageItem, setStorageItem } from "@/utils/helpers";
@@ -39,10 +42,79 @@ import {
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 export default function HomeScreen() {
+  const { getContent } = useGetContent();
+
+  const {
+    offlineMessage,
+    headerTitle,
+    statusOfflineLabel,
+    statusOnlineLabel,
+    alertActiveRideTitle,
+    alertActiveRideMessage,
+    alertOk,
+    toastOfferTypesSaved,
+    toastOfferTypesFailed,
+    toastNowOnline,
+    toastGoOnlineFailed,
+    toastStatusOnlineFailed,
+    toastNowOffline,
+    toastGoOfflineFailed,
+    toastStatusOfflineFailed,
+    sheetOfferTypeTitle,
+    sheetOfferTypeEconomy,
+    sheetOfferTypeSedan,
+    sheetOfferTypeSuv,
+    sheetOfferTypeLuxury,
+    sheetOfferTypeSaving,
+    sheetOfferTypeSave,
+    sheetSortTitle,
+    sheetSortPickupTime,
+    sheetSortPickupDistance,
+    sheetSortReset,
+    sheetSortApply,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      offlineMessage: get(ACTIVE_JOB_CONTENT_KEYS.OFFLINE_MESSAGE),
+      headerTitle: get(HOME_CONTENT_KEYS.HEADER_TITLE),
+      statusOfflineLabel: get(HOME_CONTENT_KEYS.STATUS_OFFLINE),
+      statusOnlineLabel: get(HOME_CONTENT_KEYS.STATUS_ONLINE),
+      alertActiveRideTitle: get(HOME_CONTENT_KEYS.ALERT_ACTIVE_RIDE_TITLE),
+      alertActiveRideMessage: get(HOME_CONTENT_KEYS.ALERT_ACTIVE_RIDE_MESSAGE),
+      alertOk: get(HOME_CONTENT_KEYS.ALERT_OK),
+      toastOfferTypesSaved: get(HOME_CONTENT_KEYS.TOAST_OFFER_TYPES_SAVED),
+      toastOfferTypesFailed: get(HOME_CONTENT_KEYS.TOAST_OFFER_TYPES_FAILED),
+      toastNowOnline: get(HOME_CONTENT_KEYS.TOAST_NOW_ONLINE),
+      toastGoOnlineFailed: get(HOME_CONTENT_KEYS.TOAST_GO_ONLINE_FAILED),
+      toastStatusOnlineFailed: get(
+        HOME_CONTENT_KEYS.TOAST_STATUS_ONLINE_FAILED,
+      ),
+      toastNowOffline: get(HOME_CONTENT_KEYS.TOAST_NOW_OFFLINE),
+      toastGoOfflineFailed: get(HOME_CONTENT_KEYS.TOAST_GO_OFFLINE_FAILED),
+      toastStatusOfflineFailed: get(
+        HOME_CONTENT_KEYS.TOAST_STATUS_OFFLINE_FAILED,
+      ),
+      sheetOfferTypeTitle: get(HOME_CONTENT_KEYS.SHEET_OFFER_TYPE_TITLE),
+      sheetOfferTypeEconomy: get(HOME_CONTENT_KEYS.SHEET_OFFER_TYPE_ECONOMY),
+      sheetOfferTypeSedan: get(HOME_CONTENT_KEYS.SHEET_OFFER_TYPE_SEDAN),
+      sheetOfferTypeSuv: get(HOME_CONTENT_KEYS.SHEET_OFFER_TYPE_SUV),
+      sheetOfferTypeLuxury: get(HOME_CONTENT_KEYS.SHEET_OFFER_TYPE_LUXURY),
+      sheetOfferTypeSaving: get(HOME_CONTENT_KEYS.SHEET_OFFER_TYPE_SAVING),
+      sheetOfferTypeSave: get(HOME_CONTENT_KEYS.SHEET_OFFER_TYPE_SAVE),
+      sheetSortTitle: get(HOME_CONTENT_KEYS.SHEET_SORT_TITLE),
+      sheetSortPickupTime: get(HOME_CONTENT_KEYS.SHEET_SORT_PICKUP_TIME),
+      sheetSortPickupDistance: get(
+        HOME_CONTENT_KEYS.SHEET_SORT_PICKUP_DISTANCE,
+      ),
+      sheetSortReset: get(HOME_CONTENT_KEYS.SHEET_SORT_RESET),
+      sheetSortApply: get(HOME_CONTENT_KEYS.SHEET_SORT_APPLY),
+    };
+  }, [getContent]);
+
   const router = useRouter();
   const [auth] = useAuth();
   const [driver, setDriver] = useDriver();
@@ -66,7 +138,7 @@ export default function HomeScreen() {
   });
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation, loading: offlineLoading } = useDelete(
-    DRIVER_ENDPOINTS.markOffline(auth?.user?.id || "")
+    DRIVER_ENDPOINTS.markOffline(auth?.user?.id || ""),
   );
 
   // Online location API using shared post hook
@@ -75,7 +147,7 @@ export default function HomeScreen() {
 
   // Driver status API using shared post hook
   const { execute: updateDriverStatus, loading: statusLoading } = usePost(
-    DRIVER_ENDPOINTS.updateStatus(auth?.user?.id || "")
+    DRIVER_ENDPOINTS.updateStatus(auth?.user?.id || ""),
   );
 
   // Interval is managed centrally in OnlineLocationTracker (app/_layout)
@@ -83,10 +155,8 @@ export default function HomeScreen() {
   const statusValue: DriverStatusLabel = driver?.online
     ? DRIVER_STATUS.ONLINE
     : DRIVER_STATUS.OFFLINE;
-  const labels: [DriverStatusLabel, DriverStatusLabel] = [
-    DRIVER_STATUS.OFFLINE,
-    DRIVER_STATUS.ONLINE,
-  ];
+
+  const labels: [string, string] = [statusOfflineLabel, statusOnlineLabel];
 
   // Calculate dynamic toggle size based on screen width and label text
   const toggleSize = useMemo(() => {
@@ -94,7 +164,7 @@ export default function HomeScreen() {
     // Get the longer label text (OFFLINE = 7 chars, ONLINE = 6 chars)
     const maxLabelLength = Math.max(
       DRIVER_STATUS.OFFLINE.length,
-      DRIVER_STATUS.ONLINE.length
+      DRIVER_STATUS.ONLINE.length,
     );
 
     // Font size is 12px (from Toggle component: fontSize: 12)
@@ -135,7 +205,7 @@ export default function HomeScreen() {
   // Active view state for hired drivers (live/future toggle)
   // Default to "hired" to show HIRED type by default
   const [activeView, setActiveView] = useState<"live" | "future" | "hired">(
-    "hired"
+    "hired",
   );
 
   // Local loading state for online toggle (includes location fetch time)
@@ -215,7 +285,7 @@ export default function HomeScreen() {
     const initializeDemoNotifications = async () => {
       // Check if demo notifications already exist
       const hasDemoNotifications = notifications.some((notification) =>
-        notification.id.startsWith("demo-notification-")
+        notification.id.startsWith("demo-notification-"),
       );
 
       if (!hasDemoNotifications) {
@@ -224,7 +294,7 @@ export default function HomeScreen() {
         await addNotifications(demoNotifications);
         demoNotificationsInitialized.current = true;
         log(
-          `[HomeScreen] Added ${demoNotifications.length} demo notifications`
+          `[HomeScreen] Added ${demoNotifications.length} demo notifications`,
         );
       } else {
         demoNotificationsInitialized.current = true;
@@ -235,16 +305,16 @@ export default function HomeScreen() {
   }, [notifications, addNotifications, log]);
 
   const [economy, setEconomy] = useState<boolean>(
-    settings.ridePreferences.rideTypes.economy
+    settings.ridePreferences.rideTypes.economy,
   );
   const [sedan, setSedan] = useState<boolean>(
-    settings.ridePreferences.rideTypes.sedan
+    settings.ridePreferences.rideTypes.sedan,
   );
   const [suv, setSuv] = useState<boolean>(
-    settings.ridePreferences.rideTypes.suv
+    settings.ridePreferences.rideTypes.suv,
   );
   const [luxury, setLuxury] = useState<boolean>(
-    settings.ridePreferences.rideTypes.luxury
+    settings.ridePreferences.rideTypes.luxury,
   );
 
   // Determine which ride types are enabled based on car type
@@ -327,7 +397,7 @@ export default function HomeScreen() {
           rideTypes: { economy, sedan, suv, luxury },
         },
       });
-      showToast("Offer type preferences saved successfully", {
+      showToast(toastOfferTypesSaved, {
         variant: "success",
         position: "top",
       });
@@ -342,8 +412,7 @@ export default function HomeScreen() {
       }
 
       // Error is handled by context and shown via useEffect
-      const errorMessage =
-        error?.message || "Failed to save offer type preferences";
+      const errorMessage = error?.message || toastOfferTypesFailed;
       showToast(errorMessage, {
         variant: "error",
         position: "top",
@@ -402,7 +471,7 @@ export default function HomeScreen() {
         // doesn't "cold start" and re-post the same initial coordinates.
         await setStorageItem(
           PREVIOUS_LOCATION_STORAGE_KEY,
-          JSON.stringify(payload)
+          JSON.stringify(payload),
         );
 
         // Call the online location API first
@@ -425,7 +494,7 @@ export default function HomeScreen() {
             const errorMessage =
               statusResponse.message ||
               statusResponse.data?.jHeader?.message ||
-              "Failed to update driver status to online";
+              toastStatusOnlineFailed;
             log("[HomeScreen] Driver status update failed:", errorMessage);
             throw new Error(errorMessage);
           }
@@ -441,11 +510,13 @@ export default function HomeScreen() {
           log("[HomeScreen] Failed to connect socket:", error);
         }
 
-        showToast("You are now Online", { variant: "success" });
+        showToast(toastNowOnline, { variant: "success" });
         // Interval loop is managed centrally in OnlineLocationTracker
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Failed to go online.";
+          error instanceof Error && error.message
+            ? error.message
+            : toastGoOnlineFailed;
         log("[HomeScreen] Error going online:", error);
         showToast(message, { variant: "error" });
         // Revert optimistic update on failure
@@ -463,15 +534,15 @@ export default function HomeScreen() {
         const { retrievalId } = await getRetrievalId();
         if (retrievalId) {
           Alert.alert(
-            "Active Ride Detected",
-            "You have an active ride that needs to be completed. Please first cancel the active ride or mark it as completed before going offline.",
+            alertActiveRideTitle,
+            alertActiveRideMessage,
             [
               {
-                text: "OK",
+                text: alertOk,
                 style: "default",
               },
             ],
-            { cancelable: true }
+            { cancelable: true },
           );
           return; // Prevent going offline
         }
@@ -496,7 +567,7 @@ export default function HomeScreen() {
             const errorMessage =
               statusResponse.message ||
               statusResponse.data?.jHeader?.message ||
-              "Failed to update driver status to offline";
+              toastStatusOfflineFailed;
             log("[HomeScreen] Driver status update failed:", errorMessage);
             throw new Error(errorMessage);
           }
@@ -519,13 +590,13 @@ export default function HomeScreen() {
           log("[HomeScreen] Error disconnecting socket:", error);
         }
 
-        showToast("You are now Offline", { variant: "success" });
+        showToast(toastNowOffline, { variant: "success" });
         log("[HomeScreen] Driver successfully marked as offline");
       } catch (error) {
         const message =
-          error instanceof Error
+          error instanceof Error && error.message
             ? error.message
-            : "Failed to go offline. Please try again.";
+            : toastGoOfflineFailed;
         showToast(message, { variant: "error" });
         log("[HomeScreen] Error marking driver offline:", error);
         // Revert optimistic update on failure
@@ -538,10 +609,10 @@ export default function HomeScreen() {
 
   // Determine which bell icon to show based on notification status
   const hasUnreadNotifications = notifications.some(
-    (notification) => notification.messageType === "unread"
+    (notification) => notification.messageType === "unread",
   );
   const unreadCount = notifications.filter(
-    (notification) => notification.messageType === "unread"
+    (notification) => notification.messageType === "unread",
   ).length;
   const bellIconSource = hasUnreadNotifications
     ? require("@/assets/images/red-bell-icon.png")
@@ -602,7 +673,7 @@ export default function HomeScreen() {
       log(
         `Future Jobs pressed - switched to ${
           activeView === "hired" || activeView === "live" ? "future" : "hired"
-        } view`
+        } view`,
       );
     } else {
       // Handle other icon presses
@@ -642,15 +713,15 @@ export default function HomeScreen() {
       settings.ridePreferences.rideTypes.sedan,
       settings.ridePreferences.rideTypes.suv,
       settings.ridePreferences.rideTypes.luxury,
-      sheetOpen
-    ])
+      sheetOpen,
+    ]),
   );
 
   return (
     <PermissionGate>
       <SafeAreaView style={styles.container}>
         <Header
-          title="Home"
+          title={headerTitle}
           hideBackIcon
           leftAccessory={
             <TouchableOpacity
@@ -796,7 +867,7 @@ export default function HomeScreen() {
           </View>
         )}
         {!driver?.online ? (
-          <DriverOffline />
+          <DriverOffline message={offlineMessage} />
         ) : hasAnyActiveOffer ? (
           <ActiveOfferLoader />
         ) : !isIndependentOperator && activeView === "future" ? (
@@ -812,8 +883,8 @@ export default function HomeScreen() {
               isIndependentOperator
                 ? OFFER_TYPES.LIVE
                 : activeView === "live"
-                ? OFFER_TYPES.LIVE
-                : OFFER_TYPES.HIRED
+                  ? OFFER_TYPES.LIVE
+                  : OFFER_TYPES.HIRED
             }
           />
         )}
@@ -822,7 +893,7 @@ export default function HomeScreen() {
           open={sheetOpen}
           onClose={closeRideTypes}
           snapPoints={["35%"]}
-          headerTitle="Choose Your Offer Type"
+          headerTitle={sheetOfferTypeTitle}
         >
           <View style={styles.sheetContainer}>
             <View style={styles.sheetGroup}>
@@ -832,7 +903,7 @@ export default function HomeScreen() {
                   weight="medium"
                   style={styles.textBlack16}
                 >
-                  Economy
+                  {sheetOfferTypeEconomy}
                 </Typography>
                 <Toggle
                   variant="switch"
@@ -848,7 +919,7 @@ export default function HomeScreen() {
                   weight="medium"
                   style={styles.textBlack16}
                 >
-                  Sedan
+                  {sheetOfferTypeSedan}
                 </Typography>
                 <Toggle
                   variant="switch"
@@ -864,7 +935,7 @@ export default function HomeScreen() {
                   weight="medium"
                   style={styles.textBlack16}
                 >
-                  SUV
+                  {sheetOfferTypeSuv}
                 </Typography>
                 <Toggle
                   variant="switch"
@@ -880,7 +951,7 @@ export default function HomeScreen() {
                   weight="medium"
                   style={styles.textBlack16}
                 >
-                  Luxury
+                  {sheetOfferTypeLuxury}
                 </Typography>
                 <Toggle
                   variant="switch"
@@ -899,7 +970,7 @@ export default function HomeScreen() {
                 loading={isSavingSettings}
                 disabled={isSavingSettings}
               >
-                {isSavingSettings ? "Saving..." : "Save"}
+                {isSavingSettings ? sheetOfferTypeSaving : sheetOfferTypeSave}
               </Button>
             </View>
           </View>
@@ -910,7 +981,7 @@ export default function HomeScreen() {
           open={sortSheetOpen}
           onClose={closeSortSheet}
           snapPoints={["25%"]}
-          headerTitle="Sort Rides By"
+          headerTitle={sheetSortTitle}
         >
           <View style={styles.sheetContainer}>
             <View style={styles.sheetGroup}>
@@ -928,7 +999,7 @@ export default function HomeScreen() {
                     weight="medium"
                     style={styles.textBlack16}
                   >
-                    Pickup Time
+                    {sheetSortPickupTime}
                   </Typography>
                 </View>
                 <RNImage
@@ -955,7 +1026,7 @@ export default function HomeScreen() {
                     weight="medium"
                     style={styles.textBlack16}
                   >
-                    Pickup Distance
+                    {sheetSortPickupDistance}
                   </Typography>
                 </View>
                 <RNImage
@@ -978,7 +1049,7 @@ export default function HomeScreen() {
                   weight="semibold"
                   style={styles.sheetButtonOutlinedText}
                 >
-                  Reset
+                  {sheetSortReset}
                 </Typography>
               </TouchableOpacity>
               <TouchableOpacity
@@ -990,7 +1061,7 @@ export default function HomeScreen() {
                   weight="semibold"
                   style={styles.sheetButtonPrimaryText}
                 >
-                  Apply
+                  {sheetSortApply}
                 </Typography>
               </TouchableOpacity>
             </View>

@@ -1,6 +1,9 @@
 import { colors, textColors } from "@/constants/colors";
+import { ACTIVE_OFFER_LOADER_CONTENT_KEYS } from "@/content/components/active-offer-loader-keys";
 import { useRideOffer } from "@/context/RideOfferContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { router } from "expo-router";
+import { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import Button from "../Button";
 import Typography from "../Typography";
@@ -16,6 +19,17 @@ interface ActiveOfferLoaderProps {
  * Shows a loader with message and button to navigate to job offers.
  */
 export default function ActiveOfferLoader({ style }: ActiveOfferLoaderProps) {
+  const { getContent } = useGetContent();
+  const { title, description, subDescription, actionButton } = useMemo(() => {
+    const get = getContent;
+    return {
+      title: get(ACTIVE_OFFER_LOADER_CONTENT_KEYS.TITLE),
+      description: get(ACTIVE_OFFER_LOADER_CONTENT_KEYS.DESCRIPTION),
+      subDescription: get(ACTIVE_OFFER_LOADER_CONTENT_KEYS.SUB_DESCRIPTION),
+      actionButton: get(ACTIVE_OFFER_LOADER_CONTENT_KEYS.ACTION_BUTTON),
+    };
+  }, [getContent]);
+
   const {
     hasAnyActiveOffer,
     currentOffer,
@@ -33,7 +47,8 @@ export default function ActiveOfferLoader({ style }: ActiveOfferLoaderProps) {
     // Safety: if we have no offer data at all but the flag is still true, clear it
     // so the driver doesn't get stuck on this screen.
     const hasOfferData =
-      !!currentOffer || (temporaryRides && Object.keys(temporaryRides).length > 0);
+      !!currentOffer ||
+      (temporaryRides && Object.keys(temporaryRides).length > 0);
     if (!hasOfferData) {
       setHasAnyActiveOffer(false);
     }
@@ -55,7 +70,7 @@ export default function ActiveOfferLoader({ style }: ActiveOfferLoaderProps) {
             weight="semibold"
             style={styles.title}
           >
-            Ride Offer Available
+            {title}
           </Typography>
 
           <Typography
@@ -63,8 +78,7 @@ export default function ActiveOfferLoader({ style }: ActiveOfferLoaderProps) {
             weight="regular"
             style={styles.description}
           >
-            You have a sequential ride offer that needs your response. The
-            system is waiting for you to respond to it.
+            {description}
           </Typography>
 
           <Typography
@@ -72,7 +86,7 @@ export default function ActiveOfferLoader({ style }: ActiveOfferLoaderProps) {
             weight="regular"
             style={styles.subDescription}
           >
-            Please go to notifications screen to view and respond to the offer.
+            {subDescription}
           </Typography>
         </View>
 
@@ -84,7 +98,7 @@ export default function ActiveOfferLoader({ style }: ActiveOfferLoaderProps) {
             onPress={handleGoToJobOffers}
             style={styles.actionButton}
           >
-            Go to Notifications
+            {actionButton}
           </Button>
         </View>
       </View>

@@ -1,6 +1,8 @@
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import React, { useEffect } from "react";
+import { PASSWORD_FORM_CONTENT_KEYS } from "@/content/components/password-keys";
+import { useGetContent } from "@/hooks/useGetContent";
+import React, { useEffect, useMemo } from "react";
 import { DimensionValue, StyleSheet, View } from "react-native";
 import { getPasswordStrength, PasswordStrengths } from "./utils";
 
@@ -9,12 +11,6 @@ export interface PasswordStrengthProps {
   width?: DimensionValue; // default 100%
   onChange?: (isStrong: boolean) => void;
 }
-
-const STRENGTH_TO_COPY: Record<PasswordStrengths, string> = {
-  weak: "Weak",
-  moderate: "Moderate",
-  strong: "Strong",
-};
 
 const STRENGTH_TO_COLOR: Record<PasswordStrengths, string> = {
   weak: textColors.red500, // red-500
@@ -34,6 +30,23 @@ const PasswordStrength: React.FC<PasswordStrengthProps> = ({
   onChange,
 }) => {
   if (!password) return null;
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const { strengthWeak, strengthModerate, strengthStrong } = useMemo(() => {
+    const get = getContent;
+    return {
+      strengthWeak: get(PASSWORD_FORM_CONTENT_KEYS.STRENGTH_WEAK),
+      strengthModerate: get(PASSWORD_FORM_CONTENT_KEYS.STRENGTH_MODERATE),
+      strengthStrong: get(PASSWORD_FORM_CONTENT_KEYS.STRENGTH_STRONG),
+    };
+  }, [getContent]);
+  // Page Content End
+
+  const STRENGTH_TO_LABEL: Record<PasswordStrengths, string> = {
+    weak: strengthWeak,
+    moderate: strengthModerate,
+    strong: strengthStrong,
+  };
 
   const strength = getPasswordStrength(password);
   const activeColor = STRENGTH_TO_COLOR[strength];
@@ -66,7 +79,7 @@ const PasswordStrength: React.FC<PasswordStrengthProps> = ({
           weight="medium"
           style={{ color: activeColor, marginLeft: 12 }}
         >
-          {STRENGTH_TO_COPY[strength]}
+          {STRENGTH_TO_LABEL[strength]}
         </Typography>
       </View>
     </View>

@@ -14,10 +14,12 @@ import {
   NOTIFICATIONS_BACKUP_STORAGE_KEY,
   URLS,
 } from "@/constants/global";
+import { MORE_CONTENT_KEYS } from "@/content/(tabs)/more-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { SETTINGS_STORAGE_KEY } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import {
   clearStorageSelectively,
@@ -28,7 +30,7 @@ import {
 import { buildRequest } from "@/utils/requestBuilder";
 import { disconnectSocket } from "@/utils/socket";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -56,55 +58,112 @@ type BaseOfficeContactDetails = {
   driver_relations_phone_number: string | null;
 };
 
-const ITEMS: MoreItem[] = [
-  {
-    key: "profile",
-    title: "Profile",
-    icon: require("@/assets/images/more/profile-icon.png"),
-  },
-  {
-    key: "inbox",
-    title: "Inbox",
-    icon: require("@/assets/images/more/inbox-icon.png"),
-  },
-  {
-    key: "contact-base",
-    title: "Contact Base",
-    icon: require("@/assets/images/more/contact-base-icon.png"),
-  },
-  // {
-  //   key: "coming-soon",
-  //   title: "Coming Soon",
-  //   icon: require("@/assets/images/more/coming-soon-icon.png"),
-  // },
-  {
-    key: "share-app",
-    title: "Share App",
-    icon: require("@/assets/images/more/share-icon.png"),
-  },
-  {
-    key: "app-settings",
-    title: "App Settings",
-    icon: require("@/assets/images/more/settings-icon.png"),
-  },
-  {
-    key: "delete-profile",
-    title: "Delete Profile",
-    icon: require("@/assets/images/more/delete-profile-icon.png"),
-  },
-  {
-    key: "change-password",
-    title: "Change Password",
-    icon: require("@/assets/images/more/change-password-icon.png"),
-  },
-  {
-    key: "logout",
-    title: "Logout",
-    icon: require("@/assets/images/more/logout-icon.png"),
-  },
-];
-
 export default function MoreScreen() {
+  const { getContent } = useGetContent();
+  const {
+    headerTitle,
+    itemProfile,
+    itemInbox,
+    itemContactBase,
+    itemShareApp,
+    itemAppSettings,
+    itemDeleteProfile,
+    itemChangePassword,
+    itemLogout,
+    logoutConfirmTitle,
+    logoutConfirmDescription,
+    logoutConfirmCancel,
+    logoutConfirmConfirm,
+    deleteConfirmTitle,
+    deleteConfirmDescription,
+    deleteConfirmCancel,
+    deleteConfirmConfirm,
+    contactSheetTitle,
+    contactLoading,
+    contactEmpty,
+    contactDriverRelations,
+    contactDispatcher,
+    contactCallDispatcher,
+    shareTitle,
+    shareMessage,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(MORE_CONTENT_KEYS.HEADER_TITLE),
+      itemProfile: get(MORE_CONTENT_KEYS.ITEM_PROFILE),
+      itemInbox: get(MORE_CONTENT_KEYS.ITEM_INBOX),
+      itemContactBase: get(MORE_CONTENT_KEYS.ITEM_CONTACT_BASE),
+      itemShareApp: get(MORE_CONTENT_KEYS.ITEM_SHARE_APP),
+      itemAppSettings: get(MORE_CONTENT_KEYS.ITEM_APP_SETTINGS),
+      itemDeleteProfile: get(MORE_CONTENT_KEYS.ITEM_DELETE_PROFILE),
+      itemChangePassword: get(MORE_CONTENT_KEYS.ITEM_CHANGE_PASSWORD),
+      itemLogout: get(MORE_CONTENT_KEYS.ITEM_LOGOUT),
+      logoutConfirmTitle: get(MORE_CONTENT_KEYS.LOGOUT_CONFIRM_TITLE),
+      logoutConfirmDescription: get(
+        MORE_CONTENT_KEYS.LOGOUT_CONFIRM_DESCRIPTION,
+      ),
+      logoutConfirmCancel: get(MORE_CONTENT_KEYS.LOGOUT_CONFIRM_CANCEL),
+      logoutConfirmConfirm: get(MORE_CONTENT_KEYS.LOGOUT_CONFIRM_CONFIRM),
+      deleteConfirmTitle: get(MORE_CONTENT_KEYS.DELETE_CONFIRM_TITLE),
+      deleteConfirmDescription: get(
+        MORE_CONTENT_KEYS.DELETE_CONFIRM_DESCRIPTION,
+      ),
+      deleteConfirmCancel: get(MORE_CONTENT_KEYS.DELETE_CONFIRM_CANCEL),
+      deleteConfirmConfirm: get(MORE_CONTENT_KEYS.DELETE_CONFIRM_CONFIRM),
+      contactSheetTitle: get(MORE_CONTENT_KEYS.CONTACT_SHEET_TITLE),
+      contactLoading: get(MORE_CONTENT_KEYS.CONTACT_LOADING),
+      contactEmpty: get(MORE_CONTENT_KEYS.CONTACT_EMPTY),
+      contactDriverRelations: get(MORE_CONTENT_KEYS.CONTACT_DRIVER_RELATIONS),
+      contactDispatcher: get(MORE_CONTENT_KEYS.CONTACT_DISPATCHER),
+      contactCallDispatcher: get(MORE_CONTENT_KEYS.CONTACT_CALL_DISPATCHER),
+      shareTitle: get(MORE_CONTENT_KEYS.SHARE_TITLE),
+      shareMessage: get(MORE_CONTENT_KEYS.SHARE_MESSAGE),
+    };
+  }, [getContent]);
+
+  const items: MoreItem[] = [
+    {
+      key: "profile",
+      title: itemProfile,
+      icon: require("@/assets/images/more/profile-icon.png"),
+    },
+    {
+      key: "inbox",
+      title: itemInbox,
+      icon: require("@/assets/images/more/inbox-icon.png"),
+    },
+    {
+      key: "contact-base",
+      title: itemContactBase,
+      icon: require("@/assets/images/more/contact-base-icon.png"),
+    },
+    {
+      key: "share-app",
+      title: itemShareApp,
+      icon: require("@/assets/images/more/share-icon.png"),
+    },
+    {
+      key: "app-settings",
+      title: itemAppSettings,
+      icon: require("@/assets/images/more/settings-icon.png"),
+    },
+    {
+      key: "delete-profile",
+      title: itemDeleteProfile,
+      icon: require("@/assets/images/more/delete-profile-icon.png"),
+    },
+    {
+      key: "change-password",
+      title: itemChangePassword,
+      icon: require("@/assets/images/more/change-password-icon.png"),
+    },
+    {
+      key: "logout",
+      title: itemLogout,
+      icon: require("@/assets/images/more/logout-icon.png"),
+    },
+  ];
+
   const router = useRouter();
   const log = logger();
   const [auth, setAuth] = useAuth();
@@ -120,11 +179,16 @@ export default function MoreScreen() {
 
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation } = useDelete(
-    DRIVER_ENDPOINTS.markOffline(auth?.user?.id || "")
+    DRIVER_ENDPOINTS.markOffline(auth?.user?.id || ""),
   );
 
-  const { execute: fetchBaseOfficeContactDetailsApi, loading: baseOfficeLoading } =
-    usePost<any>(BASE_OFFICE_ENDPOINTS.getContactDetails, API_CLIENT_TYPES.SETTINGS);
+  const {
+    execute: fetchBaseOfficeContactDetailsApi,
+    loading: baseOfficeLoading,
+  } = usePost<any>(
+    BASE_OFFICE_ENDPOINTS.getContactDetails,
+    API_CLIENT_TYPES.SETTINGS,
+  );
 
   const fetchBaseOfficeContacts = async () => {
     try {
@@ -144,19 +208,19 @@ export default function MoreScreen() {
           P_ACTION_CODE: actionCode,
           P_AFFILIATE_NUM: toNum(
             user?.affiliate_num ?? user?.affiliateNum,
-            DB_ACTION_DEFAULTS.AFFILIATE_NUM
+            DB_ACTION_DEFAULTS.AFFILIATE_NUM,
           ),
           P_APP_NAME: DB_ACTION_DEFAULTS.APP_NAME,
           P_COMPANY_ID: toNum(
             user?.company_id ?? user?.companyId,
-            DB_ACTION_DEFAULTS.COMPANY_ID
+            DB_ACTION_DEFAULTS.COMPANY_ID,
           ),
         },
         {
           source: "NativeApp",
           includeGPS: false,
           includeActionCode: true,
-        }
+        },
       );
 
       const dbResponse = await fetchBaseOfficeContactDetailsApi(requestBody);
@@ -280,17 +344,17 @@ export default function MoreScreen() {
           };
           await setStorageItem(
             NOTIFICATIONS_BACKUP_STORAGE_KEY,
-            JSON.stringify(notificationsBackup)
+            JSON.stringify(notificationsBackup),
           );
           log(
             "[MoreScreen] Notifications backed up successfully:",
             notificationsBackup.notifications.length,
-            "notifications"
+            "notifications",
           );
         } catch (parseError) {
           log(
             "[MoreScreen] Error parsing driver data for notifications backup:",
-            parseError
+            parseError,
           );
           // Continue without backup if parsing fails
         }
@@ -308,7 +372,9 @@ export default function MoreScreen() {
         SETTINGS_STORAGE_KEY,
         NOTIFICATIONS_BACKUP_STORAGE_KEY,
       ]);
-      log("[MoreScreen] Storage cleared selectively, settings and notifications preserved");
+      log(
+        "[MoreScreen] Storage cleared selectively, settings and notifications preserved",
+      );
     } catch (error) {
       log("[MoreScreen] Error clearing storage selectively:", error);
       // Continue with logout even if storage clearing fails
@@ -324,14 +390,14 @@ export default function MoreScreen() {
     try {
       const isIOS = Platform.OS === "ios";
       const storeUrl = isIOS ? URLS.appStore : URLS.playStore;
-      const message = `Check out the BR Driver app! Download it here: ${storeUrl}`;
-      await Share.share({ message, url: storeUrl, title: "BR Driver" });
+      const message = `${shareMessage} ${storeUrl}`;
+      await Share.share({ message, url: storeUrl, title: shareTitle });
     } catch (error) {
       // noop: silently ignore share cancellation/errors
     }
   };
 
-  const data: MoreItem[] = ITEMS.map((item) => {
+  const data: MoreItem[] = items.map((item) => {
     if (item.key === "profile") {
       return {
         ...item,
@@ -356,7 +422,6 @@ export default function MoreScreen() {
       return {
         ...item,
         onClick: () => {
-          console.log("[MoreScreen] Logout clicked");
           setLogoutSheetOpen(true);
         },
       };
@@ -404,7 +469,7 @@ export default function MoreScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="More" hideBackIcon />
+      <Header title={headerTitle} hideBackIcon />
       <View style={styles.content}>
         <FlatList
           data={data}
@@ -426,10 +491,10 @@ export default function MoreScreen() {
       </View>
       <ConfirmationSheet
         open={logoutSheetOpen}
-        title="Are You Sure?"
-        description="Are you sure you want to logout? This action cannot be undone."
-        cancelButtonText="Cancel"
-        confirmButtonText="Yes, Logout"
+        title={logoutConfirmTitle}
+        description={logoutConfirmDescription}
+        cancelButtonText={logoutConfirmCancel}
+        confirmButtonText={logoutConfirmConfirm}
         onCancel={() => setLogoutSheetOpen(false)}
         onConfirm={() => {
           handleLogout();
@@ -441,10 +506,10 @@ export default function MoreScreen() {
       {/* Delete Profile Confirmation */}
       <ConfirmationSheet
         open={deleteProfileSheetOpen}
-        title="Are You Sure?"
-        description="Are you sure you want to delete your profile? This action cannot be undone."
-        cancelButtonText="Cancel"
-        confirmButtonText="Yes, Delete"
+        title={deleteConfirmTitle}
+        description={deleteConfirmDescription}
+        cancelButtonText={deleteConfirmCancel}
+        confirmButtonText={deleteConfirmConfirm}
         onCancel={() => setDeleteProfileSheetOpen(false)}
         onConfirm={() => {
           setDeleteProfileSheetOpen(false);
@@ -458,7 +523,7 @@ export default function MoreScreen() {
         snapPoints={["38%"]}
         initialSnapIndex={0}
         showHeader={true}
-        headerTitle="Contact Base"
+        headerTitle={contactSheetTitle}
         onClose={() => {
           setContactBaseSheetOpen(false);
           setBaseOfficeContactDetails(null);
@@ -469,13 +534,13 @@ export default function MoreScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={textColors.grey700} />
             <Typography type="bodyMedium" style={styles.loadingText}>
-              Loading...
+              {contactLoading}
             </Typography>
           </View>
         ) : baseOfficeError || !baseOfficeContactDetails ? (
           <View style={styles.emptyContainer}>
             <Typography type="bodyMedium" style={styles.emptyText}>
-              No base contacts founds
+              {contactEmpty}
             </Typography>
           </View>
         ) : (
@@ -499,11 +564,11 @@ export default function MoreScreen() {
             <View style={styles.contactList}>
               {[
                 {
-                  label: "Driver Relations",
+                  label: contactDriverRelations,
                   phone: baseOfficeContactDetails.driver_relations_phone_number,
                 },
                 {
-                  label: "Dispatcher",
+                  label: contactDispatcher,
                   phone: baseOfficeContactDetails.primary_phone_number,
                 },
               ].map((item) => {
@@ -541,15 +606,16 @@ export default function MoreScreen() {
               variant="primary"
               rounded="half"
               disabled={
-                baseOfficeLoading || !baseOfficeContactDetails.primary_phone_number
+                baseOfficeLoading ||
+                !baseOfficeContactDetails.primary_phone_number
               }
               onPress={() =>
                 Linking.openURL(
-                  `tel:${baseOfficeContactDetails.primary_phone_number}`
+                  `tel:${baseOfficeContactDetails.primary_phone_number}`,
                 )
               }
             >
-              Call Dispatcher
+              {contactCallDispatcher}
             </Button>
           </>
         )}

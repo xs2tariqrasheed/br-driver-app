@@ -1,7 +1,16 @@
 import { textColors } from "@/constants/colors";
+import { BID_WAITING_TIMER_CONTENT_KEYS } from "@/content/components/bid-waiting-timer-keys";
 import { useOverlayInsets } from "@/context/OverlayInsetsContext";
-import React, { useCallback } from "react";
-import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useGetContent } from "@/hooks/useGetContent";
+import React, { useCallback, useMemo } from "react";
+import {
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Button from "../Button";
 import ProgressTimer from "../ProgressTimer";
 import Typography from "../Typography";
@@ -59,12 +68,49 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
     onCompleteProgress();
   }, [onCompleteProgress]);
 
+  // Get content
+  const { getContent } = useGetContent();
+  const {
+    headerWaiting,
+    headerCancelBid,
+    descriptionWaiting,
+    descriptionConfirm,
+    buttonKeepWaiting,
+    buttonCancelBid,
+    buttonCanceling,
+    buttonCancel,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerWaiting: get(BID_WAITING_TIMER_CONTENT_KEYS.HEADER_WAITING),
+      headerCancelBid: get(BID_WAITING_TIMER_CONTENT_KEYS.HEADER_CANCEL_BID),
+      descriptionWaiting: get(
+        BID_WAITING_TIMER_CONTENT_KEYS.DESCRIPTION_WAITING,
+      ),
+      descriptionConfirm: get(
+        BID_WAITING_TIMER_CONTENT_KEYS.DESCRIPTION_CONFIRM,
+      ),
+      buttonKeepWaiting: get(
+        BID_WAITING_TIMER_CONTENT_KEYS.BUTTON_KEEP_WAITING,
+      ),
+      buttonCancelBid: get(BID_WAITING_TIMER_CONTENT_KEYS.BUTTON_CANCEL_BID),
+      buttonCanceling: get(BID_WAITING_TIMER_CONTENT_KEYS.BUTTON_CANCELING),
+      buttonCancel: get(BID_WAITING_TIMER_CONTENT_KEYS.BUTTON_CANCEL),
+    };
+  }, [getContent]);
+
   return (
     <Modal
       visible={open}
       transparent
       animationType="slide"
-      onRequestClose={isCanceling ? undefined : (isConfirming ? (onKeepWaiting || onCancel) : onCancel)}
+      onRequestClose={
+        isCanceling
+          ? undefined
+          : isConfirming
+            ? onKeepWaiting || onCancel
+            : onCancel
+      }
       presentationStyle={Platform.OS === "ios" ? "overFullScreen" : undefined}
       statusBarTranslucent={Platform.OS === "android"}
     >
@@ -86,12 +132,18 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
               weight="semibold"
               style={styles.headerTitle}
             >
-              {isConfirming ? "Cancel Bid" : "Waiting for Customer"}
+              {isConfirming ? headerCancelBid : headerWaiting}
             </Typography>
             <View style={styles.placeholder} />
-            <TouchableOpacity 
-              style={styles.closeButton} 
-              onPress={isCanceling ? undefined : (isConfirming ? (onKeepWaiting || onCancel) : onCancel)}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={
+                isCanceling
+                  ? undefined
+                  : isConfirming
+                    ? onKeepWaiting || onCancel
+                    : onCancel
+              }
               disabled={isCanceling}
             >
               <Text style={styles.closeButtonText}>✕</Text>
@@ -99,16 +151,16 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
           </View>
 
           {/* Content */}
-          <View style={[styles.content, { paddingBottom: 20 + overlayBottomInset }]}>
+          <View
+            style={[styles.content, { paddingBottom: 20 + overlayBottomInset }]}
+          >
             {/* Description */}
             <Typography
               type="bodyLarge"
               weight="regular"
               style={styles.description}
             >
-              {isConfirming
-                ? "Are you sure you want to cancel this bid? This action cannot be undone."
-                : "Your bid has been sent. Please wait while the customer reviews it."}
+              {isConfirming ? descriptionConfirm : descriptionWaiting}
             </Typography>
 
             {/* Progress Bar */}
@@ -122,7 +174,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
 
             {/* Action Buttons */}
             {isConfirming ? (
-              <View style={styles.actionRow}> 
+              <View style={styles.actionRow}>
                 <View style={styles.actionCol}>
                   <Button
                     variant="outlined"
@@ -131,7 +183,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                     style={styles.cancelButton}
                     disabled={isCanceling}
                   >
-                    Keep Waiting
+                    {buttonKeepWaiting}
                   </Button>
                 </View>
                 <View style={[styles.actionCol, styles.actionColSpacing]}>
@@ -142,7 +194,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                     disabled={isCanceling}
                     loading={isCanceling}
                   >
-                    {isCanceling ? "Canceling..." : "Cancel Bid"}
+                    {isCanceling ? buttonCanceling : buttonCancelBid}
                   </Button>
                 </View>
               </View>
@@ -154,7 +206,7 @@ const BidWaitingTimerModal: React.FC<BidWaitingTimerModalProps> = ({
                   style={styles.cancelButton}
                   disabled={isCanceling}
                 >
-                  {isCanceling ? "Canceling..." : "Cancel"}
+                  {isCanceling ? buttonCanceling : buttonCancel}
                 </Button>
               </View>
             )}

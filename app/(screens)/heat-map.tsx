@@ -9,11 +9,13 @@ import {
   HEATMAP_DEMAND_WEIGHTS,
   HEATMAP_REFRESH_INTERVAL_MS,
 } from "@/constants/global";
+import { HEATMAP_CONTENT_KEYS } from "@/content/heat-map-keys";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { calculateETA, getCurrentLocation, logger } from "@/utils/helpers";
 import { buildRequest } from "@/utils/requestBuilder";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
 
 // Define the structure of heatmap data point
@@ -54,6 +56,26 @@ interface HeatmapCoordinate {
 }
 
 export default function HeatMapScreen() {
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const {
+    headerTitle,
+    emptyMessage,
+    emptyOverlay,
+    errorUnknown,
+    errorLoadFailed,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(HEATMAP_CONTENT_KEYS.HEADER_TITLE),
+      emptyMessage: get(HEATMAP_CONTENT_KEYS.EMPTY_MESSAGE),
+      emptyOverlay: get(HEATMAP_CONTENT_KEYS.EMPTY_OVERLAY),
+      errorUnknown: get(HEATMAP_CONTENT_KEYS.ERROR_UNKNOWN),
+      errorLoadFailed: get(HEATMAP_CONTENT_KEYS.ERROR_LOAD_FAILED),
+    };
+  }, [getContent]);
+  // Page Content End
+
   const router = useRouter();
   const log = logger();
 
@@ -67,10 +89,11 @@ export default function HeatMapScreen() {
   } | null>(null);
 
   // API hook for fetching heatmap data
-  const { execute: fetchHeatmapApi, loading: apiLoading } = usePost<HeatmapDbResponse>(
-    HEATMAP_ENDPOINTS.getHeatmapCoordinates,
-    API_CLIENT_TYPES.SETTINGS
-  );
+  const { execute: fetchHeatmapApi, loading: apiLoading } =
+    usePost<HeatmapDbResponse>(
+      HEATMAP_ENDPOINTS.getHeatmapCoordinates,
+      API_CLIENT_TYPES.SETTINGS,
+    );
 
   // Fetch heatmap data from API
   const fetchHeatmapData = async () => {
@@ -116,7 +139,7 @@ export default function HeatMapScreen() {
           source: "NativeApp",
           includeGPS: true,
           includeActionCode: true, // Include P_ACTION_CODE for db-action endpoint
-        }
+        },
       );
 
       log("[HeatMapScreen] Fetching heatmap data from API...");
@@ -126,12 +149,17 @@ export default function HeatMapScreen() {
 
       // `usePost` returns `response.data.data ?? response.data`, so `response` is usually the DB response:
       // { jHeader, jData: { heatmapCoordinates } }
-      const dbResponse = (response as any)?.jData ? (response as any) : (response as any)?.data;
+      const dbResponse = (response as any)?.jData
+        ? (response as any)
+        : (response as any)?.data;
 
       const responseCode = dbResponse?.jHeader?.responseCode;
-      const isSuccess = responseCode === "0" || responseCode === 0 || responseCode === undefined;
+      const isSuccess =
+        responseCode === "0" ||
+        responseCode === 0 ||
+        responseCode === undefined;
       if (!isSuccess) {
-        throw new Error(dbResponse?.jHeader?.message || "Failed to load heatmap data");
+        throw new Error(dbResponse?.jHeader?.message || errorLoadFailed);
       }
 
       const coords: HeatmapCoordinate[] =
@@ -139,7 +167,7 @@ export default function HeatMapScreen() {
 
       if (!Array.isArray(coords) || coords.length === 0) {
         setHeatmapData([]);
-        setError("NO HEATMAP data is available right now.");
+        setError(emptyMessage);
         return;
       }
 
@@ -172,40 +200,47 @@ export default function HeatMapScreen() {
 
         const key = `${lat.toFixed(5)}|${lng.toFixed(5)}`;
         const existing = bestByCoord.get(key);
-        if (!existing || demandRank(demandLevel) > demandRank(existing.demandLevel)) {
+        if (
+          !existing ||
+          demandRank(demandLevel) > demandRank(existing.demandLevel)
+        ) {
           bestByCoord.set(key, { lat, lng, demandLevel });
         }
       }
 
-      const processedData: HeatmapDataPoint[] = Array.from(bestByCoord.values()).map(
-        ({ lat, lng, demandLevel }) => {
-          const weight: number =
-            demandLevel === "high"
-              ? HEATMAP_DEMAND_WEIGHTS.HIGH
-              : demandLevel === "medium"
-                ? HEATMAP_DEMAND_WEIGHTS.MEDIUM
-                : demandLevel === "low"
-                  ? HEATMAP_DEMAND_WEIGHTS.LOW
-                  : HEATMAP_DEMAND_WEIGHTS.DEFAULT;
+      const processedData: HeatmapDataPoint[] = Array.from(
+        bestByCoord.values(),
+      ).map(({ lat, lng, demandLevel }) => {
+        const weight: number =
+          demandLevel === "high"
+            ? HEATMAP_DEMAND_WEIGHTS.HIGH
+            : demandLevel === "medium"
+              ? HEATMAP_DEMAND_WEIGHTS.MEDIUM
+              : demandLevel === "low"
+                ? HEATMAP_DEMAND_WEIGHTS.LOW
+                : HEATMAP_DEMAND_WEIGHTS.DEFAULT;
 
-          const eta = calculateETA(currentUserLocation!, { lat, lng }, demandLevel);
-          return { lat, lng, weight, eta, demandLevel };
-        }
-      );
+        const eta = calculateETA(
+          currentUserLocation!,
+          { lat, lng },
+          demandLevel,
+        );
+        return { lat, lng, weight, eta, demandLevel };
+      });
 
       if (processedData.length === 0) {
         setHeatmapData([]);
-        setError("NO HEATMAP data is available right now.");
+        setError(emptyMessage);
         return;
       }
 
       setHeatmapData(processedData);
       setError(null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      const errorMessage = err instanceof Error ? err.message : errorUnknown;
       log("[HeatMapScreen] Error fetching heatmap data:", errorMessage);
       setHeatmapData([]);
-      setError("NO HEATMAP data is available right now.");
+      setError(emptyMessage);
     } finally {
       setIsLoading(false);
     }
@@ -234,7 +269,7 @@ export default function HeatMapScreen() {
         log("[HeatMapScreen] Screen unfocused - cleanup");
         isActive = false;
       };
-    }, []) // Empty dependency array - fetch fresh data on every focus
+    }, []), // Empty dependency array - fetch fresh data on every focus
   );
 
   // Auto-refresh data at regular intervals while screen is focused
@@ -254,7 +289,7 @@ export default function HeatMapScreen() {
   if (isLoading || apiLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="Heat Map" onBackPress={handleGoBack} />
+        <Header title={headerTitle} onBackPress={handleGoBack} />
         <MapLoading isLoading={isLoading || apiLoading} />
       </SafeAreaView>
     );
@@ -262,7 +297,7 @@ export default function HeatMapScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Heat Map" onBackPress={handleGoBack} />
+      <Header title={headerTitle} onBackPress={handleGoBack} />
       <View style={styles.mapContainer}>
         <HeatMap
           heatmapData={heatmapData}
@@ -278,7 +313,7 @@ export default function HeatMapScreen() {
         {heatmapData.length === 0 && (
           <View style={styles.emptyOverlay}>
             <Typography type="bodyMedium" style={styles.emptyOverlayText}>
-              No data is available right now.
+              {emptyOverlay}
             </Typography>
           </View>
         )}

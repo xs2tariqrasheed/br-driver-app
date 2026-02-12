@@ -23,9 +23,11 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import { API_CLIENT_TYPES, BiometricMethod, URLS } from "@/constants/global";
+import { LOGIN_CONTENT_KEYS } from "@/content/(screens)/auth/login-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import { useSettings } from "@/context/SettingsContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -67,13 +69,180 @@ const LOGIN_DEFAULT_VALUES: LoginFormValues = {
  * - Provides bottom sheets for forgotten credentials and biometric prompts
  */
 export default function LoginScreen() {
+  const { getContent } = useGetContent();
   const router = useRouter();
   const log = logger();
   const [auth, setAuth] = useAuth() as any;
   const { overlayBottomInset } = useOverlayInsets();
   const [isFetchingSettings, setIsFetchingSettings] = useState(false);
-
   const [settings, , { fetchSettings }] = useSettings();
+
+  // Page Content
+  const {
+    pageTitle,
+    loadingMessage,
+    introTitle,
+    introDescription,
+    formCompanyIdLabel,
+    formCompanyIdPlaceholder,
+    formCompanyIdValidationRequired,
+    formLoginIdLabel,
+    formLoginIdPlaceholder,
+    formLoginIdValidationRequired,
+    formLoginIdValidationInvalid,
+    formPasswordLabel,
+    formPasswordPlaceholder,
+    formPasswordValidationRequired,
+    formPasswordValidationMinLength,
+    forgotLink,
+    actionSign,
+    actionSigningIn,
+    dividerOr,
+    biometricFingerprintTitle,
+    biometricFaceIdTitle,
+    biometricFaceRecognitionTitle,
+    biometricNotSupportedReason,
+    biometricUnsupportedFingerprintTitle,
+    biometricUnsupportedFaceIdTitle,
+    biometricUnsupportedFaceRecognitionTitle,
+    biometricUnsupportedDescriptionDefault,
+    biometricUnsupportedDescriptionAndroidFace,
+    biometricUnsupportedDescriptionIosFace,
+    biometricNotEnabledFaceTitle,
+    biometricNotEnabledFingerprintTitle,
+    biometricNotEnabledFaceDescription,
+    biometricNotEnabledFingerprintDescription,
+    biometricPromptMessage,
+    biometricPromptCancel,
+    footerNoAccount,
+    actionRequestRegistration,
+    forgotSheetHeaderTitle,
+    forgotSheetOptionPassword,
+    forgotSheetOptionUserId,
+    biometricSheetButtonOpenSettings,
+    successSheetTitle,
+    successSheetWelcomePrefix,
+    successSheetWelcomeSuffix,
+    successSheetDescriptionCommunity,
+    successSheetDescriptionJourney,
+    successSheetButtonContinue,
+    errorGeneric,
+    inAppWebviewRequestRegistrationTitle,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      pageTitle: get(LOGIN_CONTENT_KEYS.PAGE_TITLE),
+      loadingMessage: get(LOGIN_CONTENT_KEYS.LOADING_MESSAGE),
+      introTitle: get(LOGIN_CONTENT_KEYS.INTRO_TITLE),
+      introDescription: get(LOGIN_CONTENT_KEYS.INTRO_DESCRIPTION),
+      formCompanyIdLabel: get(LOGIN_CONTENT_KEYS.FORM_COMPANY_ID_LABEL),
+      formCompanyIdPlaceholder: get(
+        LOGIN_CONTENT_KEYS.FORM_COMPANY_ID_PLACEHOLDER,
+      ),
+      formCompanyIdValidationRequired: get(
+        LOGIN_CONTENT_KEYS.FORM_COMPANY_ID_VALIDATION_REQUIRED,
+      ),
+      formLoginIdLabel: get(LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_LABEL),
+      formLoginIdPlaceholder: get(LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_PLACEHOLDER),
+      formLoginIdValidationRequired: get(
+        LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_VALIDATION_REQUIRED,
+      ),
+      formLoginIdValidationInvalid: get(
+        LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_VALIDATION_INVALID,
+      ),
+      formPasswordLabel: get(LOGIN_CONTENT_KEYS.FORM_PASSWORD_LABEL),
+      formPasswordPlaceholder: get(
+        LOGIN_CONTENT_KEYS.FORM_PASSWORD_PLACEHOLDER,
+      ),
+      formPasswordValidationRequired: get(
+        LOGIN_CONTENT_KEYS.FORM_PASSWORD_VALIDATION_REQUIRED,
+      ),
+      formPasswordValidationMinLength: get(
+        LOGIN_CONTENT_KEYS.FORM_PASSWORD_VALIDATION_MIN_LENGTH,
+      ),
+      forgotLink: get(LOGIN_CONTENT_KEYS.FORGOT_LINK),
+      actionSign: get(LOGIN_CONTENT_KEYS.ACTION_SIGN_IN),
+      actionSigningIn: get(LOGIN_CONTENT_KEYS.ACTION_SIGNING_IN),
+      dividerOr: get(LOGIN_CONTENT_KEYS.DIVIDER_OR),
+      biometricFingerprintTitle: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_FINGERPRINT_TITLE,
+      ),
+      biometricFaceIdTitle: get(LOGIN_CONTENT_KEYS.BIOMETRIC_FACE_ID_TITLE),
+      biometricFaceRecognitionTitle: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_FACE_RECOGNITION_TITLE,
+      ),
+      biometricNotSupportedReason: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_SUPPORTED_REASON,
+      ),
+      biometricUnsupportedFingerprintTitle: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FINGERPRINT_TITLE,
+      ),
+      biometricUnsupportedFaceIdTitle: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FACE_ID_TITLE,
+      ),
+      biometricUnsupportedFaceRecognitionTitle: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FACE_RECOGNITION_TITLE,
+      ),
+      biometricUnsupportedDescriptionDefault: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_DEFAULT,
+      ),
+      biometricUnsupportedDescriptionAndroidFace: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_ANDROID_FACE,
+      ),
+      biometricUnsupportedDescriptionIosFace: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_IOS_FACE,
+      ),
+      biometricNotEnabledFaceTitle: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FACE_TITLE,
+      ),
+      biometricNotEnabledFingerprintTitle: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FINGERPRINT_TITLE,
+      ),
+      biometricNotEnabledFaceDescription: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FACE_DESCRIPTION,
+      ),
+      biometricNotEnabledFingerprintDescription: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FINGERPRINT_DESCRIPTION,
+      ),
+      biometricPromptMessage: get(LOGIN_CONTENT_KEYS.BIOMETRIC_PROMPT_MESSAGE),
+      biometricPromptCancel: get(LOGIN_CONTENT_KEYS.BIOMETRIC_PROMPT_CANCEL),
+      footerNoAccount: get(LOGIN_CONTENT_KEYS.FOOTER_NO_ACCOUNT),
+      actionRequestRegistration: get(
+        LOGIN_CONTENT_KEYS.ACTION_REQUEST_REGISTRATION,
+      ),
+      forgotSheetHeaderTitle: get(LOGIN_CONTENT_KEYS.FORGOT_SHEET_HEADER_TITLE),
+      forgotSheetOptionPassword: get(
+        LOGIN_CONTENT_KEYS.FORGOT_SHEET_OPTION_PASSWORD,
+      ),
+      forgotSheetOptionUserId: get(
+        LOGIN_CONTENT_KEYS.FORGOT_SHEET_OPTION_USER_ID,
+      ),
+      biometricSheetButtonOpenSettings: get(
+        LOGIN_CONTENT_KEYS.BIOMETRIC_SHEET_BUTTON_OPEN_SETTINGS,
+      ),
+      successSheetTitle: get(LOGIN_CONTENT_KEYS.SUCCESS_SHEET_TITLE),
+      successSheetWelcomePrefix: get(
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_WELCOME_PREFIX,
+      ),
+      successSheetWelcomeSuffix: get(
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_WELCOME_SUFFIX,
+      ),
+      successSheetDescriptionCommunity: get(
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_DESCRIPTION_COMMUNITY,
+      ),
+      successSheetDescriptionJourney: get(
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_DESCRIPTION_JOURNEY,
+      ),
+      successSheetButtonContinue: get(
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_BUTTON_CONTINUE,
+      ),
+      errorGeneric: get(LOGIN_CONTENT_KEYS.ERROR_GENERIC),
+      inAppWebviewRequestRegistrationTitle: get(
+        LOGIN_CONTENT_KEYS.IN_APP_WEBVIEW_REQUEST_REGISTRATION_TITLE,
+      ),
+    };
+  }, [getContent]);
+  // Page Content End
 
   const {
     control,
@@ -132,7 +301,7 @@ export default function LoginScreen() {
     try {
       await submitLogin(apiPayload);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Login failed";
+      const message = e instanceof Error ? e.message : errorGeneric;
       showToast(message, { variant: "error", position: "top" });
       setIsLoggingIn(false);
     }
@@ -238,7 +407,7 @@ export default function LoginScreen() {
   useFocusEffect(
     useCallback(() => {
       reset(LOGIN_DEFAULT_VALUES);
-    }, [reset])
+    }, [reset]),
   );
 
   /**
@@ -250,7 +419,7 @@ export default function LoginScreen() {
       setBiometricDescription(description);
       setBiometricSheetOpen(true);
     },
-    []
+    [],
   );
 
   /** Closes the biometric bottom sheet. */
@@ -272,21 +441,29 @@ export default function LoginScreen() {
    * Human-friendly labels and messages for unsupported or not-enabled biometrics
    */
   const getMethodDisplayName = (method: BiometricMethod): string => {
-    if (method === "fingerprint") return "Fingerprint";
-    if (method === "faceId") return "Face ID";
-    return "Face Recognition";
+    if (method === "fingerprint") return biometricFingerprintTitle;
+    if (method === "faceId") return biometricFaceIdTitle;
+    return biometricFaceRecognitionTitle;
   };
 
   const getUnsupportedCopy = (method: BiometricMethod) => {
-    const title = `${getMethodDisplayName(method)} Not Supported`;
-    let description = "This biometric option is not available on this device.";
-    if (method !== "fingerprint") {
-      if (Platform.OS === "android") {
-        description =
-          "Your device's Face Unlock is not exposed to apps by the system. You can still sign in using fingerprint or your password.";
-      } else {
-        description = "This device does not support Face ID.";
-      }
+    let title: string;
+    let description: string;
+    if (method === "fingerprint") {
+      title = biometricUnsupportedFingerprintTitle;
+      description = biometricUnsupportedDescriptionDefault;
+    } else if (method === "faceId") {
+      title = biometricUnsupportedFaceIdTitle;
+      description =
+        Platform.OS === "android"
+          ? biometricUnsupportedDescriptionAndroidFace
+          : biometricUnsupportedDescriptionIosFace;
+    } else {
+      title = biometricUnsupportedFaceRecognitionTitle;
+      description =
+        Platform.OS === "android"
+          ? biometricUnsupportedDescriptionAndroidFace
+          : biometricUnsupportedDescriptionIosFace;
     }
     return { title, description };
   };
@@ -294,11 +471,11 @@ export default function LoginScreen() {
   const getNotEnabledCopy = (method: BiometricMethod) => {
     const isFace = method !== "fingerprint";
     const title = isFace
-      ? "Face recognition not set up"
-      : "Fingerprint not set up";
+      ? biometricNotEnabledFaceTitle
+      : biometricNotEnabledFingerprintTitle;
     const description = isFace
-      ? "Please enroll your face in device settings and try again."
-      : "Please enroll your fingerprint in device settings and try again.";
+      ? biometricNotEnabledFaceDescription
+      : biometricNotEnabledFingerprintDescription;
     return { title, description };
   };
 
@@ -321,8 +498,8 @@ export default function LoginScreen() {
         // Optionally, we could proceed to authenticate here.
         // For now, just trigger a simple prompt to validate everything is set up.
         const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: "Authenticate",
-          cancelLabel: "Cancel",
+          promptMessage: biometricPromptMessage,
+          cancelLabel: biometricPromptCancel,
           disableDeviceFallback: false,
         });
         if (result?.success) {
@@ -347,7 +524,7 @@ export default function LoginScreen() {
         openBiometricSheet(title, description);
       }
     },
-    [openBiometricSheet]
+    [openBiometricSheet],
   );
 
   /** On mount, read supported device biometric types. */
@@ -370,25 +547,25 @@ export default function LoginScreen() {
     if (!supportedTypes || supportedTypes.length === 0) return false;
     if (method === "fingerprint") {
       return supportedTypes.includes(
-        LocalAuthentication.AuthenticationType.FINGERPRINT
+        LocalAuthentication.AuthenticationType.FINGERPRINT,
       );
     }
     // Both Face ID and Face Recognition map to FACIAL_RECOGNITION at the API level
     return supportedTypes.includes(
-      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION
+      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION,
     );
   };
   return (
     <SafeAreaView
       style={[styles.container, { paddingBottom: overlayBottomInset }]}
     >
-      <Header title="Login" hideBackIcon onBackPress={undefined} />
+      <Header title={pageTitle} hideBackIcon onBackPress={undefined} />
 
       {isFetchingSettings && (
         <View style={styles.loadingOverlay}>
           <Loader size="medium" />
           <Typography type="bodyMedium" style={styles.loadingText}>
-            Please wait we are logging you in...
+            {loadingMessage}
           </Typography>
         </View>
       )}
@@ -415,14 +592,14 @@ export default function LoginScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Access Your Account
+              {introTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={styles.textBlack}
             >
-              Sign in to access your account, manage rides, and start earning.
+              {introDescription}
             </Typography>
           </View>
 
@@ -432,12 +609,12 @@ export default function LoginScreen() {
               control={control}
               name="companyId"
               rules={{
-                required: "Company ID is required",
+                required: formCompanyIdValidationRequired,
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Company ID"
-                  placeholder="Enter your company ID"
+                  label={formCompanyIdLabel}
+                  placeholder={formCompanyIdPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -451,10 +628,10 @@ export default function LoginScreen() {
               control={control}
               name="loginId"
               rules={{
-                required: "Login ID is required",
+                required: formLoginIdValidationRequired,
                 validate: (value: string) => {
                   const trimmed = value.trim();
-                  if (!trimmed) return "Login ID is required";
+                  if (!trimmed) return formLoginIdValidationRequired;
 
                   // Login ID can be email or phone number
                   // Check if it's an email
@@ -470,13 +647,13 @@ export default function LoginScreen() {
                     return true;
                   }
 
-                  return "Please enter a valid email address or phone number";
+                  return formLoginIdValidationInvalid;
                 },
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Login ID"
-                  placeholder="Enter your email or phone number"
+                  label={formLoginIdLabel}
+                  placeholder={formLoginIdPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -493,16 +670,16 @@ export default function LoginScreen() {
               control={control}
               name="password"
               rules={{
-                required: "Password is required",
+                required: formPasswordValidationRequired,
                 minLength: {
                   value: 6,
-                  message: "Password must be at least 6 characters",
+                  message: formPasswordValidationMinLength,
                 },
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Password"
-                  placeholder="Enter your password"
+                  label={formPasswordLabel}
+                  placeholder={formPasswordPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -520,7 +697,7 @@ export default function LoginScreen() {
                   weight="semibold"
                   style={styles.textBlack}
                 >
-                  Forgot?
+                  {forgotLink}
                 </Typography>
               </TouchableOpacity>
             </View>
@@ -532,7 +709,7 @@ export default function LoginScreen() {
               loading={isLoggingIn}
               disabled={isLoggingIn}
             >
-              {isLoggingIn ? "Signing in..." : "Sign In"}
+              {isLoggingIn ? actionSigningIn : actionSign}
             </Button>
           </View>
 
@@ -548,7 +725,7 @@ export default function LoginScreen() {
                   weight="regular"
                   style={styles.textGrey700}
                 >
-                  Or
+                  {dividerOr}
                 </Typography>
                 <View style={styles.hr} />
               </View>
@@ -557,17 +734,17 @@ export default function LoginScreen() {
                 {[
                   {
                     icon: require("@/assets/images/finger-print.png"),
-                    title: "Fingerprint",
+                    title: biometricFingerprintTitle,
                     method: "fingerprint" as BiometricMethod,
                   },
                   {
                     icon: require("@/assets/images/face-id.png"),
-                    title: "Face ID",
+                    title: biometricFaceIdTitle,
                     method: "faceId" as BiometricMethod,
                   },
                   {
                     icon: require("@/assets/images/facial-recognition.png"),
-                    title: "Face Recognition",
+                    title: biometricFaceRecognitionTitle,
                     method: "faceRecognition" as BiometricMethod,
                   },
                 ]
@@ -593,7 +770,9 @@ export default function LoginScreen() {
                       styles.authText,
                       !supported ? styles.authTextDisabled : null,
                     ];
-                    const reasonText = !supported ? "Not supported" : "";
+                    const reasonText = !supported
+                      ? biometricNotSupportedReason
+                      : "";
 
                     return (
                       <TouchableOpacity
@@ -605,7 +784,7 @@ export default function LoginScreen() {
                             void checkAndPromptBiometrics(option.method);
                           } else {
                             const { title, description } = getUnsupportedCopy(
-                              option.method
+                              option.method,
                             );
                             openBiometricSheet(title, description);
                           }
@@ -643,7 +822,7 @@ export default function LoginScreen() {
               weight="regular"
               style={styles.textBlack}
             >
-              Don't have an account?
+              {footerNoAccount}
             </Typography>
           </View>
 
@@ -656,12 +835,12 @@ export default function LoginScreen() {
                 pathname: "/(screens)/in-app-webview",
                 params: {
                   url: URLS.requestRegistration,
-                  title: "Request Registration",
+                  title: inAppWebviewRequestRegistrationTitle,
                 },
               })
             }
           >
-            Request Registration
+            {actionRequestRegistration}
           </Button>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -671,19 +850,19 @@ export default function LoginScreen() {
         open={forgotSheetOpen}
         onClose={closeForgotSheet}
         snapPoints={[250]}
-        headerTitle="Forgot?"
+        headerTitle={forgotSheetHeaderTitle}
       >
         <View style={styles.sheetContainer}>
           {[
             {
-              label: "Forgot Password",
+              label: forgotSheetOptionPassword,
               onPress: () => {
                 closeForgotSheet();
                 router.push("/(screens)/auth/forgot-password");
               },
             },
             {
-              label: "Forgot User Id",
+              label: forgotSheetOptionUserId,
               onPress: () => {
                 closeForgotSheet();
                 router.push("/(screens)/auth/forgot-user-id");
@@ -737,7 +916,7 @@ export default function LoginScreen() {
             onPress={handleOpenSettings}
             disabled={isLoggingIn}
           >
-            Open Settings
+            {biometricSheetButtonOpenSettings}
           </Button>
         </View>
       </BottomSheet>
@@ -762,7 +941,7 @@ export default function LoginScreen() {
             weight="semibold"
             style={styles.successTitle}
           >
-            Identity Verified!
+            {successSheetTitle}
           </Typography>
 
           <Typography
@@ -770,25 +949,21 @@ export default function LoginScreen() {
             weight="regular"
             style={styles.successDescription}
           >
-            Welcome aboard, {auth?.user?.name}! We're thrilled to have you as
-            our captain. Let’s hit the road and make every journey a great one!
+            {successSheetWelcomePrefix} {successSheetWelcomeSuffix}
           </Typography>
           <Typography
             type="bodyLarge"
             weight="regular"
             style={styles.successDescription}
           >
-            You're now part of a trusted community of drivers dedicated to
-            delivering great service. Stay safe, drive smart, and enjoy the
-            journey ahead.
+            {successSheetDescriptionCommunity}
           </Typography>
           <Typography
             type="bodyLarge"
             weight="regular"
             style={styles.successDescription}
           >
-            From short trips to long hauls, every mile you drive matters. Let’s
-            build a smooth, successful ride experience together.
+            {successSheetDescriptionJourney}
           </Typography>
 
           <Button
@@ -799,7 +974,7 @@ export default function LoginScreen() {
               router.replace("/(tabs)");
             }}
           >
-            Continue
+            {successSheetButtonContinue}
           </Button>
         </View>
       </BottomSheet>

@@ -1,6 +1,8 @@
 import { checkPasswordRequirements } from "@/components/Form/Password/Strength/utils";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { PASSWORD_FORM_CONTENT_KEYS } from "@/content/components/password-keys";
+import { useGetContent } from "@/hooks/useGetContent";
 import React, { useMemo } from "react";
 import { Image, StyleSheet, View } from "react-native";
 
@@ -13,33 +15,60 @@ const PasswordRequirements: React.FC<PasswordRequirementsProps> = ({
 }) => {
   const value = password ?? "";
 
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const {
+    requirementsTitle,
+    requirementsMinLength,
+    requirementsUppercase,
+    requirementsLowercase,
+    requirementsNumber,
+    requirementsSpecial,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      requirementsTitle: get(PASSWORD_FORM_CONTENT_KEYS.REQUIREMENTS_TITLE),
+      requirementsMinLength: get(
+        PASSWORD_FORM_CONTENT_KEYS.REQUIREMENTS_MIN_LENGTH,
+      ),
+      requirementsUppercase: get(
+        PASSWORD_FORM_CONTENT_KEYS.REQUIREMENTS_UPPERCASE,
+      ),
+      requirementsLowercase: get(
+        PASSWORD_FORM_CONTENT_KEYS.REQUIREMENTS_LOWERCASE,
+      ),
+      requirementsNumber: get(PASSWORD_FORM_CONTENT_KEYS.REQUIREMENTS_NUMBER),
+      requirementsSpecial: get(PASSWORD_FORM_CONTENT_KEYS.REQUIREMENTS_SPECIAL),
+    };
+  }, [getContent]);
+  // Page Content End
   const checks = useMemo(() => {
     const req = checkPasswordRequirements(value);
 
     return [
       {
         key: "minLength",
-        label: "Must be at least 8 characters long.",
+        label: requirementsMinLength,
         met: req.hasMinLength,
       },
       {
         key: "uppercase",
-        label: "Must contain at least one uppercase letter (A–Z)",
+        label: requirementsUppercase,
         met: req.hasUppercase,
       },
       {
         key: "lowercase",
-        label: "Must contain at least one lowercase letter (a–z)",
+        label: requirementsLowercase,
         met: req.hasLowercase,
       },
       {
         key: "number",
-        label: "Must include at least one number (0–9).",
+        label: requirementsNumber,
         met: req.hasNumber,
       },
       {
         key: "special",
-        label: "Must include at least one special character.",
+        label: requirementsSpecial,
         met: req.hasSpecialChar,
       },
     ];
@@ -48,7 +77,7 @@ const PasswordRequirements: React.FC<PasswordRequirementsProps> = ({
   return (
     <View style={styles.container}>
       <Typography type="headingSmall" weight="medium" style={styles.title}>
-        Password Requirements
+        {requirementsTitle}
       </Typography>
 
       <View style={styles.list}>

@@ -20,6 +20,8 @@ export const RETRIEVAL_ID_STORAGE_KEY = "@retrieval_id";
 export const TRIP_ID_STORAGE_KEY = "@trip_id";
 // Ride state storage key
 export const RIDE_STATE_STORAGE_KEY = "@ride_state";
+// Content cache storage key
+export const CONTENT_STORAGE_KEY = "@content_cache";
 // Deployed base URL storage key
 export const DEPLOYED_BASE_URL_STORAGE_KEY = "@deployed_base_url";
 // Notifications backup storage key (used during logout to preserve notifications)
@@ -83,6 +85,12 @@ export const DB_ACTION_DEFAULTS = {
   APP_NAME: "driver-ios",
 } as const;
 
+// Content service defaults for mobile app
+export const CONTENT_APP_NAME = "driverapp" as const;
+export const CONTENT_VIEW_NAME = "APP_CONTENT" as const;
+export const CONTENT_ACTION_CODE = "CMN.S.APP_CONTENT" as const;
+export const CONTENT_AFFILIATE_NUM = 101 as const;
+
 // OTP / Verification
 // Default countdown seconds before allowing resend. Can be updated centrally.
 export const OTP_RESEND_SECONDS = 40;
@@ -136,19 +144,6 @@ export const CANCEL_RIDE_REASONS = [
 ] as const;
 
 export type CancelRideReason = (typeof CANCEL_RIDE_REASONS)[number];
-
-// App Settings screen configuration
-export const APP_SETTINGS_ITEMS = [
-  { key: "login", label: "Login Settings" },
-  { key: "ride-preferences", label: "Ride Preferences" },
-  { key: "availability", label: "Availability & Scheduling" },
-  { key: "safety", label: "Safety Settings" },
-  { key: "notifications", label: "Notifications" },
-  { key: "app-info", label: "App Info" },
-] as const;
-
-// Application version shown in App Info section
-export const APP_VERSION = "1.0.0" as const;
 
 // Driver Settings (Featured Driver & Auto-bid) – central constants
 export const FEATURED_DRIVER_PRICE_MIN = 0;
@@ -284,25 +279,6 @@ export const BID_STATUS = {
 
 export type BidStatus = (typeof BID_STATUS)[keyof typeof BID_STATUS];
 
-// Bid Status Messages
-export const BID_STATUS_MESSAGES = {
-  EXPIRED: {
-    TITLE: "Bid Expired!",
-    DESCRIPTION:
-      "Your bid has expired. You can rebid if you're still interested.",
-  },
-  UNSUCCESSFUL: {
-    TITLE: "Bid Unsuccessful!",
-    DESCRIPTION:
-      "Your bid has been rejected. You can rebid if you're still interested.",
-  },
-  ACCEPTED: {
-    TITLE: "Bid Accepted!",
-    DESCRIPTION:
-      "The customer accepted your offer. Get ready to start the ride.",
-  },
-} as const;
-
 // Bid Status Background Colors - imported from colors.ts
 export const BID_STATUS_COLORS = {
   EXPIRED: bidStatusColors.expired,
@@ -343,13 +319,6 @@ export const SWIPE_BUTTON_STATES = {
 export type SwipeButtonState =
   (typeof SWIPE_BUTTON_STATES)[keyof typeof SWIPE_BUTTON_STATES];
 
-export const SWIPE_BUTTON_TITLES = {
-  [SWIPE_BUTTON_STATES.MARK_ARRIVED]: "Swipe to Mark as Arrived",
-  [SWIPE_BUTTON_STATES.START_RIDE]: "Swipe to Start Ride",
-  [SWIPE_BUTTON_STATES.END_RIDE]: "Swipe to Complete Ride",
-  [SWIPE_BUTTON_STATES.RESTART_RIDE]: "Swipe to Re-start Ride",
-} as const;
-
 // Notification Types
 export const NOTIFICATION_TYPES = {
   AUTHORIZATION: "authorization",
@@ -359,19 +328,6 @@ export const NOTIFICATION_TYPES = {
   ERROR: "error",
   SPECIAL_RIDE_OFFER: "special-ride-offer",
   MESSAGE: "message",
-} as const;
-
-// Speech Messages
-export const SPEECH_MESSAGES = {
-  NEW_RIDE_OFFER: "You have a new ride offer",
-  NEW_BROADCAST_JOB: "You have a new broadcast job",
-  BID_ACCEPTED: "Your bid has been accepted! Get ready to start the ride.",
-  BID_EXPIRED:
-    "Your bid has expired. You can rebid if you're still interested.",
-  BID_UNSUCCESSFUL:
-    "Your bid has rejected. You can rebid if you're still interested",
-  MAKE_STOP: "You have a stop request",
-  NEW_MESSAGE: "You have a new blink message",
 } as const;
 
 export type NotificationType =

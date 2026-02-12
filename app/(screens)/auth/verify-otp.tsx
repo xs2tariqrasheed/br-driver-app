@@ -24,11 +24,13 @@ import {
   OTP_LENGTH,
   OTP_RESEND_SECONDS,
 } from "@/constants/global";
+import { VERIFY_OTP_CONTENT_KEYS } from "@/content/(screens)/auth/verify-otp-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
 import { useFetch } from "@/hooks/useFetch";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { clearStorage, logger } from "@/utils/helpers";
 import { disconnectSocket } from "@/utils/socket";
@@ -43,6 +45,74 @@ import { useLocalSearchParams, useRouter } from "expo-router";
  * - Handles resend with a countdown timer
  */
 export default function VerifyOtpScreen() {
+  const { getContent } = useGetContent();
+
+  // Page Content
+  const {
+    pageTitle,
+    loadingMessage,
+    introTitle,
+    introDescription,
+    errorInvalid,
+    resendCountdownPrefix,
+    resendCountdownSuffix,
+    resendPrompt,
+    resendLink,
+    toastVerified,
+    toastForgotUserIdSuccess,
+    toastDeleteProfileNoResend,
+    toastResent,
+    toastResendError,
+    toastInvalidLoginData,
+    toastLoginDataNotFound,
+    toastProfileDeleted,
+    toastProfileDeletionError,
+    toastDeleteProfileApiError,
+    toastLoginCompleteError,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      pageTitle: get(VERIFY_OTP_CONTENT_KEYS.PAGE_TITLE),
+      loadingMessage: get(VERIFY_OTP_CONTENT_KEYS.LOADING_MESSAGE),
+      introTitle: get(VERIFY_OTP_CONTENT_KEYS.INTRO_TITLE),
+      introDescription: get(VERIFY_OTP_CONTENT_KEYS.INTRO_DESCRIPTION),
+      errorInvalid: get(VERIFY_OTP_CONTENT_KEYS.ERROR_INVALID),
+      resendCountdownPrefix: get(
+        VERIFY_OTP_CONTENT_KEYS.RESEND_COUNTDOWN_PREFIX,
+      ),
+      resendCountdownSuffix: get(
+        VERIFY_OTP_CONTENT_KEYS.RESEND_COUNTDOWN_SUFFIX,
+      ),
+      resendPrompt: get(VERIFY_OTP_CONTENT_KEYS.RESEND_PROMPT),
+      resendLink: get(VERIFY_OTP_CONTENT_KEYS.RESEND_LINK),
+      toastVerified: get(VERIFY_OTP_CONTENT_KEYS.TOAST_VERIFIED),
+      toastForgotUserIdSuccess: get(
+        VERIFY_OTP_CONTENT_KEYS.TOAST_FORGOT_USER_ID_SUCCESS,
+      ),
+      toastDeleteProfileNoResend: get(
+        VERIFY_OTP_CONTENT_KEYS.TOAST_DELETE_PROFILE_NO_RESEND,
+      ),
+      toastResent: get(VERIFY_OTP_CONTENT_KEYS.TOAST_RESENT),
+      toastResendError: get(VERIFY_OTP_CONTENT_KEYS.TOAST_RESEND_ERROR),
+      toastInvalidLoginData: get(
+        VERIFY_OTP_CONTENT_KEYS.TOAST_INVALID_LOGIN_DATA,
+      ),
+      toastLoginDataNotFound: get(
+        VERIFY_OTP_CONTENT_KEYS.TOAST_LOGIN_DATA_NOT_FOUND,
+      ),
+      toastProfileDeleted: get(VERIFY_OTP_CONTENT_KEYS.TOAST_PROFILE_DELETED),
+      toastProfileDeletionError: get(
+        VERIFY_OTP_CONTENT_KEYS.TOAST_PROFILE_DELETION_ERROR,
+      ),
+      toastDeleteProfileApiError: get(
+        VERIFY_OTP_CONTENT_KEYS.TOAST_DELETE_PROFILE_API_ERROR,
+      ),
+      toastLoginCompleteError: get(
+        VERIFY_OTP_CONTENT_KEYS.TOAST_LOGIN_COMPLETE_ERROR,
+      ),
+    };
+  }, [getContent]);
+  // Page Content End
   const router = useRouter();
   const log = logger();
   const {
@@ -89,7 +159,7 @@ export default function VerifyOtpScreen() {
 
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation } = useDelete(
-    DRIVER_ENDPOINTS.markOffline(currentAuth?.user?.id || "")
+    DRIVER_ENDPOINTS.markOffline(currentAuth?.user?.id || ""),
   );
 
   const disabled = verifying || resending || loading;
@@ -106,9 +176,8 @@ export default function VerifyOtpScreen() {
       try {
         log("[VerifyOtpScreen] Calling delete profile API");
         const { settingsApiClient } = await import("@/config/apiConfig");
-        const { DRIVER_SETTINGS_ENDPOINTS } = await import(
-          "@/constants/endpoints"
-        );
+        const { DRIVER_SETTINGS_ENDPOINTS } =
+          await import("@/constants/endpoints");
 
         const response = await settingsApiClient.delete(
           DRIVER_SETTINGS_ENDPOINTS.deleteProfile,
@@ -116,7 +185,7 @@ export default function VerifyOtpScreen() {
             data: {
               otp: otp,
             },
-          } as any
+          } as any,
         );
 
         // Check if the response indicates success
@@ -137,13 +206,13 @@ export default function VerifyOtpScreen() {
             responseData?.message ||
             responseData?.data?.jHeader?.message ||
             responseData?.error ||
-            "Failed to delete driver profile";
+            toastDeleteProfileApiError;
 
           throw new Error(errorMessage);
         }
 
         log(
-          "[VerifyOtpScreen] Driver profile deleted successfully from database"
+          "[VerifyOtpScreen] Driver profile deleted successfully from database",
         );
       } catch (apiError: any) {
         const errorMessage =
@@ -151,7 +220,7 @@ export default function VerifyOtpScreen() {
           apiError?.response?.data?.data?.jHeader?.message ||
           apiError?.response?.data?.error ||
           apiError?.message ||
-          "Failed to delete driver profile";
+          toastDeleteProfileApiError;
 
         log("[VerifyOtpScreen] Error deleting driver profile:", errorMessage);
         showToast(errorMessage, {
@@ -206,13 +275,13 @@ export default function VerifyOtpScreen() {
       await setAuth(null);
       await setDriver(null);
 
-      showToast("Profile deleted successfully.", {
+      showToast(toastProfileDeleted, {
         variant: "success",
         position: "top",
       });
     } catch (error) {
       log("[VerifyOtpScreen] Error in completeDeleteProfileAfterOtp:", error);
-      showToast("An error occurred during profile deletion", {
+      showToast(toastProfileDeletionError, {
         variant: "error",
         position: "top",
       });
@@ -264,7 +333,7 @@ export default function VerifyOtpScreen() {
           duration: 500,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     caretAnimRef.current.start();
     return () => {
@@ -304,7 +373,7 @@ export default function VerifyOtpScreen() {
     if (otp.length !== OTP_LENGTH) return;
     try {
       const response = { message: "OTP verified" }; //await verifyOtp({ code: otp });
-      showToast(response?.message || "OTP verified", {
+      showToast(response?.message || toastVerified, {
         variant: "success",
         position: "top",
       });
@@ -312,10 +381,10 @@ export default function VerifyOtpScreen() {
       // Success style briefly then navigate
       setTimeout(() => {
         if (context === "forgot-user-id") {
-          showToast(
-            "Success! We've reset your User ID and sent the new one to your email. Use it to log in next time.",
-            { variant: "success", position: "top" }
-          );
+          showToast(toastForgotUserIdSuccess, {
+            variant: "success",
+            position: "top",
+          });
           router.replace("/(screens)/auth/login");
         } else if (context === "delete-profile") {
           void completeDeleteProfileAfterOtp();
@@ -335,8 +404,8 @@ export default function VerifyOtpScreen() {
         }
       }, 300);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Invalid OTP";
-      setError("Invalid OTP");
+      const message = e instanceof Error ? e.message : errorInvalid;
+      setError(errorInvalid);
       setVerified(false);
       showToast(message, { variant: "error", position: "top" });
     }
@@ -347,19 +416,16 @@ export default function VerifyOtpScreen() {
     // For delete-profile context, skip resend as it requires loginId/companyId
     // which are not available in the authenticated context
     if (context === "delete-profile") {
-      showToast(
-        "Please use the OTP you received. If you didn't receive it, please contact support.",
-        {
-          variant: "warning",
-          position: "top",
-        }
-      );
+      showToast(toastDeleteProfileNoResend, {
+        variant: "warning",
+        position: "top",
+      });
       return;
     }
 
     try {
       const response = await resendOtp({});
-      showToast(response?.message || "OTP resent", {
+      showToast(response?.message || toastResent, {
         variant: "success",
         position: "top",
       });
@@ -368,7 +434,7 @@ export default function VerifyOtpScreen() {
       setError(null);
       inputRef.current?.focus();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to resend";
+      const message = e instanceof Error ? e.message : toastResendError;
       showToast(message, { variant: "error", position: "top" });
     }
   };
@@ -398,7 +464,7 @@ export default function VerifyOtpScreen() {
           log("Parsed login data from params", loginResponse);
         } catch (error) {
           log("Error parsing login data:", error);
-          showToast("Invalid login data", {
+          showToast(toastInvalidLoginData, {
             variant: "error",
             position: "top",
           });
@@ -408,7 +474,7 @@ export default function VerifyOtpScreen() {
 
       if (!loginResponse || !loginResponse.user) {
         log("No login data available");
-        showToast("Login data not found", {
+        showToast(toastLoginDataNotFound, {
           variant: "error",
           position: "top",
         });
@@ -485,7 +551,7 @@ export default function VerifyOtpScreen() {
       router.replace("/(tabs)");
     } catch (error) {
       log("Error completing login after OTP:", error);
-      showToast("Failed to complete login", {
+      showToast(toastLoginCompleteError, {
         variant: "error",
         position: "top",
       });
@@ -506,13 +572,13 @@ export default function VerifyOtpScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Verify OTP" onBackPress={() => router.back()} />
+      <Header title={pageTitle} onBackPress={() => router.back()} />
 
       {isFetchingSettings && (
         <View style={styles.loadingOverlay}>
           <Loader size="medium" />
           <Typography type="bodyMedium" style={styles.loadingText}>
-            Please wait we are logging you in...
+            {loadingMessage}
           </Typography>
         </View>
       )}
@@ -536,15 +602,14 @@ export default function VerifyOtpScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Enter the OTP
+              {introTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={styles.textBlack}
             >
-              We’ve sent a one-time password (OTP) to your registered login ID.
-              Please enter it below to continue.
+              {introDescription}
             </Typography>
           </View>
 
@@ -626,7 +691,7 @@ export default function VerifyOtpScreen() {
                 weight="semibold"
                 style={styles.textBlack}
               >
-                Resend Code in {secondsLeft} sec
+                {resendCountdownPrefix} {secondsLeft} {resendCountdownSuffix}
               </Typography>
             </View>
           ) : (
@@ -636,14 +701,14 @@ export default function VerifyOtpScreen() {
                 weight="regular"
                 style={styles.textBlack}
               >
-                Didn’t receive the OTP?{" "}
+                {resendPrompt}{" "}
                 <Typography
                   type="bodyMedium"
                   weight="semibold"
                   style={styles.resendLink}
                   onPress={handleResend}
                 >
-                  Resend
+                  {resendLink}
                 </Typography>
               </Typography>
             </View>

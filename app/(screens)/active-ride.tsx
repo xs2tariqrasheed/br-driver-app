@@ -27,23 +27,22 @@ import {
   CancelRideReason,
   CAR_TYPE,
   DRIVER_ACTIONS,
-  RIDE_HEADER_TITLES,
   RIDE_STATES,
-  RIDE_TOGGLE_LABELS,
   RIDE_TYPES,
   RideToggleLabel,
   SOS_NUMBERS,
   SWIPE_BUTTON_STATES,
-  SWIPE_BUTTON_TITLES,
   SwipeButtonState,
   VEHICLE_ISSUE_OFFLINE_HOURS,
 } from "@/constants/global";
+import { ACTIVE_RIDE_CONTENT_KEYS } from "@/content/active-ride-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
 import { useChat } from "@/context/ChatContext";
 import { useDriver } from "@/context/DriverContext";
 import { useActiveTripSocket } from "@/hooks/useActiveTripSocket";
 import { useFetch } from "@/hooks/useFetch";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { useSocket } from "@/hooks/useSocket";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -63,20 +62,247 @@ import {
 } from "react-native";
 
 export default function ActiveRideScreen() {
+  const { getContent } = useGetContent();
+
+  // page content
+  const {
+    headerTitle,
+    headerEnRoute,
+    headerOnScene,
+    headerLoaded,
+    headerStop,
+    headerCompleted,
+    toggleMap,
+    toggleDetails,
+    loadingTrip,
+    loadingAddress,
+    errorTitle,
+    errorMessage,
+    errorRetry,
+    completionLoading,
+    completionSubtext,
+    swipeMarkArrived,
+    swipeStartRide,
+    swipeCompleteRide,
+    swipeRestartRide,
+    swipeProcessing,
+    toastCirclingNotified,
+    toastCirclingFailed,
+    toastMarkedArrived,
+    toastRideStarted,
+    toastRideCompleted,
+    toastRideStopped,
+    toastActionFailed,
+    toastPhoneUnavailable,
+    toastChatFailed,
+    toastCancelFailed,
+    toastTripCancelled,
+    toastCancelTripFailed,
+    toastEtaUpdated,
+    toastEtaFailed,
+    toastEtaError,
+    contactSheetTitle,
+    contactPhoneLabel,
+    contactPhoneNa,
+    contactCallCellular,
+    contactChat,
+    contactWhatsapp,
+    sosSheetTitle,
+    sosCallDispatch,
+    sosCall911,
+    cancelSheetTitle,
+    cancelSelectReasonLabel,
+    cancelChooseReason,
+    cancelAddCommentsLabel,
+    cancelCommentsPlaceholder,
+    cancelContinue,
+    cancelReasonsSheetTitle,
+    cancelReasonVehicleIssue,
+    cancelReasonCustomerNoShow,
+    cancelReasonWrongAddress,
+    cancelReasonSafetyConcern,
+    cancelReasonPersonalEmergency,
+    cancelReasonOther,
+    confirmTitle,
+    confirmDescriptionVehicleIssuePrefix,
+    confirmDescriptionVehicleIssueSuffix,
+    confirmDescriptionDefault,
+    confirmCancel,
+    confirmConfirm,
+    confirmLoading,
+    etaSheetTitle,
+    etaSheetDescription,
+    etaFetching,
+    etaUpdating,
+    etaButton,
+    errorLoadTrip,
+    errorEtaMissing,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(ACTIVE_RIDE_CONTENT_KEYS.HEADER_TITLE),
+      headerEnRoute: get(ACTIVE_RIDE_CONTENT_KEYS.HEADER_EN_ROUTE),
+      headerOnScene: get(ACTIVE_RIDE_CONTENT_KEYS.HEADER_ON_SCENE),
+      headerLoaded: get(ACTIVE_RIDE_CONTENT_KEYS.HEADER_LOADED),
+      headerStop: get(ACTIVE_RIDE_CONTENT_KEYS.HEADER_STOP),
+      headerCompleted: get(ACTIVE_RIDE_CONTENT_KEYS.HEADER_COMPLETED),
+      toggleMap: get(ACTIVE_RIDE_CONTENT_KEYS.TOGGLE_MAP),
+      toggleDetails: get(ACTIVE_RIDE_CONTENT_KEYS.TOGGLE_DETAILS),
+      loadingTrip: get(ACTIVE_RIDE_CONTENT_KEYS.LOADING_TRIP),
+      loadingAddress: get(ACTIVE_RIDE_CONTENT_KEYS.LOADING_ADDRESS),
+      errorTitle: get(ACTIVE_RIDE_CONTENT_KEYS.ERROR_TITLE),
+      errorMessage: get(ACTIVE_RIDE_CONTENT_KEYS.ERROR_MESSAGE),
+      errorRetry: get(ACTIVE_RIDE_CONTENT_KEYS.ERROR_RETRY),
+      completionLoading: get(ACTIVE_RIDE_CONTENT_KEYS.COMPLETION_LOADING),
+      completionSubtext: get(ACTIVE_RIDE_CONTENT_KEYS.COMPLETION_SUBTEXT),
+      swipeMarkArrived: get(ACTIVE_RIDE_CONTENT_KEYS.SWIPE_MARK_ARRIVED),
+      swipeStartRide: get(ACTIVE_RIDE_CONTENT_KEYS.SWIPE_START_RIDE),
+      swipeCompleteRide: get(ACTIVE_RIDE_CONTENT_KEYS.SWIPE_COMPLETE_RIDE),
+      swipeRestartRide: get(ACTIVE_RIDE_CONTENT_KEYS.SWIPE_RESTART_RIDE),
+      swipeProcessing: get(ACTIVE_RIDE_CONTENT_KEYS.SWIPE_PROCESSING),
+      toastCirclingNotified: get(
+        ACTIVE_RIDE_CONTENT_KEYS.TOAST_CIRCLING_NOTIFIED,
+      ),
+      toastCirclingFailed: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_CIRCLING_FAILED),
+      toastMarkedArrived: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_MARKED_ARRIVED),
+      toastRideStarted: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_RIDE_STARTED),
+      toastRideCompleted: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_RIDE_COMPLETED),
+      toastRideStopped: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_RIDE_STOPPED),
+      toastActionFailed: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_ACTION_FAILED),
+      toastPhoneUnavailable: get(
+        ACTIVE_RIDE_CONTENT_KEYS.TOAST_PHONE_UNAVAILABLE,
+      ),
+      toastChatFailed: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_CHAT_FAILED),
+      toastCancelFailed: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_CANCEL_FAILED),
+      toastTripCancelled: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_TRIP_CANCELLED),
+      toastCancelTripFailed: get(
+        ACTIVE_RIDE_CONTENT_KEYS.TOAST_CANCEL_TRIP_FAILED,
+      ),
+      toastEtaUpdated: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_ETA_UPDATED),
+      toastEtaFailed: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_ETA_FAILED),
+      toastEtaError: get(ACTIVE_RIDE_CONTENT_KEYS.TOAST_ETA_ERROR),
+      contactSheetTitle: get(ACTIVE_RIDE_CONTENT_KEYS.CONTACT_SHEET_TITLE),
+      contactPhoneLabel: get(ACTIVE_RIDE_CONTENT_KEYS.CONTACT_PHONE_LABEL),
+      contactPhoneNa: get(ACTIVE_RIDE_CONTENT_KEYS.CONTACT_PHONE_NA),
+      contactCallCellular: get(ACTIVE_RIDE_CONTENT_KEYS.CONTACT_CALL_CELLULAR),
+      contactChat: get(ACTIVE_RIDE_CONTENT_KEYS.CONTACT_CHAT),
+      contactWhatsapp: get(ACTIVE_RIDE_CONTENT_KEYS.CONTACT_WHATSAPP),
+      sosSheetTitle: get(ACTIVE_RIDE_CONTENT_KEYS.SOS_SHEET_TITLE),
+      sosCallDispatch: get(ACTIVE_RIDE_CONTENT_KEYS.SOS_CALL_DISPATCH),
+      sosCall911: get(ACTIVE_RIDE_CONTENT_KEYS.SOS_CALL_911),
+      cancelSheetTitle: get(ACTIVE_RIDE_CONTENT_KEYS.CANCEL_SHEET_TITLE),
+      cancelSelectReasonLabel: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_SELECT_REASON_LABEL,
+      ),
+      cancelChooseReason: get(ACTIVE_RIDE_CONTENT_KEYS.CANCEL_CHOOSE_REASON),
+      cancelAddCommentsLabel: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_ADD_COMMENTS_LABEL,
+      ),
+      cancelCommentsPlaceholder: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_COMMENTS_PLACEHOLDER,
+      ),
+      cancelContinue: get(ACTIVE_RIDE_CONTENT_KEYS.CANCEL_CONTINUE),
+      cancelReasonsSheetTitle: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_REASONS_SHEET_TITLE,
+      ),
+      cancelReasonVehicleIssue: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_REASON_VEHICLE_ISSUE,
+      ),
+      cancelReasonCustomerNoShow: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_REASON_CUSTOMER_NO_SHOW,
+      ),
+      cancelReasonWrongAddress: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_REASON_WRONG_ADDRESS,
+      ),
+      cancelReasonSafetyConcern: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_REASON_SAFETY_CONCERN,
+      ),
+      cancelReasonPersonalEmergency: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CANCEL_REASON_PERSONAL_EMERGENCY,
+      ),
+      cancelReasonOther: get(ACTIVE_RIDE_CONTENT_KEYS.CANCEL_REASON_OTHER),
+      confirmTitle: get(ACTIVE_RIDE_CONTENT_KEYS.CONFIRM_TITLE),
+      confirmDescriptionVehicleIssuePrefix: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CONFIRM_DESCRIPTION_VEHICLE_ISSUE_PREFIX,
+      ),
+      confirmDescriptionVehicleIssueSuffix: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CONFIRM_DESCRIPTION_VEHICLE_ISSUE_SUFFIX,
+      ),
+      confirmDescriptionDefault: get(
+        ACTIVE_RIDE_CONTENT_KEYS.CONFIRM_DESCRIPTION_DEFAULT,
+      ),
+      confirmCancel: get(ACTIVE_RIDE_CONTENT_KEYS.CONFIRM_CANCEL),
+      confirmConfirm: get(ACTIVE_RIDE_CONTENT_KEYS.CONFIRM_CONFIRM),
+      confirmLoading: get(ACTIVE_RIDE_CONTENT_KEYS.CONFIRM_LOADING),
+      etaSheetTitle: get(ACTIVE_RIDE_CONTENT_KEYS.ETA_SHEET_TITLE),
+      etaSheetDescription: get(ACTIVE_RIDE_CONTENT_KEYS.ETA_SHEET_DESCRIPTION),
+      etaFetching: get(ACTIVE_RIDE_CONTENT_KEYS.ETA_FETCHING),
+      etaUpdating: get(ACTIVE_RIDE_CONTENT_KEYS.ETA_UPDATING),
+      etaButton: get(ACTIVE_RIDE_CONTENT_KEYS.ETA_BUTTON),
+      errorLoadTrip: get(ACTIVE_RIDE_CONTENT_KEYS.ERROR_LOAD_TRIP),
+      errorEtaMissing: get(ACTIVE_RIDE_CONTENT_KEYS.ERROR_ETA_MISSING),
+    };
+  }, [getContent]);
+  // end page content
+
+  // Header title by ride state (from dynamic content)
+  const headerTitleByState = useMemo(
+    () => ({
+      [RIDE_STATES.EN_ROUTE]: headerEnRoute,
+      [RIDE_STATES.ON_SCENE]: headerOnScene,
+      [RIDE_STATES.LOADED]: headerLoaded,
+      [RIDE_STATES.STOPPED]: headerStop,
+      [RIDE_STATES.COMPLETED]: headerCompleted,
+    }),
+    [headerEnRoute, headerOnScene, headerLoaded, headerStop, headerCompleted],
+  );
+
+  // Swipe button title by state (from dynamic content)
+  const swipeTitleByState = useMemo(
+    () => ({
+      [SWIPE_BUTTON_STATES.MARK_ARRIVED]: swipeMarkArrived,
+      [SWIPE_BUTTON_STATES.START_RIDE]: swipeStartRide,
+      [SWIPE_BUTTON_STATES.END_RIDE]: swipeCompleteRide,
+      [SWIPE_BUTTON_STATES.RESTART_RIDE]: swipeRestartRide,
+    }),
+    [swipeMarkArrived, swipeStartRide, swipeCompleteRide, swipeRestartRide],
+  );
+
+  // Toggle labels from dynamic content (Map / Details)
   const labels: [RideToggleLabel, RideToggleLabel] = useMemo(
-    () => [RIDE_TOGGLE_LABELS.MAP, RIDE_TOGGLE_LABELS.DETAILS],
-    []
+    () => [toggleMap as RideToggleLabel, toggleDetails as RideToggleLabel],
+    [toggleMap, toggleDetails],
+  );
+
+  // Cancel reason display list (same order as CANCEL_RIDE_REASONS for mapping)
+  const cancelReasonDisplayList = useMemo(
+    () => [
+      cancelReasonVehicleIssue,
+      cancelReasonCustomerNoShow,
+      cancelReasonWrongAddress,
+      cancelReasonSafetyConcern,
+      cancelReasonPersonalEmergency,
+      cancelReasonOther,
+    ],
+    [
+      cancelReasonVehicleIssue,
+      cancelReasonCustomerNoShow,
+      cancelReasonWrongAddress,
+      cancelReasonSafetyConcern,
+      cancelReasonPersonalEmergency,
+      cancelReasonOther,
+    ],
   );
 
   // Keep bottom sheet snapPoints stable to avoid re-renders (and TextInput focus loss)
   // while the active trip screen updates in real-time (socket/location updates).
   const updateEtaSnapPoints = useMemo<(string | number)[]>(
     () => ["40%", "60%"],
-    []
+    [],
   );
   const updateEtaSnapPointsWhenKeyboardVisible = useMemo<(string | number)[]>(
     () => ["90%", "95%"],
-    []
+    [],
   );
 
   // Get params from navigation
@@ -113,14 +339,14 @@ export default function ActiveRideScreen() {
   });
 
   const [toggleValue, setToggleValue] = useState<RideToggleLabel>(
-    RIDE_TOGGLE_LABELS.MAP
+    () => toggleMap as RideToggleLabel,
   );
 
   const [isDriverReachedOnPickup, setIsDriverReachedOnPickup] =
     useState<boolean>(false);
 
   const [swipeButtonState, setSwipeButtonState] = useState<SwipeButtonState>(
-    SWIPE_BUTTON_STATES.MARK_ARRIVED
+    SWIPE_BUTTON_STATES.MARK_ARRIVED,
   );
 
   // Dynamic width for header toggle (Map/Details) similar to Home screen status toggle
@@ -153,7 +379,7 @@ export default function ActiveRideScreen() {
 
   // Ride state management
   const [currentRideState, setCurrentRideState] = useState<string>(
-    RIDE_STATES.EN_ROUTE
+    RIDE_STATES.EN_ROUTE,
   );
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
   const [isCompletingRide, setIsCompletingRide] = useState<boolean>(false);
@@ -191,21 +417,21 @@ export default function ActiveRideScreen() {
     execute: fetchActiveTrip,
   } = useFetch<any>(
     driverId ? `${ACTIVE_TRIP_ROUTES.RETRIEVAL_ID}/${driverId}` : "",
-    API_CLIENT_TYPES.ACTIVE_TRIP
+    API_CLIENT_TYPES.ACTIVE_TRIP,
   );
 
   // API call for driver actions
   const { execute: submitDriverAction } = usePost(
     ACTIVE_TRIP_ROUTES.DRIVER_ACTION,
-    API_CLIENT_TYPES.ACTIVE_TRIP
+    API_CLIENT_TYPES.ACTIVE_TRIP,
   );
   const { execute: cancelTrip, loading: isCancellingTrip } = usePost(
     ACTIVE_TRIP_ROUTES.CANCEL,
-    API_CLIENT_TYPES.ACTIVE_TRIP
+    API_CLIENT_TYPES.ACTIVE_TRIP,
   );
   const { execute: updateETA, loading: isUpdatingETA } = usePost(
     ACTIVE_TRIP_ROUTES.UPDATE_ETA,
-    API_CLIENT_TYPES.ACTIVE_TRIP
+    API_CLIENT_TYPES.ACTIVE_TRIP,
   );
 
   // Fetch driver ETA
@@ -216,7 +442,7 @@ export default function ActiveRideScreen() {
 
   const { execute: fetchETA, loading: isFetchingETA } = useFetch(
     ACTIVE_TRIP_ROUTES.GET_ETA,
-    API_CLIENT_TYPES.ACTIVE_TRIP
+    API_CLIENT_TYPES.ACTIVE_TRIP,
   );
 
   // Function to fetch driver ETA
@@ -384,7 +610,7 @@ export default function ActiveRideScreen() {
               await connectActiveTripSocket(
                 driverId,
                 fallbackRetrievalId,
-                fallbackTripId
+                fallbackTripId,
               );
               console.log("✅ Active trip socket connected");
             }
@@ -402,9 +628,7 @@ export default function ActiveRideScreen() {
         }
       } catch (error) {
         console.error("Error loading job offer data:", error);
-        setDataError(
-          error instanceof Error ? error.message : "Failed to load trip data"
-        );
+        setDataError(error instanceof Error ? error.message : errorLoadTrip);
         setIsLoadingData(false);
       }
     };
@@ -461,7 +685,7 @@ export default function ActiveRideScreen() {
           responseCode === undefined;
         if (isSuccess && responseData?.data) {
           const fetchedJobOffer = tripDetailsApiResponseToJobOffer(
-            responseData.data
+            responseData.data,
           );
           if (fetchedJobOffer) {
             const mergedJobOffer = {
@@ -507,7 +731,7 @@ export default function ActiveRideScreen() {
       } catch (err) {
         console.warn(
           "⚠️ [ActiveRide] Could not fetch trip details on load:",
-          err
+          err,
         );
       } finally {
         setTripDetailsFetchedOnLoad(true);
@@ -523,7 +747,7 @@ export default function ActiveRideScreen() {
   useEffect(() => {
     const loadTripDetailsForDetailsView = async () => {
       // Only fetch when toggle is switched to DETAILS view
-      if (toggleValue !== RIDE_TOGGLE_LABELS.DETAILS) {
+      if (toggleValue !== toggleDetails) {
         // Reset fetch flag when switching away from details
         if (tripDetailsFetched) {
           setTripDetailsFetched(false);
@@ -534,7 +758,7 @@ export default function ActiveRideScreen() {
       // If already fetched for this session, skip
       if (tripDetailsFetched) {
         console.log(
-          "📥 [ActiveRide] Trip details already fetched in this session, skipping"
+          "📥 [ActiveRide] Trip details already fetched in this session, skipping",
         );
         return;
       }
@@ -542,7 +766,7 @@ export default function ActiveRideScreen() {
       // If jobOfferData doesn't exist yet, wait
       if (!jobOfferData) {
         console.log(
-          "📥 [ActiveRide] Job offer data not available yet, waiting..."
+          "📥 [ActiveRide] Job offer data not available yet, waiting...",
         );
         return;
       }
@@ -564,7 +788,7 @@ export default function ActiveRideScreen() {
 
         if (!tripNumber) {
           console.warn(
-            "📥 [ActiveRide] No trip number available for fetching details"
+            "📥 [ActiveRide] No trip number available for fetching details",
           );
           return;
         }
@@ -572,7 +796,7 @@ export default function ActiveRideScreen() {
         // Skip if tripNumber looks like a UUID (contains dashes and is long)
         if (tripNumber.includes("-") && tripNumber.length > 20) {
           console.warn(
-            "📥 [ActiveRide] Trip number appears to be UUID, skipping fetch"
+            "📥 [ActiveRide] Trip number appears to be UUID, skipping fetch",
           );
           return;
         }
@@ -589,7 +813,7 @@ export default function ActiveRideScreen() {
 
         if (isSuccess && responseData?.data) {
           const fetchedJobOffer = tripDetailsApiResponseToJobOffer(
-            responseData.data
+            responseData.data,
           );
 
           if (fetchedJobOffer) {
@@ -619,7 +843,7 @@ export default function ActiveRideScreen() {
       } catch (err: any) {
         console.error(
           "❌ [ActiveRide] Error Response Status:",
-          err?.response?.status ?? err
+          err?.response?.status ?? err,
         );
       }
     };
@@ -665,7 +889,7 @@ export default function ActiveRideScreen() {
             await connectActiveTripSocket(
               driverId,
               fallbackRetrievalId,
-              fallbackTripId
+              fallbackTripId,
             );
             console.log("✅ Active trip socket connected");
           }
@@ -755,7 +979,7 @@ export default function ActiveRideScreen() {
         const generateAddressFromCoordinates = (
           lat: number,
           lng: number,
-          type: "pickup" | "dropoff"
+          type: "pickup" | "dropoff",
         ): string => {
           // Use the provided Lahore addresses
           if (type === "pickup") {
@@ -829,11 +1053,11 @@ export default function ActiveRideScreen() {
           typeof ratingRaw === "number"
             ? ratingRaw
             : ratingRaw != null && ratingRaw !== ""
-            ? (() => {
-                const n = parseFloat(String(ratingRaw).trim());
-                return Number.isNaN(n) ? 4.8 : n;
-              })()
-            : 4.8;
+              ? (() => {
+                  const n = parseFloat(String(ratingRaw).trim());
+                  return Number.isNaN(n) ? 4.8 : n;
+                })()
+              : 4.8;
 
         return {
           id: activeTrip.tripId,
@@ -864,7 +1088,7 @@ export default function ActiveRideScreen() {
             generateAddressFromCoordinates(
               activeTrip.pickup.lat,
               activeTrip.pickup.lng,
-              "pickup"
+              "pickup",
             ),
           dropoffTime,
           dropoffDistance,
@@ -873,7 +1097,7 @@ export default function ActiveRideScreen() {
             generateAddressFromCoordinates(
               activeTrip.dropoff.lat,
               activeTrip.dropoff.lng,
-              "dropoff"
+              "dropoff",
             ),
           rideTime,
           rideDistance,
@@ -953,7 +1177,7 @@ export default function ActiveRideScreen() {
   const [addTollSheetOpen, setAddTollSheetOpen] = useState<boolean>(false);
   // Cancel ride state
   const [selectedReason, setSelectedReason] = useState<CancelRideReason | null>(
-    null
+    null,
   );
   const [cancelComments, setCancelComments] = useState<string>("");
 
@@ -983,22 +1207,14 @@ export default function ActiveRideScreen() {
     if (isActionLoading) return;
     const success = await handleDriverAction(DRIVER_ACTIONS.CIRCLING);
     if (success) {
-      showToast(
-        "The customer has been notified that you are circling.",
-        "success",
-        "top"
-      );
+      showToast(toastCirclingNotified, "success", "top");
     } else {
-      showToast(
-        "Failed to set circling status. Please try again.",
-        "error",
-        "top"
-      );
+      showToast(toastCirclingFailed, "error", "top");
     }
   };
 
   const handleDetails = () => {
-    setToggleValue(RIDE_TOGGLE_LABELS.DETAILS);
+    setToggleValue(toggleDetails as RideToggleLabel);
   };
 
   // Handle stop action
@@ -1078,24 +1294,23 @@ export default function ActiveRideScreen() {
         // Handle special cases
         if (action === DRIVER_ACTIONS.ARRIVED) {
           setIsDriverReachedOnPickup(true);
-          showToast("Marked arrived successfully", "success", "top");
+          showToast(toastMarkedArrived, "success", "top");
         } else if (action === DRIVER_ACTIONS.START) {
           console.log("Ride started");
-          showToast("Ride started", "success", "top");
+          showToast(toastRideStarted, "success", "top");
         } else if (action === DRIVER_ACTIONS.COMPLETED) {
           // Handle ride completion
           console.log("Ride completed, redirecting to feedback screen...");
-          showToast("Ride completed", "success", "top");
+          showToast(toastRideCompleted, "success", "top");
           await handleRideCompletion();
           return;
         } else if (action === DRIVER_ACTIONS.STOP) {
-          showToast("Ride stopped", "success", "top");
+          showToast(toastRideStopped, "success", "top");
         }
       } else {
         // Show error message or handle failure
         console.error("Failed to submit driver action:", action);
-        // You could show a toast or error message here
-        showToast("Action failed. Please try again.", "error", "top");
+        showToast(toastActionFailed, "error", "top");
       }
     } catch (error) {
       console.error("Error in handleSwipeComplete:", error);
@@ -1254,7 +1469,7 @@ export default function ActiveRideScreen() {
   // Contact action functions
   const handleCallCustomer = async () => {
     if (!customerPhone) {
-      showToast("Customer phone number is not available", "error", "top");
+      showToast(toastPhoneUnavailable, "error", "top");
       return;
     }
     try {
@@ -1274,15 +1489,14 @@ export default function ActiveRideScreen() {
     } catch (error: any) {
       console.error("Failed to open chat:", error);
       // Show error message to user
-      const errorMessage =
-        error?.message || "Failed to open chat. Please try again.";
+      const errorMessage = error?.message || toastChatFailed;
       showToast(errorMessage, "error", "top");
     }
   };
 
   const handleWhatsApp = async () => {
     if (!customerPhone) {
-      showToast("Customer phone number is not available", "error", "top");
+      showToast(toastPhoneUnavailable, "error", "top");
       return;
     }
     try {
@@ -1340,7 +1554,7 @@ export default function ActiveRideScreen() {
 
       if (!currentTripId || !currentDriverId) {
         console.error("Missing tripId or driverId for cancellation");
-        showToast("Unable to cancel trip. Please try again.", "error", "top");
+        showToast(toastCancelFailed, "error", "top");
         return;
       }
 
@@ -1381,7 +1595,7 @@ export default function ActiveRideScreen() {
       const response = cancelResponse as any;
       if (response?.success === false) {
         throw new Error(
-          response?.error || response?.message || "Failed to cancel trip"
+          response?.error || response?.message || "Failed to cancel trip",
         );
       }
 
@@ -1417,7 +1631,7 @@ export default function ActiveRideScreen() {
       setCancelComments("");
 
       // Show success message
-      showToast("Trip cancelled successfully", "success", "top");
+      showToast(toastTripCancelled, "success", "top");
 
       // Small delay to ensure context updates propagate before navigation
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -1427,11 +1641,9 @@ export default function ActiveRideScreen() {
     } catch (error) {
       console.error("Error handling ride cancellation:", error);
       showToast(
-        error instanceof Error
-          ? error.message
-          : "Failed to cancel trip. Please try again.",
+        error instanceof Error ? error.message : toastCancelTripFailed,
         "error",
-        "top"
+        "top",
       );
     }
   };
@@ -1445,11 +1657,7 @@ export default function ActiveRideScreen() {
     async (eta: number, note?: string) => {
       if (!driverId || !jobOfferData?.id) {
         console.error("Missing driverId or tripId for ETA update");
-        showToast(
-          "Unable to update ETA. Missing trip information.",
-          "error",
-          "top"
-        );
+        showToast(errorEtaMissing, "error", "top");
         return;
       }
 
@@ -1469,7 +1677,7 @@ export default function ActiveRideScreen() {
           responseCode === undefined;
 
         if (isSuccess) {
-          showToast("ETA updated successfully", "success", "top");
+          showToast(toastEtaUpdated, "success", "top");
           // Re-fetch ETA from DB to get the updated values (including note)
           try {
             await loadDriverETA();
@@ -1484,18 +1692,12 @@ export default function ActiveRideScreen() {
           closeUpdateETASheet();
         } else {
           console.error("Failed to update ETA:", response);
-          const errorMessage =
-            response?.jHeader?.message ||
-            "Failed to update ETA. Please try again.";
+          const errorMessage = response?.jHeader?.message || toastEtaFailed;
           showToast(errorMessage, "error", "top");
         }
       } catch (error) {
         console.error("Error updating ETA:", error);
-        showToast(
-          "An error occurred while updating ETA. Please try again.",
-          "error",
-          "top"
-        );
+        showToast(toastEtaError, "error", "top");
       }
     },
     [
@@ -1505,7 +1707,7 @@ export default function ActiveRideScreen() {
       showToast,
       closeUpdateETASheet,
       loadDriverETA,
-    ]
+    ],
   );
 
   // Add Toll handler
@@ -1567,7 +1769,7 @@ export default function ActiveRideScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={textColors.teal700} />
-          <Text style={styles.loadingText}>Loading trip data...</Text>
+          <Text style={styles.loadingText}>{loadingTrip}</Text>
         </View>
       </SafeAreaView>
     );
@@ -1579,14 +1781,12 @@ export default function ActiveRideScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <Header
-          title="Active Ride"
+          title={headerTitle}
           onBackPress={() => router.replace("/(tabs)")}
         />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Unable to Load Trip Data</Text>
-          <Text style={styles.errorMessage}>
-            {dataError || "No active trip data available"}
-          </Text>
+          <Text style={styles.errorTitle}>{errorTitle}</Text>
+          <Text style={styles.errorMessage}>{dataError || errorMessage}</Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => {
@@ -1604,7 +1804,7 @@ export default function ActiveRideScreen() {
               }
             }}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{errorRetry}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -1620,19 +1820,19 @@ export default function ActiveRideScreen() {
         <View style={styles.completionOverlay}>
           <View style={styles.completionLoadingContainer}>
             <ActivityIndicator size="large" color={textColors.teal700} />
-            <Text style={styles.completionLoadingText}>Completing ride...</Text>
-            <Text style={styles.completionSubText}>
-              Please wait while we process your ride completion
+            <Text style={styles.completionLoadingText}>
+              {completionLoading}
             </Text>
+            <Text style={styles.completionSubText}>{completionSubtext}</Text>
           </View>
         </View>
       )}
 
       <Header
         title={
-          RIDE_HEADER_TITLES[
-            currentRideState as keyof typeof RIDE_HEADER_TITLES
-          ] || "En Route"
+          headerTitleByState[
+            currentRideState as keyof typeof headerTitleByState
+          ] ?? headerEnRoute
         }
         rightAccessory={
           <View style={styles.toggleWrap}>
@@ -1704,12 +1904,12 @@ export default function ActiveRideScreen() {
         <RideLocations
           pickupAddress={
             currentRideState === RIDE_STATES.EN_ROUTE
-              ? jobOfferData?.pickupAddress || "Loading address..."
+              ? jobOfferData?.pickupAddress || loadingAddress
               : ""
           }
           dropoffAddress={
             currentRideState === RIDE_STATES.LOADED
-              ? jobOfferData?.dropoffAddress || "Loading address..."
+              ? jobOfferData?.dropoffAddress || loadingAddress
               : ""
           }
           showFreeWaitTimer={
@@ -1728,8 +1928,7 @@ export default function ActiveRideScreen() {
         style={[
           styles.detailsContainer,
           {
-            display:
-              toggleValue === RIDE_TOGGLE_LABELS.DETAILS ? "flex" : "none",
+            display: toggleValue === toggleDetails ? "flex" : "none",
           },
         ]}
       >
@@ -1739,26 +1938,26 @@ export default function ActiveRideScreen() {
       <View
         style={[
           styles.mapContainer,
-          { display: toggleValue === RIDE_TOGGLE_LABELS.MAP ? "flex" : "none" },
+          { display: toggleValue === toggleMap ? "flex" : "none" },
         ]}
       >
         <RideMap
-          pickupAddress={jobOfferData?.pickupAddress || "Loading address..."}
-          dropoffAddress={jobOfferData?.dropoffAddress || "Loading address..."}
+          pickupAddress={jobOfferData?.pickupAddress || loadingAddress}
+          dropoffAddress={jobOfferData?.dropoffAddress || loadingAddress}
           pickupCoordinates={mapCoordinates.pickupCoords}
           dropoffCoordinates={mapCoordinates.dropoffCoords}
           eta={
             isDriverReachedOnPickup
               ? ""
               : driverETA?.eta
-              ? `${driverETA.eta} mins`
-              : ""
+                ? `${driverETA.eta} mins`
+                : ""
           }
           showWazeButton={true}
           rideStatus={
-            RIDE_HEADER_TITLES[
-              currentRideState as keyof typeof RIDE_HEADER_TITLES
-            ] || "En Route"
+            headerTitleByState[
+              currentRideState as keyof typeof headerTitleByState
+            ] ?? headerEnRoute
           }
           onMapReady={() => {
             setIsMapReady(true);
@@ -1768,7 +1967,7 @@ export default function ActiveRideScreen() {
         />
       </View>
 
-      {toggleValue === RIDE_TOGGLE_LABELS.MAP && showSwipe && (
+      {toggleValue === toggleMap && showSwipe && (
         <Animated.View style={{ opacity: swipeOpacity }}>
           <RideAction
             leftComponent={
@@ -1783,8 +1982,8 @@ export default function ActiveRideScreen() {
             }
             swipeTitle={
               isActionLoading || isCompletingRide
-                ? "Processing..."
-                : SWIPE_BUTTON_TITLES[swipeButtonState]
+                ? swipeProcessing
+                : (swipeTitleByState[swipeButtonState] ?? swipeMarkArrived)
             }
             onSwipeComplete={() => {
               if (!isActionLoading && !isCompletingRide) {
@@ -1818,29 +2017,29 @@ export default function ActiveRideScreen() {
         open={contactCustomerSheetOpen}
         onClose={closeContactCustomerSheet}
         snapPoints={[250]}
-        headerTitle="Contact Customer"
+        headerTitle={contactSheetTitle}
       >
         <Typography
           type="bodyLarge"
           weight="bold"
           style={styles.sheetHeaderText}
         >
-          Phone: {customerPhone || "N/A"}
+          {contactPhoneLabel} {customerPhone || contactPhoneNa}
         </Typography>
         <View style={styles.sheetContainer}>
           {[
             {
-              label: "Call Using Cellular",
+              label: contactCallCellular,
               iconUrl: require("@/assets/images/phone-call.png"),
               onPress: handleCallCustomer,
             },
             {
-              label: "Chat",
+              label: contactChat,
               iconUrl: require("@/assets/images/sms.png"),
               onPress: handleSendSMS,
             },
             {
-              label: "WhatsApp",
+              label: contactWhatsapp,
               iconUrl: require("@/assets/images/whatsapp.png"),
               onPress: handleWhatsApp,
             },
@@ -1878,17 +2077,17 @@ export default function ActiveRideScreen() {
         open={sosSheetOpen}
         onClose={closeSosSheet}
         snapPoints={[250]}
-        headerTitle="SOS"
+        headerTitle={sosSheetTitle}
       >
         <View style={styles.sheetContainer}>
           {[
             {
-              label: "Call Dispatch",
+              label: sosCallDispatch,
               iconUrl: require("@/assets/images/phone-call.png"),
               onPress: handleCallDispatch,
             },
             {
-              label: "Call 911",
+              label: sosCall911,
               iconUrl: require("@/assets/images/sos-call.png"),
               onPress: handleCall911,
             },
@@ -1929,7 +2128,7 @@ export default function ActiveRideScreen() {
         snapPoints={["45%", "65%"]}
         snapPointsWhenKeyboardVisible={["85%", "95%"]}
         swipeToClose={false}
-        headerTitle="Cancel Ride"
+        headerTitle={cancelSheetTitle}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.cancelRideContainer}>
@@ -1940,7 +2139,7 @@ export default function ActiveRideScreen() {
               weight="medium"
               style={styles.cancelRideLabel}
             >
-              Select a Reason
+              {cancelSelectReasonLabel}
             </Typography>
             <TouchableOpacity
               onPress={handleOpenReasons}
@@ -1956,7 +2155,11 @@ export default function ActiveRideScreen() {
                 }
                 numberOfLines={1}
               >
-                {selectedReason || "Choose reason..."}
+                {selectedReason
+                  ? (cancelReasonDisplayList[
+                      CANCEL_RIDE_REASONS.indexOf(selectedReason)
+                    ] ?? selectedReason)
+                  : cancelChooseReason}
               </Typography>
               <Image
                 source={require("@/assets/images/black-down-arrow-icon.png")}
@@ -1972,10 +2175,10 @@ export default function ActiveRideScreen() {
               weight="medium"
               style={styles.cancelRideLabel}
             >
-              Add Comments
+              {cancelAddCommentsLabel}
             </Typography>
             <TextArea
-              placeholder="Type Here"
+              placeholder={cancelCommentsPlaceholder}
               value={cancelComments}
               onChangeText={setCancelComments}
               numberOfLines={3}
@@ -2001,7 +2204,7 @@ export default function ActiveRideScreen() {
                 !selectedReason && styles.cancelRideContinueButtonTextDisabled,
               ]}
             >
-              Continue
+              {cancelContinue}
             </Typography>
           </TouchableOpacity>
         </View>
@@ -2012,11 +2215,12 @@ export default function ActiveRideScreen() {
         open={reasonsSheetOpen}
         onClose={closeReasonsSheet}
         snapPoints={["45%"]}
-        headerTitle="Select Reason"
+        headerTitle={cancelReasonsSheetTitle}
       >
         <View style={styles.sheetContainer}>
-          {CANCEL_RIDE_REASONS.map((reason) => {
+          {CANCEL_RIDE_REASONS.map((reason, i) => {
             const selected = selectedReason === reason;
+            const displayLabel = cancelReasonDisplayList[i] ?? reason;
             return (
               <View key={reason}>
                 <TouchableOpacity
@@ -2028,7 +2232,7 @@ export default function ActiveRideScreen() {
                     weight={selected ? "bold" : "medium"}
                     style={styles.textBlack}
                   >
-                    {reason}
+                    {displayLabel}
                   </Typography>
                 </TouchableOpacity>
                 <View style={styles.sheetDivider} />
@@ -2041,18 +2245,18 @@ export default function ActiveRideScreen() {
       {/* Confirmation Modal */}
       <ConfirmationModal
         open={confirmationModalOpen}
-        title="Are You Sure?"
+        title={confirmTitle}
         description={
           selectedReason === "Vehicle Issue"
-            ? `You'll be set offline for ${VEHICLE_ISSUE_OFFLINE_HOURS} hours to resolve vehicle issues. This can't be undone. Frequent bailouts may affect your score or job offers.`
-            : "This action cannot be undone. Cancellation may affect your driver score or future ride preferences."
+            ? `${confirmDescriptionVehicleIssuePrefix} ${VEHICLE_ISSUE_OFFLINE_HOURS} ${confirmDescriptionVehicleIssueSuffix}`
+            : confirmDescriptionDefault
         }
         onConfirm={handleConfirmCancel}
         onCancel={handleGoBack}
-        cancelButtonText="Go Back"
-        confirmButtonText="Yes, Cancel"
+        cancelButtonText={confirmCancel}
+        confirmButtonText={confirmConfirm}
         loading={isCancellingTrip}
-        loadingText="Cancelling..."
+        loadingText={confirmLoading}
       />
 
       {/* Update ETA Bottom Sheet */}
@@ -2064,15 +2268,11 @@ export default function ActiveRideScreen() {
         snapPointsWhenKeyboardVisible={updateEtaSnapPointsWhenKeyboardVisible}
         swipeToClose={false}
         variant="update"
-        headerTitle="Update ETA"
-        description="Let the rider know if your arrival time has changed."
+        headerTitle={etaSheetTitle}
+        description={etaSheetDescription}
         showNoteSection={true}
         buttonText={
-          isFetchingETA
-            ? "Fetching ETA..."
-            : isUpdatingETA
-            ? "Updating ETA..."
-            : "Update ETA"
+          isFetchingETA ? etaFetching : isUpdatingETA ? etaUpdating : etaButton
         }
         isLoading={isUpdatingETA || isFetchingETA}
         initialEta={driverETA?.eta}

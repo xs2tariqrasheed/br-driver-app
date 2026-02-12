@@ -1,11 +1,13 @@
 import Header from "@/components/Header";
+import { useToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { CHAT_MODAL_CONTENT_KEYS } from "@/content/components/chat-modal-keys";
 import { useChat } from "@/context/ChatContext";
-import { openPhoneDialer } from "@/utils/helpers";
 import { useModalManager } from "@/context/ModalManagerContext";
-import { useToast } from "@/components/Toast";
-import React, { useEffect, useRef, useState } from "react";
+import { useGetContent } from "@/hooks/useGetContent";
+import { openPhoneDialer } from "@/utils/helpers";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -23,6 +25,47 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MessageBubble from "./MessageBubble";
 
 const ChatModal: React.FC = () => {
+  // Get content
+  const { getContent } = useGetContent();
+  const {
+    headerTitleFallback,
+    headerCustomerFallback,
+    loadingMessage,
+    errorDefault,
+    errorRetryButton,
+    errorLoadFailed,
+    errorCloseButton,
+    emptyTitle,
+    emptySubtitle,
+    inputPlaceholder,
+    toastSendFailed,
+    toastSendError,
+    toastPhoneUnavailable,
+    toastCallFailed,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitleFallback: get(CHAT_MODAL_CONTENT_KEYS.HEADER_TITLE_FALLBACK),
+      headerCustomerFallback: get(
+        CHAT_MODAL_CONTENT_KEYS.HEADER_CUSTOMER_FALLBACK,
+      ),
+      loadingMessage: get(CHAT_MODAL_CONTENT_KEYS.LOADING_MESSAGE),
+      errorDefault: get(CHAT_MODAL_CONTENT_KEYS.ERROR_DEFAULT),
+      errorRetryButton: get(CHAT_MODAL_CONTENT_KEYS.ERROR_RETRY_BUTTON),
+      errorLoadFailed: get(CHAT_MODAL_CONTENT_KEYS.ERROR_LOAD_FAILED),
+      errorCloseButton: get(CHAT_MODAL_CONTENT_KEYS.ERROR_CLOSE_BUTTON),
+      emptyTitle: get(CHAT_MODAL_CONTENT_KEYS.EMPTY_TITLE),
+      emptySubtitle: get(CHAT_MODAL_CONTENT_KEYS.EMPTY_SUBTITLE),
+      inputPlaceholder: get(CHAT_MODAL_CONTENT_KEYS.INPUT_PLACEHOLDER),
+      toastSendFailed: get(CHAT_MODAL_CONTENT_KEYS.TOAST_SEND_FAILED),
+      toastSendError: get(CHAT_MODAL_CONTENT_KEYS.TOAST_SEND_ERROR),
+      toastPhoneUnavailable: get(
+        CHAT_MODAL_CONTENT_KEYS.TOAST_PHONE_UNAVAILABLE,
+      ),
+      toastCallFailed: get(CHAT_MODAL_CONTENT_KEYS.TOAST_CALL_FAILED),
+    };
+  }, [getContent]);
+
   const {
     isOpen,
     messages,
@@ -96,7 +139,7 @@ const ChatModal: React.FC = () => {
           } catch (error: any) {
             console.error("Error handling keyboard show:", error);
           }
-        }
+        },
       );
 
       keyboardWillHideListener = Keyboard.addListener(
@@ -107,7 +150,7 @@ const ChatModal: React.FC = () => {
           } catch (error: any) {
             console.error("Error handling keyboard hide:", error);
           }
-        }
+        },
       );
     } catch (error: any) {
       console.error("Error setting up keyboard listeners:", error);
@@ -131,7 +174,7 @@ const ChatModal: React.FC = () => {
 
       if (!sendMessage) {
         console.error("sendMessage function is not available");
-        showToast("Unable to send message. Please try again.", "error", "top");
+        showToast(toastSendFailed, "error", "top");
         return;
       }
 
@@ -144,38 +187,30 @@ const ChatModal: React.FC = () => {
       setInputText("");
     } catch (error: any) {
       console.error("Error sending message:", error);
-      showToast(
-        error?.message || "Failed to send message. Please try again.",
-        "error",
-        "top"
-      );
+      showToast(error?.message || toastSendError, "error", "top");
     }
   };
 
   const handlePhoneCall = async () => {
     try {
       if (!customerInfo?.phone) {
-        showToast("Phone number is not available.", "error", "top");
+        showToast(toastPhoneUnavailable, "error", "top");
         return;
       }
 
       await openPhoneDialer(customerInfo.phone);
     } catch (error: any) {
       console.error("Failed to open phone dialer:", error);
-      showToast(
-        error?.message || "Unable to make phone call. Please try again.",
-        "error",
-        "top"
-      );
+      showToast(error?.message || toastCallFailed, "error", "top");
     }
   };
 
   const renderHeader = () => {
     try {
-      const customerName = customerInfo?.name || "Customer";
+      const customerName = customerInfo?.name || headerCustomerFallback;
       return (
         <Header
-          title={customerName}
+          title={customerName || headerCustomerFallback}
           onBackPress={closeChat}
           rightAccessory={
             <TouchableOpacity
@@ -194,12 +229,7 @@ const ChatModal: React.FC = () => {
       );
     } catch (error: any) {
       console.error("Error rendering header:", error);
-      return (
-        <Header
-          title="Chat"
-          onBackPress={closeChat}
-        />
-      );
+      return <Header title={headerTitleFallback} onBackPress={closeChat} />;
     }
   };
 
@@ -214,7 +244,7 @@ const ChatModal: React.FC = () => {
               weight="regular"
               style={styles.loadingText}
             >
-              Loading messages...
+              {loadingMessage}
             </Typography>
           </View>
         );
@@ -223,8 +253,12 @@ const ChatModal: React.FC = () => {
       if (error) {
         return (
           <View style={styles.errorContainer}>
-            <Typography type="bodyLarge" weight="medium" style={styles.errorText}>
-              {error || "An error occurred"}
+            <Typography
+              type="bodyLarge"
+              weight="medium"
+              style={styles.errorText}
+            >
+              {error || errorDefault}
             </Typography>
             <TouchableOpacity
               style={styles.retryButton}
@@ -241,7 +275,7 @@ const ChatModal: React.FC = () => {
                 weight="semibold"
                 style={styles.retryButtonText}
               >
-                Retry
+                {errorRetryButton}
               </Typography>
             </TouchableOpacity>
           </View>
@@ -249,7 +283,7 @@ const ChatModal: React.FC = () => {
       }
 
       const safeMessages = Array.isArray(messages) ? messages : [];
-      const customerName = customerInfo?.name || "Customer";
+      const customerName = customerInfo?.name || headerCustomerFallback;
 
       if (safeMessages.length === 0) {
         return (
@@ -259,14 +293,14 @@ const ChatModal: React.FC = () => {
               weight="regular"
               style={styles.emptyText}
             >
-              No messages yet
+              {emptyTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={styles.emptySubtext}
             >
-              Start a conversation with {customerName}
+              {emptySubtitle} {customerName}
             </Typography>
           </View>
         );
@@ -288,7 +322,10 @@ const ChatModal: React.FC = () => {
               }
               return <MessageBubble key={message.id} message={message} />;
             } catch (error: any) {
-              console.error(`Error rendering message at index ${index}:`, error);
+              console.error(
+                `Error rendering message at index ${index}:`,
+                error,
+              );
               return null;
             }
           })}
@@ -299,7 +336,7 @@ const ChatModal: React.FC = () => {
       return (
         <View style={styles.errorContainer}>
           <Typography type="bodyLarge" weight="medium" style={styles.errorText}>
-            Unable to load messages. Please try again.
+            {errorLoadFailed}
           </Typography>
           <TouchableOpacity
             style={styles.retryButton}
@@ -318,7 +355,7 @@ const ChatModal: React.FC = () => {
               weight="semibold"
               style={styles.retryButtonText}
             >
-              Close
+              {errorCloseButton}
             </Typography>
           </TouchableOpacity>
         </View>
@@ -333,14 +370,15 @@ const ChatModal: React.FC = () => {
           style={[
             styles.inputContainer,
             {
-              paddingBottom: keyboardHeight > 0 ? 12 : (insets?.bottom || 0) + 12,
+              paddingBottom:
+                keyboardHeight > 0 ? 12 : (insets?.bottom || 0) + 12,
             },
           ]}
         >
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.textInput}
-              placeholder="Type here"
+              placeholder={inputPlaceholder}
               placeholderTextColor={textColors.grey500}
               value={inputText || ""}
               onChangeText={(text) => {
@@ -372,7 +410,8 @@ const ChatModal: React.FC = () => {
                   source={require("@/assets/images/black-arrow-right.png")}
                   style={[
                     styles.sendIcon,
-                    (!inputText?.trim() || isSending) && styles.sendIconDisabled,
+                    (!inputText?.trim() || isSending) &&
+                      styles.sendIconDisabled,
                   ]}
                   resizeMode="contain"
                 />

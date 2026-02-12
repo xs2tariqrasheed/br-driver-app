@@ -1,10 +1,13 @@
+import MessageBubble from "@/components/ChatModal/MessageBubble";
 import Header from "@/components/Header";
+import { useToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { CHAT_CONTENT_KEYS } from "@/content/chat-keys";
 import { useChat } from "@/context/ChatContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { openPhoneDialer } from "@/utils/helpers";
-import { useToast } from "@/components/Toast";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -18,9 +21,49 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MessageBubble from "@/components/ChatModal/MessageBubble";
 
 export default function ChatScreen() {
+  const { getContent } = useGetContent();
+
+  // page content
+  const {
+    headerTitleFallback,
+    headerCustomerFallback,
+    loadingMessage,
+    errorDefault,
+    errorRetryButton,
+    errorLoadFailed,
+    errorCloseButton,
+    emptyTitle,
+    emptySubtitle,
+    inputPlaceholder,
+    toastSendFailed,
+    toastSendError,
+    toastPhoneUnavailable,
+    toastCallFailed,
+  } = useMemo(() => {
+    return {
+      headerTitleFallback: getContent(CHAT_CONTENT_KEYS.HEADER_TITLE_FALLBACK),
+      headerCustomerFallback: getContent(
+        CHAT_CONTENT_KEYS.HEADER_CUSTOMER_FALLBACK,
+      ),
+      loadingMessage: getContent(CHAT_CONTENT_KEYS.LOADING_MESSAGE),
+      errorDefault: getContent(CHAT_CONTENT_KEYS.ERROR_DEFAULT),
+      errorRetryButton: getContent(CHAT_CONTENT_KEYS.ERROR_RETRY_BUTTON),
+      errorLoadFailed: getContent(CHAT_CONTENT_KEYS.ERROR_LOAD_FAILED),
+      errorCloseButton: getContent(CHAT_CONTENT_KEYS.ERROR_CLOSE_BUTTON),
+      emptyTitle: getContent(CHAT_CONTENT_KEYS.EMPTY_TITLE),
+      emptySubtitle: getContent(CHAT_CONTENT_KEYS.EMPTY_SUBTITLE),
+      inputPlaceholder: getContent(CHAT_CONTENT_KEYS.INPUT_PLACEHOLDER),
+      toastSendFailed: getContent(CHAT_CONTENT_KEYS.TOAST_SEND_FAILED),
+      toastSendError: getContent(CHAT_CONTENT_KEYS.TOAST_SEND_ERROR),
+      toastPhoneUnavailable: getContent(
+        CHAT_CONTENT_KEYS.TOAST_PHONE_UNAVAILABLE,
+      ),
+      toastCallFailed: getContent(CHAT_CONTENT_KEYS.TOAST_CALL_FAILED),
+    };
+  }, [getContent]);
+
   const {
     isOpen,
     messages,
@@ -82,7 +125,7 @@ export default function ChatScreen() {
           } catch (error: any) {
             console.error("Error handling keyboard show:", error);
           }
-        }
+        },
       );
 
       keyboardWillHideListener = Keyboard.addListener(
@@ -93,7 +136,7 @@ export default function ChatScreen() {
           } catch (error: any) {
             console.error("Error handling keyboard hide:", error);
           }
-        }
+        },
       );
     } catch (error: any) {
       console.error("Error setting up keyboard listeners:", error);
@@ -117,7 +160,7 @@ export default function ChatScreen() {
 
       if (!sendMessage) {
         console.error("sendMessage function is not available");
-        showToast("Unable to send message. Please try again.", "error", "top");
+        showToast(toastSendFailed, "error", "top");
         return;
       }
 
@@ -130,35 +173,27 @@ export default function ChatScreen() {
       setInputText("");
     } catch (error: any) {
       console.error("Error sending message:", error);
-      showToast(
-        error?.message || "Failed to send message. Please try again.",
-        "error",
-        "top"
-      );
+      showToast(error?.message || toastSendError, "error", "top");
     }
   };
 
   const handlePhoneCall = async () => {
     try {
       if (!customerInfo?.phone) {
-        showToast("Phone number is not available.", "error", "top");
+        showToast(toastPhoneUnavailable, "error", "top");
         return;
       }
 
       await openPhoneDialer(customerInfo.phone);
     } catch (error: any) {
       console.error("Failed to open phone dialer:", error);
-      showToast(
-        error?.message || "Unable to make phone call. Please try again.",
-        "error",
-        "top"
-      );
+      showToast(error?.message || toastCallFailed, "error", "top");
     }
   };
 
   const renderHeader = () => {
     try {
-      const customerName = customerInfo?.name || "Customer";
+      const customerName = customerInfo?.name || headerCustomerFallback;
       return (
         <Header
           title={customerName}
@@ -180,12 +215,7 @@ export default function ChatScreen() {
       );
     } catch (error: any) {
       console.error("Error rendering header:", error);
-      return (
-        <Header
-          title="Chat"
-          onBackPress={closeChat}
-        />
-      );
+      return <Header title={headerTitleFallback} onBackPress={closeChat} />;
     }
   };
 
@@ -200,7 +230,7 @@ export default function ChatScreen() {
               weight="regular"
               style={styles.loadingText}
             >
-              Loading messages...
+              {loadingMessage}
             </Typography>
           </View>
         );
@@ -209,8 +239,12 @@ export default function ChatScreen() {
       if (error) {
         return (
           <View style={styles.errorContainer}>
-            <Typography type="bodyLarge" weight="medium" style={styles.errorText}>
-              {error || "An error occurred"}
+            <Typography
+              type="bodyLarge"
+              weight="medium"
+              style={styles.errorText}
+            >
+              {error || errorDefault}
             </Typography>
             <TouchableOpacity
               style={styles.retryButton}
@@ -227,7 +261,7 @@ export default function ChatScreen() {
                 weight="semibold"
                 style={styles.retryButtonText}
               >
-                Retry
+                {errorRetryButton}
               </Typography>
             </TouchableOpacity>
           </View>
@@ -235,7 +269,7 @@ export default function ChatScreen() {
       }
 
       const safeMessages = Array.isArray(messages) ? messages : [];
-      const customerName = customerInfo?.name || "Customer";
+      const customerName = customerInfo?.name || headerCustomerFallback;
 
       if (safeMessages.length === 0) {
         return (
@@ -245,14 +279,14 @@ export default function ChatScreen() {
               weight="regular"
               style={styles.emptyText}
             >
-              No messages yet
+              {emptyTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={styles.emptySubtext}
             >
-              Start a conversation with {customerName}
+              {emptySubtitle} {customerName}
             </Typography>
           </View>
         );
@@ -274,7 +308,10 @@ export default function ChatScreen() {
               }
               return <MessageBubble key={message.id} message={message} />;
             } catch (error: any) {
-              console.error(`Error rendering message at index ${index}:`, error);
+              console.error(
+                `Error rendering message at index ${index}:`,
+                error,
+              );
               return null;
             }
           })}
@@ -285,7 +322,7 @@ export default function ChatScreen() {
       return (
         <View style={styles.errorContainer}>
           <Typography type="bodyLarge" weight="medium" style={styles.errorText}>
-            Unable to load messages. Please try again.
+            {errorLoadFailed}
           </Typography>
           <TouchableOpacity
             style={styles.retryButton}
@@ -304,7 +341,7 @@ export default function ChatScreen() {
               weight="semibold"
               style={styles.retryButtonText}
             >
-              Close
+              {errorCloseButton}
             </Typography>
           </TouchableOpacity>
         </View>
@@ -319,14 +356,15 @@ export default function ChatScreen() {
           style={[
             styles.inputContainer,
             {
-              paddingBottom: keyboardHeight > 0 ? 12 : (insets?.bottom || 0) + 12,
+              paddingBottom:
+                keyboardHeight > 0 ? 12 : (insets?.bottom || 0) + 12,
             },
           ]}
         >
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.textInput}
-              placeholder="Type here"
+              placeholder={inputPlaceholder}
               placeholderTextColor={textColors.grey500}
               value={inputText || ""}
               onChangeText={(text) => {
@@ -358,7 +396,8 @@ export default function ChatScreen() {
                   source={require("@/assets/images/black-arrow-right.png")}
                   style={[
                     styles.sendIcon,
-                    (!inputText?.trim() || isSending) && styles.sendIconDisabled,
+                    (!inputText?.trim() || isSending) &&
+                      styles.sendIconDisabled,
                   ]}
                   resizeMode="contain"
                 />
@@ -507,5 +546,3 @@ const styles = StyleSheet.create({
     tintColor: textColors.grey500,
   },
 });
-
-

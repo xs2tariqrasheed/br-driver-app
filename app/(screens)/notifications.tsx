@@ -4,13 +4,15 @@ import NotificationItem from "@/components/NotificationItem";
 import { ThemedView } from "@/components/ThemedView";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
+import { NOTIFICATIONS_CONTENT_KEYS } from "@/content/notifications-keys";
 import {
   NotificationItem as NotificationItemType,
   useDriver,
 } from "@/context/DriverContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { Image } from "expo-image";
 import { router, Stack, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +26,79 @@ import {
 type TabType = "All" | "Unread" | "Read";
 
 const NotificationsScreen: React.FC = () => {
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const {
+    headerTitle,
+    actionClearAll,
+    tabAll,
+    tabUnread,
+    tabRead,
+    loadingMessage,
+    emptyAll,
+    emptyFilteredPrefix,
+    emptyFilteredSuffix,
+    alertReplySentTitle,
+    alertReplySentMessage,
+    alertErrorTitle,
+    alertReplyFailed,
+    alertOk,
+    alertDeleteTitle,
+    alertDeleteMessage,
+    alertDeleteCancel,
+    alertDeleteConfirm,
+    alertDeleteFailed,
+    alertDeleteAllTitle,
+    alertDeleteAllMessage,
+    alertDeleteAllConfirm,
+    alertDeleteAllFailed,
+  } = useMemo(() => {
+    const get = getContent;
+
+    return {
+      headerTitle: get(NOTIFICATIONS_CONTENT_KEYS.HEADER_TITLE),
+      actionClearAll: get(NOTIFICATIONS_CONTENT_KEYS.ACTION_CLEAR_ALL),
+      tabAll: get(NOTIFICATIONS_CONTENT_KEYS.TAB_ALL),
+      tabUnread: get(NOTIFICATIONS_CONTENT_KEYS.TAB_UNREAD),
+      tabRead: get(NOTIFICATIONS_CONTENT_KEYS.TAB_READ),
+      loadingMessage: get(NOTIFICATIONS_CONTENT_KEYS.LOADING_MESSAGE),
+      emptyAll: get(NOTIFICATIONS_CONTENT_KEYS.EMPTY_ALL),
+      emptyFilteredPrefix: get(
+        NOTIFICATIONS_CONTENT_KEYS.EMPTY_FILTERED_PREFIX,
+      ),
+      emptyFilteredSuffix: get(
+        NOTIFICATIONS_CONTENT_KEYS.EMPTY_FILTERED_SUFFIX,
+      ),
+      alertReplySentTitle: get(
+        NOTIFICATIONS_CONTENT_KEYS.ALERT_REPLY_SENT_TITLE,
+      ),
+      alertReplySentMessage: get(
+        NOTIFICATIONS_CONTENT_KEYS.ALERT_REPLY_SENT_MESSAGE,
+      ),
+      alertErrorTitle: get(NOTIFICATIONS_CONTENT_KEYS.ALERT_ERROR_TITLE),
+      alertReplyFailed: get(NOTIFICATIONS_CONTENT_KEYS.ALERT_REPLY_FAILED),
+      alertOk: get(NOTIFICATIONS_CONTENT_KEYS.ALERT_OK),
+      alertDeleteTitle: get(NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_TITLE),
+      alertDeleteMessage: get(NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_MESSAGE),
+      alertDeleteCancel: get(NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_CANCEL),
+      alertDeleteConfirm: get(NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_CONFIRM),
+      alertDeleteFailed: get(NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_FAILED),
+      alertDeleteAllTitle: get(
+        NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_ALL_TITLE,
+      ),
+      alertDeleteAllMessage: get(
+        NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_ALL_MESSAGE,
+      ),
+      alertDeleteAllConfirm: get(
+        NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_ALL_CONFIRM,
+      ),
+      alertDeleteAllFailed: get(
+        NOTIFICATIONS_CONTENT_KEYS.ALERT_DELETE_ALL_FAILED,
+      ),
+    };
+  }, [getContent]);
+  // Page Content End
+
   const {
     notifications,
     fetchNotifications,
@@ -67,11 +142,15 @@ const NotificationsScreen: React.FC = () => {
         console.log("[NotificationsScreen] useFocusEffect cleanup");
         isActive = false;
       };
-    }, [fetchNotifications])
+    }, [fetchNotifications]),
   );
 
   // Check if any API operation is in progress
-  const isProcessing = isFetchingNotifications || isMarkingAsRead || isDeletingNotification || isReplyingToNotification;
+  const isProcessing =
+    isFetchingNotifications ||
+    isMarkingAsRead ||
+    isDeletingNotification ||
+    isReplyingToNotification;
 
   const handleNotificationPress = async (notificationId: string) => {
     if (isProcessing) return; // Prevent action during processing
@@ -99,88 +178,70 @@ const NotificationsScreen: React.FC = () => {
 
     try {
       await replyToNotification(selectedNotification.id, reply);
-      Alert.alert(
-        "Reply Sent",
-        `Your reply: "${reply}" has been sent successfully.`
-      );
-      console.log("Reply sent:", reply);
+      Alert.alert(alertReplySentTitle, alertReplySentMessage);
     } catch (error: any) {
       console.error("Error sending reply:", error);
-      Alert.alert(
-        "Error",
-        error?.message || "Failed to send reply. Please try again.",
-        [{ text: "OK" }]
-      );
+      Alert.alert(alertErrorTitle, error?.message || alertReplyFailed, [
+        { text: alertOk },
+      ]);
     }
   };
 
   const handleDeleteNotification = async (notificationId: string) => {
     if (isProcessing) return; // Prevent action during processing
 
-    Alert.alert(
-      "Delete Notification",
-      "Are you sure you want to delete this notification?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    Alert.alert(alertDeleteTitle, alertDeleteMessage, [
+      {
+        text: alertDeleteCancel,
+        style: "cancel",
+      },
+      {
+        text: alertDeleteConfirm,
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteNotification(notificationId);
+            // The notification will be automatically removed from the UI
+            // due to the context state update
+          } catch (error) {
+            console.error("Failed to delete notification:", error);
+            Alert.alert(alertErrorTitle, alertDeleteFailed, [
+              { text: alertOk },
+            ]);
+          }
         },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteNotification(notificationId);
-              // The notification will be automatically removed from the UI
-              // due to the context state update
-            } catch (error) {
-              console.error("Failed to delete notification:", error);
-              Alert.alert(
-                "Error",
-                "Failed to delete notification. Please try again.",
-                [{ text: "OK" }]
-              );
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleDeleteAll = async () => {
     if (notifications.length === 0 || isProcessing) return; // Prevent action during processing
 
-    Alert.alert(
-      "Delete All Notifications",
-      "Are you sure you want to delete all notifications? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    Alert.alert(alertDeleteAllTitle, alertDeleteAllMessage, [
+      {
+        text: alertDeleteCancel,
+        style: "cancel",
+      },
+      {
+        text: alertDeleteAllConfirm,
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteAllNotifications();
+            // All notifications will be automatically removed from the UI
+            // due to the context state update
+          } catch (error) {
+            console.error("Failed to delete all notifications:", error);
+            Alert.alert(alertErrorTitle, alertDeleteAllFailed, [
+              { text: alertOk },
+            ]);
+          }
         },
-        {
-          text: "Delete All",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteAllNotifications();
-              // All notifications will be automatically removed from the UI
-              // due to the context state update
-            } catch (error) {
-              console.error("Failed to delete all notifications:", error);
-              Alert.alert(
-                "Error",
-                "Failed to delete all notifications. Please try again.",
-                [{ text: "OK" }]
-              );
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
-  // Filter notifications based on active tab
+  // Filter notifications based on active tab (use stable tab id)
   const filteredNotifications = notifications.filter((notification) => {
     switch (activeTab) {
       case "Unread":
@@ -193,29 +254,34 @@ const NotificationsScreen: React.FC = () => {
     }
   });
 
-  // Tab component
-  const TabNavigator = () => {
-    const tabs: TabType[] = ["All", "Unread", "Read"];
+  // Tab component – use stable keys (tab id) to avoid duplicate key when content is loading
+  const TAB_IDS = ["All", "Unread", "Read"] as const;
+  const TabNavigator = ({ read, unread, all }: any) => {
+    const tabs: { id: (typeof TAB_IDS)[number]; label: string }[] = [
+      { id: "All", label: all },
+      { id: "Unread", label: unread },
+      { id: "Read", label: read },
+    ];
 
     return (
       <View style={styles.tabContainer}>
-        {tabs.map((tab) => (
+        {tabs.map(({ id, label }) => (
           <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
-            onPress={() => setActiveTab(tab)}
+            key={id}
+            style={[styles.tab, activeTab === id && styles.activeTab]}
+            onPress={() => setActiveTab(id)}
           >
             <Typography
               type="bodyLarge"
-              weight={activeTab === tab ? "bold" : "regular"}
+              weight={activeTab === id ? "bold" : "regular"}
               style={[
                 styles.tabText,
-                activeTab === tab
+                activeTab === id
                   ? styles.activeTabText
                   : styles.inactiveTabText,
               ]}
             >
-              {tab}
+              {label}
             </Typography>
           </TouchableOpacity>
         ))}
@@ -228,77 +294,90 @@ const NotificationsScreen: React.FC = () => {
       <ThemedView style={{ flex: 1 }}>
         <Stack.Screen options={{ headerShown: false }} />
         <Header
-        title="Notifications"
-        hideBackIcon={false}
-        onBackPress={() => router.back()}
-        rightAccessory={
-          notifications.length > 0 ? (
-            <TouchableOpacity
-              style={[styles.deleteAllButton, isProcessing && styles.disabledButton]}
-              onPress={handleDeleteAll}
-              activeOpacity={0.6}
-              disabled={isProcessing}
-            >
-              <Image
-                source={require("@/assets/images/delete-icon.png")}
-                style={[styles.deleteAllIcon, isProcessing && styles.disabledIcon]}
-                contentFit="contain"
-              />
-              <Typography
-                type="bodySmall"
-                weight="medium"
-                style={[styles.deleteAllText, isProcessing && styles.disabledText]}
+          title={headerTitle}
+          hideBackIcon={false}
+          onBackPress={() => router.back()}
+          rightAccessory={
+            notifications.length > 0 ? (
+              <TouchableOpacity
+                style={[
+                  styles.deleteAllButton,
+                  isProcessing && styles.disabledButton,
+                ]}
+                onPress={handleDeleteAll}
+                activeOpacity={0.6}
+                disabled={isProcessing}
               >
-                Clear All
-              </Typography>
-            </TouchableOpacity>
-          ) : null
-        }
-      />
+                <Image
+                  source={require("@/assets/images/delete-icon.png")}
+                  style={[
+                    styles.deleteAllIcon,
+                    isProcessing && styles.disabledIcon,
+                  ]}
+                  contentFit="contain"
+                />
+                <Typography
+                  type="bodySmall"
+                  weight="medium"
+                  style={[
+                    styles.deleteAllText,
+                    isProcessing && styles.disabledText,
+                  ]}
+                >
+                  {actionClearAll}
+                </Typography>
+              </TouchableOpacity>
+            ) : null
+          }
+        />
 
-      {/* Tab Navigator */}
-      <TabNavigator />
+        {/* Tab Navigator */}
+        <TabNavigator read={tabRead} unread={tabUnread} all={tabAll} />
 
-      {isFetchingNotifications ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={textColors.teal700} />
-          <Typography type="bodyMedium" weight="regular" style={styles.loadingText}>
-            Loading notifications...
-          </Typography>
-        </View>
-      ) : filteredNotifications.length > 0 ? (
-        <ScrollView style={{ flex: 1 }}>
-          {filteredNotifications.map((notification) => (
-            <NotificationItem
-              key={notification.id}
-              id={notification.id}
-              messageTitle={notification.messageTitle}
-              messageBody={notification.messageBody}
-              dateTime={notification.dateTime}
-              messageType={notification.messageType}
-              isSpecial={notification.isSpecial}
-              onPress={handleNotificationPress}
-              onDelete={handleDeleteNotification}
-            />
-          ))}
-        </ScrollView>
-      ) : (
-        <View style={{ padding: 16 }}>
-          <Typography type="bodyLarge" weight="regular">
-            {activeTab === "All"
-              ? "No notifications yet."
-              : `No ${activeTab.toLowerCase()} notifications.`}
-          </Typography>
-        </View>
-      )}
+        {isFetchingNotifications ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={textColors.teal700} />
+            <Typography
+              type="bodyMedium"
+              weight="regular"
+              style={styles.loadingText}
+            >
+              {loadingMessage}
+            </Typography>
+          </View>
+        ) : filteredNotifications.length > 0 ? (
+          <ScrollView style={{ flex: 1 }}>
+            {filteredNotifications.map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                id={notification.id}
+                messageTitle={notification.messageTitle}
+                messageBody={notification.messageBody}
+                dateTime={notification.dateTime}
+                messageType={notification.messageType}
+                isSpecial={notification.isSpecial}
+                onPress={handleNotificationPress}
+                onDelete={handleDeleteNotification}
+              />
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={{ padding: 16 }}>
+            <Typography type="bodyLarge" weight="regular">
+              {activeTab === "All"
+                ? emptyAll
+                : `${emptyFilteredPrefix} ${activeTab.toLowerCase()} ${emptyFilteredSuffix}`}
+            </Typography>
+          </View>
+        )}
 
-      {/* Notification Bottom Sheet */}
-      <NotificationBottomSheet
-        open={bottomSheetOpen}
-        onClose={handleBottomSheetClose}
-        notification={selectedNotification}
-        onSendReply={handleSendReply}
-        isReplying={isReplyingToNotification}
+        {/* Notification Bottom Sheet */}
+        <NotificationBottomSheet
+          open={bottomSheetOpen}
+          onClose={handleBottomSheetClose}
+          notification={selectedNotification}
+          onSendReply={handleSendReply}
+          isReplying={isReplyingToNotification}
         />
       </ThemedView>
     </SafeAreaView>

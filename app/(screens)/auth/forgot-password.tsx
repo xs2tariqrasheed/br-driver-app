@@ -1,4 +1,4 @@
-import React from "react";
+import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   KeyboardAvoidingView,
@@ -18,6 +18,8 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import { API_CLIENT_TYPES } from "@/constants/global";
+import { FORGOT_PASSWORD_CONTENT_KEYS } from "@/content/(screens)/auth/forgot-password-keys";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { useRouter } from "expo-router";
 
@@ -33,6 +35,7 @@ type ForgotFormValues = {
  * - Navigates to Verify OTP on success
  */
 export default function ForgotPasswordScreen() {
+  const { getContent } = useGetContent();
   const router = useRouter();
   const {
     control,
@@ -45,8 +48,53 @@ export default function ForgotPasswordScreen() {
 
   const { execute: requestOtp, loading } = usePost<any, ForgotFormValues>(
     AUTH_ENDPOINTS.requestOtp,
-    API_CLIENT_TYPES.AUTH
+    API_CLIENT_TYPES.AUTH,
   );
+
+  // Page Content
+  const {
+    pageTitle,
+    introTitle,
+    introDescription,
+    formLoginIdLabel,
+    formLoginIdPlaceholder,
+    formLoginIdValidationRequired,
+    formCompanyIdLabel,
+    formCompanyIdPlaceholder,
+    formCompanyIdValidationRequired,
+    actionSendOtp,
+    toastSuccess,
+    toastError,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      pageTitle: get(FORGOT_PASSWORD_CONTENT_KEYS.PAGE_TITLE),
+      introTitle: get(FORGOT_PASSWORD_CONTENT_KEYS.INTRO_TITLE),
+      introDescription: get(FORGOT_PASSWORD_CONTENT_KEYS.INTRO_DESCRIPTION),
+      formLoginIdLabel: get(FORGOT_PASSWORD_CONTENT_KEYS.FORM_LOGIN_ID_LABEL),
+      formLoginIdPlaceholder: get(
+        FORGOT_PASSWORD_CONTENT_KEYS.FORM_LOGIN_ID_PLACEHOLDER,
+      ),
+      formLoginIdValidationRequired: get(
+        FORGOT_PASSWORD_CONTENT_KEYS.FORM_LOGIN_ID_VALIDATION_REQUIRED,
+      ),
+      formCompanyIdLabel: get(
+        FORGOT_PASSWORD_CONTENT_KEYS.FORM_COMPANY_ID_LABEL,
+      ),
+      formCompanyIdPlaceholder: get(
+        FORGOT_PASSWORD_CONTENT_KEYS.FORM_COMPANY_ID_PLACEHOLDER,
+      ),
+      formCompanyIdValidationRequired: get(
+        FORGOT_PASSWORD_CONTENT_KEYS.FORM_COMPANY_ID_VALIDATION_REQUIRED,
+      ),
+      actionSendOtp: get(FORGOT_PASSWORD_CONTENT_KEYS.ACTION_SEND_OTP),
+      toastSuccess: get(
+        FORGOT_PASSWORD_CONTENT_KEYS.FORGOT_PASSWORD_TOAST_SUCCESS,
+      ),
+      toastError: get(FORGOT_PASSWORD_CONTENT_KEYS.FORGOT_PASSWORD_TOAST_ERROR),
+    };
+  }, [getContent]);
+  // Page Content End
 
   /**
    * Sends an OTP to the user for password reset.
@@ -56,27 +104,27 @@ export default function ForgotPasswordScreen() {
     try {
       const response = await requestOtp(data);
 
-      showToast(response?.message || "OTP sent successfully", {
+      showToast(response?.message || toastSuccess, {
         variant: "success",
         position: "top",
       });
       router.push({
         pathname: "/(screens)/auth/verify-otp",
-        params: { 
+        params: {
           context: "forgot-password",
           email: data.loginId, // loginId is email behind the scenes
           companyId: data.companyId,
         },
       });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to send OTP";
+      const message = e instanceof Error ? e.message : toastError;
       showToast(message, { variant: "error", position: "top" });
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Forgot Password" onBackPress={() => router.back()} />
+      <Header title={pageTitle} onBackPress={() => router.back()} />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
@@ -98,15 +146,14 @@ export default function ForgotPasswordScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Verify Your Identity
+              {introTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={styles.textBlack}
             >
-              Enter your Login and Company ID to receive a one-time password
-              (OTP) for resetting your password.
+              {introDescription}
             </Typography>
           </View>
 
@@ -114,11 +161,11 @@ export default function ForgotPasswordScreen() {
             <Controller
               control={control}
               name="loginId"
-              rules={{ required: "Login ID is required." }}
+              rules={{ required: formLoginIdValidationRequired }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Login ID"
-                  placeholder="Enter your login ID"
+                  label={formLoginIdLabel}
+                  placeholder={formLoginIdPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -131,11 +178,11 @@ export default function ForgotPasswordScreen() {
             <Controller
               control={control}
               name="companyId"
-              rules={{ required: "Company ID is required." }}
+              rules={{ required: formCompanyIdValidationRequired }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Company ID"
-                  placeholder="Enter your company ID"
+                  label={formCompanyIdLabel}
+                  placeholder={formCompanyIdPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -152,7 +199,7 @@ export default function ForgotPasswordScreen() {
               loading={loading}
               disabled={loading}
             >
-              Send OTP
+              {actionSendOtp}
             </Button>
           </View>
         </ScrollView>

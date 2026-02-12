@@ -1,5 +1,7 @@
 import { textColors } from "@/constants/colors";
-import React, { useState } from "react";
+import { BID_BOTTOM_SHEET_CONTENT_KEYS } from "@/content/components/bid-bottom-sheet-keys";
+import { useGetContent } from "@/hooks/useGetContent";
+import React, { useMemo, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import CustomBottomSheet from "../BottomSheet";
 import Button from "../Button";
@@ -105,6 +107,34 @@ const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
   const [isBoosted, setIsBoosted] = useState(false);
   const [boostAmount, setBoostAmount] = useState(boostedPrices[0] || 0);
 
+  // Get content
+  const { getContent } = useGetContent();
+
+  const {
+    headerTitle,
+    sectionAdjustPrice,
+    sectionEtaLabel,
+    sectionEtaSuffix,
+    sectionBoostLabel,
+    sectionBoostSuffix,
+    actionSubmit,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(BID_BOTTOM_SHEET_CONTENT_KEYS.HEADER_TITLE),
+      sectionAdjustPrice: get(
+        BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ADJUST_PRICE,
+      ),
+      sectionEtaLabel: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ETA_LABEL),
+      sectionEtaSuffix: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ETA_SUFFIX),
+      sectionBoostLabel: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_BOOST_LABEL),
+      sectionBoostSuffix: get(
+        BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_BOOST_SUFFIX,
+      ),
+      actionSubmit: get(BID_BOTTOM_SHEET_CONTENT_KEYS.ACTION_SUBMIT),
+    };
+  }, [getContent]);
+
   // Get min and max values from suggested bids
   const minBid = Math.min(...systemSuggestedBids.map((b) => b.amount));
   const maxBid = Math.max(...systemSuggestedBids.map((b) => b.amount));
@@ -113,7 +143,7 @@ const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
 
   // Find the selected bid data
   const selectedBidData = systemSuggestedBids.find(
-    (b) => b.amount === selectedBid
+    (b) => b.amount === selectedBid,
   );
 
   const handleSubmit = () => {
@@ -135,7 +165,7 @@ const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
       showHeader={showHeader}
       backdrop={backdrop}
       swipeToClose={swipeToClose}
-      headerTitle="Customize Your Bid"
+      headerTitle={headerTitle}
     >
       <View style={styles.container}>
         {/* Header */}
@@ -162,7 +192,7 @@ const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
           weight="semibold"
           style={styles.sectionHeading}
         >
-          Adjust Price
+          {sectionAdjustPrice}
         </Typography>
 
         {/* Suggested Bid Buttons */}
@@ -212,13 +242,13 @@ const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
             weight="semibold"
             style={styles.etaSectionTitle}
           >
-            Est.Time of Arrival{" "}
+            {sectionEtaLabel}{" "}
             <Typography
               type="bodyLarge"
               weight="regular"
               style={styles.etaSectionTitle}
             >
-              (ETA)
+              {sectionEtaSuffix}
             </Typography>
           </Typography>
           <Counter
@@ -229,8 +259,8 @@ const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
             max={30}
             step={1}
             formatLabel={(value) => `${value} mins`}
-              />
-            </View>
+          />
+        </View>
 
         <Divider marginVertical={24} />
 
@@ -242,13 +272,13 @@ const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
               weight="semibold"
               style={styles.sectionTitle}
             >
-              Boost My Bid{" "}
+              {sectionBoostLabel}{" "}
               <Typography
                 type="bodyLarge"
                 weight="regular"
                 style={styles.etaSectionTitle}
               >
-                (Put me on top)
+                {sectionBoostSuffix}
               </Typography>
             </Typography>
             <Toggle
@@ -304,7 +334,7 @@ const BidBottomSheet: React.FC<BidBottomSheetProps> = ({
         {/* Submit Button */}
         <View style={styles.submitSection}>
           <Button variant="primary" rounded="half" onPress={handleSubmit}>
-            Submit
+            {actionSubmit}
           </Button>
         </View>
       </View>

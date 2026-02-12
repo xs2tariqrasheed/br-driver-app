@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   KeyboardAvoidingView,
@@ -20,8 +20,10 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import { API_CLIENT_TYPES } from "@/constants/global";
+import { UPDATE_PASSWORD_CONTENT_KEYS } from "@/content/(screens)/more/update-password-keys";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
-import { useRouter } from "expo-router";
+import { router } from "expo-router";
 
 type UpdateFormValues = {
   oldPassword: string;
@@ -30,7 +32,66 @@ type UpdateFormValues = {
 };
 
 export default function UpdatePasswordScreen() {
-  const router = useRouter();
+  const getContent = useGetContent();
+
+  const {
+    headerTitle,
+    introTitle,
+    introDescription,
+    formOldPasswordLabel,
+    formOldPasswordPlaceholder,
+    formOldPasswordValidationRequired,
+    formPasswordLabel,
+    formPasswordPlaceholder,
+    formPasswordValidationRequired,
+    formConfirmPasswordLabel,
+    formConfirmPasswordPlaceholder,
+    formConfirmPasswordValidationRequired,
+    formConfirmPasswordValidationMismatch,
+    actionUpdate,
+    toastSuccess,
+    toastError,
+  } = useMemo(() => {
+    const get = getContent.getContent;
+    return {
+      headerTitle: get(UPDATE_PASSWORD_CONTENT_KEYS.HEADER_TITLE),
+      introTitle: get(UPDATE_PASSWORD_CONTENT_KEYS.INTRO_TITLE),
+      introDescription: get(UPDATE_PASSWORD_CONTENT_KEYS.INTRO_DESCRIPTION),
+      formOldPasswordLabel: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_OLD_PASSWORD_LABEL,
+      ),
+      formOldPasswordPlaceholder: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_OLD_PASSWORD_PLACEHOLDER,
+      ),
+      formOldPasswordValidationRequired: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_OLD_PASSWORD_VALIDATION_REQUIRED,
+      ),
+      formPasswordLabel: get(UPDATE_PASSWORD_CONTENT_KEYS.FORM_PASSWORD_LABEL),
+      formPasswordPlaceholder: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_PASSWORD_PLACEHOLDER,
+      ),
+      formPasswordValidationRequired: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_PASSWORD_VALIDATION_REQUIRED,
+      ),
+      formConfirmPasswordLabel: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_CONFIRM_PASSWORD_LABEL,
+      ),
+      formConfirmPasswordPlaceholder: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_CONFIRM_PASSWORD_PLACEHOLDER,
+      ),
+      formConfirmPasswordValidationRequired: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_CONFIRM_PASSWORD_VALIDATION_REQUIRED,
+      ),
+      formConfirmPasswordValidationMismatch: get(
+        UPDATE_PASSWORD_CONTENT_KEYS.FORM_CONFIRM_PASSWORD_VALIDATION_MISMATCH,
+      ),
+      actionUpdate: get(UPDATE_PASSWORD_CONTENT_KEYS.ACTION_UPDATE),
+      toastSuccess: get(UPDATE_PASSWORD_CONTENT_KEYS.TOAST_SUCCESS),
+      toastError: get(UPDATE_PASSWORD_CONTENT_KEYS.TOAST_ERROR),
+    };
+  }, [getContent]);
+  // Page Content End
+
   const {
     control,
     handleSubmit,
@@ -73,7 +134,7 @@ export default function UpdatePasswordScreen() {
         password: passwordValue,
         confirmPassword: confirmValue,
       });
-      showToast(response?.message || "Password updated successfully", {
+      showToast(response?.message || toastSuccess, {
         variant: "success",
         position: "top",
       });
@@ -81,8 +142,7 @@ export default function UpdatePasswordScreen() {
       setPasswordPanelsOverride(null);
       setConfirmPanelsOverride(null);
     } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Failed to update password";
+      const message = e instanceof Error ? e.message : toastError;
       showToast(message, { variant: "error", position: "top" });
     }
   };
@@ -120,7 +180,7 @@ export default function UpdatePasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Update Password" onBackPress={() => router.back()} />
+      <Header title={headerTitle} onBackPress={() => router.back()} />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
@@ -142,14 +202,14 @@ export default function UpdatePasswordScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Update Your Password
+              {introTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={styles.textBlack}
             >
-              Set a new password to keep your account secure.
+              {introDescription}
             </Typography>
           </View>
 
@@ -157,11 +217,11 @@ export default function UpdatePasswordScreen() {
             <Controller
               control={control}
               name="oldPassword"
-              rules={{ required: "Old Password is required." }}
+              rules={{ required: formOldPasswordValidationRequired }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Old Password"
-                  placeholder="Old Password"
+                  label={formOldPasswordLabel}
+                  placeholder={formOldPasswordPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -176,12 +236,12 @@ export default function UpdatePasswordScreen() {
               control={control}
               name="password"
               rules={{
-                required: "New Password is required.",
+                required: formPasswordValidationRequired,
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="New Password"
-                  placeholder="New Password"
+                  label={formPasswordLabel}
+                  placeholder={formPasswordPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -212,14 +272,15 @@ export default function UpdatePasswordScreen() {
               control={control}
               name="confirmPassword"
               rules={{
-                required: "Please confirm your new password.",
+                required: formConfirmPasswordValidationRequired,
                 validate: (val) =>
-                  val === passwordValue || "Passwords do not match.",
+                  val === passwordValue ||
+                  formConfirmPasswordValidationMismatch,
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Confirm New Password"
-                  placeholder="Confirm New Password"
+                  label={formConfirmPasswordLabel}
+                  placeholder={formConfirmPasswordPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -253,7 +314,7 @@ export default function UpdatePasswordScreen() {
               loading={submitting}
               disabled={submitting || !canSubmit}
             >
-              Update Password
+              {actionUpdate}
             </Button>
           </View>
         </ScrollView>

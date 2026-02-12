@@ -5,9 +5,10 @@ import { Image as RNImage, StyleSheet, View } from "react-native";
 
 export interface DriverOfflineProps {
   style?: any;
+  message: string;
 }
 
-const DriverOffline: React.FC<DriverOfflineProps> = ({ style }) => {
+const DriverOffline: React.FC<DriverOfflineProps> = ({ style, message }) => {
   return (
     <View style={[styles.container, style]}>
       <View style={styles.content}>
@@ -21,8 +22,7 @@ const DriverOffline: React.FC<DriverOfflineProps> = ({ style }) => {
           weight="regular"
           style={styles.description}
         >
-          You are offline. Switch your status to online to start receiving jobs,
-          viewing job listings, and accessing other features.
+          {message}
         </Typography>
       </View>
     </View>

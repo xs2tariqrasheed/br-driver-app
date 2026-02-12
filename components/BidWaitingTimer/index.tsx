@@ -1,5 +1,7 @@
 import { textColors } from "@/constants/colors";
-import React from "react";
+import { BID_WAITING_TIMER_CONTENT_KEYS } from "@/content/components/bid-waiting-timer-keys";
+import { useGetContent } from "@/hooks/useGetContent";
+import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import CustomBottomSheet from "../BottomSheet";
 import Button from "../Button";
@@ -67,12 +69,25 @@ const BidWaitingTimer: React.FC<BidWaitingTimerProps> = ({
   snapPoints = ["40%"],
   initialSnapIndex = 0,
 }) => {
+  // Get content
+  const { getContent } = useGetContent();
+  const { headerWaiting, descriptionWaiting, buttonCancel } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerWaiting: get(BID_WAITING_TIMER_CONTENT_KEYS.HEADER_WAITING),
+      descriptionWaiting: get(
+        BID_WAITING_TIMER_CONTENT_KEYS.DESCRIPTION_WAITING,
+      ),
+      buttonCancel: get(BID_WAITING_TIMER_CONTENT_KEYS.BUTTON_CANCEL),
+    };
+  }, [getContent]);
+
   return (
     <CustomBottomSheet
       open={open}
       snapPoints={snapPoints}
       initialSnapIndex={initialSnapIndex}
-      headerTitle="Waiting for Customer"
+      headerTitle={headerWaiting}
       disabledClose={true}
     >
       <View style={styles.container}>
@@ -82,7 +97,7 @@ const BidWaitingTimer: React.FC<BidWaitingTimerProps> = ({
           weight="regular"
           style={styles.description}
         >
-          Your bid has been sent. Please wait while the customer reviews it.
+          {descriptionWaiting}
         </Typography>
 
         {/* Progress Bar */}
@@ -104,7 +119,7 @@ const BidWaitingTimer: React.FC<BidWaitingTimerProps> = ({
             onPress={onCancel}
             style={styles.cancelButton}
           >
-            Cancel
+            {buttonCancel}
           </Button>
         </View>
       </View>

@@ -86,7 +86,7 @@ export type AuthEndpointKey = keyof typeof AUTH_ENDPOINTS;
 
 export const APP_ENDPOINTS = {
   /** Get app content */
-  content: "/settings-service/content",
+  content: "/settings-service/content/app",
 } as const;
 
 export const DRIVER_SETTINGS_ENDPOINTS = {

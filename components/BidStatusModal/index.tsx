@@ -16,14 +16,14 @@ import {
   BID_STATUS,
   BID_STATUS_COLORS,
   BID_STATUS_COUNTDOWN_DURATION_SECONDS,
-  BID_STATUS_MESSAGES,
-  SPEECH_MESSAGES,
   type BidStatus,
 } from "@/constants/global";
+import { BID_STATUS_MODAL_CONTENT_KEYS } from "@/content/components/bid-status-modal-keys";
 import { useSettings } from "@/context/SettingsContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { speechManager } from "@/utils/speechManager";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Typography from "../Typography";
 
@@ -67,14 +67,64 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
 }) => {
   const [settings] = useSettings();
   const [countdown, setCountdown] = useState<number>(
-    BID_STATUS_COUNTDOWN_DURATION_SECONDS
+    BID_STATUS_COUNTDOWN_DURATION_SECONDS,
   );
 
-  // Get status-specific data
-  const statusData =
-    BID_STATUS_MESSAGES[
-      status.toUpperCase() as keyof typeof BID_STATUS_MESSAGES
-    ];
+  const { getContent } = useGetContent();
+  const {
+    titleExpired,
+    descriptionExpired,
+    titleUnsuccessful,
+    descriptionUnsuccessful,
+    titleAccepted,
+    descriptionAccepted,
+    countdownRedirecting,
+    countdownClosing,
+    speechAccepted,
+    speechExpired,
+    speechUnsuccessful,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      titleExpired: get(BID_STATUS_MODAL_CONTENT_KEYS.TITLE_EXPIRED),
+      descriptionExpired: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.DESCRIPTION_EXPIRED,
+      ),
+      titleUnsuccessful: get(BID_STATUS_MODAL_CONTENT_KEYS.TITLE_UNSUCCESSFUL),
+      descriptionUnsuccessful: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.DESCRIPTION_UNSUCCESSFUL,
+      ),
+      titleAccepted: get(BID_STATUS_MODAL_CONTENT_KEYS.TITLE_ACCEPTED),
+      descriptionAccepted: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.DESCRIPTION_ACCEPTED,
+      ),
+      countdownRedirecting: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.COUNT_DOWN_REDIRECTING,
+      ),
+      countdownClosing: get(BID_STATUS_MODAL_CONTENT_KEYS.COUNT_DOWN_CLOSING),
+      speechAccepted: get(BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_ACCEPTED),
+      speechExpired: get(BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_EXPIRED),
+      speechUnsuccessful: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_UNSUCCESSFUL,
+      ),
+    };
+  }, [getContent]);
+
+  const statusTitle =
+    status === BID_STATUS.EXPIRED
+      ? titleExpired
+      : status === BID_STATUS.UNSUCCESSFUL
+        ? titleUnsuccessful
+        : titleAccepted;
+  const statusDescription =
+    status === BID_STATUS.EXPIRED
+      ? descriptionExpired
+      : status === BID_STATUS.UNSUCCESSFUL
+        ? descriptionUnsuccessful
+        : descriptionAccepted;
+  const countdownLabel =
+    status === BID_STATUS.ACCEPTED ? countdownRedirecting : countdownClosing;
+
   const backgroundColor =
     BID_STATUS_COLORS[status.toUpperCase() as keyof typeof BID_STATUS_COLORS];
 
@@ -85,24 +135,31 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
     }
   }, [open]);
 
-  // Speak the status message when modal opens
+  // Speak the status message when modal opens (using dynamic content)
   useEffect(() => {
     if (open && !settings.notifications.muteAll) {
       switch (status) {
         case BID_STATUS.EXPIRED:
-          speechManager.speak(SPEECH_MESSAGES.BID_EXPIRED);
+          speechManager.speak(speechExpired);
           break;
         case BID_STATUS.UNSUCCESSFUL:
-          speechManager.speak(SPEECH_MESSAGES.BID_UNSUCCESSFUL);
+          speechManager.speak(speechUnsuccessful);
           break;
         case BID_STATUS.ACCEPTED:
-          speechManager.speak(SPEECH_MESSAGES.BID_ACCEPTED);
+          speechManager.speak(speechAccepted);
           break;
         default:
           break;
       }
     }
-  }, [open, status, settings.notifications.muteAll]);
+  }, [
+    open,
+    status,
+    settings.notifications.muteAll,
+    speechExpired,
+    speechUnsuccessful,
+    speechAccepted,
+  ]);
 
   // Handle countdown timer for expired, accepted, and unsuccessful status
   useEffect(() => {
@@ -140,7 +197,9 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
 
       // Navigate to active-ride screen when status is ACCEPTED
       if (status === BID_STATUS.ACCEPTED) {
-        console.log("⏳ Waiting for backend to initialize trip before redirecting...");
+        console.log(
+          "⏳ Waiting for backend to initialize trip before redirecting...",
+        );
         // Add a small delay before redirecting to allow backend to initialize the trip
         setTimeout(() => {
           console.log("🚀 Redirecting to active-ride screen in BidStatusModal");
@@ -169,7 +228,9 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
     console.log("status on Close in BidStatusModal", status);
     // Navigate to active-ride screen when status is ACCEPTED
     if (status === BID_STATUS.ACCEPTED) {
-      console.log("⏳ Waiting for backend to initialize trip before redirecting...");
+      console.log(
+        "⏳ Waiting for backend to initialize trip before redirecting...",
+      );
       // Add a small delay before redirecting to allow backend to initialize the trip
       setTimeout(() => {
         console.log("🚀 Redirecting to active-ride screen in BidStatusModal");
@@ -202,7 +263,7 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
               weight="semibold"
               style={styles.headerTitle}
             >
-              {statusData?.TITLE}
+              {statusTitle}
             </Typography>
             <View style={styles.placeholder} />
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
@@ -218,13 +279,12 @@ const BidStatusModal: React.FC<BidStatusModalProps> = ({
               weight="regular"
               style={styles.description}
             >
-              {statusData.DESCRIPTION}
+              {statusDescription}
             </Typography>
 
             {/* Countdown timer for all statuses */}
             <Typography type="bodyLarge" weight="bold" style={styles.countdown}>
-              {status === BID_STATUS.ACCEPTED ? "Redirecting in" : "Closing in"}{" "}
-              {formatCountdown(countdown)}
+              {countdownLabel} {formatCountdown(countdown)}
             </Typography>
           </View>
         </View>

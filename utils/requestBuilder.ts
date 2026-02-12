@@ -11,6 +11,10 @@
 import {
   API_VERSION,
   CLIENT_VERSION,
+  CONTENT_ACTION_CODE,
+  CONTENT_AFFILIATE_NUM,
+  CONTENT_APP_NAME,
+  CONTENT_VIEW_NAME,
   DEFAULT_ACCESS_KEY,
   DEFAULT_ACCESS_TOKEN,
 } from "@/constants/global";
@@ -223,7 +227,7 @@ export function getRequestedURL(): string {
  */
 export async function buildRequestHeader(
   viewName: string,
-  source: string = "NativeApp",
+  source: string = "driverapp",
   options?: {
     actionCode?: string;
     includeGPS?: boolean;
@@ -391,4 +395,25 @@ export async function buildForgotUserIdRequest(input: {
     source: "NativeApp",
     includeGPS: true,
   });
+}
+
+/**
+ * Builds a content fetch request for Settings Service (/content/app).
+ */
+export async function buildAppContentRequest(): Promise<DbRequestJson> {
+  const jHeader = await buildRequestHeader(CONTENT_VIEW_NAME, "driverapp", {
+    includeGPS: false,
+  });
+
+  const jData = {
+    P_ACTION_CODE: CONTENT_ACTION_CODE,
+    P_AFFILIATE_NUM: CONTENT_AFFILIATE_NUM,
+    P_APP_NAME: CONTENT_APP_NAME,
+  };
+
+  return {
+    jHeader,
+    jMetaData: {},
+    jData,
+  };
 }

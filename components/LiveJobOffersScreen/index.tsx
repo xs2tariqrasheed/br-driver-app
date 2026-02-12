@@ -20,13 +20,13 @@ import { textColors } from "@/constants/colors";
 import { ACTIVE_TRIP_ROUTES, LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
 import {
   API_CLIENT_TYPES,
-  EMPTY_STATE_MESSAGES,
   LOCAL_JOB_STATUS,
   OFFER_TYPES,
   TRIP_OFFER_ACTIONS,
   type LocalJobStatus,
   type OfferType,
 } from "@/constants/global";
+import { LIVE_JOB_OFFERS_CONTENT_KEYS } from "@/content/components/live-job-offers-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
@@ -35,6 +35,7 @@ import { useDriver } from "@/context/DriverContext";
 import { usePackageInfo } from "@/context/PackageInfoContext";
 import { useRideOffer } from "@/context/RideOfferContext";
 import { useSpecialRequirements } from "@/context/SpecialRequirementsContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
 import { router, useFocusEffect } from "expo-router";
@@ -72,6 +73,61 @@ export default function LiveJobOffersScreen({
   showHiddenJobs,
   type = OFFER_TYPES.LIVE,
 }: LiveJobOffersScreenProps) {
+  // Get content
+  const { getContent } = useGetContent();
+  const {
+    toastWaitingCustomer,
+    toastBidFailed,
+    toastAcceptUnable,
+    toastAcceptSuccess,
+    toastEtaUpdateFailed,
+    toastAcceptFailed,
+    viewMorePrefix,
+    viewMoreSuffix,
+    tripInProgressTitle,
+    tripInProgressMessage,
+    tripInProgressButton,
+    emptyTitle,
+    emptyMessageLive,
+    emptyMessageHired,
+    errorTitle,
+    errorMessage,
+    errorRetry,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      toastWaitingCustomer: get(
+        LIVE_JOB_OFFERS_CONTENT_KEYS.TOAST_WAITING_CUSTOMER,
+      ),
+      toastBidFailed: get(LIVE_JOB_OFFERS_CONTENT_KEYS.TOAST_BID_FAILED),
+      toastAcceptUnable: get(LIVE_JOB_OFFERS_CONTENT_KEYS.TOAST_ACCEPT_UNABLE),
+      toastAcceptSuccess: get(
+        LIVE_JOB_OFFERS_CONTENT_KEYS.TOAST_ACCEPT_SUCCESS,
+      ),
+      toastEtaUpdateFailed: get(
+        LIVE_JOB_OFFERS_CONTENT_KEYS.TOAST_ETA_UPDATE_FAILED,
+      ),
+      toastAcceptFailed: get(LIVE_JOB_OFFERS_CONTENT_KEYS.TOAST_ACCEPT_FAILED),
+      viewMorePrefix: get(LIVE_JOB_OFFERS_CONTENT_KEYS.VIEW_MORE_PREFIX),
+      viewMoreSuffix: get(LIVE_JOB_OFFERS_CONTENT_KEYS.VIEW_MORE_SUFFIX),
+      tripInProgressTitle: get(
+        LIVE_JOB_OFFERS_CONTENT_KEYS.TRIP_IN_PROGRESS_TITLE,
+      ),
+      tripInProgressMessage: get(
+        LIVE_JOB_OFFERS_CONTENT_KEYS.TRIP_IN_PROGRESS_MESSAGE,
+      ),
+      tripInProgressButton: get(
+        LIVE_JOB_OFFERS_CONTENT_KEYS.TRIP_IN_PROGRESS_BUTTON,
+      ),
+      emptyTitle: get(LIVE_JOB_OFFERS_CONTENT_KEYS.EMPTY_TITLE),
+      emptyMessageLive: get(LIVE_JOB_OFFERS_CONTENT_KEYS.EMPTY_MESSAGE_LIVE),
+      emptyMessageHired: get(LIVE_JOB_OFFERS_CONTENT_KEYS.EMPTY_MESSAGE_HIRED),
+      errorTitle: get(LIVE_JOB_OFFERS_CONTENT_KEYS.ERROR_TITLE),
+      errorMessage: get(LIVE_JOB_OFFERS_CONTENT_KEYS.ERROR_MESSAGE),
+      errorRetry: get(LIVE_JOB_OFFERS_CONTENT_KEYS.ERROR_RETRY),
+    };
+  }, [getContent]);
+
   const [driver] = useDriver();
   const { getLiveOfferStatus, setLastBidETA } = useDriver();
   const [auth] = useAuth();
@@ -106,13 +162,13 @@ export default function LiveJobOffersScreen({
   // API hook for submitting driver response for broadcast offers
   const { execute: submitDriverResponse } = usePost(
     LIVE_JOB_ENDPOINTS.driverResponse,
-    API_CLIENT_TYPES.AUCTION
+    API_CLIENT_TYPES.AUCTION,
   );
 
   // API hook for updating ETA (non-blocking, used after trip acceptance)
   const { execute: updateETA } = usePost(
     ACTIVE_TRIP_ROUTES.UPDATE_ETA,
-    API_CLIENT_TYPES.ACTIVE_TRIP
+    API_CLIENT_TYPES.ACTIVE_TRIP,
   );
 
   // Reactively track trip-in-progress based on driver context changes
@@ -125,12 +181,12 @@ export default function LiveJobOffersScreen({
   useFocusEffect(
     useCallback(() => {
       isNavigatingToTripDetailsRef.current = false;
-    }, [])
+    }, []),
   );
 
   // Track which offer is being processed (skip/hide operation)
   const [processingOfferId, setProcessingOfferId] = useState<string | null>(
-    null
+    null,
   );
 
   // Timeout effect: Show empty state after 7 seconds if no offers received
@@ -158,7 +214,7 @@ export default function LiveJobOffersScreen({
     log(
       `[LiveJobOffersScreen] broadcastOffers length: ${
         broadcastOffers?.length || 0
-      }`
+      }`,
     );
     log(`[LiveJobOffersScreen] showHiddenJobs: ${showHiddenJobs}`);
 
@@ -173,7 +229,7 @@ export default function LiveJobOffersScreen({
       // Show all offers (offered, accepted, skipped, hidden, expired, rejected, bidding)
       filtered = broadcastOffers;
       log(
-        `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (including hidden/skipped/expired/rejected)`
+        `[LiveJobOffersScreen] Showing all ${broadcastOffers.length} broadcast offers (including hidden/skipped/expired/rejected)`,
       );
     } else {
       // Show active offers, and offers that can be re-bid (rejected/expired)
@@ -183,10 +239,10 @@ export default function LiveJobOffersScreen({
           offer.status === "bidding" ||
           offer.status === "accepted" ||
           offer.status === "rejected" ||
-          offer.status === "expired"
+          offer.status === "expired",
       );
       log(
-        `[LiveJobOffersScreen] Showing ${filtered.length} visible offers out of ${broadcastOffers.length} total`
+        `[LiveJobOffersScreen] Showing ${filtered.length} visible offers out of ${broadcastOffers.length} total`,
       );
     }
 
@@ -199,7 +255,7 @@ export default function LiveJobOffersScreen({
   const sortedJobs = useMemo(() => {
     log(`[LiveJobOffersScreen] sortedJobs useMemo triggered`);
     log(
-      `[LiveJobOffersScreen] filteredJobs length: ${filteredJobs?.length || 0}`
+      `[LiveJobOffersScreen] filteredJobs length: ${filteredJobs?.length || 0}`,
     );
     log(`[LiveJobOffersScreen] sortBy: ${externalSortBy}`);
 
@@ -231,7 +287,7 @@ export default function LiveJobOffersScreen({
   // Get item status for each job
   const getItemStatus = useCallback(
     (
-      jobId: string
+      jobId: string,
     ):
       | LocalJobStatus
       | "expired"
@@ -242,7 +298,7 @@ export default function LiveJobOffersScreen({
       | "offer-expired" => {
       const hiddenOffer = getLiveOfferStatus(jobId);
       const broadcastOffer = broadcastOffers.find(
-        (offer) => offer.id === jobId
+        (offer) => offer.id === jobId,
       );
 
       // Check if the offer is truly expired in the broadcast context FIRST (highest priority)
@@ -272,7 +328,7 @@ export default function LiveJobOffersScreen({
       // For fresh offers (status "offered"), always return "offered" regardless of previous status
       if (broadcastOffer?.status === "offered") {
         console.log(
-          `  - fresh offer, returning offered status (ignoring previous status)`
+          `  - fresh offer, returning offered status (ignoring previous status)`,
         );
         return "offered";
       }
@@ -292,7 +348,7 @@ export default function LiveJobOffersScreen({
       // Fallback to hiddenOffer status for backward compatibility
       if (hiddenOffer?.status) {
         console.log(
-          `  - returning hidden status from hiddenOffer: ${hiddenOffer.status}`
+          `  - returning hidden status from hiddenOffer: ${hiddenOffer.status}`,
         );
         return hiddenOffer.status;
       }
@@ -300,7 +356,7 @@ export default function LiveJobOffersScreen({
       console.log(`  - returning visible status`);
       return LOCAL_JOB_STATUS.VISIBLE;
     },
-    [getLiveOfferStatus, broadcastOffers]
+    [getLiveOfferStatus, broadcastOffers],
   );
 
   // Handle button click (bid/accept)
@@ -322,16 +378,16 @@ export default function LiveJobOffersScreen({
       // the status might be stuck or transitioning
       if ((isExpired || isRejected) && job.bidable) {
         log(
-          `[LiveJobOffersScreen] Job ${jobId} is ${job.status}, allowing rebid. Resetting status to offered.`
+          `[LiveJobOffersScreen] Job ${jobId} is ${job.status}, allowing rebid. Resetting status to offered.`,
         );
         // Reset status to "offered" to allow rebidding
         updateBroadcastOffer(jobId, { status: "offered" });
         // Proceed with opening the bid sheet
       } else if (isBidding) {
         log(
-          `[LiveJobOffersScreen] Job ${jobId} is already in bidding state, waiting for customer`
+          `[LiveJobOffersScreen] Job ${jobId} is already in bidding state, waiting for customer`,
         );
-        showToast("Waiting for customer response...", {
+        showToast(toastWaitingCustomer, {
           variant: "warning",
           position: "top",
         });
@@ -361,7 +417,7 @@ export default function LiveJobOffersScreen({
 
         // Show bid bottom sheet with submission callback
         showBidBottomSheet(bidData, (bidData) =>
-          handleBidSubmitted(bidData, job)
+          handleBidSubmitted(bidData, job),
         );
         log(`[LiveJobOffersScreen] Opening bid bottom sheet for job: ${jobId}`);
       } else {
@@ -371,7 +427,13 @@ export default function LiveJobOffersScreen({
         log(`[LiveJobOffersScreen] Opening ETA modal for job: ${jobId}`);
       }
     },
-    [sortedJobs, showRideOfferModal, showBidBottomSheet, updateBroadcastOffer]
+    [
+      sortedJobs,
+      showRideOfferModal,
+      showBidBottomSheet,
+      updateBroadcastOffer,
+      toastWaitingCustomer,
+    ],
   );
 
   // Handle bid submission from bid bottom sheet
@@ -395,7 +457,7 @@ export default function LiveJobOffersScreen({
           jobToUse.tripOffer?.tripId?.startsWith("demo-")
         ) {
           log(
-            "[LiveJobOffersScreen] Demo offer detected - skipping API call for bid"
+            "[LiveJobOffersScreen] Demo offer detected - skipping API call for bid",
           );
           showToast("Demo offer: Bid submitted locally (no API call)", {
             variant: "success",
@@ -412,7 +474,7 @@ export default function LiveJobOffersScreen({
           jobToUse.tripOffer.tripId,
           bidData.selectedBid || jobToUse.fare || jobToUse.tripOffer?.fare,
           bidData.eta,
-          bidData.isBoosted ? bidData.boostAmount : undefined
+          bidData.isBoosted ? bidData.boostAmount : undefined,
         );
 
         if (result?.success) {
@@ -427,7 +489,7 @@ export default function LiveJobOffersScreen({
             status: "bidding" as any, // Set status to bidding to prevent expiration
           });
           log(
-            "[LiveJobOffersScreen] Updated offer status to 'bidding' to prevent expiration"
+            "[LiveJobOffersScreen] Updated offer status to 'bidding' to prevent expiration",
           );
 
           // For broadcast offers, don't change status to "accepted" immediately
@@ -442,9 +504,7 @@ export default function LiveJobOffersScreen({
       } catch (error) {
         log("[LiveJobOffersScreen] Failed to submit bid:", error);
         const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Failed to submit bid. Please try again.";
+          error instanceof Error ? error.message : toastBidFailed;
         showToast(errorMessage, {
           variant: "error",
           position: "top",
@@ -455,7 +515,7 @@ export default function LiveJobOffersScreen({
           if (jobToUse?.id) {
             removeBroadcastOffer(jobToUse.id);
             log(
-              `[LiveJobOffersScreen] Removed expired offer ${jobToUse.id} after failed bid`
+              `[LiveJobOffersScreen] Removed expired offer ${jobToUse.id} after failed bid`,
             );
           }
         }
@@ -468,7 +528,8 @@ export default function LiveJobOffersScreen({
       removeBroadcastOffer,
       showBidWaitingTimer,
       setLastBidETA,
-    ]
+      toastBidFailed,
+    ],
   );
 
   // Handle ETA submission for accept flow (broadcast offers)
@@ -484,7 +545,7 @@ export default function LiveJobOffersScreen({
 
       if (!driverId || !tripId) {
         log("[LiveJobOffersScreen] Missing driverId or tripId");
-        showToast("Unable to accept offer. Please try again.", {
+        showToast(toastAcceptUnable, {
           variant: "error",
           position: "top",
         });
@@ -497,7 +558,7 @@ export default function LiveJobOffersScreen({
         tripId?.startsWith("demo-")
       ) {
         log(
-          "[LiveJobOffersScreen] Demo offer detected - skipping API call for ETA"
+          "[LiveJobOffersScreen] Demo offer detected - skipping API call for ETA",
         );
         showToast("Demo offer: Ride accepted locally (no API call)", {
           variant: "success",
@@ -507,7 +568,7 @@ export default function LiveJobOffersScreen({
         // Mark the offer as accepted in the context
         updateBroadcastOffer(selectedJobForAccept.id, { status: "accepted" });
         log(
-          `[LiveJobOffersScreen] Marked demo job ${selectedJobForAccept.id} as accepted`
+          `[LiveJobOffersScreen] Marked demo job ${selectedJobForAccept.id} as accepted`,
         );
 
         // Close the ETA modal
@@ -522,7 +583,7 @@ export default function LiveJobOffersScreen({
         setIsSubmitETALoading(true);
         log(
           `[LiveJobOffersScreen] Submitting ETA for broadcast offer: ${selectedJobForAccept.id}`,
-          `tripId: ${tripId}, ETA: ${eta}`
+          `tripId: ${tripId}, ETA: ${eta}`,
         );
 
         // Call the API directly for broadcast offers
@@ -534,17 +595,17 @@ export default function LiveJobOffersScreen({
         });
 
         log(
-          "[LiveJobOffersScreen] ETA submitted successfully for broadcast offer"
+          "[LiveJobOffersScreen] ETA submitted successfully for broadcast offer",
         );
 
         // Mark the offer as accepted in the context
         updateBroadcastOffer(selectedJobForAccept.id, { status: "accepted" });
         log(
-          `[LiveJobOffersScreen] Marked job ${selectedJobForAccept.id} as accepted`
+          `[LiveJobOffersScreen] Marked job ${selectedJobForAccept.id} as accepted`,
         );
 
         // Show success toast
-        showToast("Ride accepted successfully!", {
+        showToast(toastAcceptSuccess, {
           variant: "success",
           position: "top",
         });
@@ -556,7 +617,7 @@ export default function LiveJobOffersScreen({
         // Add a small delay before redirecting to allow backend to initialize the trip
         // This prevents "Active trip resource not found" error
         log(
-          "[LiveJobOffersScreen] Waiting for backend to initialize trip before redirecting..."
+          "[LiveJobOffersScreen] Waiting for backend to initialize trip before redirecting...",
         );
         await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
 
@@ -572,30 +633,27 @@ export default function LiveJobOffersScreen({
           eta: eta,
         })
           .then(() => {
-            log("[LiveJobOffersScreen] ✅ ETA updated in database successfully");
+            log(
+              "[LiveJobOffersScreen] ✅ ETA updated in database successfully",
+            );
           })
           .catch((etaError) => {
             log(
               "[LiveJobOffersScreen] ⚠️ Failed to update ETA in database (non-blocking):",
-              etaError
+              etaError,
             );
-            showToast(
-              "Ride accepted! ETA update failed. You can update it later during the active ride.",
-              {
-                variant: "error",
-                position: "top",
-              }
-            );
+            showToast(toastEtaUpdateFailed, {
+              variant: "error",
+              position: "top",
+            });
           });
       } catch (error) {
         log(
           "[LiveJobOffersScreen] Failed to submit ETA for broadcast offer:",
-          error
+          error,
         );
         const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Failed to accept ride offer. Please try again.";
+          error instanceof Error ? error.message : toastAcceptFailed;
         showToast(errorMessage, {
           variant: "error",
           position: "top",
@@ -606,7 +664,7 @@ export default function LiveJobOffersScreen({
           if (selectedJobForAccept?.id) {
             removeBroadcastOffer(selectedJobForAccept.id);
             log(
-              `[LiveJobOffersScreen] Removed expired offer ${selectedJobForAccept.id} after failed ETA`
+              `[LiveJobOffersScreen] Removed expired offer ${selectedJobForAccept.id} after failed ETA`,
             );
           }
           setIsETAModalOpen(false);
@@ -626,7 +684,11 @@ export default function LiveJobOffersScreen({
       updateETA,
       showToast,
       log,
-    ]
+      toastAcceptUnable,
+      toastAcceptSuccess,
+      toastEtaUpdateFailed,
+      toastAcceptFailed,
+    ],
   );
 
   // Handle "Click here to view +X more" click
@@ -727,7 +789,7 @@ export default function LiveJobOffersScreen({
           weight="semibold"
           style={styles.viewMoreText}
         >
-          Click here to view +{additionalJobsCount} more
+          {viewMorePrefix}{additionalJobsCount} {viewMoreSuffix}
         </Typography>
         <Image
           source={require("@/assets/images/double-down-arrows-icon.png")}
@@ -746,15 +808,14 @@ export default function LiveJobOffersScreen({
         weight="semibold"
         style={styles.tripInProgressTitle}
       >
-        Trip in Progress
+        {tripInProgressTitle}
       </Typography>
       <Typography
         type="bodyLarge"
         weight="regular"
         style={styles.tripInProgressMessage}
       >
-        You currently have an active trip. Complete your current ride to receive
-        new job offers.
+        {tripInProgressMessage}
       </Typography>
       <Image
         source={require("@/assets/images/ride-inprogress.gif")}
@@ -771,7 +832,7 @@ export default function LiveJobOffersScreen({
           weight="semibold"
           style={styles.viewActiveRideButtonText}
         >
-          View Active Ride
+          {tripInProgressButton}
         </Typography>
       </TouchableOpacity>
     </View>
@@ -785,16 +846,14 @@ export default function LiveJobOffersScreen({
         weight="semibold"
         style={styles.emptyStateTitle}
       >
-        {EMPTY_STATE_MESSAGES.NO_JOBS_TITLE}
+        {emptyTitle}
       </Typography>
       <Typography
         type="bodyLarge"
         weight="regular"
         style={styles.emptyStateMessage}
       >
-        {type === OFFER_TYPES.LIVE
-          ? EMPTY_STATE_MESSAGES.NO_JOBS_MESSAGE
-          : EMPTY_STATE_MESSAGES.NO_HIRED_JOBS_MESSAGE}
+        {type === OFFER_TYPES.LIVE ? emptyMessageLive : emptyMessageHired}
       </Typography>
     </View>
   );
@@ -807,19 +866,18 @@ export default function LiveJobOffersScreen({
         weight="semibold"
         style={styles.errorStateTitle}
       >
-        Unable to Load Jobs
+        {errorTitle}
       </Typography>
       <Typography
         type="bodyMedium"
         weight="regular"
         style={styles.errorStateMessage}
       >
-        Something went wrong while loading jobs. Please try again.
+        {errorMessage}
       </Typography>
       <TouchableOpacity
         style={styles.retryButton}
         onPress={() => {
-          // Refresh the broadcast offers by clearing and re-fetching
           clearAllBroadcastOffers();
         }}
       >
@@ -828,7 +886,7 @@ export default function LiveJobOffersScreen({
           weight="semibold"
           style={styles.retryButtonText}
         >
-          Retry
+          {errorRetry}
         </Typography>
       </TouchableOpacity>
     </View>
@@ -868,7 +926,7 @@ export default function LiveJobOffersScreen({
     if (hasMoreJobs) {
       const additionalCount = sortedJobs.length - 3;
       log(
-        `[LiveJobOffersScreen] Showing "Click here to view +${additionalCount} more" indicator`
+        `[LiveJobOffersScreen] Showing "Click here to view +${additionalCount} more" indicator`,
       );
     }
   }, [hasMoreJobs, sortedJobs.length]);

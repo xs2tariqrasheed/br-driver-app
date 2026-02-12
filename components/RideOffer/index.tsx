@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -25,6 +25,7 @@ import {
   RIDE_TYPES,
   TRIP_OFFER_TYPES,
 } from "@/constants/global";
+import { RIDE_OFFER_CONTENT_KEYS } from "@/content/ride-offer-keys";
 import { useBidBottomSheet } from "@/context/BidBottomSheetContext";
 import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
 import { useModalManager } from "@/context/ModalManagerContext";
@@ -34,6 +35,7 @@ import {
   SpecialRequirements,
   useSpecialRequirements,
 } from "@/context/SpecialRequirementsContext";
+import { useGetContent } from "@/hooks/useGetContent";
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
 
@@ -41,10 +43,10 @@ const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 // Icon URLs for custom markers
 const pickupIconUrl = Image.resolveAssetSource(
-  require("@/assets/images/pickup-icon.png")
+  require("@/assets/images/pickup-icon.png"),
 ).uri;
 const dropoffIconUrl = Image.resolveAssetSource(
-  require("@/assets/images/dropoff-icon.png")
+  require("@/assets/images/dropoff-icon.png"),
 ).uri;
 
 interface TripOffer {
@@ -142,6 +144,37 @@ export default function RideOfferModal({
   isHideLoading = false,
   asScreen = false,
 }: RideOfferModalProps) {
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const {
+    headerTitle,
+    markerPickupTitle,
+    markerDropOffTitle,
+    actionHide,
+    actionSkipPrice,
+    actionWaiting,
+    actionRebid,
+    actionBid,
+    actionAccept,
+    expiredMessage,
+    toastExpired,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(RIDE_OFFER_CONTENT_KEYS.HEADER_TITLE),
+      markerPickupTitle: get(RIDE_OFFER_CONTENT_KEYS.MARKER_PICKUP_TITLE),
+      markerDropOffTitle: get(RIDE_OFFER_CONTENT_KEYS.MARKER_DROP_OFF_TITLE),
+      actionHide: get(RIDE_OFFER_CONTENT_KEYS.ACTION_HIDE),
+      actionSkipPrice: get(RIDE_OFFER_CONTENT_KEYS.ACTION_SKIP_PRICE),
+      actionWaiting: get(RIDE_OFFER_CONTENT_KEYS.ACTION_WAITING),
+      actionRebid: get(RIDE_OFFER_CONTENT_KEYS.ACTION_REBID),
+      actionBid: get(RIDE_OFFER_CONTENT_KEYS.ACTION_BID),
+      actionAccept: get(RIDE_OFFER_CONTENT_KEYS.ACTION_ACCEPT),
+      expiredMessage: get(RIDE_OFFER_CONTENT_KEYS.EXPIRED_MESSAGE),
+      toastExpired: get(RIDE_OFFER_CONTENT_KEYS.TOAST_EXPIRED),
+    };
+  }, [getContent]);
+  // Page Content End
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const mapRef = useRef<MapView>(null);
   const { height: windowHeight } = useWindowDimensions();
@@ -193,7 +226,7 @@ export default function RideOfferModal({
   const buildMockBidData = () => {
     const baseAmount = Math.max(
       10,
-      Math.round((offer?.totalPrice || 20) * 0.2)
+      Math.round((offer?.totalPrice || 20) * 0.2),
     );
     const suggestionSteps = [0, 5, 10];
     const systemSuggestedBids = suggestionSteps.map((step) => ({
@@ -278,8 +311,8 @@ export default function RideOfferModal({
     offer?.expiredAt instanceof Date
       ? offer.expiredAt.getTime()
       : offer?.expiredAt
-      ? new Date(offer.expiredAt).getTime()
-      : undefined;
+        ? new Date(offer.expiredAt).getTime()
+        : undefined;
   const isExpiredByTime =
     typeof expiredAtMs === "number" &&
     !Number.isNaN(expiredAtMs) &&
@@ -315,7 +348,7 @@ export default function RideOfferModal({
     const bidData = buildMockBidData();
     showBidBottomSheet(
       { ...bidData, amount: offer?.fare || offer?.tripOffer?.fare },
-      handleBidSubmitted
+      handleBidSubmitted,
     );
   };
 
@@ -325,7 +358,7 @@ export default function RideOfferModal({
       const result = await submitBid(
         data?.selectedBid,
         data?.eta,
-        data?.isBoosted ? data?.boostAmount : undefined
+        data?.isBoosted ? data?.boostAmount : undefined,
       );
       console.log("🔔 Bid submission result:", result);
       if (result && "success" in result && result.success) {
@@ -356,12 +389,12 @@ export default function RideOfferModal({
     // If driver has performed any action (bid, accept, etc.), status would have changed
     if (offer && offer.status === LIVE_JOB_STATUS.OFFERED) {
       console.log(
-        `[RideOffer] Timer completed for sequential offer ${offer.id} - marking as expired`
+        `[RideOffer] Timer completed for sequential offer ${offer.id} - marking as expired`,
       );
       const tripId = offer.tripOffer?.tripId;
 
       // Case 1 rule: only expire when still "offered" (no action taken)
-      showToast("Ride offer expired!", { variant: "warning", position: "top" });
+      showToast(toastExpired, { variant: "warning", position: "top" });
 
       // Prefer centralized expiration handling (cleans up state + notifications)
       if (tripId) {
@@ -377,7 +410,7 @@ export default function RideOfferModal({
       }
     } else {
       console.log(
-        `[RideOffer] Skipping expiration for ${offer?.id} - status changed to: ${offer?.status}`
+        `[RideOffer] Skipping expiration for ${offer?.id} - status changed to: ${offer?.status}`,
       );
     }
   };
@@ -401,7 +434,7 @@ export default function RideOfferModal({
           style={{ paddingTop: insets.top + (Platform.OS === "ios" ? 20 : 0) }}
         >
           <Header
-            title="Ride Offer"
+            title={headerTitle}
             hideBackIcon={false}
             onBackPress={() => {
               onClose();
@@ -446,7 +479,7 @@ export default function RideOfferModal({
                     latitude: offer.tripOffer.pickup.lat,
                     longitude: offer.tripOffer.pickup.lng,
                   }}
-                  title="Pickup Location"
+                  title={markerPickupTitle}
                   description={offer.pickupAddress}
                   icon={{
                     uri: pickupIconUrl,
@@ -463,7 +496,7 @@ export default function RideOfferModal({
                     latitude: offer.tripOffer.dropoff.lat,
                     longitude: offer.tripOffer.dropoff.lng,
                   }}
-                  title="Dropoff Location"
+                  title={markerDropOffTitle}
                   description={offer.dropoffAddress}
                   icon={{
                     uri: dropoffIconUrl,
@@ -547,7 +580,7 @@ export default function RideOfferModal({
                         disabled={shouldDisabled || isBidding}
                         loading={isHideLoading}
                       >
-                        Hide
+                        {actionHide}
                       </Button>
 
                       <Button
@@ -559,7 +592,7 @@ export default function RideOfferModal({
                         disabled={shouldDisabled || isBidding}
                         loading={isSkipLoading}
                       >
-                        Skip Price
+                        {actionSkipPrice}
                       </Button>
 
                       {bidable ? (
@@ -576,10 +609,10 @@ export default function RideOfferModal({
                           loading={isSubmitBidLoading}
                         >
                           {isBidding
-                            ? "Waiting..."
+                            ? actionWaiting
                             : isBidExpired || isRejected
-                            ? "Re-bid"
-                            : "Bid"}
+                              ? actionRebid
+                              : actionBid}
                         </Button>
                       ) : (
                         <Button
@@ -590,7 +623,7 @@ export default function RideOfferModal({
                           onPress={onAccept}
                           disabled={shouldDisabled || isBidding}
                         >
-                          Accept
+                          {actionAccept}
                         </Button>
                       )}
                     </View>
@@ -599,9 +632,7 @@ export default function RideOfferModal({
                 {isOfferExpired && (
                   <View style={styles.expiredContainer}>
                     <View style={styles.expiredAlert}>
-                      <Text style={styles.expiredText}>
-                        This offer has expired
-                      </Text>
+                      <Text style={styles.expiredText}>{expiredMessage}</Text>
                     </View>
                   </View>
                 )}

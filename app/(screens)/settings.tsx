@@ -12,13 +12,14 @@ import { textColors } from "@/constants/colors";
 import {
   ETA_BUFFER_MINUTES_MAX,
   ETA_BUFFER_MINUTES_MIN,
-  EXTRA_COMMISSION_PRICE_OPTIONS,
   FEATURED_DRIVER_PRICE_MAX,
   FEATURED_DRIVER_PRICE_MIN,
 } from "@/constants/global";
+import { SETTINGS_CONTENT_KEYS } from "@/content/settings-keys";
 import { useSettings } from "@/context/SettingsContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -29,22 +30,79 @@ import {
 } from "react-native";
 
 export default function SettingsScreen() {
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const {
+    headerTitle,
+    loadingMessage,
+    toastSaved,
+    featuredTitle,
+    featuredDescription,
+    etaTitle,
+    etaDescription,
+    autoBidTitle,
+    autoBidDescription,
+    autoBidPlaceholder,
+    autoBidCustomerPrice,
+    sheetBidPriceTitle,
+    bidOptionPlus10,
+    bidOptionPlus5,
+    bidOptionCustomerPrice,
+    bidOptionMinus5,
+    bidOptionMinus10,
+    actionSave,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(SETTINGS_CONTENT_KEYS.HEADER_TITLE),
+      loadingMessage: get(SETTINGS_CONTENT_KEYS.LOADING_MESSAGE),
+      toastSaved: get(SETTINGS_CONTENT_KEYS.TOAST_SAVED),
+      featuredTitle: get(SETTINGS_CONTENT_KEYS.FEATURED_TITLE),
+      featuredDescription: get(SETTINGS_CONTENT_KEYS.FEATURED_DESCRIPTION),
+      etaTitle: get(SETTINGS_CONTENT_KEYS.ETA_TITLE),
+      etaDescription: get(SETTINGS_CONTENT_KEYS.ETA_DESCRIPTION),
+      autoBidTitle: get(SETTINGS_CONTENT_KEYS.AUTO_BID_TITLE),
+      autoBidDescription: get(SETTINGS_CONTENT_KEYS.AUTO_BID_DESCRIPTION),
+      autoBidPlaceholder: get(SETTINGS_CONTENT_KEYS.AUTO_BID_PLACEHOLDER),
+      autoBidCustomerPrice: get(SETTINGS_CONTENT_KEYS.AUTO_BID_CUSTOMER_PRICE),
+      sheetBidPriceTitle: get(SETTINGS_CONTENT_KEYS.SHEET_BID_PRICE_TITLE),
+      bidOptionPlus10: get(SETTINGS_CONTENT_KEYS.BID_OPTION_PLUS_10),
+      bidOptionPlus5: get(SETTINGS_CONTENT_KEYS.BID_OPTION_PLUS_5),
+      bidOptionCustomerPrice: get(
+        SETTINGS_CONTENT_KEYS.BID_OPTION_CUSTOMER_PRICE,
+      ),
+      bidOptionMinus5: get(SETTINGS_CONTENT_KEYS.BID_OPTION_MINUS_5),
+      bidOptionMinus10: get(SETTINGS_CONTENT_KEYS.BID_OPTION_MINUS_10),
+      actionSave: get(SETTINGS_CONTENT_KEYS.ACTION_SAVE),
+    };
+  }, [getContent]);
+  // Page Content End
+
+  // Extra commission selectable price strategies. Keep values as numbers for backend.
+  const extraCommissionPriceOptions = [
+    { label: bidOptionPlus10, value: 10 },
+    { label: bidOptionPlus5, value: 5 },
+    { label: bidOptionCustomerPrice, value: 0 },
+    { label: bidOptionMinus5, value: -5 },
+    { label: bidOptionMinus10, value: -10 },
+  ];
+
   const router = useRouter();
   const settingsContext = useSettings();
   const [settings, setSettings, status] = settingsContext;
   const { isLoading, error, clearError } = status;
 
   const [featured, setFeatured] = useState<number>(
-    settings.featuredDriverPriceUSD ?? 0
+    settings.featuredDriverPriceUSD ?? 0,
   );
   const [etaMinutes, setEtaMinutes] = useState<number>(
-    settings.etaBufferMinutes ?? 0
+    settings.etaBufferMinutes ?? 0,
   );
   const [autoBidEnabled, setAutoBidEnabled] = useState<boolean>(
-    settings.autoBidEnabled ?? false
+    settings.autoBidEnabled ?? false,
   );
   const [strategy, setStrategy] = useState<number | null>(
-    settings.autoBidStrategy ?? null
+    settings.autoBidStrategy ?? null,
   );
 
   // Bottom sheet for selecting auto-bid price
@@ -55,9 +113,15 @@ export default function SettingsScreen() {
 
   // Display label for selected strategy: 0 → "Customer price", positive → "+10%", negative → "-5%"
   const getStrategyLabel = (value: number | null): string => {
-    if (value === null) return "Select price for bid";
-    const opt = EXTRA_COMMISSION_PRICE_OPTIONS.find((o) => o.value === value);
-    return opt ? opt.label : value === 0 ? "Customer price" : value > 0 ? `+${value}%` : `${value}%`;
+    if (value === null) return autoBidPlaceholder;
+    const opt = extraCommissionPriceOptions.find((o) => o.value === value);
+    return opt
+      ? opt.label
+      : value === 0
+        ? autoBidCustomerPrice
+        : value > 0
+          ? `${bidOptionPlus10}%`
+          : `${bidOptionMinus5}%`;
   };
 
   // Sync local state from context whenever screen is focused so we show latest
@@ -73,7 +137,7 @@ export default function SettingsScreen() {
       settings.etaBufferMinutes,
       settings.autoBidEnabled,
       settings.autoBidStrategy,
-    ])
+    ]),
   );
 
   // Show error toast when error occurs
@@ -93,7 +157,7 @@ export default function SettingsScreen() {
         autoBidEnabled,
         autoBidStrategy: autoBidEnabled ? strategy : null,
       });
-      showToast("Settings saved successfully", {
+      showToast(toastSaved, {
         variant: "success",
         position: "top",
       });
@@ -110,12 +174,12 @@ export default function SettingsScreen() {
           headerShown: false,
         }}
       />
-      <Header title="Settings" onBackPress={() => router.back()} />
+      <Header title={headerTitle} onBackPress={() => router.back()} />
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <Loader size="medium" />
           <Typography type="bodyMedium" style={styles.loadingText}>
-            Saving settings...
+            {loadingMessage}
           </Typography>
         </View>
       )}
@@ -135,15 +199,14 @@ export default function SettingsScreen() {
             weight="semibold"
             style={styles.textBlack}
           >
-            Show Me as a Featured Driver
+            {featuredTitle}
           </Typography>
           <Typography
             type="bodyMedium"
             weight="regular"
             style={styles.textBlack}
           >
-            Boost your visibility in the customer app by appearing as a featured
-            driver.
+            {featuredDescription}
           </Typography>
           <Counter
             value={featured}
@@ -164,15 +227,14 @@ export default function SettingsScreen() {
             weight="semibold"
             style={styles.textBlack}
           >
-            Add Extra Time to My ETA
+            {etaTitle}
           </Typography>
           <Typography
             type="bodyMedium"
             weight="regular"
             style={styles.textBlack}
           >
-            Add buffer minutes to the system-calculated ETA to account for
-            traffic or other delays.
+            {etaDescription}
           </Typography>
           <Counter
             value={etaMinutes}
@@ -194,7 +256,7 @@ export default function SettingsScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Auto-Bid on Ride Offers
+              {autoBidTitle}
             </Typography>
             <Toggle
               variant="switch"
@@ -212,8 +274,7 @@ export default function SettingsScreen() {
             weight="regular"
             style={styles.textBlack}
           >
-            Automatically bid on rides using your preferred pricing strategy.
-            Choose how your bid compares to the customer's base price.
+            {autoBidDescription}
           </Typography>
           {autoBidEnabled ? (
             <TouchableOpacity
@@ -225,7 +286,9 @@ export default function SettingsScreen() {
               <Typography
                 type="bodyLarge"
                 weight="medium"
-                style={strategy !== null ? styles.textBlack : styles.placeholder}
+                style={
+                  strategy !== null ? styles.textBlack : styles.placeholder
+                }
                 numberOfLines={1}
               >
                 {getStrategyLabel(strategy)}
@@ -246,7 +309,7 @@ export default function SettingsScreen() {
           onPress={handleSave}
           disabled={isLoading}
         >
-          Save
+          {actionSave}
         </Button>
       </View>
 
@@ -255,12 +318,12 @@ export default function SettingsScreen() {
         open={sheetOpen}
         onClose={closeSheet}
         snapPoints={["45%"]}
-        headerTitle="Select Bid Price"
+        headerTitle={sheetBidPriceTitle}
       >
         <View style={styles.sheetContainer}>
           <Divider />
 
-          {EXTRA_COMMISSION_PRICE_OPTIONS.map((opt) => {
+          {extraCommissionPriceOptions.map((opt) => {
             const selected = strategy === opt.value;
             return (
               <View key={opt.value}>

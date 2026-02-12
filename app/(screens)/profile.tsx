@@ -5,19 +5,111 @@ import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { URLS } from "@/constants/global";
+import { PROFILE_CONTENT_KEYS } from "@/content/profile-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
-import { useRouter, Stack } from "expo-router";
-import React, { useMemo } from "react";
-import {
-  Linking,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { useGetContent } from "@/hooks/useGetContent";
+import { Stack, useRouter } from "expo-router";
+import { useMemo } from "react";
+import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
 
 export default function ProfileScreen() {
+  const { getContent } = useGetContent();
+  const {
+    headerTitle,
+    nameFallback,
+    valueNa,
+    sectionPersonalLabel,
+    sectionContactLabel,
+    sectionDriverDetailsLabel,
+    sectionActivityLabel,
+    sectionPaymentLabel,
+    personalFullNameLabel,
+    personalDateOfBirthLabel,
+    personalGenderLabel,
+    personalEthnicityLabel,
+    personalLanguagesLabel,
+    personalYearsOfExperienceLabel,
+    contactEmailLabel,
+    contactPhoneLabel,
+    contactWhatsappLabel,
+    driverRecNumberLabel,
+    driverRecIdLabel,
+    driverNetworkNumberLabel,
+    driverTypeLabel,
+    driverAvailabilityLabel,
+    driverGradeLabel,
+    driverCurrentStatusLabel,
+    driverRideStatusLabel,
+    statusOnlineLabel,
+    statusOfflineLabel,
+    activityTotalRidesLabel,
+    activityLastActiveLabel,
+    activityLastSignInLabel,
+    paymentCommissionLabel,
+    paymentHourlyRateLabel,
+    paymentDistanceRateLabel,
+    paymentCycleLabel,
+    paymentDayLabel,
+    paymentBankNameLabel,
+    paymentAccountNameLabel,
+    paymentAccountNumberLabel,
+    actionEditPortal,
+    noteEditInfo,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(PROFILE_CONTENT_KEYS.HEADER_TITLE),
+      nameFallback: get(PROFILE_CONTENT_KEYS.NAME_FALLBACK),
+      valueNa: get(PROFILE_CONTENT_KEYS.VALUE_NA),
+      sectionPersonalLabel: get(PROFILE_CONTENT_KEYS.SECTION_PERSONAL),
+      sectionContactLabel: get(PROFILE_CONTENT_KEYS.SECTION_CONTACT),
+      sectionDriverDetailsLabel: get(
+        PROFILE_CONTENT_KEYS.SECTION_DRIVER_DETAILS,
+      ),
+      sectionActivityLabel: get(PROFILE_CONTENT_KEYS.SECTION_ACTIVITY),
+      sectionPaymentLabel: get(PROFILE_CONTENT_KEYS.SECTION_PAYMENT),
+      personalFullNameLabel: get(PROFILE_CONTENT_KEYS.PERSONAL_FULL_NAME),
+      personalDateOfBirthLabel: get(
+        PROFILE_CONTENT_KEYS.PERSONAL_DATE_OF_BIRTH,
+      ),
+      personalGenderLabel: get(PROFILE_CONTENT_KEYS.PERSONAL_GENDER),
+      personalEthnicityLabel: get(PROFILE_CONTENT_KEYS.PERSONAL_ETHNICITY),
+      personalLanguagesLabel: get(PROFILE_CONTENT_KEYS.PERSONAL_LANGUAGES),
+      personalYearsOfExperienceLabel: get(
+        PROFILE_CONTENT_KEYS.PERSONAL_YEARS_OF_EXPERIENCE,
+      ),
+      contactEmailLabel: get(PROFILE_CONTENT_KEYS.CONTACT_EMAIL),
+      contactPhoneLabel: get(PROFILE_CONTENT_KEYS.CONTACT_PHONE),
+      contactWhatsappLabel: get(PROFILE_CONTENT_KEYS.CONTACT_WHATSAPP),
+      driverRecNumberLabel: get(PROFILE_CONTENT_KEYS.DRIVER_NUMBER),
+      driverRecIdLabel: get(PROFILE_CONTENT_KEYS.DRIVER_ID),
+      driverNetworkNumberLabel: get(PROFILE_CONTENT_KEYS.DRIVER_NETWORK_NUMBER),
+      driverTypeLabel: get(PROFILE_CONTENT_KEYS.DRIVER_TYPE),
+      driverAvailabilityLabel: get(PROFILE_CONTENT_KEYS.DRIVER_AVAILABILITY),
+      driverGradeLabel: get(PROFILE_CONTENT_KEYS.DRIVER_GRADE),
+      driverCurrentStatusLabel: get(PROFILE_CONTENT_KEYS.DRIVER_CURRENT_STATUS),
+      driverRideStatusLabel: get(PROFILE_CONTENT_KEYS.DRIVER_RIDE_STATUS),
+      statusOnlineLabel: get(PROFILE_CONTENT_KEYS.STATUS_ONLINE),
+      statusOfflineLabel: get(PROFILE_CONTENT_KEYS.STATUS_OFFLINE),
+      activityTotalRidesLabel: get(PROFILE_CONTENT_KEYS.ACTIVITY_TOTAL_RIDES),
+      activityLastActiveLabel: get(PROFILE_CONTENT_KEYS.ACTIVITY_LAST_ACTIVE),
+      activityLastSignInLabel: get(PROFILE_CONTENT_KEYS.ACTIVITY_LAST_SIGN_IN),
+      paymentCommissionLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_COMMISSION),
+      paymentHourlyRateLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_HOURLY_RATE),
+      paymentDistanceRateLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_DISTANCE_RATE),
+      paymentCycleLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_CYCLE),
+      paymentDayLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_DAY),
+      paymentBankNameLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_BANK_NAME),
+      paymentAccountNameLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_ACCOUNT_NAME),
+      paymentAccountNumberLabel: get(
+        PROFILE_CONTENT_KEYS.PAYMENT_ACCOUNT_NUMBER,
+      ),
+      actionEditPortal: get(PROFILE_CONTENT_KEYS.ACTION_EDIT_PORTAL),
+      noteEditInfo: get(PROFILE_CONTENT_KEYS.NOTE_EDIT_INFO),
+    };
+  }, [getContent]);
+
   const router = useRouter();
   const [auth] = useAuth();
   const [driver] = useDriver();
@@ -32,47 +124,52 @@ export default function ProfileScreen() {
   // Personal Information
   const firstName = personalInfo?.first_name || "";
   const lastName = personalInfo?.last_name || "";
-  const fullName = `${firstName} ${lastName}`.trim() || "Driver";
-  const dateOfBirth = personalInfo?.date_of_birth || "N/A";
-  const gender = personalInfo?.gender || "N/A";
-  const ethnicity = personalInfo?.ethnicity || "N/A";
-  const languages = personalInfo?.driver_language || "N/A";
-  const ssn = personalInfo?.social_security_number || "N/A";
-  const yearsOfExperience = user?.years_of_experience || "N/A";
+  const fullName = `${firstName} ${lastName}`.trim() || nameFallback;
+  const dateOfBirth = personalInfo?.date_of_birth || valueNa;
+  const gender = personalInfo?.gender || valueNa;
+  const ethnicity = personalInfo?.ethnicity || valueNa;
+  const languages = personalInfo?.driver_language || valueNa;
+  const ssn = personalInfo?.social_security_number || valueNa;
+  const yearsOfExperience = user?.years_of_experience || valueNa;
 
   // Contact Information
-  const email = contactInfo?.primary_email_address || "N/A";
-  const phone = contactInfo?.primary_phone_number || "N/A";
-  const whatsapp = contactInfo?.whatsapp_contact_number || "N/A";
+  const email = contactInfo?.primary_email_address || valueNa;
+  const phone = contactInfo?.primary_phone_number || valueNa;
+  const whatsapp = contactInfo?.whatsapp_contact_number || valueNa;
 
   // Driver Details
-  const driverNumber = user?.driver_number || "N/A";
-  const driverRecId = user?.driver_rec_id || user?.id || "N/A";
-  const driverNetworkNumber = user?.driver_network_number || "N/A";
-  const driverType = user?.driver_type || "N/A";
-  const availability = user?.availability || "N/A";
-  const grade = user?.grade || "N/A";
-  const currentRideStatus = user?.current_ride_status || "N/A";
-  const isOnline = user?.is_online === "YES" || user?.is_online === true || driver?.online || false;
+  const driverNumber = user?.driver_number || valueNa;
+  const driverRecId = user?.driver_rec_id || user?.id || valueNa;
+  const driverNetworkNumber = user?.driver_network_number || valueNa;
+  const driverType = user?.driver_type || valueNa;
+  const availability = user?.availability || valueNa;
+  const grade = user?.grade || valueNa;
+  const currentRideStatus = user?.current_ride_status || valueNa;
+  const isOnline =
+    user?.is_online === "YES" ||
+    user?.is_online === true ||
+    driver?.online ||
+    false;
 
   // Activity
   const numberOfRides = activity?.number_of_rides || 0;
-  const lastActiveAt = activity?.last_active_at || "N/A";
-  const lastSignInAt = activity?.last_sign_in_at || "N/A";
+  const lastActiveAt = activity?.last_active_at || valueNa;
+  const lastSignInAt = activity?.last_sign_in_at || valueNa;
 
   // Payment Information
-  const commissionPercentage = paymentInfo?.commission_percentage || "N/A";
-  const hourlyRate = paymentInfo?.hourly_rate || "N/A";
-  const distanceRate = paymentInfo?.distance_rate || "N/A";
-  const paymentCycle = paymentInfo?.payment_cycle || "N/A";
-  const paymentDay = paymentInfo?.payment_day || "N/A";
-  const bankName = paymentInfo?.payment_bank_name || "N/A";
-  const bankAccountName = paymentInfo?.payment_bank_account_name || "N/A";
-  const bankAccountNumber = paymentInfo?.payment_bank_account_number || "N/A";
+  const commissionPercentage = paymentInfo?.commission_percentage || valueNa;
+  const hourlyRate = paymentInfo?.hourly_rate || valueNa;
+  const distanceRate = paymentInfo?.distance_rate || valueNa;
+  const paymentCycle = paymentInfo?.payment_cycle || valueNa;
+  const paymentDay = paymentInfo?.payment_day || valueNa;
+  const bankName = paymentInfo?.payment_bank_name || valueNa;
+  const bankAccountName = paymentInfo?.payment_bank_account_name || valueNa;
+  const bankAccountNumber = paymentInfo?.payment_bank_account_number || valueNa;
 
   // Format dates for display
   const formatDate = (dateStr: string) => {
-    if (!dateStr || dateStr === "N/A" || dateStr.includes("0000-00-00")) return "N/A";
+    if (!dateStr || dateStr === valueNa || dateStr.includes("0000-00-00"))
+      return valueNa;
     try {
       const date = new Date(dateStr);
       return date.toLocaleDateString();
@@ -84,74 +181,119 @@ export default function ProfileScreen() {
   // Personal Information Section
   const personalInfoItems: InfoTableDataItem[] = useMemo(
     () => [
-      { label: "Full Name", value: fullName },
-      { label: "Date of Birth", value: formatDate(dateOfBirth) },
-      { label: "Gender", value: gender },
-      { label: "Ethnicity", value: ethnicity },
-      { label: "Languages", value: languages },
-      { label: "Years of Experience", value: String(yearsOfExperience) },
+      { label: personalFullNameLabel, value: fullName },
+      { label: personalDateOfBirthLabel, value: formatDate(dateOfBirth) },
+      { label: personalGenderLabel, value: gender },
+      { label: personalEthnicityLabel, value: ethnicity },
+      { label: personalLanguagesLabel, value: languages },
+      {
+        label: personalYearsOfExperienceLabel,
+        value: String(yearsOfExperience),
+      },
     ],
-    [fullName, dateOfBirth, gender, ethnicity, languages, yearsOfExperience]
+    [fullName, dateOfBirth, gender, ethnicity, languages, yearsOfExperience],
   );
 
   // Contact Information Section
   const contactInfoItems: InfoTableDataItem[] = useMemo(
     () => [
-      { label: "Email", value: email },
-      { label: "Phone", value: phone },
-      { label: "WhatsApp", value: whatsapp },
+      { label: contactEmailLabel, value: email },
+      { label: contactPhoneLabel, value: phone },
+      { label: contactWhatsappLabel, value: whatsapp },
     ],
-    [email, phone, whatsapp]
+    [email, phone, whatsapp],
   );
 
   // Driver Details Section
   const driverDetailsItems: InfoTableDataItem[] = useMemo(
     () => [
-      { label: "Driver Number", value: driverNumber },
-      { label: "Driver ID", value: String(driverRecId) },
-      { label: "Network Number", value: driverNetworkNumber },
-      { label: "Driver Type", value: driverType },
-      { label: "Availability", value: availability },
-      { label: "Grade", value: grade },
-      { label: "Current Status", value: isOnline ? "Online" : "Offline" },
-      { label: "Ride Status", value: currentRideStatus },
+      { label: driverRecNumberLabel, value: driverNumber },
+      { label: driverRecIdLabel, value: String(driverRecId) },
+      { label: driverNetworkNumberLabel, value: driverNetworkNumber },
+      { label: driverTypeLabel, value: driverType },
+      { label: driverAvailabilityLabel, value: availability },
+      { label: driverGradeLabel, value: grade },
+      {
+        label: driverCurrentStatusLabel,
+        value: isOnline ? statusOnlineLabel : statusOfflineLabel,
+      },
+      { label: driverRideStatusLabel, value: currentRideStatus },
     ],
-    [driverNumber, driverRecId, driverNetworkNumber, driverType, availability, grade, isOnline, currentRideStatus]
+    [
+      driverNumber,
+      driverRecId,
+      driverNetworkNumber,
+      driverType,
+      availability,
+      grade,
+      isOnline,
+      currentRideStatus,
+    ],
   );
 
   // Activity Section
   const activityItems: InfoTableDataItem[] = useMemo(
     () => [
-      { label: "Total Rides", value: String(numberOfRides) },
-      { label: "Last Active", value: formatDate(lastActiveAt) },
-      { label: "Last Sign In", value: formatDate(lastSignInAt) },
+      { label: activityTotalRidesLabel, value: String(numberOfRides) },
+      { label: activityLastActiveLabel, value: formatDate(lastActiveAt) },
+      { label: activityLastSignInLabel, value: formatDate(lastSignInAt) },
     ],
-    [numberOfRides, lastActiveAt, lastSignInAt]
+    [numberOfRides, lastActiveAt, lastSignInAt],
   );
 
   // Payment Information Section
   const paymentInfoItems: InfoTableDataItem[] = useMemo(
     () => [
-      { label: "Commission %", value: commissionPercentage !== "N/A" ? `${commissionPercentage}%` : "N/A" },
-      { label: "Hourly Rate", value: hourlyRate !== "N/A" ? `$${hourlyRate}` : "N/A" },
-      { label: "Distance Rate", value: distanceRate !== "N/A" ? `$${distanceRate}` : "N/A" },
-      { label: "Payment Cycle", value: paymentCycle },
-      { label: "Payment Day", value: paymentDay !== "N/A" ? String(paymentDay) : "N/A" },
-      { label: "Bank Name", value: bankName },
-      { label: "Account Name", value: bankAccountName },
-      { label: "Account Number", value: bankAccountNumber !== "N/A" ? `****${String(bankAccountNumber).slice(-4)}` : "N/A" },
+      {
+        label: paymentCommissionLabel,
+        value:
+          commissionPercentage !== valueNa
+            ? `${commissionPercentage}%`
+            : valueNa,
+      },
+      {
+        label: paymentHourlyRateLabel,
+        value: hourlyRate !== valueNa ? `$${hourlyRate}` : valueNa,
+      },
+      {
+        label: paymentDistanceRateLabel,
+        value: distanceRate !== valueNa ? `$${distanceRate}` : valueNa,
+      },
+      { label: paymentCycleLabel, value: paymentCycle },
+      {
+        label: paymentDayLabel,
+        value: paymentDay !== valueNa ? String(paymentDay) : valueNa,
+      },
+      { label: paymentBankNameLabel, value: bankName },
+      { label: paymentAccountNameLabel, value: bankAccountName },
+      {
+        label: paymentAccountNumberLabel,
+        value:
+          bankAccountNumber !== valueNa
+            ? `****${String(bankAccountNumber).slice(-4)}`
+            : valueNa,
+      },
     ],
-    [commissionPercentage, hourlyRate, distanceRate, paymentCycle, paymentDay, bankName, bankAccountName, bankAccountNumber]
+    [
+      commissionPercentage,
+      hourlyRate,
+      distanceRate,
+      paymentCycle,
+      paymentDay,
+      bankName,
+      bankAccountName,
+      bankAccountNumber,
+    ],
   );
 
   const handleEditProfile = () => {
-    // Open web portal in browser
-    const portalUrl = URLS.driverPortal;
-    if (portalUrl) {
-      Linking.openURL(portalUrl).catch((err) => {
-        console.error("Failed to open driver portal:", err);
-      });
-    }
+    router.push({
+      pathname: "/(screens)/in-app-webview",
+      params: {
+        url: URLS.driverPortal,
+        title: actionEditPortal,
+      },
+    });
   };
 
   const handleBackPress = () => {
@@ -165,7 +307,11 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="Profile" hideBackIcon={false} onBackPress={handleBackPress} />
+      <Header
+        title={headerTitle}
+        hideBackIcon={false}
+        onBackPress={handleBackPress}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -178,35 +324,35 @@ export default function ProfileScreen() {
 
         {/* Personal Information */}
         <InfoTable
-          title="Personal Information"
+          title={sectionPersonalLabel}
           data={personalInfoItems}
           showFooter={false}
         />
 
         {/* Contact Information */}
         <InfoTable
-          title="Contact Information"
+          title={sectionContactLabel}
           data={contactInfoItems}
           showFooter={false}
         />
 
         {/* Driver Details */}
         <InfoTable
-          title="Driver Details"
+          title={sectionDriverDetailsLabel}
           data={driverDetailsItems}
           showFooter={false}
         />
 
         {/* Activity */}
         <InfoTable
-          title="Activity"
+          title={sectionActivityLabel}
           data={activityItems}
           showFooter={false}
         />
 
         {/* Payment Information */}
         <InfoTable
-          title="Payment Information"
+          title={sectionPaymentLabel}
           data={paymentInfoItems}
           showFooter={false}
         />
@@ -219,19 +365,14 @@ export default function ProfileScreen() {
             onPress={handleEditProfile}
             style={styles.editButton}
           >
-            Edit Profile on Web Portal
+            {actionEditPortal}
           </Button>
         </View>
 
         {/* Info Note */}
         <View style={styles.noteContainer}>
-          <Typography
-            type="bodySmall"
-            weight="regular"
-            style={styles.noteText}
-          >
-            Profile information can only be edited through the web portal. Tap
-            the button above to open the portal in your browser.
+          <Typography type="bodySmall" weight="regular" style={styles.noteText}>
+            {noteEditInfo}
           </Typography>
         </View>
       </ScrollView>
@@ -265,7 +406,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   noteContainer: {
-    backgroundColor: textColors.grey50,
+    backgroundColor: textColors.grey100,
     borderRadius: 8,
     padding: 16,
     marginTop: 8,

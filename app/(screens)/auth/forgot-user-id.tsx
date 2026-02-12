@@ -17,8 +17,11 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import { API_CLIENT_TYPES } from "@/constants/global";
+import { FORGOT_USER_ID_CONTENT_KEYS } from "@/content/(screens)/auth/forgot-user-id-keys";
+import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { useRouter } from "expo-router";
+import { useMemo } from "react";
 
 type ForgotUserIdFormValues = {
   companyId: string;
@@ -34,6 +37,69 @@ type ForgotUserIdFormValues = {
  */
 export default function ForgotUserIdScreen() {
   const router = useRouter();
+  const { getContent } = useGetContent();
+
+  // Page Content
+  const {
+    pageTitle,
+    introTitle,
+    introDescription,
+    formCompanyIdLabel,
+    formCompanyIdPlaceholder,
+    formCompanyIdValidationRequired,
+    formEmailLabel,
+    formEmailPlaceholder,
+    formEmailValidationRequired,
+    formEmailValidationInvalid,
+    formPhoneLabel,
+    formPhonePlaceholder,
+    formPhoneValidationRequired,
+    formPhoneValidationInvalid,
+    actionSendOtp,
+    toastSuccess,
+    toastError,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      pageTitle: get(FORGOT_USER_ID_CONTENT_KEYS.PAGE_TITLE),
+      introTitle: get(FORGOT_USER_ID_CONTENT_KEYS.INTRO_TITLE),
+      introDescription: get(FORGOT_USER_ID_CONTENT_KEYS.INTRO_DESCRIPTION),
+      formCompanyIdLabel: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_COMPANY_ID_LABEL,
+      ),
+      formCompanyIdPlaceholder: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_COMPANY_ID_PLACEHOLDER,
+      ),
+      formCompanyIdValidationRequired: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_COMPANY_ID_VALIDATION_REQUIRED,
+      ),
+      formEmailLabel: get(FORGOT_USER_ID_CONTENT_KEYS.FORM_EMAIL_LABEL),
+      formEmailPlaceholder: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_EMAIL_PLACEHOLDER,
+      ),
+      formEmailValidationRequired: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_EMAIL_VALIDATION_REQUIRED,
+      ),
+      formEmailValidationInvalid: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_EMAIL_VALIDATION_INVALID,
+      ),
+      formPhoneLabel: get(FORGOT_USER_ID_CONTENT_KEYS.FORM_PHONE_LABEL),
+      formPhonePlaceholder: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_PHONE_PLACEHOLDER,
+      ),
+      formPhoneValidationRequired: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_PHONE_VALIDATION_REQUIRED,
+      ),
+      formPhoneValidationInvalid: get(
+        FORGOT_USER_ID_CONTENT_KEYS.FORM_PHONE_VALIDATION_INVALID,
+      ),
+      actionSendOtp: get(FORGOT_USER_ID_CONTENT_KEYS.ACTION_SEND_OTP),
+      toastSuccess: get(FORGOT_USER_ID_CONTENT_KEYS.TOAST_SUCCESS),
+      toastError: get(FORGOT_USER_ID_CONTENT_KEYS.TOAST_ERROR),
+    };
+  }, [getContent]);
+  // Page Content End
+
   const {
     control,
     handleSubmit,
@@ -63,7 +129,7 @@ export default function ForgotUserIdScreen() {
         phone: data.phone.trim(),
       });
 
-      showToast(response?.message || "OTP sent successfully", {
+      showToast(response?.message || toastSuccess, {
         variant: "success",
         position: "top",
       });
@@ -72,14 +138,14 @@ export default function ForgotUserIdScreen() {
         params: { context: "forgot-user-id" },
       });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to send OTP";
+      const message = e instanceof Error ? e.message : toastError;
       showToast(message, { variant: "error", position: "top" });
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Forgot User Id" onBackPress={() => router.back()} />
+      <Header title={pageTitle} onBackPress={() => router.back()} />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
@@ -101,15 +167,14 @@ export default function ForgotUserIdScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Verify Your Identity
+              {introTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={styles.textBlack}
             >
-              Enter your Company ID, Email and phone to receive a one-time
-              password (OTP) for resetting your password.
+              {introDescription}
             </Typography>
           </View>
 
@@ -117,11 +182,11 @@ export default function ForgotUserIdScreen() {
             <Controller
               control={control}
               name="companyId"
-              rules={{ required: "Company ID is required." }}
+              rules={{ required: formCompanyIdValidationRequired }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Company ID"
-                  placeholder="Enter your company ID"
+                  label={formCompanyIdLabel}
+                  placeholder={formCompanyIdPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -135,16 +200,16 @@ export default function ForgotUserIdScreen() {
               control={control}
               name="email"
               rules={{
-                required: "Email is required.",
+                required: formEmailValidationRequired,
                 pattern: {
                   value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: "Enter a valid email.",
+                  message: formEmailValidationInvalid,
                 },
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Email"
-                  placeholder="Enter your email"
+                  label={formEmailLabel}
+                  placeholder={formEmailPlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -160,13 +225,13 @@ export default function ForgotUserIdScreen() {
               control={control}
               name="phone"
               rules={{
-                required: "Phone is required.",
-                minLength: { value: 7, message: "Enter a valid phone." },
+                required: formPhoneValidationRequired,
+                minLength: { value: 7, message: formPhoneValidationInvalid },
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Phone"
-                  placeholder="Enter your phone"
+                  label={formPhoneLabel}
+                  placeholder={formPhonePlaceholder}
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
@@ -184,7 +249,7 @@ export default function ForgotUserIdScreen() {
               loading={loading}
               disabled={loading}
             >
-              Send OTP
+              {actionSendOtp}
             </Button>
           </View>
         </ScrollView>

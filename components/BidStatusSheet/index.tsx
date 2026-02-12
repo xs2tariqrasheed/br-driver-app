@@ -15,10 +15,11 @@ import {
   BID_STATUS,
   BID_STATUS_COLORS,
   BID_STATUS_COUNTDOWN_DURATION_SECONDS,
-  BID_STATUS_MESSAGES,
   type BidStatus,
 } from "@/constants/global";
-import React, { useCallback, useEffect, useState } from "react";
+import { BID_STATUS_MODAL_CONTENT_KEYS } from "@/content/components/bid-status-modal-keys";
+import { useGetContent } from "@/hooks/useGetContent";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import CustomBottomSheet from "../BottomSheet";
 import Typography from "../Typography";
@@ -63,11 +64,53 @@ const BidStatusSheet: React.FC<BidStatusSheetProps> = ({
     BID_STATUS_COUNTDOWN_DURATION_SECONDS
   );
 
-  // Get status-specific data
-  const statusData =
-    BID_STATUS_MESSAGES[
-      status.toUpperCase() as keyof typeof BID_STATUS_MESSAGES
-    ];
+  const { getContent } = useGetContent();
+  const {
+    titleExpired,
+    descriptionExpired,
+    titleUnsuccessful,
+    descriptionUnsuccessful,
+    titleAccepted,
+    descriptionAccepted,
+    countdownRedirecting,
+    countdownClosing,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      titleExpired: get(BID_STATUS_MODAL_CONTENT_KEYS.TITLE_EXPIRED),
+      descriptionExpired: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.DESCRIPTION_EXPIRED,
+      ),
+      titleUnsuccessful: get(BID_STATUS_MODAL_CONTENT_KEYS.TITLE_UNSUCCESSFUL),
+      descriptionUnsuccessful: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.DESCRIPTION_UNSUCCESSFUL,
+      ),
+      titleAccepted: get(BID_STATUS_MODAL_CONTENT_KEYS.TITLE_ACCEPTED),
+      descriptionAccepted: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.DESCRIPTION_ACCEPTED,
+      ),
+      countdownRedirecting: get(
+        BID_STATUS_MODAL_CONTENT_KEYS.COUNT_DOWN_REDIRECTING,
+      ),
+      countdownClosing: get(BID_STATUS_MODAL_CONTENT_KEYS.COUNT_DOWN_CLOSING),
+    };
+  }, [getContent]);
+
+  const statusTitle =
+    status === BID_STATUS.EXPIRED
+      ? titleExpired
+      : status === BID_STATUS.UNSUCCESSFUL
+        ? titleUnsuccessful
+        : titleAccepted;
+  const statusDescription =
+    status === BID_STATUS.EXPIRED
+      ? descriptionExpired
+      : status === BID_STATUS.UNSUCCESSFUL
+        ? descriptionUnsuccessful
+        : descriptionAccepted;
+  const countdownLabel =
+    status === BID_STATUS.ACCEPTED ? countdownRedirecting : countdownClosing;
+
   const backgroundColor =
     BID_STATUS_COLORS[status.toUpperCase() as keyof typeof BID_STATUS_COLORS];
 
@@ -129,7 +172,7 @@ const BidStatusSheet: React.FC<BidStatusSheetProps> = ({
       initialSnapIndex={0}
       backdrop={true}
       swipeToClose={false}
-      headerTitle={statusData.TITLE}
+      headerTitle={statusTitle}
       onClose={handleClose}
       customBackgroundColor={backgroundColor}
     >
@@ -140,12 +183,12 @@ const BidStatusSheet: React.FC<BidStatusSheetProps> = ({
           weight="regular"
           style={styles.description}
         >
-          {statusData.DESCRIPTION}
+          {statusDescription}
         </Typography>
 
         {/* Countdown timer for all statuses */}
         <Typography type="bodyLarge" weight="bold" style={styles.countdown}>
-          Redirecting in {formatCountdown(countdown)}
+          {countdownLabel} {formatCountdown(countdown)}
         </Typography>
       </View>
     </CustomBottomSheet>

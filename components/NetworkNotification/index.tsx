@@ -1,9 +1,10 @@
+import { NETWORK_NOTIFICATIONS_CONTENT_KEYS } from "@/content/components/network-notifications-keys";
 import { useNetwork } from "@/context/NetworkContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { logger } from "@/utils/helpers";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
-  Dimensions,
   Image,
   StyleSheet,
   Text,
@@ -12,9 +13,31 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-
 const NetworkNotification: React.FC = () => {
+  const { getContent } = useGetContent();
+  const {
+    offlineTitle,
+    offlineMessage,
+    criticalTitle,
+    criticalMessage,
+    slowTitle,
+    slowMessage,
+    defaultTitle,
+    defaultMessage,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      offlineTitle: get(NETWORK_NOTIFICATIONS_CONTENT_KEYS.OFFLINE_TITLE),
+      offlineMessage: get(NETWORK_NOTIFICATIONS_CONTENT_KEYS.OFFLINE_MESSAGE),
+      criticalTitle: get(NETWORK_NOTIFICATIONS_CONTENT_KEYS.CRITICAL_TITLE),
+      criticalMessage: get(NETWORK_NOTIFICATIONS_CONTENT_KEYS.CRITICAL_MESSAGE),
+      slowTitle: get(NETWORK_NOTIFICATIONS_CONTENT_KEYS.SLOW_TITLE),
+      slowMessage: get(NETWORK_NOTIFICATIONS_CONTENT_KEYS.SLOW_MESSAGE),
+      defaultTitle: get(NETWORK_NOTIFICATIONS_CONTENT_KEYS.DEFAULT_TITLE),
+      defaultMessage: get(NETWORK_NOTIFICATIONS_CONTENT_KEYS.DEFAULT_MESSAGE),
+    };
+  }, [getContent]);
+
   const log = logger();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(-100)).current;
@@ -34,7 +57,7 @@ const NetworkNotification: React.FC = () => {
     if (showNetworkWarning) {
       log(
         "[NetworkNotification] Showing network warning for quality:",
-        networkQuality
+        networkQuality,
       );
 
       // Slide down and fade in
@@ -81,28 +104,26 @@ const NetworkNotification: React.FC = () => {
     switch (networkQuality) {
       case "offline":
         return {
-          title: "No Internet Connection",
-          message: "Please check your internet connection and try again.",
+          title: offlineTitle,
+          message: offlineMessage,
           backgroundColor: "#DC2626", // Red
         };
       case "critical":
         return {
-          title: "Poor Connection",
-          message:
-            "Your internet connection is very weak. Some features may not work properly.",
+          title: criticalTitle,
+          message: criticalMessage,
           backgroundColor: "#DC2626", // Red
         };
       case "slow":
         return {
-          title: "Slow Connection",
-          message:
-            "Your internet connection is slow. Some features may work slowly.",
+          title: slowTitle,
+          message: slowMessage,
           backgroundColor: "#F59E0B", // Amber
         };
       default:
         return {
-          title: "Network Issue",
-          message: "There's an issue with your internet connection.",
+          title: defaultTitle,
+          message: defaultMessage,
           backgroundColor: "#DC2626", // Red
         };
     }

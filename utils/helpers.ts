@@ -65,7 +65,9 @@ export const logger =
  * - 121  -> "2 hrs, 1 min"
  */
 export function formatMinutesToHrMins(totalMinutes: number): string {
-  const safe = Number.isFinite(totalMinutes) ? Math.max(0, Math.floor(totalMinutes)) : 0;
+  const safe = Number.isFinite(totalMinutes)
+    ? Math.max(0, Math.floor(totalMinutes))
+    : 0;
   const hrs = Math.floor(safe / 60);
   const mins = safe % 60;
 
@@ -85,7 +87,10 @@ export function formatMinutesToHrMins(totalMinutes: number): string {
  */
 export function formatMetersToKmMeters(totalMiles: number): string {
   const raw = Number.isFinite(totalMiles) ? Math.max(0, totalMiles) : 0;
-  const text = raw % 1 === 0 ? String(Math.round(raw)) : String(parseFloat(raw.toFixed(1)));
+  const text =
+    raw % 1 === 0
+      ? String(Math.round(raw))
+      : String(parseFloat(raw.toFixed(1)));
   return `${text} miles`;
 }
 
@@ -98,7 +103,7 @@ export function formatMetersToKmMeters(totalMiles: number): string {
  */
 export const setStorageItem = async (
   key: string,
-  value: StorageValue
+  value: StorageValue,
 ): Promise<void> => {
   await AsyncStorage.setItem(key, value);
 };
@@ -145,7 +150,7 @@ export const clearStorage = async (): Promise<void> => {
  * ```
  */
 export const clearStorageSelectively = async (
-  keysToPreserve: string[] = []
+  keysToPreserve: string[] = [],
 ): Promise<void> => {
   try {
     // Get all storage keys
@@ -182,7 +187,7 @@ export const getAllStorageKeys = async (): Promise<readonly string[]> => {
  * @returns {Promise<void>} Resolves when all pairs are saved.
  */
 export const multiSetStorageItems = async (
-  entries: Array<[string, StorageValue]>
+  entries: Array<[string, StorageValue]>,
 ): Promise<void> => {
   await AsyncStorage.multiSet(entries);
 };
@@ -194,7 +199,7 @@ export const multiSetStorageItems = async (
  * @returns {Promise<ReadonlyArray<[string, string | null]>>} Array of [key, value] tuples.
  */
 export const multiGetStorageItems = async (
-  keys: readonly string[]
+  keys: readonly string[],
 ): Promise<ReadonlyArray<[string, string | null]>> => {
   return AsyncStorage.multiGet(keys);
 };
@@ -284,14 +289,14 @@ export interface WebViewMessageData {
  * ```
  */
 export const getCurrentLocation = async (
-  fallbackRegion?: MapRegion
+  fallbackRegion?: MapRegion,
 ): Promise<MapRegion> => {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
         "Permission denied",
-        "Location permission is required to show your current location."
+        "Location permission is required to show your current location.",
       );
       if (fallbackRegion) {
         return fallbackRegion;
@@ -332,11 +337,11 @@ export const getCurrentLocation = async (
 export const reverseGeocode = async (
   latitude: number,
   longitude: number,
-  apiKey: string
+  apiKey: string,
 ): Promise<string> => {
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
     );
     const data = await response.json();
 
@@ -367,13 +372,13 @@ export const reverseGeocode = async (
  */
 export const geocodeAddress = async (
   address: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<LocationCoordinates | null> => {
   try {
     const response = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        address
-      )}&key=${apiKey}`
+        address,
+      )}&key=${apiKey}`,
     );
     const data = await response.json();
 
@@ -410,11 +415,11 @@ export const geocodeAddress = async (
 export const getDirections = async (
   origin: LocationCoordinates,
   destination: LocationCoordinates,
-  apiKey: string
+  apiKey: string,
 ): Promise<any> => {
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`
+      `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`,
     );
     const data = await response.json();
 
@@ -447,7 +452,7 @@ export const generateMapHTML = (
   apiKey: string,
   autoSelectCurrentLocation: boolean = true,
   pickupIconUrl: string = "",
-  userLocation: LocationCoordinates | null = null
+  userLocation: LocationCoordinates | null = null,
 ): string => {
   const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
 
@@ -748,7 +753,7 @@ export const generateHeatmapHTML = (
   heatmapData: HeatmapDataPoint[] = [],
   options: HeatmapOptions = {},
   pickupIconUrl: string = "",
-  userLocation: LocationCoordinates | null = null
+  userLocation: LocationCoordinates | null = null,
 ): string => {
   const { latitude, longitude } = region;
   const { radius = 50, opacity = 0.7, showETALabels = true } = options;
@@ -1126,7 +1131,7 @@ export const calculateDistance = (
   lat1: number,
   lng1: number,
   lat2: number,
-  lng2: number
+  lng2: number,
 ): number => {
   const R = 6371; // Earth's radius in kilometers
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -1146,7 +1151,7 @@ export const calculateDistance = (
  */
 export const calculateDistanceMeters = (
   prev: { lat: number; lng: number } | null,
-  curr: { lat: number; lng: number } | null
+  curr: { lat: number; lng: number } | null,
 ): number => {
   if (!prev || !curr) return Number.POSITIVE_INFINITY;
   const km = calculateDistance(prev.lat, prev.lng, curr.lat, curr.lng);
@@ -1160,7 +1165,7 @@ export const calculateDistanceMeters = (
 export const computeDeltaMetersAgainstThreshold = (
   prev: { lat: number; lng: number } | null,
   curr: { lat: number; lng: number } | null,
-  mentionedDistanceMeters: number
+  mentionedDistanceMeters: number,
 ): number => {
   const meters = calculateDistanceMeters(prev, curr);
   if (!isFinite(meters)) return Number.POSITIVE_INFINITY;
@@ -1177,13 +1182,13 @@ export const computeDeltaMetersAgainstThreshold = (
 export const calculateETA = (
   userLocation: LocationCoordinates,
   demandLocation: { lat: number; lng: number },
-  demandLevel: "high" | "medium" | "low" = "medium"
+  demandLevel: "high" | "medium" | "low" = "medium",
 ): string => {
   const distance = calculateDistance(
     userLocation.latitude,
     userLocation.longitude,
     demandLocation.lat,
-    demandLocation.lng
+    demandLocation.lng,
   );
 
   // Average speed assumptions based on demand level (traffic conditions)
@@ -1238,7 +1243,7 @@ export const calculateETA = (
 export const handleWebViewLocationMessage = (
   event: any,
   onLocationSelect: (data: LocationSelectData) => void,
-  onMapPress?: (latitude: number, longitude: number) => void
+  onMapPress?: (latitude: number, longitude: number) => void,
 ): void => {
   const log = logger();
 
@@ -1255,7 +1260,7 @@ export const handleWebViewLocationMessage = (
           "placeId:",
           data.placeId,
           "zipCode:",
-          data.zipCode
+          data.zipCode,
         );
         onLocationSelect({
           address: data.address,
@@ -1424,7 +1429,7 @@ export function filterExpiredDestinations(destinations: DesiredDestination[]): {
  * ```
  */
 export function getValidDestinations(
-  destinations: DesiredDestination[]
+  destinations: DesiredDestination[],
 ): DesiredDestination[] {
   return destinations.filter((dest) => !isDestinationExpired(dest.expired_at));
 }
@@ -1466,7 +1471,7 @@ export function formatExpirationTime(expiredAt: string): string {
  * @returns string - Formatted date string (MM/DD/YYYY hh:mm A)
  */
 export const formatDateTimestamp = (
-  timestamp: string | number | null | undefined
+  timestamp: string | number | null | undefined,
 ): string => {
   try {
     if (timestamp == null) return dayjs().format("MM/DD/YYYY hh:mm A");
@@ -1579,7 +1584,7 @@ export const openSMSApp = async (phoneNumber: string): Promise<void> => {
           "android.intent.action.SENDTO",
           {
             data: `sms:${phoneNumber}`,
-          }
+          },
         );
         console.log("SMS app opened via IntentLauncher");
         return;
@@ -1646,7 +1651,7 @@ export const openWhatsApp = async (phoneNumber: string): Promise<void> => {
  * @returns Duration in milliseconds, or null if expiredAt is invalid
  */
 export function calculateProgressTimerDuration(
-  expiredAt: string | Date | null | undefined
+  expiredAt: string | Date | null | undefined,
 ): number | null {
   if (!expiredAt) {
     return null;
@@ -1693,7 +1698,7 @@ export interface TransformedBidPrices {
  * // Returns: { systemSuggestedBids: [...], boostedPrices: [...] }
  */
 export const transformBidPrices = (
-  systemSuggestedPrices: Record<string, any> | null | undefined
+  systemSuggestedPrices: Record<string, any> | null | undefined,
 ): TransformedBidPrices => {
   const result: TransformedBidPrices = {
     systemSuggestedBids: [],
@@ -1720,7 +1725,7 @@ export const transformBidPrices = (
     systemSuggestedPrices.driver_payout_percentage !== null
   ) {
     const payoutPercentage = Number(
-      systemSuggestedPrices.driver_payout_percentage
+      systemSuggestedPrices.driver_payout_percentage,
     );
     if (!isNaN(payoutPercentage)) {
       result.driverPayoutPercentage = payoutPercentage;
@@ -1821,10 +1826,7 @@ export function transformTripDetailsFromDb(dbResponse: any): any {
     dateTime,
     rideType: trip.rideType || trip.trip_type || "ONE_WAY",
     peopleCount:
-      trip.noOfPassengers ??
-      trip.peopleCount ??
-      trip.people_count ??
-      1,
+      trip.noOfPassengers ?? trip.peopleCount ?? trip.people_count ?? 1,
     rating: (() => {
       const r = trip.passengerRating ?? trip.passenger_rating ?? trip.rating;
       if (r == null) return 0;
@@ -1977,66 +1979,66 @@ export function tripDetailsApiResponseToJobOffer(apiData: any): any {
   const fareDetails = Array.isArray(trip.fareDetails)
     ? trip.fareDetails
     : trip.fareDetails && typeof trip.fareDetails === "object"
-    ? [
-        {
-          label: "Ride Price",
-          value: `$${Number(trip.fareDetails.ridePrice ?? 0).toFixed(2)}`,
-        },
-        {
-          label: "Tolls (EZ Pass)",
-          value: `$${Number(trip.fareDetails.tolls ?? 0).toFixed(2)}`,
-        },
-        {
-          label: "Tips",
-          value: `$${Number(trip.fareDetails.tips ?? 0).toFixed(2)}`,
-        },
-        {
-          label: "Discount",
-          value: `$${Number(trip.fareDetails.discount ?? 0).toFixed(2)}`,
-        },
-        {
-          label: "Service Charges",
-          value: `$${Number(trip.fareDetails.serviceCharges ?? 0).toFixed(2)}`,
-        },
-        {
-          label: "Fuel Surcharge",
-          value: `$${Number(trip.fareDetails.fuelSurcharge ?? 0).toFixed(2)}`,
-        },
-        {
-          label: "NYC Congestion Surcharge",
-          value: `$${Number(
-            trip.fareDetails.nycCongestionSurcharge ?? 0
-          ).toFixed(2)}`,
-        },
-      ]
-    : [];
+      ? [
+          {
+            label: "Ride Price",
+            value: `$${Number(trip.fareDetails.ridePrice ?? 0).toFixed(2)}`,
+          },
+          {
+            label: "Tolls (EZ Pass)",
+            value: `$${Number(trip.fareDetails.tolls ?? 0).toFixed(2)}`,
+          },
+          {
+            label: "Tips",
+            value: `$${Number(trip.fareDetails.tips ?? 0).toFixed(2)}`,
+          },
+          {
+            label: "Discount",
+            value: `$${Number(trip.fareDetails.discount ?? 0).toFixed(2)}`,
+          },
+          {
+            label: "Service Charges",
+            value: `$${Number(trip.fareDetails.serviceCharges ?? 0).toFixed(2)}`,
+          },
+          {
+            label: "Fuel Surcharge",
+            value: `$${Number(trip.fareDetails.fuelSurcharge ?? 0).toFixed(2)}`,
+          },
+          {
+            label: "NYC Congestion Surcharge",
+            value: `$${Number(
+              trip.fareDetails.nycCongestionSurcharge ?? 0,
+            ).toFixed(2)}`,
+          },
+        ]
+      : [];
 
   const customerDetails = Array.isArray(trip.customerDetails)
     ? trip.customerDetails
     : trip.customerDetails && typeof trip.customerDetails === "object"
-    ? [
-        {
-          label: "Name",
-          value: trip.customerDetails.customerName ?? "Customer",
-        },
-        {
-          label: "Required Car Type",
-          value: trip.customerDetails.requiredCarType ?? "",
-        },
-        {
-          label: "Offer Price",
-          value: `$${Number(trip.customerDetails.offerPrice ?? 0).toFixed(2)}`,
-        },
-        {
-          label: "Account No.",
-          value: trip.customerDetails.accountNumber ?? "",
-        },
-        {
-          label: "Profile No.",
-          value: trip.customerDetails.profileNumber ?? "",
-        },
-      ]
-    : [];
+      ? [
+          {
+            label: "Name",
+            value: trip.customerDetails.customerName ?? "Customer",
+          },
+          {
+            label: "Required Car Type",
+            value: trip.customerDetails.requiredCarType ?? "",
+          },
+          {
+            label: "Offer Price",
+            value: `$${Number(trip.customerDetails.offerPrice ?? 0).toFixed(2)}`,
+          },
+          {
+            label: "Account No.",
+            value: trip.customerDetails.accountNumber ?? "",
+          },
+          {
+            label: "Profile No.",
+            value: trip.customerDetails.profileNumber ?? "",
+          },
+        ]
+      : [];
 
   const dateTime = trip.dateTime
     ? formatDateTimeToReadableFormat(trip.dateTime)
@@ -2070,7 +2072,7 @@ export function tripDetailsApiResponseToJobOffer(apiData: any): any {
  * Transform trip details to feedback screen fare summary format
  */
 export function transformTripDetailsToFareSummary(
-  tripDetails: any
+  tripDetails: any,
 ): Array<{ label: string; value: string }> {
   if (!tripDetails || !tripDetails.fareDetails) {
     return [];
@@ -2102,7 +2104,7 @@ export function transformTripDetailsToFareSummary(
  * Returns 0 if the driver ID is invalid or cannot be converted.
  */
 export function getNumericDriverId(
-  driverId: string | number | undefined
+  driverId: string | number | undefined,
 ): number {
   if (!driverId) {
     return 0;
@@ -2121,7 +2123,7 @@ export function getNumericDriverId(
  * Used to compute adjusted bid amount from offer price, e.g. $55 + 5% = $57.75.
  */
 export function getPercentFromAutoBidStrategy(
-  value: number | string | null | undefined
+  value: number | string | null | undefined,
 ): number {
   if (value == null || value === "") return 0;
   if (typeof value === "number" && !Number.isNaN(value)) return value;
@@ -2135,7 +2137,7 @@ export function getPercentFromAutoBidStrategy(
  * @returns The formatted date string (e.g., "Wednesday, February 4, 2026 10:00 AM")
  */
 export function formatDateTimeToReadableFormat(
-  dateString: string | Date
+  dateString: string | Date,
 ): string {
   if (!dateString) return "";
   if (typeof dateString === "string") {

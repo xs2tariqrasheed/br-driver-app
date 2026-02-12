@@ -1,0 +1,16 @@
+export const CHAT_MODAL_CONTENT_KEYS = {
+  HEADER_TITLE_FALLBACK: "driver-app-chat-modal-header-title-fallback",
+  HEADER_CUSTOMER_FALLBACK: "driver-app-chat-modal-header-customer-fallback",
+  LOADING_MESSAGE: "driver-app-chat-modal-loading-message",
+  ERROR_DEFAULT: "driver-app-chat-modal-error-default",
+  ERROR_RETRY_BUTTON: "driver-app-chat-modal-error-retry-button",
+  ERROR_LOAD_FAILED: "driver-app-chat-modal-error-load-failed",
+  ERROR_CLOSE_BUTTON: "driver-app-chat-modal-error-close-button",
+  EMPTY_TITLE: "driver-app-chat-modal-empty-title",
+  EMPTY_SUBTITLE: "driver-app-chat-modal-empty-subtitle",
+  INPUT_PLACEHOLDER: "driver-app-chat-modal-input-placeholder",
+  TOAST_SEND_FAILED: "driver-app-chat-modal-toast-send-failed",
+  TOAST_SEND_ERROR: "driver-app-chat-modal-toast-send-error",
+  TOAST_PHONE_UNAVAILABLE: "driver-app-chat-modal-toast-phone-unavailable",
+  TOAST_CALL_FAILED: "driver-app-chat-modal-toast-call-failed",
+} as const;

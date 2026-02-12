@@ -16,11 +16,13 @@
 import { textColors } from "@/constants/colors";
 import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
 import { API_CLIENT_TYPES } from "@/constants/global";
+import { ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS } from "@/content/components/active-ride-initializer-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useFetch } from "@/hooks/useFetch";
+import { useGetContent } from "@/hooks/useGetContent";
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -43,6 +45,47 @@ interface RetrievalIdResponse {
 }
 
 export default function ActiveRideInitializer() {
+  const { getContent } = useGetContent();
+
+  const {
+    loadingChecking,
+    loadingDefault,
+    timeoutTitle,
+    timeoutMessage,
+    noRideTitle,
+    noRideMessage,
+    noRideSubMessage,
+    errorTitle,
+    errorMessage,
+    authRequiredTitle,
+    authRequiredMessage,
+    actionRetry,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      loadingChecking: get(
+        ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.LOADING_CHECKING,
+      ),
+      loadingDefault: get(ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.LOADING_DEFAULT),
+      timeoutTitle: get(ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.TIMEOUT_TITLE),
+      timeoutMessage: get(ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.TIMEOUT_MESSAGE),
+      noRideTitle: get(ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.NO_RIDE_TITLE),
+      noRideMessage: get(ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.NO_RIDE_MESSAGE),
+      noRideSubMessage: get(
+        ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.NO_RIDE_SUB_MESSAGE,
+      ),
+      errorTitle: get(ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.ERROR_TITLE),
+      errorMessage: get(ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.ERROR_MESSAGE),
+      authRequiredTitle: get(
+        ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.AUTH_REQUIRED_TITLE,
+      ),
+      authRequiredMessage: get(
+        ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.AUTH_REQUIRED_MESSAGE,
+      ),
+      actionRetry: get(ACTIVE_RIDE_INITIALIZER_CONTENT_KEYS.ACTION_RETRY),
+    };
+  }, [getContent]);
+
   const [auth] = useAuth();
   const driverId = auth?.user?.id;
   const [retryCount, setRetryCount] = useState(0);
@@ -56,7 +99,7 @@ export default function ActiveRideInitializer() {
   // Call the API to check for active ride
   const { data, loading, error, execute } = useFetch<RetrievalIdResponse>(
     driverId ? `${ACTIVE_TRIP_ROUTES.RETRIEVAL_ID}/${driverId}` : "",
-    API_CLIENT_TYPES.ACTIVE_TRIP
+    API_CLIENT_TYPES.ACTIVE_TRIP,
   );
 
   useEffect(() => {
@@ -169,7 +212,7 @@ export default function ActiveRideInitializer() {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={textColors.teal700} />
-        <Text style={styles.loadingText}>Checking for active rides...</Text>
+        <Text style={styles.loadingText}>{loadingChecking}</Text>
       </View>
     );
   }
@@ -178,12 +221,10 @@ export default function ActiveRideInitializer() {
   if (hasTimedOut && loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Connection Timeout</Text>
-        <Text style={styles.message}>
-          The request is taking longer than expected. Please try again.
-        </Text>
+        <Text style={styles.title}>{timeoutTitle}</Text>
+        <Text style={styles.message}>{timeoutMessage}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{actionRetry}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -200,13 +241,9 @@ export default function ActiveRideInitializer() {
     ) {
       return (
         <View style={styles.container}>
-          <Text style={styles.title}>No Active Ride</Text>
-          <Text style={styles.message}>
-            You don't have any active rides at the moment.
-          </Text>
-          <Text style={styles.subMessage}>
-            Keep the app open to receive new ride offers.
-          </Text>
+          <Text style={styles.title}>{noRideTitle}</Text>
+          <Text style={styles.message}>{noRideMessage}</Text>
+          <Text style={styles.subMessage}>{noRideSubMessage}</Text>
         </View>
       );
     }
@@ -214,13 +251,11 @@ export default function ActiveRideInitializer() {
     // Other errors
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Error</Text>
-        <Text style={styles.errorMessage}>
-          Failed to check for active rides. Please try again.
-        </Text>
+        <Text style={styles.title}>{errorTitle}</Text>
+        <Text style={styles.errorMessage}>{errorMessage}</Text>
         <Text style={styles.errorDetails}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{actionRetry}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -230,10 +265,8 @@ export default function ActiveRideInitializer() {
   if (!driverId) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Authentication Required</Text>
-        <Text style={styles.message}>
-          Please log in to check for active rides.
-        </Text>
+        <Text style={styles.title}>{authRequiredTitle}</Text>
+        <Text style={styles.message}>{authRequiredMessage}</Text>
       </View>
     );
   }
@@ -242,7 +275,7 @@ export default function ActiveRideInitializer() {
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color={textColors.teal700} />
-      <Text style={styles.loadingText}>Loading...</Text>
+      <Text style={styles.loadingText}>{loadingDefault}</Text>
     </View>
   );
 }

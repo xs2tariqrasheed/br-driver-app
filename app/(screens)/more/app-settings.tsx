@@ -5,11 +5,13 @@ import Loader from "@/components/Loader";
 import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import { APP_SETTINGS_ITEMS, APP_VERSION, DRIVER_TYPES } from "@/constants/global";
+import { DRIVER_TYPES } from "@/constants/global";
+import { APP_SETTINGS_CONTENT_KEYS } from "@/content/(screens)/more/app-settings-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Image,
   SafeAreaView,
@@ -19,12 +21,112 @@ import {
 } from "react-native";
 
 export default function AppSettingsScreen() {
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const {
+    headerTitle,
+    loadingMessage,
+    toastSaved,
+    sectionLogin,
+    sectionRidePreferences,
+    sectionAvailability,
+    sectionSafety,
+    sectionNotifications,
+    sectionAppInfo,
+    appInfoVersionLabel,
+    loginFaceRecognition,
+    loginFaceId,
+    loginFingerprint,
+    notificationsMuteJobOffers,
+    notificationsMuteAll,
+    ridePreferencesHomePageLabel,
+    ridePreferencesHomePageLiveJobs,
+    ridePreferencesHomePageFutureReservations,
+    ridePreferencesHomePageLongDistance,
+    ridePreferencesHomePagePets,
+    ridePreferencesHomePagePackage,
+    ridePreferencesRideTypesLabel,
+    ridePreferencesRideTypesEconomy,
+    ridePreferencesRideTypesSedan,
+    ridePreferencesRideTypesSuv,
+    ridePreferencesRideTypesLuxury,
+    emptyState,
+    appVersion,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(APP_SETTINGS_CONTENT_KEYS.HEADER_TITLE),
+      loadingMessage: get(APP_SETTINGS_CONTENT_KEYS.LOADING_MESSAGE),
+      toastSaved: get(APP_SETTINGS_CONTENT_KEYS.TOAST_SAVED),
+      sectionLogin: get(APP_SETTINGS_CONTENT_KEYS.SECTION_LOGIN),
+      sectionRidePreferences: get(
+        APP_SETTINGS_CONTENT_KEYS.SECTION_RIDE_PREFERENCES,
+      ),
+      sectionAvailability: get(APP_SETTINGS_CONTENT_KEYS.SECTION_AVAILABILITY),
+      sectionSafety: get(APP_SETTINGS_CONTENT_KEYS.SECTION_SAFETY),
+      sectionNotifications: get(
+        APP_SETTINGS_CONTENT_KEYS.SECTION_NOTIFICATIONS,
+      ),
+      sectionAppInfo: get(APP_SETTINGS_CONTENT_KEYS.SECTION_APP_INFO),
+      appInfoVersionLabel: get(
+        APP_SETTINGS_CONTENT_KEYS.APP_INFO_VERSION_LABEL,
+      ),
+      loginFaceRecognition: get(
+        APP_SETTINGS_CONTENT_KEYS.LOGIN_FACE_RECOGNITION,
+      ),
+      loginFaceId: get(APP_SETTINGS_CONTENT_KEYS.LOGIN_FACE_ID),
+      loginFingerprint: get(APP_SETTINGS_CONTENT_KEYS.LOGIN_FINGERPRINT),
+      notificationsMuteJobOffers: get(
+        APP_SETTINGS_CONTENT_KEYS.NOTIFICATIONS_MUTE_JOB_OFFERS,
+      ),
+      notificationsMuteAll: get(
+        APP_SETTINGS_CONTENT_KEYS.NOTIFICATIONS_MUTE_ALL,
+      ),
+      ridePreferencesHomePageLabel: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_HOME_PAGE_LABEL,
+      ),
+      ridePreferencesHomePageLiveJobs: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_HOME_PAGE_LIVE_JOBS,
+      ),
+      ridePreferencesHomePageFutureReservations: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_HOME_PAGE_FUTURE_RESERVATIONS,
+      ),
+      ridePreferencesHomePageLongDistance: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_HOME_PAGE_LONG_DISTANCE,
+      ),
+      ridePreferencesHomePagePets: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_HOME_PAGE_PETS,
+      ),
+      ridePreferencesHomePagePackage: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_HOME_PAGE_PACKAGE,
+      ),
+      ridePreferencesRideTypesLabel: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_RIDE_TYPES_LABEL,
+      ),
+      ridePreferencesRideTypesEconomy: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_RIDE_TYPES_ECONOMY,
+      ),
+      ridePreferencesRideTypesSedan: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_RIDE_TYPES_SEDAN,
+      ),
+      ridePreferencesRideTypesSuv: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_RIDE_TYPES_SUV,
+      ),
+      ridePreferencesRideTypesLuxury: get(
+        APP_SETTINGS_CONTENT_KEYS.RIDE_PREFERENCES_RIDE_TYPES_LUXURY,
+      ),
+      emptyState: get(APP_SETTINGS_CONTENT_KEYS.EMPTY_STATE),
+      appVersion: get(APP_SETTINGS_CONTENT_KEYS.APP_VERSION),
+    };
+  }, [getContent]);
+  // Page Content End
+
   const router = useRouter();
   const settingsContext = useSettings();
   const [settings, setSettings, status] = settingsContext;
   const { isLoading, error, clearError } = status;
   const [auth] = useAuth();
-  
+
   // Check if user is an independent operator
   const isIndependentOperator =
     auth?.user?.type === DRIVER_TYPES.INDEPENDENT_OPERATOR;
@@ -38,11 +140,11 @@ export default function AppSettingsScreen() {
   }, [error, clearError]);
 
   // Helper function to create async toggle handler
-  const createToggleHandler = (updateFn: (next: boolean) => SettingsObject) => {
+  const createToggleHandler = (updateFn: (next: boolean) => any) => {
     return async (next: boolean) => {
       try {
         await setSettings(updateFn(next));
-        showToast("Settings saved successfully", {
+        showToast(toastSaved, {
           variant: "success",
           position: "top",
         });
@@ -52,7 +154,16 @@ export default function AppSettingsScreen() {
     };
   };
 
-  const items = APP_SETTINGS_ITEMS.map((item) => ({
+  // App Settings screen configuration
+  const settingsItemsConfig = [
+    { key: "login", label: sectionLogin },
+    { key: "ride-preferences", label: sectionRidePreferences },
+    { key: "availability", label: sectionAvailability },
+    { key: "safety", label: sectionSafety },
+    { key: "notifications", label: sectionNotifications },
+    { key: "app-info", label: sectionAppInfo },
+  ];
+  const settingsItems = settingsItemsConfig.map((item) => ({
     key: item.key,
     label: item.label,
     icon: (
@@ -69,21 +180,21 @@ export default function AppSettingsScreen() {
             weight="semibold"
             style={styles.infoLabel}
           >
-            Version
+            {appInfoVersionLabel}
           </Typography>
           <Typography
             type="bodyMedium"
             weight="regular"
             style={styles.infoValue}
           >
-            {APP_VERSION}
+            {appVersion}
           </Typography>
         </View>
       ) : item.key === "login" ? (
         <View style={styles.group}>
           <View style={styles.row}>
             <Typography type="bodyLarge" weight="medium" style={styles.text16}>
-              Enable Face Recognition Login
+              {loginFaceRecognition}
             </Typography>
             <Toggle
               variant="switch"
@@ -97,7 +208,7 @@ export default function AppSettingsScreen() {
                       enableFaceRecognition: next,
                     },
                   });
-                  showToast("Settings saved successfully", {
+                  showToast(toastSaved, {
                     variant: "success",
                     position: "top",
                   });
@@ -111,7 +222,7 @@ export default function AppSettingsScreen() {
           </View>
           <View style={styles.row}>
             <Typography type="bodyLarge" weight="medium" style={styles.text16}>
-              Enable Face ID Login
+              {loginFaceId}
             </Typography>
             <Toggle
               variant="switch"
@@ -125,7 +236,7 @@ export default function AppSettingsScreen() {
                       enableFaceId: next,
                     },
                   });
-                  showToast("Settings saved successfully", {
+                  showToast(toastSaved, {
                     variant: "success",
                     position: "top",
                   });
@@ -139,7 +250,7 @@ export default function AppSettingsScreen() {
           </View>
           <View style={styles.row}>
             <Typography type="bodyLarge" weight="medium" style={styles.text16}>
-              Enable Fingerprint Login
+              {loginFingerprint}
             </Typography>
             <Toggle
               variant="switch"
@@ -153,7 +264,7 @@ export default function AppSettingsScreen() {
                       enableFingerprint: next,
                     },
                   });
-                  showToast("Settings saved successfully", {
+                  showToast(toastSaved, {
                     variant: "success",
                     position: "top",
                   });
@@ -170,7 +281,7 @@ export default function AppSettingsScreen() {
         <View style={styles.group}>
           <View style={styles.row}>
             <Typography type="bodyLarge" weight="medium" style={styles.text16}>
-              Mute Job Offers
+              {notificationsMuteJobOffers}
             </Typography>
             <Toggle
               variant="switch"
@@ -184,7 +295,7 @@ export default function AppSettingsScreen() {
                       muteJobOffers: next,
                     },
                   });
-                  showToast("Settings saved successfully", {
+                  showToast(toastSaved, {
                     variant: "success",
                     position: "top",
                   });
@@ -198,7 +309,7 @@ export default function AppSettingsScreen() {
           </View>
           <View style={styles.row}>
             <Typography type="bodyLarge" weight="medium" style={styles.text16}>
-              Mute All
+              {notificationsMuteAll}
             </Typography>
             <Toggle
               variant="switch"
@@ -212,7 +323,7 @@ export default function AppSettingsScreen() {
                       muteAll: next,
                     },
                   });
-                  showToast("Settings saved successfully", {
+                  showToast(toastSaved, {
                     variant: "success",
                     position: "top",
                   });
@@ -230,7 +341,7 @@ export default function AppSettingsScreen() {
           items={[
             {
               key: "ride-home-page",
-              label: "Home Page",
+              label: ridePreferencesHomePageLabel,
               icon: (
                 <Image
                   source={require("@/assets/images/app-settings-icon.png")}
@@ -248,7 +359,7 @@ export default function AppSettingsScreen() {
                           weight="medium"
                           style={styles.text16}
                         >
-                          Live Jobs
+                          {ridePreferencesHomePageLiveJobs}
                         </Typography>
                         <Toggle
                           variant="switch"
@@ -273,7 +384,7 @@ export default function AppSettingsScreen() {
                           weight="medium"
                           style={styles.text16}
                         >
-                          Future Reservations
+                          {ridePreferencesHomePageFutureReservations}
                         </Typography>
                         <Toggle
                           variant="switch"
@@ -302,7 +413,7 @@ export default function AppSettingsScreen() {
                       weight="medium"
                       style={styles.text16}
                     >
-                      Long Distance/Intercity
+                      {ridePreferencesHomePageLongDistance}
                     </Typography>
                     <Toggle
                       variant="switch"
@@ -329,7 +440,7 @@ export default function AppSettingsScreen() {
                       weight="medium"
                       style={styles.text16}
                     >
-                      Pets
+                      {ridePreferencesHomePagePets}
                     </Typography>
                     <Toggle
                       variant="switch"
@@ -354,7 +465,7 @@ export default function AppSettingsScreen() {
                       weight="medium"
                       style={styles.text16}
                     >
-                      Package
+                      {ridePreferencesHomePagePackage}
                     </Typography>
                     <Toggle
                       variant="switch"
@@ -378,7 +489,7 @@ export default function AppSettingsScreen() {
             },
             {
               key: "ride-types",
-              label: "Ride Types",
+              label: ridePreferencesRideTypesLabel,
               icon: (
                 <Image
                   source={require("@/assets/images/app-settings-icon.png")}
@@ -393,7 +504,7 @@ export default function AppSettingsScreen() {
                       weight="medium"
                       style={styles.text16}
                     >
-                      Economy
+                      {ridePreferencesRideTypesEconomy}
                     </Typography>
                     <Toggle
                       variant="switch"
@@ -418,7 +529,7 @@ export default function AppSettingsScreen() {
                       weight="medium"
                       style={styles.text16}
                     >
-                      Sedan
+                      {ridePreferencesRideTypesSedan}
                     </Typography>
                     <Toggle
                       variant="switch"
@@ -443,7 +554,7 @@ export default function AppSettingsScreen() {
                       weight="medium"
                       style={styles.text16}
                     >
-                      SUV
+                      {ridePreferencesRideTypesSuv}
                     </Typography>
                     <Toggle
                       variant="switch"
@@ -468,7 +579,7 @@ export default function AppSettingsScreen() {
                       weight="medium"
                       style={styles.text16}
                     >
-                      Luxury
+                      {ridePreferencesRideTypesLuxury}
                     </Typography>
                     <Toggle
                       variant="switch"
@@ -495,7 +606,7 @@ export default function AppSettingsScreen() {
       ) : (
         <View>
           <Typography type="bodyMedium" weight="regular" style={styles.noData}>
-            No Data Found
+            {emptyState}
           </Typography>
         </View>
       ),
@@ -503,12 +614,12 @@ export default function AppSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="App Settings" onBackPress={() => router.back()} />
+      <Header title={headerTitle} onBackPress={() => router.back()} />
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <Loader size="medium" />
           <Typography type="bodyMedium" style={styles.loadingText}>
-            Saving settings...
+            {loadingMessage}
           </Typography>
         </View>
       )}
@@ -517,7 +628,7 @@ export default function AppSettingsScreen() {
         showsVerticalScrollIndicator={false}
         pointerEvents={isLoading ? "none" : "auto"}
       >
-        <Accordion items={items} />
+        <Accordion items={settingsItems} />
       </ScrollView>
     </SafeAreaView>
   );

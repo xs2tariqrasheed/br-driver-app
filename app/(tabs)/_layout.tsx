@@ -1,13 +1,22 @@
 import Typography from "@/components/Typography";
 import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import { Tabs, usePathname } from "expo-router";
-import { useEffect } from "react";
-import { Image, ImageProps, Platform, StyleSheet, useWindowDimensions, View } from "react-native";
+import { useEffect, useMemo } from "react";
+import {
+  Image,
+  ImageProps,
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { textColors } from "@/constants/colors";
+import { TABS_CONTENT_KEYS } from "@/content/(tabs)/tabs-keys";
+import { useGetContent } from "@/hooks/useGetContent";
 
 const SHOW_EXAMPLES = process.env.EXPO_PUBLIC_SHOW_EXAMPLES === "true";
 
@@ -24,15 +33,35 @@ const TAB_HIDDEN_PATHS = [
 ];
 
 export default function TabLayout() {
+  // Page Content Start
+  const { getContent } = useGetContent();
+  const {
+    homeTabLabel,
+    activeJobTabLabel,
+    earningsTabLabel,
+    moreTabLabel,
+    examplesTabLabel,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      homeTabLabel: get(TABS_CONTENT_KEYS.HOME_TAB_LABEL),
+      activeJobTabLabel: get(TABS_CONTENT_KEYS.ACTIVE_JOB_TAB_LABEL),
+      earningsTabLabel: get(TABS_CONTENT_KEYS.EARNINGS_TAB_LABEL),
+      moreTabLabel: get(TABS_CONTENT_KEYS.MORE_TAB_LABEL),
+      examplesTabLabel: get(TABS_CONTENT_KEYS.EXAMPLES_TAB_LABEL),
+    };
+  }, [getContent]);
+  // Page Content End
+
   const pathname = usePathname();
   const { setTabBarHeight } = useOverlayInsets();
   // Hide tabs only on active ride related screens
   // Show tabs on all other screens including notifications, settings, desired-destinations, etc.
-  const hideTabs = TAB_HIDDEN_PATHS.some((route) =>
-    pathname?.startsWith(route)
-  ) || pathname?.includes("desired-destinations-map");
+  const hideTabs =
+    TAB_HIDDEN_PATHS.some((route) => pathname?.startsWith(route)) ||
+    pathname?.includes("desired-destinations-map");
   const insets = useSafeAreaInsets();
-  
+
   // Calculate dynamic tab bar height
   // Base height: 64px for tab items + safe area bottom inset
   // Minimum height: 64px + 8px padding, Maximum: responsive to screen
@@ -40,7 +69,7 @@ export default function TabLayout() {
   const minPadding = 8;
   const tabBarHeight = Math.max(
     baseTabHeight + minPadding,
-    baseTabHeight + insets.bottom + minPadding
+    baseTabHeight + insets.bottom + minPadding,
   );
 
   // Expose tab bar height to overlays (modals/bottom sheets) so they can add bottom padding
@@ -67,9 +96,10 @@ export default function TabLayout() {
               // paddingBottom: Math.max(insets.bottom, minPadding),
               paddingTop: 18,
             },
-            default: { 
+            default: {
               height: tabBarHeight,
-              paddingTop: Platform.OS === "android" ? 16 : Math.max(insets.top, 8),
+              paddingTop:
+                Platform.OS === "android" ? 16 : Math.max(insets.top, 8),
               paddingBottom: Math.max(insets.bottom, minPadding),
             },
           }),
@@ -80,10 +110,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: homeTabLabel,
           tabBarIcon: ({ focused }) => (
             <TabItem
-              label="Home"
+              label={homeTabLabel}
               focused={focused}
               source={require("@/assets/images/home-icon.png")}
             />
@@ -93,10 +123,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="active-job"
         options={{
-          title: "Active Job",
+          title: activeJobTabLabel,
           tabBarIcon: ({ focused }) => (
             <TabItem
-              label="Active Job"
+              label={activeJobTabLabel}
               focused={focused}
               source={require("@/assets/images/active-jobs-icon.png")}
             />
@@ -106,10 +136,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="earnings"
         options={{
-          title: "Earnings",
+          title: earningsTabLabel,
           tabBarIcon: ({ focused }) => (
             <TabItem
-              label="Earnings"
+              label={earningsTabLabel}
               focused={focused}
               source={require("@/assets/images/earnings-icon.png")}
             />
@@ -119,10 +149,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="more"
         options={{
-          title: "More",
+          title: moreTabLabel,
           tabBarIcon: ({ focused }) => (
             <TabItem
-              label="More"
+              label={moreTabLabel}
               focused={focused}
               source={require("@/assets/images/more-icon.png")}
             />
@@ -134,10 +164,10 @@ export default function TabLayout() {
         options={{
           // Hide this tab entirely when the flag is false
           href: SHOW_EXAMPLES ? undefined : null,
-          title: "Examples",
+          title: examplesTabLabel,
           tabBarIcon: ({ focused }) => (
             <TabItem
-              label="Examples"
+              label={examplesTabLabel}
               focused={focused}
               source={require("@/assets/images/more-icon.png")}
             />
@@ -194,7 +224,7 @@ function TabItem({
   const isSmallScreen = width < 375;
   const baseWidth = isSmallScreen ? 95 : 90; // Slightly wider for small screens
   const tabItemWidth = Math.min(baseWidth, Math.max(baseWidth, width * 0.25));
-  
+
   return (
     <View
       style={[

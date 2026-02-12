@@ -6,14 +6,16 @@ import {
   ETA_BUFFER_MINUTES_MIN,
 } from "@/constants/global";
 
+import { BID_BOTTOM_SHEET_CONTENT_KEYS } from "@/content/components/bid-bottom-sheet-keys";
 import { useSettings } from "@/context/SettingsContext";
 import { useFetch } from "@/hooks/useFetch";
+import { useGetContent } from "@/hooks/useGetContent";
 import {
   getPercentFromAutoBidStrategy,
   SystemSuggestedBid,
   transformBidPrices,
 } from "@/utils/helpers";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -77,11 +79,38 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
 
   const { height: screenHeight } = Dimensions.get("window");
   const MAX_HEIGHT = screenHeight * 0.85;
-  
+
+  // Get content
+  const { getContent } = useGetContent();
+  const {
+    headerTitle,
+    sectionAdjustPrice,
+    sectionEtaLabel,
+    sectionEtaSuffix,
+    sectionBoostLabel,
+    sectionBoostSuffix,
+    actionSubmit,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(BID_BOTTOM_SHEET_CONTENT_KEYS.HEADER_TITLE),
+      sectionAdjustPrice: get(
+        BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ADJUST_PRICE,
+      ),
+      sectionEtaLabel: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ETA_LABEL),
+      sectionEtaSuffix: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ETA_SUFFIX),
+      sectionBoostLabel: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_BOOST_LABEL),
+      sectionBoostSuffix: get(
+        BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_BOOST_SUFFIX,
+      ),
+      actionSubmit: get(BID_BOTTOM_SHEET_CONTENT_KEYS.ACTION_SUBMIT),
+    };
+  }, [getContent]);
+
   // Fetch system suggested bid prices
   const { execute: fetchBidPrices, loading: isLoadingPrices } = useFetch(
     LIVE_JOB_ENDPOINTS.getSystemSuggestedBidPrices,
-    API_CLIENT_TYPES.AUCTION
+    API_CLIENT_TYPES.AUCTION,
   );
 
   // State for fetched prices
@@ -117,7 +146,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
       const etaMinutes = settings.etaBufferMinutes ?? 0;
       const etaVal = Math.min(
         ETA_BUFFER_MINUTES_MAX,
-        Math.max(ETA_BUFFER_MINUTES_MIN, systemEta + etaMinutes)
+        Math.max(ETA_BUFFER_MINUTES_MIN, systemEta + etaMinutes),
       );
       setEta(etaVal);
 
@@ -186,12 +215,12 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
               }
               if (transformed.driverPayoutPercentage !== null) {
                 setFetchedDriverPayoutPercentage(
-                  transformed.driverPayoutPercentage
+                  transformed.driverPayoutPercentage,
                 );
               }
             } else {
               console.log(
-                "⚠️ [BidBottomSheetModal] No system_suggested_prices found in response"
+                "⚠️ [BidBottomSheetModal] No system_suggested_prices found in response",
               );
             }
           }
@@ -219,7 +248,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
 
   // Find the selected bid data
   const selectedBidData = systemSuggestedBids.find(
-    (b) => b.amount === selectedBid
+    (b) => b.amount === selectedBid,
   );
 
   // Calculate driver earnings for selected bid
@@ -267,7 +296,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
               weight="semibold"
               style={styles.headerTitle}
             >
-              Customize Your Bid
+              {headerTitle}
             </Typography>
             <View style={styles.placeholder} />
             <TouchableOpacity
@@ -315,7 +344,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
               weight="semibold"
               style={styles.sectionHeading}
             >
-              Adjust Price
+              {sectionAdjustPrice}
             </Typography>
             {/* Suggested Bid Buttons */}
             <View style={styles.suggestedBidsContainer}>
@@ -396,13 +425,13 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                 weight="semibold"
                 style={styles.etaSectionTitle}
               >
-                Est.Time of Arrival{" "}
+                {sectionEtaLabel}{" "}
                 <Typography
                   type="bodyLarge"
                   weight="regular"
                   style={styles.etaSectionTitle}
                 >
-                  (ETA)
+                  {sectionEtaSuffix}
                 </Typography>
               </Typography>
               {isLoadingPrices ? (
@@ -438,13 +467,13 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                   weight="semibold"
                   style={styles.sectionTitle}
                 >
-                  Boost My Bid{" "}
+                  {sectionBoostLabel}{" "}
                   <Typography
                     type="bodyLarge"
                     weight="regular"
                     style={styles.etaSectionTitle}
                   >
-                    (Put me on top)
+                    {sectionBoostSuffix}
                   </Typography>
                 </Typography>
                 {isLoadingPrices ? (
@@ -547,7 +576,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                 loading={isLoading}
                 disabled={isLoading || isLoadingPrices}
               >
-                Submit
+                {actionSubmit}
               </Button>
             </View>
           </View>

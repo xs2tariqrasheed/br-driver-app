@@ -10,7 +10,9 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { MAX_DESIRED_LOCATIONS } from "@/constants/global";
+import { DESIRED_DESTINATIONS_CONTENT_KEYS } from "@/content/desired-destinations-keys";
 import { useDriver } from "@/context/DriverContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import {
   createDesiredDestination,
   DesiredDestination,
@@ -25,7 +27,7 @@ import {
   useLocalSearchParams,
   useRouter,
 } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -37,6 +39,7 @@ import {
 
 export default function DesiredDestinationsScreen() {
   const router = useRouter();
+  const { getContent } = useGetContent();
   const params = useLocalSearchParams();
   const driverContext = useDriver();
   const [driver, setDriver] = driverContext;
@@ -48,6 +51,112 @@ export default function DesiredDestinationsScreen() {
     isLoadingDestinations,
     destinationsError,
   } = driverContext;
+
+  // page content
+  const {
+    headerTitle,
+    loadingMessage,
+    introDescription,
+    actionAdd,
+    sectionTitle,
+    emptyState,
+    sheetAddTitle,
+    sheetEditTitle,
+    sheetSelectFromMap,
+    sheetAddressPlaceholder,
+    sheetCommissionTitle,
+    sheetCommissionDescription,
+    sheetButtonSave,
+    sheetButtonSaving,
+    sheetButtonUpdate,
+    sheetButtonUpdating,
+    deleteConfirmTitle,
+    deleteConfirmDescription,
+    deleteConfirmCancel,
+    deleteConfirmConfirm,
+    toastMaxReached,
+    toastSelectLocation,
+    toastCommissionRequired,
+    toastMaxDeleteExpired,
+    toastAdded,
+    toastSaveFailed,
+    toastSelectLocationUpdate,
+    toastUpdated,
+    toastUpdateFailed,
+    toastDeleted,
+    toastDeleteFailed,
+  } = useMemo(() => {
+    const get = getContent;
+    return {
+      headerTitle: get(DESIRED_DESTINATIONS_CONTENT_KEYS.HEADER_TITLE),
+      loadingMessage: get(DESIRED_DESTINATIONS_CONTENT_KEYS.LOADING_MESSAGE),
+      introDescription: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.INTRO_DESCRIPTION,
+      ),
+      actionAdd: get(DESIRED_DESTINATIONS_CONTENT_KEYS.ACTION_ADD),
+      sectionTitle: get(DESIRED_DESTINATIONS_CONTENT_KEYS.SECTION_TITLE),
+      emptyState: get(DESIRED_DESTINATIONS_CONTENT_KEYS.EMPTY_STATE),
+      sheetAddTitle: get(DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_ADD_TITLE),
+      sheetEditTitle: get(DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_EDIT_TITLE),
+      sheetSelectFromMap: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_SELECT_FROM_MAP,
+      ),
+      sheetAddressPlaceholder: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_ADDRESS_PLACEHOLDER,
+      ),
+      sheetCommissionTitle: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_COMMISSION_TITLE,
+      ),
+      sheetCommissionDescription: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_COMMISSION_DESCRIPTION,
+      ),
+      sheetButtonSave: get(DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_BUTTON_SAVE),
+      sheetButtonSaving: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_BUTTON_SAVING,
+      ),
+      sheetButtonUpdate: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_BUTTON_UPDATE,
+      ),
+      sheetButtonUpdating: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.SHEET_BUTTON_UPDATING,
+      ),
+      deleteConfirmTitle: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.DELETE_CONFIRM_TITLE,
+      ),
+      deleteConfirmDescription: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.DELETE_CONFIRM_DESCRIPTION,
+      ),
+      deleteConfirmCancel: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.DELETE_CONFIRM_CANCEL,
+      ),
+      deleteConfirmConfirm: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.DELETE_CONFIRM_CONFIRM,
+      ),
+      toastMaxReached: get(DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_MAX_REACHED),
+      toastSelectLocation: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_SELECT_LOCATION,
+      ),
+      toastCommissionRequired: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_COMMISSION_REQUIRED,
+      ),
+      toastMaxDeleteExpired: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_MAX_DELETE_EXPIRED,
+      ),
+      toastAdded: get(DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_ADDED),
+      toastSaveFailed: get(DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_SAVE_FAILED),
+      toastSelectLocationUpdate: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_SELECT_LOCATION_UPDATE,
+      ),
+      toastUpdated: get(DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_UPDATED),
+      toastUpdateFailed: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_UPDATE_FAILED,
+      ),
+      toastDeleted: get(DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_DELETED),
+      toastDeleteFailed: get(
+        DESIRED_DESTINATIONS_CONTENT_KEYS.TOAST_DELETE_FAILED,
+      ),
+    };
+  }, [getContent]);
 
   // Local state for desired destinations list
   const [destinations, setDestinations] = useState<DesiredDestination[]>([]);
@@ -118,7 +227,7 @@ export default function DesiredDestinationsScreen() {
       return () => {
         isActive = false;
       };
-    }, []) // Empty dependency array - only run on focus
+    }, []), // Empty dependency array - only run on focus
   );
 
   // Load all destinations from driver context (include expired so user can see and delete them)
@@ -131,7 +240,7 @@ export default function DesiredDestinationsScreen() {
   // Show error toast when destinationsError changes
   useEffect(() => {
     if (destinationsError) {
-      showToast(destinationsError, {
+      showToast(toastSaveFailed, {
         variant: "error",
         position: "top",
       });
@@ -165,7 +274,11 @@ export default function DesiredDestinationsScreen() {
       // Restore which sheet to open: add vs edit (map passes these back so we reopen the correct sheet)
       const sheetMode = params.sheetMode as string | undefined;
       const editingIndexParam = params.editingIndex as string | undefined;
-      if (sheetMode === "edit" && editingIndexParam !== undefined && editingIndexParam !== "") {
+      if (
+        sheetMode === "edit" &&
+        editingIndexParam !== undefined &&
+        editingIndexParam !== ""
+      ) {
         const idx = parseInt(editingIndexParam, 10);
         if (!Number.isNaN(idx)) setEditingIndex(idx);
       } else {
@@ -215,10 +328,7 @@ export default function DesiredDestinationsScreen() {
   const handleAddDestination = () => {
     log("handleAddDestination called");
     if (destinations.length >= MAX_DESIRED_LOCATIONS) {
-      showToast(
-        "You've reached the maximum of 3 destinations. Delete an existing or expired one to add a new destination.",
-        { variant: "warning", position: "top" }
-      );
+      showToast(toastMaxReached, { variant: "warning", position: "top" });
       return;
     }
     setEditingIndex(null);
@@ -234,24 +344,18 @@ export default function DesiredDestinationsScreen() {
   const handleSaveDestination = useCallback(async () => {
     const trimmed = inputAddress.trim();
     if (!trimmed || !selectedCoordinates || !selectedPlaceId) {
-      showToast("Please select a location from the map", {
+      showToast(toastSelectLocation, {
         variant: "error",
         position: "top",
       });
       return;
     }
     if (commission === 0) {
-      showToast(
-        "Please select a commission for your destination first as it is required",
-        { variant: "error", position: "top" }
-      );
+      showToast(toastCommissionRequired, { variant: "error", position: "top" });
       return;
     }
     if (!canAddMore) {
-      showToast(
-        "Maximum 3 destinations allowed. Delete an expired destination first to add a new one.",
-        { variant: "error", position: "top" }
-      );
+      showToast(toastMaxDeleteExpired, { variant: "error", position: "top" });
       return;
     }
 
@@ -259,9 +363,7 @@ export default function DesiredDestinationsScreen() {
     try {
       const newDest = createDesiredDestination(trimmed);
       const finalZipCode =
-        selectedZipCode ||
-        extractZipCodeFromAddress(trimmed) ||
-        "00000";
+        selectedZipCode || extractZipCodeFromAddress(trimmed) || "00000";
 
       await createDestinationAPI({
         address: newDest.address,
@@ -273,13 +375,13 @@ export default function DesiredDestinationsScreen() {
         commissionPercentage: commission,
       } as any);
 
-      showToast("Destination added successfully", {
+      showToast(toastAdded, {
         variant: "success",
         position: "top",
       });
       closeAddSheet();
     } catch (error: any) {
-      showToast(error?.message ?? "Failed to save destination", {
+      showToast(error?.message ?? toastSaveFailed, {
         variant: "error",
         position: "top",
       });
@@ -323,7 +425,7 @@ export default function DesiredDestinationsScreen() {
       commission ?? destWithExtras.commissionPercentage ?? 0;
 
     if (!finalCoordinates) {
-      showToast("Please select a location from the map to update", {
+      showToast(toastSelectLocationUpdate, {
         variant: "error",
         position: "top",
       });
@@ -343,13 +445,13 @@ export default function DesiredDestinationsScreen() {
       } as any;
 
       await updateDestinationAPI(updatedDest);
-      showToast("Destination updated successfully", {
+      showToast(toastUpdated, {
         variant: "success",
         position: "top",
       });
       closeEditSheet();
     } catch (error: any) {
-      showToast(error?.message ?? "Failed to update destination", {
+      showToast(error?.message ?? toastUpdateFailed, {
         variant: "error",
         position: "top",
       });
@@ -372,14 +474,14 @@ export default function DesiredDestinationsScreen() {
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <Header
-        title="Desired Destinations"
+        title={headerTitle}
         onBackPress={() => router.replace("/(tabs)")}
       />
       {isFetchingDestinations && (
         <View style={styles.loadingOverlay}>
           <Loader size="medium" />
           <Typography type="bodyMedium" style={styles.loadingText}>
-            Loading destinations...
+            {loadingMessage}
           </Typography>
         </View>
       )}
@@ -398,8 +500,7 @@ export default function DesiredDestinationsScreen() {
           weight="regular"
           style={[styles.textBlack, styles.mt20]}
         >
-          Let us know where you’d prefer to go. We’ll match you with rides
-          headed in that direction.
+          {introDescription}
         </Typography>
 
         <View style={styles.mt20}>
@@ -409,7 +510,7 @@ export default function DesiredDestinationsScreen() {
             onPress={handleAddDestination}
             disabled={isLoadingDestinations || isFetchingDestinations}
           >
-            + Add Destination
+            {actionAdd}
           </Button>
         </View>
 
@@ -419,7 +520,7 @@ export default function DesiredDestinationsScreen() {
             weight="semibold"
             style={styles.textBlack}
           >
-            Your Desired Locations
+            {sectionTitle}
           </Typography>
         </View>
 
@@ -434,7 +535,7 @@ export default function DesiredDestinationsScreen() {
               weight="medium"
               style={styles.textBlack}
             >
-              No destinations added yet.
+              {emptyState}
             </Typography>
           </View>
         ) : (
@@ -454,7 +555,7 @@ export default function DesiredDestinationsScreen() {
                     const destWithExtras = dest as any;
                     console.log(
                       "📥 [DesiredDestinationsScreen] Destination:",
-                      JSON.stringify(destWithExtras, null, 2)
+                      JSON.stringify(destWithExtras, null, 2),
                     );
                     setSelectedCoordinates(
                       destWithExtras.latitude && destWithExtras.longitude
@@ -462,10 +563,10 @@ export default function DesiredDestinationsScreen() {
                             latitude: destWithExtras.latitude,
                             longitude: destWithExtras.longitude,
                           }
-                        : null
+                        : null,
                     );
                     setSelectedPlaceId(
-                      destWithExtras.googleReferenceNumber || ""
+                      destWithExtras.googleReferenceNumber || "",
                     );
                     setSelectedZipCode(destWithExtras.targetZipCode || "");
                     setCommission(destWithExtras.commissionPercentage || 0);
@@ -490,7 +591,7 @@ export default function DesiredDestinationsScreen() {
         snapPointsWhenKeyboardVisible={["75%", "95%"]}
         open={isSheetOpen && editingIndex === null}
         onClose={closeAddSheet}
-        headerTitle="Add Destination"
+        headerTitle={sheetAddTitle}
       >
         <View>
           <TouchableOpacity
@@ -511,7 +612,7 @@ export default function DesiredDestinationsScreen() {
               weight="semibold"
               style={styles.textBlue}
             >
-              Select from Map →
+              {sheetSelectFromMap}
             </Typography>
           </TouchableOpacity>
           <View
@@ -528,7 +629,7 @@ export default function DesiredDestinationsScreen() {
                 !inputAddress.trim() && styles.addressDisplayTextPlaceholder,
               ]}
             >
-              {inputAddress.trim() || "Select from map to add destination"}
+              {inputAddress.trim() || sheetAddressPlaceholder}
             </Typography>
           </View>
 
@@ -538,15 +639,14 @@ export default function DesiredDestinationsScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Offer Extra Commission
+              {sheetCommissionTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={[styles.textBlack, styles.mt10]}
             >
-              Boost your chances of getting rides to your desired destinations
-              by offering a extra commission on the fare.
+              {sheetCommissionDescription}
             </Typography>
             <Counter
               value={commission}
@@ -573,7 +673,7 @@ export default function DesiredDestinationsScreen() {
               }
               onPress={handleSaveDestination}
             >
-              {isSavingAdd ? "Saving..." : "Save"}
+              {isSavingAdd ? sheetButtonSaving : sheetButtonSave}
             </Button>
           </View>
         </View>
@@ -586,7 +686,7 @@ export default function DesiredDestinationsScreen() {
         snapPointsWhenKeyboardVisible={["75%", "95%"]}
         open={isSheetOpen && editingIndex !== null}
         onClose={closeEditSheet}
-        headerTitle="Edit Destination"
+        headerTitle={sheetEditTitle}
       >
         <View>
           <TouchableOpacity
@@ -607,7 +707,7 @@ export default function DesiredDestinationsScreen() {
               weight="semibold"
               style={styles.textBlue}
             >
-              Select from Map →
+              {sheetSelectFromMap}
             </Typography>
           </TouchableOpacity>
           <View
@@ -624,7 +724,7 @@ export default function DesiredDestinationsScreen() {
                 !inputAddress.trim() && styles.addressDisplayTextPlaceholder,
               ]}
             >
-              {inputAddress.trim() || "Select from map to add destination"}
+              {inputAddress.trim() || sheetAddressPlaceholder}
             </Typography>
           </View>
 
@@ -634,15 +734,14 @@ export default function DesiredDestinationsScreen() {
               weight="semibold"
               style={styles.textBlack}
             >
-              Offer Extra Commission
+              {sheetCommissionTitle}
             </Typography>
             <Typography
               type="bodyMedium"
               weight="regular"
               style={[styles.textBlack, styles.mt10]}
             >
-              Boost your chances of getting rides to your desired destinations
-              by offering a extra commission on the fare.
+              {sheetCommissionDescription}
             </Typography>
             <Counter
               value={commission}
@@ -662,7 +761,7 @@ export default function DesiredDestinationsScreen() {
               disabled={!inputAddress.trim() || isSavingEdit}
               onPress={handleUpdateDestination}
             >
-              {isSavingEdit ? "Updating..." : "Update"}
+              {isSavingEdit ? sheetButtonUpdating : sheetButtonUpdate}
             </Button>
           </View>
         </View>
@@ -671,10 +770,10 @@ export default function DesiredDestinationsScreen() {
       {/* Delete destination confirmation (same pattern as More screen logout/delete profile) */}
       <ConfirmationSheet
         open={deleteConfirmSheetOpen}
-        title="Are You Sure?"
-        description="Are you sure you want to delete this destination? This action cannot be undone."
-        cancelButtonText="Cancel"
-        confirmButtonText="Yes, Delete"
+        title={deleteConfirmTitle}
+        description={deleteConfirmDescription}
+        cancelButtonText={deleteConfirmCancel}
+        confirmButtonText={deleteConfirmConfirm}
         onCancel={() => {
           setDeleteConfirmSheetOpen(false);
           setDestinationToDelete(null);
@@ -686,15 +785,15 @@ export default function DesiredDestinationsScreen() {
           if (!dest) return;
           try {
             await deleteDestinationAPI(dest.id);
-            showToast("Destination deleted successfully", {
+            showToast(toastDeleted, {
               variant: "success",
               position: "top",
             });
           } catch (error: any) {
-            showToast(
-              error?.message ?? "Failed to delete destination",
-              { variant: "error", position: "top" }
-            );
+            showToast(error?.message ?? toastDeleteFailed, {
+              variant: "error",
+              position: "top",
+            });
           }
         }}
       />

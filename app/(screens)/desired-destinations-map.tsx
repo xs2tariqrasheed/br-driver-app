@@ -1,20 +1,40 @@
 import Button from "@/components/Button";
 import { Header } from "@/components/Header";
-import Typography from "@/components/Typography";
 import CustomMap from "@/components/MapWebView";
+import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { COORDINATE_REGEX, GOOGLE_MAPS_API_KEY } from "@/constants/global";
+import { DESIRED_DESTINATIONS_MAP_CONTENT_KEYS } from "@/content/desired-destinations-map-keys";
 import { useOverlayInsets } from "@/context/OverlayInsetsContext";
+import { useGetContent } from "@/hooks/useGetContent";
 import {
   extractZipCodeFromAddress,
   logger,
   reverseGeocode,
 } from "@/utils/helpers";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
 
 export default function DesiredDestinationsMapScreen() {
+  const { getContent } = useGetContent();
+
+  // page content
+  const { headerTitle, addressPlaceholder, continueButtonText } =
+    useMemo(() => {
+      return {
+        headerTitle: getContent(
+          DESIRED_DESTINATIONS_MAP_CONTENT_KEYS.HEADER_TITLE,
+        ),
+        addressPlaceholder: getContent(
+          DESIRED_DESTINATIONS_MAP_CONTENT_KEYS.ADDRESS_PLACEHOLDER,
+        ),
+        continueButtonText: getContent(
+          DESIRED_DESTINATIONS_MAP_CONTENT_KEYS.ACTION_CONTINUE,
+        ),
+      };
+    }, [getContent]);
+
   const router = useRouter();
   const params = useLocalSearchParams<{
     sheetMode?: string;
@@ -40,7 +60,7 @@ export default function DesiredDestinationsMapScreen() {
     selectedAddress: string,
     coordinates: { latitude: number; longitude: number },
     placeId?: string,
-    zipCode?: string
+    zipCode?: string,
   ) => {
     log("handleLocationSelect called with:", {
       selectedAddress,
@@ -82,7 +102,7 @@ export default function DesiredDestinationsMapScreen() {
         const resolvedAddress = await reverseGeocode(
           latitude,
           longitude,
-          GOOGLE_MAPS_API_KEY
+          GOOGLE_MAPS_API_KEY,
         );
         log("Reverse geocoding successful, resolved address:", resolvedAddress);
 
@@ -123,7 +143,7 @@ export default function DesiredDestinationsMapScreen() {
       style={[styles.container, { paddingBottom: overlayBottomInset - 10 }]}
     >
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="Add Destination" onBackPress={() => router.back()} />
+      <Header title={headerTitle} onBackPress={() => router.back()} />
       <View style={styles.mapContainer}>
         <CustomMap onLocationSelect={handleLocationSelect} />
       </View>
@@ -143,7 +163,7 @@ export default function DesiredDestinationsMapScreen() {
               !address.trim() && styles.addressDisplayTextPlaceholder,
             ]}
           >
-            {address.trim() || "Enter a location or address"}
+            {address.trim() || addressPlaceholder}
           </Typography>
         </View>
         <Button
@@ -152,7 +172,7 @@ export default function DesiredDestinationsMapScreen() {
           disabled={!address.trim() || !selectedCoordinates || !selectedPlaceId}
           onPress={handleContinue}
         >
-          Continue
+          {continueButtonText}
         </Button>
       </View>
     </SafeAreaView>
