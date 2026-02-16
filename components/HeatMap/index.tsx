@@ -256,10 +256,8 @@ export default function HeatMap({
     null,
   );
 
-  // Pickup icon for user location marker
-  const pickupIcon = Image.resolveAssetSource(
-    require("@/assets/images/pickup-icon.png"),
-  );
+  // Prevent car marker flickering: stop tracking view changes after first paint (same as RideMap)
+  const [carTracksViewChanges, setCarTracksViewChanges] = useState(true);
 
   // Heatmap options with defaults
   const { radius = 500, opacity = 0.7, showETALabels = true } = heatmapOptions;
@@ -449,14 +447,22 @@ export default function HeatMap({
             );
           })}
 
-        {/* User location marker */}
+        {/* Current location marker (car icon - same as active-ride map) */}
         {userLocation && (
           <Marker
             coordinate={userLocation}
             title="Your Current Location"
             anchor={{ x: 0.5, y: 0.5 }}
-            icon={pickupIcon}
-          ></Marker>
+            zIndex={1000}
+            tracksViewChanges={carTracksViewChanges}
+          >
+            <Image
+              source={require("@/assets/images/3d-car-icon.png")}
+              style={styles.carIcon}
+              resizeMode="contain"
+              onLoad={() => setCarTracksViewChanges(false)}
+            />
+          </Marker>
         )}
       </MapView>
 
@@ -627,5 +633,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
+  },
+  carIcon: {
+    width: 65,
+    height: 65,
   },
 });

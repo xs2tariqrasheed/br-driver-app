@@ -160,23 +160,6 @@ export default function ForgotPasswordScreen() {
           <View style={styles.formGroup}>
             <Controller
               control={control}
-              name="loginId"
-              rules={{ required: formLoginIdValidationRequired }}
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label={formLoginIdLabel}
-                  placeholder={formLoginIdPlaceholder}
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  name="loginId"
-                  errors={errors as any}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
               name="companyId"
               rules={{ required: formCompanyIdValidationRequired }}
               render={({ field: { onChange, onBlur, value } }) => (
@@ -187,6 +170,23 @@ export default function ForgotPasswordScreen() {
                   onChangeText={onChange}
                   onBlur={onBlur}
                   name="companyId"
+                  errors={errors as any}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="loginId"
+              rules={{ required: formLoginIdValidationRequired }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label={formLoginIdLabel}
+                  placeholder={formLoginIdPlaceholder}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  name="loginId"
                   errors={errors as any}
                 />
               )}

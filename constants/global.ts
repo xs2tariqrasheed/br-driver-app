@@ -26,6 +26,8 @@ export const CONTENT_STORAGE_KEY = "@content_cache";
 export const DEPLOYED_BASE_URL_STORAGE_KEY = "@deployed_base_url";
 // Notifications backup storage key (used during logout to preserve notifications)
 export const NOTIFICATIONS_BACKUP_STORAGE_KEY = "@notifications_backup";
+// Developer settings storage key (show content keys toggle, floating button position)
+export const DEV_SETTINGS_STORAGE_KEY = "@dev_settings";
 
 // Driver status display labels (used in UI)
 export const DRIVER_STATUS = {

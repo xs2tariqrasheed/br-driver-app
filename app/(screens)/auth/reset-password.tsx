@@ -9,6 +9,8 @@ import {
   View,
 } from "react-native";
 
+import { useOverlayInsets } from "@/context/OverlayInsetsContext";
+
 import Button from "@/components/Button";
 import Input from "@/components/Form/Input";
 import PasswordRequirements from "@/components/Form/Password/Requirements";
@@ -186,14 +188,16 @@ export default function ResetPasswordScreen() {
     isPasswordStrong &&
     isConfirmStrong;
 
+  const { overlayBottomInset } = useOverlayInsets();
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { paddingBottom: overlayBottomInset }]}>
       <Header title={pageTitle} onBackPress={() => router.back()} />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={100}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.content}
@@ -323,7 +327,8 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 12,
-    paddingVertical: 32,
+    paddingTop: 32,
+    paddingBottom: 32,
     gap: 20,
   },
   centeredRow: {
