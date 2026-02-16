@@ -9,6 +9,9 @@ import { NOTIFICATIONS_ENDPOINTS } from "@/constants/endpoints";
 
 const STORAGE_KEY_PREFIX = "@expoPushToken:";
 
+/** For testing: when true, always register and store the push token (skip "unchanged, skip" logic). */
+const ALWAYS_REGISTER_PUSH_TOKEN_FOR_TESTING = true;
+
 // Foreground: suppress Expo/system notification UI. Background/killed are unaffected.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -161,23 +164,37 @@ async function registerTokenWithBackend(_userId: string, token: string) {
 export async function registerTokenIfNeeded(userId: string): Promise<boolean> {
   console.log("registerTokenIfNeeded called for userId:", userId);
   try {
-    const [stored, current] = await Promise.all([
+    const [storedToken, freshToken] = await Promise.all([
       getStoredToken(userId),
       getExpoPushTokenAsync(),
     ]);
-    if (!current) {
+
+    if (!freshToken) {
       console.log("No push token available for registration");
       return false;
     }
-    if (stored === current) {
-      console.log("Push token already registered for this user");
+
+    // Compare cached/registered token with current (fresh) token – skip if same (unless testing)
+    if (!ALWAYS_REGISTER_PUSH_TOKEN_FOR_TESTING && storedToken === freshToken) {
+      console.log(
+        "Push token unchanged (stored === fresh), skipping registration"
+      );
       return true;
     }
 
-    const ok = await registerTokenWithBackend(userId, current);
+    if (ALWAYS_REGISTER_PUSH_TOKEN_FOR_TESTING) {
+      console.log("[Testing] Always registering push token with backend");
+    } else {
+      console.log(
+        "Push token changed (stored !== fresh), registering fresh token with backend"
+      );
+    }
+    const ok = await registerTokenWithBackend(userId, freshToken);
     if (ok) {
-      console.log("Push token registered successfully with backend");
-      await storeToken(userId, current);
+      await storeToken(userId, freshToken);
+      console.log(
+        "Push token registered with backend and stored locally (fresh token)"
+      );
     } else {
       console.log("Failed to register push token with backend");
     }

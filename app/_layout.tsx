@@ -1,14 +1,18 @@
 import DevFloatingButton from "@/components/DevFloatingButton";
 import { GlobalActiveTripListener } from "@/components/GlobalActiveTripListener";
+import { GlobalNotificationSocketListener } from "@/components/GlobalNotificationSocketListener";
 import { GlobalSocketListener } from "@/components/GlobalSocketListener";
 import NetworkNotification from "@/components/NetworkNotification";
 import NotificationModal from "@/components/NotificationModal";
 import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import PackageInfoModal from "@/components/PackageInfoModal";
 import SpecialRequirementsModal from "@/components/SpecialRequirementsModal";
-import { ToastProvider } from "@/components/Toast";
+import { showToast, ToastProvider } from "@/components/Toast";
 import { updateBaseUrls } from "@/config/apiConfig";
-import { DEPLOYED_BASE_URL_STORAGE_KEY } from "@/constants/global";
+import {
+  DEPLOYED_BASE_URL_STORAGE_KEY,
+  NOTIFICATION_TYPES,
+} from "@/constants/global";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { BidAcceptedProvider } from "@/context/BidAcceptedContext";
 import { BidBottomSheetProvider } from "@/context/BidBottomSheetContext";
@@ -22,7 +26,7 @@ import {
 import { ChatProvider, useChat } from "@/context/ChatContext";
 import { ContentProvider } from "@/context/ContentContext";
 import { DevSettingsProvider } from "@/context/DevSettingsContext";
-import { DriverProvider } from "@/context/DriverContext";
+import { DriverProvider, useDriver } from "@/context/DriverContext";
 import { FutureJobOffersProvider } from "@/context/FutureJobOffersContext";
 import { ModalManagerProvider } from "@/context/ModalManagerContext";
 import { NetworkProvider } from "@/context/NetworkContext";
@@ -34,7 +38,7 @@ import { SettingsProvider } from "@/context/SettingsContext";
 import { SpecialRequirementsProvider } from "@/context/SpecialRequirementsContext";
 import { registerTokenIfNeeded } from "@/services/pushNotificationService";
 import { coerceTripId } from "@/types/pushNotifications";
-import { getStorageItem } from "@/utils/helpers";
+import { formatDateTimestamp, getStorageItem } from "@/utils/helpers";
 import { speechManager } from "@/utils/speechManager";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
@@ -42,7 +46,7 @@ import * as Notifications from "expo-notifications";
 import { SplashScreen, Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
-import { Platform, View } from "react-native";
+import { AppState, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Host } from "react-native-portalize";
 import "react-native-reanimated";
@@ -53,11 +57,13 @@ SplashScreen.preventAutoHideAsync();
 function PushNotificationsBootstrap() {
   const router = useRouter();
   const [auth] = useAuth();
+  const { addNotification } = useDriver();
   const { openChat } = useChat();
   const { broadcastOffers } = useBroadcastJobOffers();
   const { getTemporaryRideByTripId, showRideOfferModal } = useRideOffer();
 
   const responseSub = useRef<Notifications.Subscription | null>(null);
+  const receivedSub = useRef<Notifications.Subscription | null>(null);
   const handledInitialResponse = useRef(false);
   const tokenRegistrationAttempted = useRef(false);
 
@@ -137,6 +143,50 @@ function PushNotificationsBootstrap() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When a push is received while app is in foreground (banner suppressed; show toast + add to notification center)
+  useEffect(() => {
+    if (!receivedSub.current) {
+      receivedSub.current = Notifications.addNotificationReceivedListener(
+        (notification) => {
+          const { title, body, data } = notification.request.content;
+          const type = (data as any)?.type;
+          addNotification?.({
+            id: `push-${type}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            messageTitle: title ?? "Notification",
+            messageBody: body ?? "",
+            dateTime: formatDateTimestamp(Date.now()),
+            messageType: "unread",
+            notificationType: NOTIFICATION_TYPES.INFO,
+          });
+          showToast(title || body || "New notification", {
+            variant: "success",
+            position: "top",
+          });
+        },
+      );
+    }
+    return () => {
+      if (receivedSub.current) {
+        Notifications.removeNotificationSubscription(receivedSub.current);
+        receivedSub.current = null;
+      }
+    };
+  }, [addNotification]);
+
+  // Re-register push token when app comes to foreground (retry if first attempt failed, keep token fresh)
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      const userId = auth?.user?.id;
+      if (!userId) return;
+      tokenRegistrationAttempted.current = false;
+      registerTokenIfNeeded(String(userId)).catch(() => {
+        tokenRegistrationAttempted.current = false;
+      });
+    });
+    return () => subscription.remove();
+  }, [auth?.user?.id]);
 
   useEffect(() => {
     const userId = auth?.user?.id;
@@ -308,6 +358,7 @@ export default function RootLayout() {
                                                       </Stack>
                                                       <StatusBar style="dark" />
                                                       <PushNotificationsBootstrap />
+                                                      <GlobalNotificationSocketListener />
                                                       {/* Global Socket Listener */}
                                                       <GlobalSocketListener />
                                                       {/* Global Active Trip Socket Listener */}
