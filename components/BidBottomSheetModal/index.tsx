@@ -78,7 +78,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
   } = bid;
 
   const { height: screenHeight } = Dimensions.get("window");
-  const MAX_HEIGHT = screenHeight * 0.85;
+  const MAX_HEIGHT = screenHeight * 0.95;
 
   // Get content
   const { getContent } = useGetContent();
@@ -311,7 +311,12 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
           {/* Content */}
           <View style={styles.content}>
             {/* Header */}
-            <View style={styles.peopleSectionHeader}>
+            <View
+              style={[
+                styles.peopleSectionHeader,
+                { paddingVertical: isBoosted ? 0 : 10 },
+              ]}
+            >
               <View />
               <View style={styles.peopleSection}>
                 <Image
@@ -549,7 +554,12 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                     </View>
 
                     {/* Boost Counter */}
-                    <View style={styles.counterSection}>
+                    <View
+                      style={[
+                        styles.counterSection,
+                        { marginTop: isBoosted ? -10 : "auto" },
+                      ]}
+                    >
                       <Counter
                         editable={true}
                         value={boostAmount}
@@ -566,7 +576,10 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
 
             {/* Submit Button */}
             <View
-              style={styles.submitSection}
+              style={[
+                styles.submitSection,
+                { marginTop: isBoosted ? -24 : "auto" },
+              ]}
               onStartShouldSetResponder={() => false}
             >
               <Button
@@ -618,7 +631,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 16,
   },
   closeButton: {
     width: 40,
@@ -736,7 +748,6 @@ const styles = StyleSheet.create({
     color: textColors.white,
   },
   submitSection: {
-    marginTop: "auto",
     paddingBottom: 20,
   },
 });

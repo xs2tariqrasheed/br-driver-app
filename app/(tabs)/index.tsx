@@ -176,15 +176,10 @@ export default function HomeScreen() {
     const baseWidth = maxLabelLength * charWidth + horizontalPadding + labelGap;
 
     // Minimum width ensures readability - increased for small devices
-    const minWidth = screenWidth < 375 ? 140 : 130; // Higher min for small screens
+    const minWidth = 130; // Higher min for small screens
     // Maximum width: don't exceed 45% of screen width (leaves room for header elements)
     const maxWidth = Math.min(screenWidth * 0.45, 220);
-
-    // For smaller screens (< 375px), add extra padding to ensure text doesn't get cut off
-    const isSmallScreen = screenWidth < 375;
-    const width = isSmallScreen
-      ? Math.max(baseWidth * 1.4, minWidth) // Increased multiplier from 1.25 to 1.4
-      : Math.max(baseWidth * 1.15, minWidth); // Slight increase for all screens
+    const width = Math.max(baseWidth * 1.15, minWidth); // Slight increase for all screens
 
     // Clamp width between min and max
     const finalWidth = Math.min(Math.max(width, minWidth), maxWidth);

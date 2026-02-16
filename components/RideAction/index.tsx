@@ -2,6 +2,7 @@ import { textColors } from "@/constants/colors";
 import { useOverlayInsets } from "@/context/OverlayInsetsContext";
 import React from "react";
 import {
+  Dimensions,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -93,8 +94,8 @@ const RideAction: React.FC<RideActionProps> = ({
     </View>
   );
 };
-
-const SIDE_WIDTH = 54; // fixed side width to preserve center alignment
+const isSmallScreen = Dimensions.get("window").width < 375;
+const SIDE_WIDTH = isSmallScreen ? 44 : 54; //  For small screens, use 44px side width to preserve center alignment
 
 const styles = StyleSheet.create({
   container: {

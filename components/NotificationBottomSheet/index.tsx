@@ -31,15 +31,13 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   isReplying = false,
 }) => {
   const [replyText, setReplyText] = useState("");
-  const {
-    showRideOfferModal,
-    getTemporaryRide,
-    getTemporaryRideByTripId,
-  } =
+  const { showRideOfferModal, getTemporaryRide, getTemporaryRideByTripId } =
     useRideOffer();
 
   // Get ride offer data from temporary ride state using notification ID
-  const rideOfferById = notification?.id ? getTemporaryRide(notification.id) : null;
+  const rideOfferById = notification?.id
+    ? getTemporaryRide(notification.id)
+    : null;
   const rideOfferTripId = (notification as any)?.rideOfferData?.tripId as
     | string
     | undefined;
@@ -54,7 +52,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
 
   const handleSendReply = () => {
     if (isReplying) return; // Prevent action during processing
-    
+
     if (!replyText.trim()) {
       Alert.alert("Error", "Please enter a reply message");
       return;
@@ -80,8 +78,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
   const shouldShowViewDetails = () => {
     return (
       notification?.notificationType ===
-        NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER &&
-      rideOffer
+        NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER && rideOffer
       // Removed hasAnyActiveOffer check to allow reopening offers from notifications
     );
   };
@@ -97,7 +94,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
     <BottomSheet
       open={open}
       onClose={onClose}
-      snapPointsWhenKeyboardVisible={["60%", "90%"]}
+      snapPointsWhenKeyboardVisible={["75%", "95%"]}
       headerTitle={notification.messageTitle}
     >
       <View style={styles.container}>
@@ -142,7 +139,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
               View Details
             </Button>
           </View>
-        ) : notification.isSpecial ? (
+        ) : notification.isSpecial && rideOffer ? (
           /* Special notification reply section */
           <View style={styles.replySection}>
             <Input
@@ -177,7 +174,12 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
         ) : (
           /* Regular notification done button */
           <View style={styles.doneSection}>
-            <Button rounded="half" variant="primary" onPress={handleDone} disabled={isReplying}>
+            <Button
+              rounded="half"
+              variant="primary"
+              onPress={handleDone}
+              disabled={isReplying}
+            >
               Done
             </Button>
           </View>

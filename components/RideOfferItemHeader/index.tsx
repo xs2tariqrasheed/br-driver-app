@@ -14,8 +14,19 @@
 import { textColors } from "@/constants/colors";
 import { CAR_TYPE, type CarType } from "@/constants/global";
 import { Image } from "expo-image";
-import { StyleSheet, TouchableOpacity, View, ViewStyle } from "react-native";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+  ViewStyle,
+} from "react-native";
 import Typography from "../Typography";
+
+/** Gap between header items as fraction of screen width, clamped to min/max. */
+const GAP_WIDTH_FRACTION = 0.09;
+const GAP_MIN = 20;
+const GAP_MAX = 48;
 
 export interface RideOfferItemHeaderProps {
   /** Number of people for the ride */
@@ -61,12 +72,17 @@ export default function RideOfferItemHeader({
   carType = CAR_TYPE.SUV,
   style,
 }: RideOfferItemHeaderProps) {
+  const { width } = useWindowDimensions();
+  const gap = Math.round(
+    Math.min(GAP_MAX, Math.max(GAP_MIN, width * GAP_WIDTH_FRACTION))
+  );
+
   // Capitalize car type for display (e.g., "sedan" -> "SEDAN", "economy" -> "ECONOMY")
   const displayCarType = carType
     ? carType.toUpperCase()
     : "SUV";
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { gap }, style]}>
       {/* User count with icon */}
       <View style={styles.iconTextContainer}>
         <Image
@@ -141,7 +157,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 40, // Fixed gap between icons
     backgroundColor: "transparent",
   },
   iconTextContainer: {

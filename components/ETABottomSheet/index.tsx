@@ -100,7 +100,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(
             setEta(next);
             onEtaChange(next);
           },
-          [onEtaChange]
+          [onEtaChange],
         );
 
         return (
@@ -171,7 +171,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(
             setNote(text);
             onNoteChange(text);
           },
-          [onNoteChange]
+          [onNoteChange],
         );
 
         if (!(variant === "update" && showNoteSection)) return null;
@@ -277,7 +277,7 @@ const ETABottomSheet: React.FC<ETABottomSheetProps> = memo(
         <SheetContent />
       </CustomBottomSheet>
     );
-  }
+  },
 );
 
 const styles = StyleSheet.create({

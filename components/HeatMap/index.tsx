@@ -34,7 +34,7 @@ interface HeatMapProps {
    */
   onLocationSelect?: (
     address: string,
-    coordinates: LocationCoordinates
+    coordinates: LocationCoordinates,
   ) => void;
   /**
    * Optional initial region to center the map on when it loads
@@ -123,15 +123,17 @@ const ETAOverlayAndroid = ({
       tappable={true}
       onPress={onMarkerPress}
     >
-      {/* Larger tappable area with visible dot */}
+      {/* Keep marker hit target but avoid visual noise over demand circles */}
       <View style={styles.androidMarkerContainer}>
-        <View
-          style={[
-            styles.androidMarkerDot,
-            { backgroundColor: getDemandColor() },
-            isSelected && styles.androidMarkerDotSelected,
-          ]}
-        />
+        {isSelected ? (
+          <View
+            style={[
+              styles.androidMarkerDot,
+              { backgroundColor: getDemandColor() },
+              styles.androidMarkerDotSelected,
+            ]}
+          />
+        ) : null}
       </View>
       {/* Callout shown on tap */}
       <Callout tooltip style={styles.calloutContainer}>
@@ -233,14 +235,14 @@ export default function HeatMap({
   // Current map region state - defines the visible area of the map
   const [region, setRegion] = useState<Region>({
     latitude: 40.7128, // Default to New York coordinates
-    longitude: -74.0060,
+    longitude: -74.006,
     latitudeDelta: 0.3, // Zoom level to show NYC area (smaller values = more zoomed in)
     longitudeDelta: 0.3,
   });
 
   // User's current location state
   const [userLocation, setUserLocation] = useState<LocationCoordinates | null>(
-    null
+    null,
   );
 
   // Logger function
@@ -251,12 +253,12 @@ export default function HeatMap({
 
   // Track which marker should show its callout (Android only)
   const [selectedMarkerIndex, setSelectedMarkerIndex] = useState<number | null>(
-    null
+    null,
   );
 
   // Pickup icon for user location marker
   const pickupIcon = Image.resolveAssetSource(
-    require("@/assets/images/pickup-icon.png")
+    require("@/assets/images/pickup-icon.png"),
   );
 
   // Heatmap options with defaults
@@ -280,7 +282,7 @@ export default function HeatMap({
       // Define fallback region in case location access fails
       const fallbackRegion = {
         latitude: 40.7128, // New York as fallback
-        longitude: -74.0060,
+        longitude: -74.006,
         latitudeDelta: 0.3,
         longitudeDelta: 0.3,
       };
@@ -309,7 +311,7 @@ export default function HeatMap({
     lat1: number,
     lon1: number,
     lat2: number,
-    lon2: number
+    lon2: number,
   ): number => {
     const R = 6371000; // Earth's radius in meters
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -317,9 +319,9 @@ export default function HeatMap({
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
@@ -346,7 +348,7 @@ export default function HeatMap({
           coordinate.latitude,
           coordinate.longitude,
           point.lat,
-          point.lng
+          point.lng,
         );
 
         // If tap is within circle radius, show the callout
@@ -363,7 +365,7 @@ export default function HeatMap({
       // For now, use coordinates as address
       // In production, you might want to use reverse geocoding
       const address = `${coordinate.latitude.toFixed(
-        6
+        6,
       )}, ${coordinate.longitude.toFixed(6)}`;
       onLocationSelect(address, {
         latitude: coordinate.latitude,
@@ -547,18 +549,18 @@ const styles = StyleSheet.create({
   },
   // Android-specific styles
   androidMarkerContainer: {
-    width: 400,
-    height: 400,
+    width: 44,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
     // Transparent hit area for easier tapping
-    backgroundColor: "white",
+    backgroundColor: "transparent",
   },
   androidMarkerDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 3,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
     borderColor: "white",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -567,10 +569,10 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   androidMarkerDotSelected: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 3,
     elevation: 8,
   },
   calloutContainer: {

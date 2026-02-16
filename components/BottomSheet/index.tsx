@@ -8,6 +8,7 @@ import BottomSheet, {
 } from "@gorhom/bottom-sheet";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  BackHandler,
   Image,
   Keyboard,
   Platform,
@@ -154,6 +155,27 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const bottomSheetRef = useRef<React.ElementRef<typeof BottomSheet>>(null);
+
+  // Handle Android back button: close sheet when open instead of navigating.
+  // Must run unconditionally (before any early return) to satisfy Rules of Hooks.
+  useEffect(() => {
+    if (Platform.OS !== "android" || !open) return;
+
+    const onBackPress = () => {
+      if (open && !disabledClose) {
+        bottomSheetRef.current?.close();
+        onClose?.();
+        return true; // Prevent default (navigation)
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    );
+    return () => subscription.remove();
+  }, [open, disabledClose, onClose]);
 
   // Define backdrop component
   const renderBackdrop = (backdropProps: BottomSheetBackdropProps) => (

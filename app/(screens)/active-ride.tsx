@@ -297,7 +297,7 @@ export default function ActiveRideScreen() {
   // Keep bottom sheet snapPoints stable to avoid re-renders (and TextInput focus loss)
   // while the active trip screen updates in real-time (socket/location updates).
   const updateEtaSnapPoints = useMemo<(string | number)[]>(
-    () => ["40%", "60%"],
+    () => ["68%", "95%"],
     [],
   );
   const updateEtaSnapPointsWhenKeyboardVisible = useMemo<(string | number)[]>(
@@ -371,7 +371,7 @@ export default function ActiveRideScreen() {
 
     // Keep it within the screen so it never goes off-screen.
     // We allow a large share of the width because labels must never truncate.
-    const maxAllowed = Math.floor(screenWidth * 0.9);
+    const maxAllowed = Math.floor(screenWidth * 0.8);
     const finalWidth = Math.min(maxAllowed, requiredTotalWidth);
 
     return { width: finalWidth, height: 28 } as const;

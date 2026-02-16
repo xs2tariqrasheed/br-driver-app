@@ -1,7 +1,5 @@
 import { activeTripApiClient } from "@/config/apiConfig";
-import {
-  ACTIVE_TRIP_SOCKET_EVENTS
-} from "@/constants/global";
+import { ACTIVE_TRIP_SOCKET_EVENTS } from "@/constants/global";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
 import { useModalManager } from "@/context/ModalManagerContext";
@@ -50,7 +48,9 @@ interface ChatContextValue {
   closeChat: () => void;
   sendMessage: (text: string) => void;
   clearError: () => void;
-  loadCustomerInfo: (driverId: string) => Promise<{ name: string; phone: string } | null>;
+  loadCustomerInfo: (
+    driverId: string,
+  ) => Promise<{ name: string; phone: string } | null>;
 }
 
 const initialState: ChatState = {
@@ -78,7 +78,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // No RN Modal registration needed when using a screen, but keep a central close entry
   // Note: closeChat is defined later, so we'll register it in a separate effect
-
 
   // Socket event listeners
   useEffect(() => {
@@ -111,7 +110,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             messages: updatedMessages,
           };
         });
-      }
+      },
     );
 
     // Listen for error events to handle message sending failures
@@ -123,7 +122,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setState((prev) => ({
           ...prev,
           messages: prev.messages.map((msg) =>
-            msg.status === "sending" ? { ...msg, status: "failed" } : msg
+            msg.status === "sending" ? { ...msg, status: "failed" } : msg,
           ),
           isSending: false,
           error: data.message || "Failed to send message",
@@ -146,7 +145,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Load customer info if not already loaded
       let customerInfo = state.customerInfo;
-      if (driverId && (!customerInfo?.phone || !customerInfo?.name || customerInfo.name === "Ryan Reynolds")) {
+      if (
+        driverId &&
+        (!customerInfo?.phone ||
+          !customerInfo?.name ||
+          customerInfo.name === "Ryan Reynolds")
+      ) {
         const loadedInfo = await loadCustomerInfo(driverId);
         if (loadedInfo) {
           customerInfo = loadedInfo;
@@ -155,7 +159,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Validate customer info before proceeding
       if (!customerInfo?.name || customerInfo.name === "Ryan Reynolds") {
-        console.warn("⚠️ Using default customer name - customer info not available");
+        console.warn(
+          "⚠️ Using default customer name - customer info not available",
+        );
         customerInfo = {
           name: "Customer",
           phone: customerInfo?.phone || "",
@@ -180,7 +186,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Fetch message history
       try {
-
         if (tripId) {
           // Fetch message history directly using API client
           try {
@@ -188,44 +193,88 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               `/active-trips/active-trips/messages/history/${tripId}`,
               {
                 params: { page: 1, limit: 50 },
-              }
+              },
             );
 
             const responseData = response.data as any;
 
             // Log the response for debugging
-            console.log("💬 [Chat History] API Response:", JSON.stringify({
-              success: responseData.success,
-              hasMessages: !!responseData.messages,
-              hasChatMessages: !!responseData.data?.chatMessages,
-              messagesLength: Array.isArray(responseData.messages) ? responseData.messages.length : 'N/A',
-              chatMessagesLength: Array.isArray(responseData.data?.chatMessages) ? responseData.data.chatMessages.length : 'N/A',
-            }, null, 2));
+            console.log(
+              "💬 [Chat History] API Response:",
+              JSON.stringify(
+                {
+                  success: responseData.success,
+                  hasMessages: !!responseData.messages,
+                  hasChatMessages: !!responseData.data?.chatMessages,
+                  messagesLength: Array.isArray(responseData.messages)
+                    ? responseData.messages.length
+                    : "N/A",
+                  chatMessagesLength: Array.isArray(
+                    responseData.data?.chatMessages,
+                  )
+                    ? responseData.data.chatMessages.length
+                    : "N/A",
+                },
+                null,
+                2,
+              ),
+            );
 
             // Check multiple possible locations for messages (DB returns chatMessages, not messages)
-            const messages = responseData.messages || responseData.data?.chatMessages || responseData.data?.messages || responseData.data?.message || [];
+            const messages =
+              responseData.messages ||
+              responseData.data?.chatMessages ||
+              responseData.data?.messages ||
+              responseData.data?.message ||
+              [];
 
-            if (responseData.success && Array.isArray(messages) && messages.length > 0) {
+            if (
+              responseData.success &&
+              Array.isArray(messages) &&
+              messages.length > 0
+            ) {
               // Transform API response to Message format
               // DB returns: chatMessagesRecId, message, senderEntity, sentAt
-              const transformedMessages: Message[] = messages.map((msg: any) => {
-                // Parse timestamp - DB returns "2026-01-12 13:32:14.000000" format
-                let timestamp = msg.sentAt || msg.message_ts || msg.timestamp || msg.P_MESSAGE_TS || new Date().toISOString();
+              const transformedMessages: Message[] = messages.map(
+                (msg: any) => {
+                  // Parse timestamp - DB returns "2026-01-12 13:32:14.000000" format
+                  let timestamp =
+                    msg.sentAt ||
+                    msg.message_ts ||
+                    msg.timestamp ||
+                    msg.P_MESSAGE_TS ||
+                    new Date().toISOString();
 
-                // Convert DB timestamp format to ISO if needed
-                if (typeof timestamp === 'string' && timestamp.includes(' ') && !timestamp.includes('T')) {
-                  // Format: "2026-01-12 13:32:14.000000" -> "2026-01-12T13:32:14.000Z"
-                  timestamp = timestamp.replace(' ', 'T').replace(/\.\d+$/, '') + 'Z';
-                }
+                  // Convert DB timestamp format to ISO if needed
+                  if (
+                    typeof timestamp === "string" &&
+                    timestamp.includes(" ") &&
+                    !timestamp.includes("T")
+                  ) {
+                    // Format: "2026-01-12 13:32:14.000000" -> "2026-01-12T13:32:14.000Z"
+                    timestamp =
+                      timestamp.replace(" ", "T").replace(/\.\d+$/, "") + "Z";
+                  }
 
-                return {
-                  id: msg.chatMessagesRecId?.toString() || msg.message_rec_id?.toString() || msg.message_id?.toString() || `msg-${Date.now()}-${Math.random()}`,
-                  text: msg.message || msg.message_text || msg.P_MESSAGE || '',
-                  sender: msg.senderEntity === 'CUSTOMER' || msg.sender_entity === 'CUSTOMER' || msg.P_SENDER_ENTITY === 'CUSTOMER' ? 'customer' : 'driver',
-                  timestamp: timestamp,
-                  status: 'sent',
-                };
-              });
+                  return {
+                    id:
+                      msg.chatMessagesRecId?.toString() ||
+                      msg.message_rec_id?.toString() ||
+                      msg.message_id?.toString() ||
+                      `msg-${Date.now()}-${Math.random()}`,
+                    text:
+                      msg.message || msg.message_text || msg.P_MESSAGE || "",
+                    sender:
+                      msg.senderEntity === "CUSTOMER" ||
+                      msg.sender_entity === "CUSTOMER" ||
+                      msg.P_SENDER_ENTITY === "CUSTOMER"
+                        ? "customer"
+                        : "driver",
+                    timestamp: timestamp,
+                    status: "sent",
+                  };
+                },
+              );
 
               // Sort messages by timestamp in ascending order (oldest first, newest at bottom)
               transformedMessages.sort((a, b) => {
@@ -234,7 +283,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 return timeA - timeB; // Ascending order (oldest first)
               });
 
-              console.log(`💬 [Chat History] Transformed and sorted ${transformedMessages.length} messages (oldest to newest)`);
+              console.log(
+                `💬 [Chat History] Transformed and sorted ${transformedMessages.length} messages (oldest to newest)`,
+              );
               setState((prev) => ({
                 ...prev,
                 messages: transformedMessages,
@@ -242,15 +293,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 error: null,
               }));
             } else {
-              console.log(`💬 [Chat History] No messages found or empty array. Response:`, {
-                success: responseData.success,
-                messagesCount: Array.isArray(messages) ? messages.length : 'not an array',
-                checkedLocations: {
-                  responseDataMessages: responseData.messages?.length || 0,
-                  dataChatMessages: responseData.data?.chatMessages?.length || 0,
-                  dataMessages: responseData.data?.messages?.length || 0,
+              console.log(
+                `💬 [Chat History] No messages found or empty array. Response:`,
+                {
+                  success: responseData.success,
+                  messagesCount: Array.isArray(messages)
+                    ? messages.length
+                    : "not an array",
+                  checkedLocations: {
+                    responseDataMessages: responseData.messages?.length || 0,
+                    dataChatMessages:
+                      responseData.data?.chatMessages?.length || 0,
+                    dataMessages: responseData.data?.messages?.length || 0,
+                  },
                 },
-              });
+              );
               // No messages or empty response
               setState((prev) => ({
                 ...prev,
@@ -266,7 +323,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               ...prev,
               isLoading: false,
               messages: [],
-              error: fetchError?.message || "Failed to load message history. You can still send messages.",
+              error:
+                fetchError?.message ||
+                "Failed to load message history. You can still send messages.",
             }));
           }
         } else {
@@ -316,7 +375,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       // Re-throw so caller can handle it
       throw new Error(
-        error?.message || "Failed to open chat. Please try again."
+        error?.message || "Failed to open chat. Please try again.",
       );
     }
   }, [getTripId, driverId, state.customerInfo]);
@@ -343,7 +402,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // Fallback to home if navigation fails
       try {
         router.replace("/(tabs)");
-      } catch { }
+      } catch {}
     }
   }, []);
 
@@ -397,7 +456,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         // Send as object, not stringified
         emitActiveTripEvent(
           ACTIVE_TRIP_SOCKET_EVENTS.SEND_MESSAGE,
-          JSON.stringify(messagePayload)
+          JSON.stringify(messagePayload),
         );
 
         // Mark message as delivered after 2 seconds
@@ -415,7 +474,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 messages: prev.messages.map((msg) =>
                   msg.id === newMessage.id
                     ? { ...msg, status: "delivered" }
-                    : msg
+                    : msg,
                 ),
                 isSending: false,
               };
@@ -430,14 +489,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           messages: prev.messages.map((msg, index) =>
             index === prev.messages.length - 1 && msg.status === "sending"
               ? { ...msg, status: "failed" }
-              : msg
+              : msg,
           ),
           isSending: false,
           error: "Failed to send message",
         }));
       }
     },
-    [state.isSending, driverId, getTripId, emitActiveTripEvent]
+    [state.isSending, driverId, getTripId, emitActiveTripEvent],
   );
 
   const clearError = useCallback(() => {
@@ -448,108 +507,127 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Load customer info from active trip
-  const loadCustomerInfo = useCallback(async (driverIdParam: string): Promise<{ name: string; phone: string } | null> => {
-    try {
-      // Skip if already loaded and not default values
-      const currentInfo = state.customerInfo;
-      if (currentInfo?.name && currentInfo.name !== "Ryan Reynolds" && currentInfo.name !== "Customer") {
-        console.log("💬 Customer info already loaded, skipping fetch");
-        return currentInfo;
-      }
-
-      console.log("💬 Loading customer info from active trip...");
-      const activeTripResponse = await activeTripApiClient.get(
-        `/active-trips/active-trips/retrieval-id/${driverIdParam}`
-      );
-
-      const activeTripData = activeTripResponse.data as any;
-      if (activeTripData?.activeTrip) {
-        const activeTrip = activeTripData.activeTrip;
-        const customerId = activeTrip.customerId;
-
-        // Extract customer_rec_id from customerId (e.g., "c-1" -> 1)
-        let customerRecId: number | null = null;
-        if (customerId) {
-          // Try to extract numeric ID from customerId
-          if (customerId.startsWith('c-')) {
-            const match = customerId.match(/\d+$/);
-            if (match) {
-              customerRecId = parseInt(match[0], 10);
-            }
-          } else if (!isNaN(Number(customerId))) {
-            customerRecId = parseInt(customerId, 10);
-          }
+  const loadCustomerInfo = useCallback(
+    async (
+      driverIdParam: string,
+    ): Promise<{ name: string; phone: string } | null> => {
+      try {
+        // Skip if already loaded and not default values
+        const currentInfo = state.customerInfo;
+        if (currentInfo?.name && currentInfo.name !== "Customer") {
+          console.log("💬 Customer info already loaded, skipping fetch");
+          return currentInfo;
         }
 
-        let customerInfo: { name: string; phone: string } | null = null;
+        console.log("💬 Loading customer info from active trip...");
+        const activeTripResponse = await activeTripApiClient.get(
+          `/active-trips/active-trips/retrieval-id/${driverIdParam}`,
+        );
 
-        // If we have customer_rec_id, fetch customer details from API
-        if (customerRecId) {
-          try {
-            console.log(`💬 Fetching customer details for customer_rec_id: ${customerRecId}`);
-            const customerResponse = await activeTripApiClient.get(
-              `/active-trips/active-trips/customer/${customerRecId}`
-            );
+        const activeTripData = activeTripResponse.data as any;
+        if (activeTripData?.activeTrip) {
+          const activeTrip = activeTripData.activeTrip;
+          const customerId = activeTrip.customerId;
 
-            const customerData = customerResponse.data as any;
-            if (customerData?.success && customerData?.customer) {
-              const customer = customerData.customer;
-              const customerName = customer.name || "Customer";
-              const customerPhone = customer.phone || "";
-
-              if (customerName && customerName !== "Customer") {
-                customerInfo = {
-                  name: customerName,
-                  phone: customerPhone,
-                };
-                console.log("💬 Customer info fetched from API:", customerInfo);
+          // Extract customer_rec_id from customerId (e.g., "c-1" -> 1)
+          let customerRecId: number | null = null;
+          if (customerId) {
+            // Try to extract numeric ID from customerId
+            if (customerId.startsWith("c-")) {
+              const match = customerId.match(/\d+$/);
+              if (match) {
+                customerRecId = parseInt(match[0], 10);
               }
+            } else if (!isNaN(Number(customerId))) {
+              customerRecId = parseInt(customerId, 10);
             }
-          } catch (apiError: any) {
-            console.warn("⚠️ Failed to fetch customer details from API:", apiError);
+          }
+
+          let customerInfo: { name: string; phone: string } | null = null;
+
+          // If we have customer_rec_id, fetch customer details from API
+          if (customerRecId) {
+            try {
+              console.log(
+                `💬 Fetching customer details for customer_rec_id: ${customerRecId}`,
+              );
+              const customerResponse = await activeTripApiClient.get(
+                `/active-trips/active-trips/customer/${customerRecId}`,
+              );
+
+              const customerData = customerResponse.data as any;
+              if (customerData?.success && customerData?.customer) {
+                const customer = customerData.customer;
+                const customerName = customer.name || "Customer";
+                const customerPhone = customer.phone || "";
+
+                if (customerName && customerName !== "Customer") {
+                  customerInfo = {
+                    name: customerName,
+                    phone: customerPhone,
+                  };
+                  console.log(
+                    "💬 Customer info fetched from API:",
+                    customerInfo,
+                  );
+                }
+              }
+            } catch (apiError: any) {
+              console.warn(
+                "⚠️ Failed to fetch customer details from API:",
+                apiError,
+              );
+            }
+          }
+
+          // Fallback: Try to get customer info directly from active trip if DB fetch failed
+          if (!customerInfo || customerInfo.name === "Customer") {
+            const customerName =
+              activeTrip.customer?.name ||
+              activeTrip.customerName ||
+              activeTrip.customer_name ||
+              activeTrip.customerDetails?.name ||
+              "Customer";
+
+            const customerPhone =
+              activeTrip.customer?.phone ||
+              activeTrip.customerPhone ||
+              activeTrip.customer_phone ||
+              activeTrip.customerDetails?.phone ||
+              "";
+
+            if (customerName && customerName !== "Customer") {
+              customerInfo = {
+                name: customerName,
+                phone: customerPhone,
+              };
+              console.log(
+                "💬 Customer info fetched from active trip:",
+                customerInfo,
+              );
+            }
+          }
+
+          // Update state with customer info if we got it
+          if (customerInfo && customerInfo.name !== "Customer") {
+            setState((prev) => ({
+              ...prev,
+              customerInfo,
+            }));
+            return customerInfo;
           }
         }
-
-        // Fallback: Try to get customer info directly from active trip if DB fetch failed
-        if (!customerInfo || customerInfo.name === "Customer") {
-          const customerName =
-            activeTrip.customer?.name ||
-            activeTrip.customerName ||
-            activeTrip.customer_name ||
-            activeTrip.customerDetails?.name ||
-            "Customer";
-
-          const customerPhone =
-            activeTrip.customer?.phone ||
-            activeTrip.customerPhone ||
-            activeTrip.customer_phone ||
-            activeTrip.customerDetails?.phone ||
-            "";
-
-          if (customerName && customerName !== "Customer") {
-            customerInfo = {
-              name: customerName,
-              phone: customerPhone,
-            };
-            console.log("💬 Customer info fetched from active trip:", customerInfo);
-          }
-        }
-
-        // Update state with customer info if we got it
-        if (customerInfo && customerInfo.name !== "Customer") {
-          setState((prev) => ({
-            ...prev,
-            customerInfo,
-          }));
-          return customerInfo;
-        }
+        return null;
+      } catch (fetchError: any) {
+        console.warn(
+          "⚠️ Failed to fetch customer info from active trip:",
+          fetchError,
+        );
+        return null;
       }
-      return null;
-    } catch (fetchError: any) {
-      console.warn("⚠️ Failed to fetch customer info from active trip:", fetchError);
-      return null;
-    }
-  }, [state.customerInfo]);
+    },
+    [state.customerInfo],
+  );
 
   const contextValue = useMemo<ChatContextValue>(
     () => ({
@@ -577,7 +655,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       sendMessage,
       clearError,
       loadCustomerInfo,
-    ]
+    ],
   );
 
   return (

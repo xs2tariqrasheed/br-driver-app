@@ -61,7 +61,7 @@ export type InputProps = BaseInputProps;
 
 const getKeyboardProps = (
   type: InputType | undefined,
-  isPasswordVisible?: boolean
+  isPasswordVisible?: boolean,
 ) => {
   const inputType: InputType = type ?? "text";
   switch (inputType) {
@@ -103,7 +103,7 @@ function InnerInput(
     value: string;
     onChangeText: (text: string) => void;
     textInputRef: React.RefObject<TextInput>;
-  }
+  },
 ) {
   const {
     label,
@@ -154,7 +154,7 @@ function InnerInput(
 
   const keyboardProps = useMemo(
     () => getKeyboardProps(inputType, isPasswordVisible),
-    [inputType, isPasswordVisible]
+    [inputType, isPasswordVisible],
   );
 
   const togglePasswordVisibility = () => {
@@ -204,8 +204,8 @@ function InnerInput(
             <Image
               source={
                 isPasswordVisible
-                  ? require("@/assets/images/eye-off.png")
-                  : require("@/assets/images/eye.png")
+                  ? require("@/assets/images/eye.png")
+                  : require("@/assets/images/eye-off.png")
               }
               style={styles.iconImage}
             />
@@ -240,8 +240,8 @@ function InnerInput(
       borderColor: hasError
         ? textColors.red500
         : isActive
-        ? textColors.teal900
-        : textColors.grey200,
+          ? textColors.teal900
+          : textColors.grey200,
     },
     borderWidth: {
       borderWidth: hasError ? 2 : isActive ? 2 : 1,
@@ -333,7 +333,7 @@ function InnerInput(
 
 const Input = forwardRef<TextInput, InputProps>(function Input(
   props: InputProps,
-  ref
+  ref,
 ) {
   const { value, onChangeText, inputType = "text", ...rest } = props as any;
   const innerRef = useRef<TextInput>(null);

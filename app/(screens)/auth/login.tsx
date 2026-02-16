@@ -42,7 +42,7 @@ type LoginFormValues = {
 const LOGIN_DEFAULT_VALUES: LoginFormValues = {
   companyId: "1",
   loginId: "ali.khan@example.com",
-  password: "Test@123",
+  password: "Test@321",
 };
 
 /**
