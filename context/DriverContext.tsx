@@ -48,6 +48,14 @@ export type NotificationItem = {
   isSpecial?: boolean;
   notificationType?: NotificationType;
   rideOfferData?: any;
+  /** Optional details for clearer identification (e.g. Ride Accepted, New Broadcast Job) */
+  pickupAddress?: string;
+  dropoffAddress?: string;
+  tripId?: string;
+  tripNumber?: string;
+  fare?: number;
+  rideTime?: number;
+  rideDistance?: number;
 };
 
 export type HiddenLiveOffer = {
@@ -493,6 +501,23 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
               notificationType: item.notification_type as
                 | NotificationType
                 | undefined,
+              pickupAddress:
+                item.pickup_address ?? item.pickupAddress ?? undefined,
+              dropoffAddress:
+                item.dropoff_address ?? item.dropoffAddress ?? undefined,
+              tripId: item.trip_id ?? item.tripId ?? undefined,
+              tripNumber: item.trip_number ?? item.tripNumber ?? undefined,
+              fare:
+                item.fare != null
+                  ? Number(item.fare)
+                  : item.total_price != null
+                    ? Number(item.total_price)
+                    : undefined,
+              rideTime: item.ride_time != null ? Number(item.ride_time) : undefined,
+              rideDistance:
+                item.ride_distance != null
+                  ? Number(item.ride_distance)
+                  : undefined,
             }));
 
           // Update read notification IDs based on backend data

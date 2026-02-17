@@ -188,7 +188,7 @@ export function GlobalSocketListener() {
               await speechManager.speak(speechNewRideOffer);
             }
 
-            // Add notification to notification center
+            // Add notification to notification center with pickup/dropoff for clarity
             const notification = {
               id: `ride-offer-${rideOffer.tripOffer.tripId}-${Date.now()}`,
               messageTitle: "Special Ride Offer",
@@ -199,8 +199,13 @@ export function GlobalSocketListener() {
               messageType: "unread" as const,
               notificationType:
                 NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER as NotificationType,
-              // Helps reopen the offer even if notification IDs change due to refresh.
               rideOfferData: { tripId: rideOffer.tripOffer.tripId },
+              pickupAddress: rideOffer.pickupAddress,
+              dropoffAddress: rideOffer.dropoffAddress,
+              tripId: rideOffer.tripOffer.tripId,
+              fare: rideOffer.tripOffer.fare,
+              rideTime: rideOffer.rideTime,
+              rideDistance: rideOffer.rideDistance,
             };
             await addNotification(notification);
 
@@ -256,7 +261,7 @@ export function GlobalSocketListener() {
               )}`,
             });
 
-            // Add notification to notification center
+            // Add notification to notification center with pickup/dropoff for clarity
             const notification = {
               id: `broadcast-offer-${
                 broadcastOffer.tripOffer.tripId
@@ -268,6 +273,12 @@ export function GlobalSocketListener() {
               dateTime: formatDateTimestamp(broadcastOffer.timestamp),
               messageType: "unread" as const,
               notificationType: NOTIFICATION_TYPES.INFO as NotificationType,
+              pickupAddress: broadcastOffer.pickupAddress,
+              dropoffAddress: broadcastOffer.dropoffAddress,
+              tripId: broadcastOffer.tripOffer.tripId,
+              fare: broadcastOffer.tripOffer.fare,
+              rideTime: broadcastOffer.rideTime,
+              rideDistance: broadcastOffer.rideDistance,
             };
             await addNotification(notification);
             log("✅ Broadcast offer notification added to notification center");
@@ -322,7 +333,12 @@ export function GlobalSocketListener() {
             setHasAnyActiveOffer(false);
           }
 
-          // Add notification to notification center
+          // Add notification with trip details when available (from current offer or tripId)
+          const currentOffer = currentOfferRef.current;
+          const offerMatchesTrip =
+            tripId &&
+            currentOffer &&
+            String(currentOffer.tripOffer.tripId) === String(tripId);
           const notification = {
             id: `accepted-response-${Date.now()}`,
             messageTitle: feedback?.success ? "Ride Accepted" : "Ride Rejected",
@@ -336,6 +352,12 @@ export function GlobalSocketListener() {
             notificationType: feedback?.success
               ? NOTIFICATION_TYPES.SUCCESS
               : NOTIFICATION_TYPES.ERROR,
+            ...(tripId && { tripId: String(tripId) }),
+            ...(offerMatchesTrip && {
+              pickupAddress: currentOffer.pickupAddress,
+              dropoffAddress: currentOffer.dropoffAddress,
+              fare: currentOffer.tripOffer.fare,
+            }),
           };
           await addNotification(notification);
         } catch (error) {
@@ -397,7 +419,12 @@ export function GlobalSocketListener() {
             // Set hasAnyActiveOffer to false on bid acceptance
             setHasAnyActiveOffer(false);
 
-            // Add success notification
+            // Add success notification with trip details when available
+            const broadcastOfferForTrip = tripId
+              ? broadcastOffers.find(
+                  (o) => String(o.tripOffer.tripId) === String(tripId),
+                )
+              : null;
             const notification = {
               id: `bid-accepted-${Date.now()}`,
               messageTitle: "Bid Accepted",
@@ -406,6 +433,12 @@ export function GlobalSocketListener() {
               dateTime: formatDateTimestamp(timestamp),
               messageType: "unread" as const,
               notificationType: NOTIFICATION_TYPES.SUCCESS,
+              ...(tripId && { tripId: String(tripId) }),
+              ...(broadcastOfferForTrip && {
+                pickupAddress: broadcastOfferForTrip.pickupAddress,
+                dropoffAddress: broadcastOfferForTrip.dropoffAddress,
+                fare: broadcastOfferForTrip.tripOffer.fare,
+              }),
             };
             await addNotification(notification);
           } else if (response === TRIP_OFFER_ACTIONS.REJECT) {

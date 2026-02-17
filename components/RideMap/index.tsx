@@ -128,7 +128,7 @@ export default function RideMap({
 
   // Ride phase
   const [ridePhase, setRidePhase] = useState<"toPickup" | "toDropoff">(
-    "toPickup"
+    "toPickup",
   );
 
   // Animated values for smooth car movement
@@ -157,7 +157,7 @@ export default function RideMap({
       longitude: 0,
       latitudeDelta: 0,
       longitudeDelta: 0,
-    })
+    }),
   );
 
   // Custom map theme
@@ -366,17 +366,20 @@ export default function RideMap({
       const now = Date.now();
       if (now - lastUpdate < UPDATE_THROTTLE) {
         if (updateTimeout) clearTimeout(updateTimeout);
-        updateTimeout = setTimeout(() => {
-          const lat = (latRef as any)._value;
-          const lng = (lngRef as any)._value;
-          animatedCarRegionRef.current.setValue({
-            latitude: lat,
-            longitude: lng,
-            latitudeDelta: 0,
-            longitudeDelta: 0,
-          });
-          lastUpdate = Date.now();
-        }, UPDATE_THROTTLE - (now - lastUpdate));
+        updateTimeout = setTimeout(
+          () => {
+            const lat = (latRef as any)._value;
+            const lng = (lngRef as any)._value;
+            animatedCarRegionRef.current.setValue({
+              latitude: lat,
+              longitude: lng,
+              latitudeDelta: 0,
+              longitudeDelta: 0,
+            });
+            lastUpdate = Date.now();
+          },
+          UPDATE_THROTTLE - (now - lastUpdate),
+        );
         return;
       }
 
@@ -395,10 +398,13 @@ export default function RideMap({
       const now = Date.now();
       if (now - lastRotUpdate < ROTATION_THROTTLE) {
         if (rotTimeout) clearTimeout(rotTimeout);
-        rotTimeout = setTimeout(() => {
-          setCarRotation(value);
-          lastRotUpdate = Date.now();
-        }, ROTATION_THROTTLE - (now - lastRotUpdate));
+        rotTimeout = setTimeout(
+          () => {
+            setCarRotation(value);
+            lastRotUpdate = Date.now();
+          },
+          ROTATION_THROTTLE - (now - lastRotUpdate),
+        );
         return;
       }
       setCarRotation(value);
@@ -500,7 +506,7 @@ export default function RideMap({
    */
   const getRouteCoordinates = async (
     origin: LocationCoordinates,
-    destination: LocationCoordinates
+    destination: LocationCoordinates,
   ): Promise<LocationCoordinates[]> => {
     try {
       const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${GOOGLE_MAPS_API_KEY}`;
@@ -556,7 +562,7 @@ export default function RideMap({
           longitude: location.coords.longitude,
         };
         log(
-          `Device location obtained: ${current.latitude}, ${current.longitude}`
+          `Device location obtained: ${current.latitude}, ${current.longitude}`,
         );
       } catch (locationError) {
         log(`Error getting device location: ${locationError}, using fallback`);
@@ -593,13 +599,13 @@ export default function RideMap({
           longitude: pickupCoordinates.lng,
         };
         log(
-          `Using API pickup coordinates: ${pickup.latitude}, ${pickup.longitude}`
+          `Using API pickup coordinates: ${pickup.latitude}, ${pickup.longitude}`,
         );
       } else {
         pickup = await geocodeAddress(pickupAddress, GOOGLE_MAPS_API_KEY);
         if (!pickup) {
           log(
-            `Could not geocode pickup address: ${pickupAddress}, using fallback coordinates`
+            `Could not geocode pickup address: ${pickupAddress}, using fallback coordinates`,
           );
           // Use fallback coordinates for Lahore
           pickup = { latitude: 31.3709, longitude: 74.3648 };
@@ -615,13 +621,13 @@ export default function RideMap({
           longitude: dropoffCoordinates.lng,
         };
         log(
-          `Using API dropoff coordinates: ${dropoff.latitude}, ${dropoff.longitude}`
+          `Using API dropoff coordinates: ${dropoff.latitude}, ${dropoff.longitude}`,
         );
       } else {
         dropoff = await geocodeAddress(dropoffAddress, GOOGLE_MAPS_API_KEY);
         if (!dropoff) {
           log(
-            `Could not geocode dropoff address: ${dropoffAddress}, using fallback coordinates`
+            `Could not geocode dropoff address: ${dropoffAddress}, using fallback coordinates`,
           );
           // Use fallback coordinates for Lahore
           dropoff = { latitude: 31.4244, longitude: 74.3574 };
@@ -640,7 +646,7 @@ export default function RideMap({
 
       const dropoffRoute = await getRouteCoordinates(
         actualPickup,
-        actualDropoff
+        actualDropoff,
       );
       const interpolatedDropoff = interpolateRoute(dropoffRoute);
       setDropoffInterpolated(interpolatedDropoff);
@@ -649,7 +655,7 @@ export default function RideMap({
       if (interpolatedPickup.length >= 2) {
         const bearing = calculateBearing(
           interpolatedPickup[0],
-          interpolatedPickup[1]
+          interpolatedPickup[1],
         );
         setCarRotation(bearing);
         animatedRotation.current.setValue(bearing);
@@ -687,7 +693,7 @@ export default function RideMap({
         {
           edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
           animated: true,
-        }
+        },
       );
     }
   };
@@ -697,7 +703,7 @@ export default function RideMap({
    */
   const calculateBearing = (
     start: LocationCoordinates,
-    end: LocationCoordinates
+    end: LocationCoordinates,
   ): number => {
     const toRad = (value: number) => (value * Math.PI) / 180;
     const toDeg = (value: number) => (value * 180) / Math.PI;
@@ -751,7 +757,7 @@ export default function RideMap({
    */
   const getDistance = (
     point1: LocationCoordinates,
-    point2: LocationCoordinates
+    point2: LocationCoordinates,
   ): number => {
     const R = 6371e3; // Earth radius in meters
     const φ1 = (point1.latitude * Math.PI) / 180;
@@ -771,7 +777,7 @@ export default function RideMap({
    * Interpolate route with proper distance-based segmentation (from WebView logic)
    */
   const interpolateRoute = (
-    route: LocationCoordinates[]
+    route: LocationCoordinates[],
   ): LocationCoordinates[] => {
     if (route.length < 2) {
       return [...route];
@@ -793,14 +799,14 @@ export default function RideMap({
 
       const distance = Math.hypot(
         end.latitude - start.latitude,
-        end.longitude - start.longitude
+        end.longitude - start.longitude,
       );
       const segments = Math.max(
         1,
         Math.min(
           Math.floor(distance / maxSegmentDistance),
-          Math.floor((maxPoints - interpolated.length) / (route.length - i))
-        )
+          Math.floor((maxPoints - interpolated.length) / (route.length - i)),
+        ),
       );
 
       for (let j = 1; j < segments && interpolated.length < maxPoints; j++) {
@@ -826,7 +832,7 @@ export default function RideMap({
   const animateNext = (
     index: number,
     route: LocationCoordinates[],
-    isDropoff: boolean = false
+    isDropoff: boolean = false,
   ) => {
     // Check if testing was stopped
     if (!testingRef.current) {
@@ -845,7 +851,7 @@ export default function RideMap({
         if (dropoffRoute.length > 1 && testingRef.current) {
           const initialBearing = calculateBearing(
             dropoffRoute[0],
-            dropoffRoute[1]
+            dropoffRoute[1],
           );
           animatedRotation.current.setValue(initialBearing);
           setCarRotation(initialBearing);
@@ -975,7 +981,7 @@ export default function RideMap({
       if (pickupInterpolated.length >= 2) {
         const initialBearing = calculateBearing(
           pickupInterpolated[0],
-          pickupInterpolated[1]
+          pickupInterpolated[1],
         );
         animatedRotation.current.setValue(initialBearing);
         setCarRotation(initialBearing);
@@ -1187,6 +1193,8 @@ export default function RideMap({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    borderTopWidth: 1,
+    borderTopColor: textColors.grey200,
   },
   map: {
     flex: 1,

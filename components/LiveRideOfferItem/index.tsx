@@ -679,7 +679,11 @@ export default function LiveRideOfferItem({
                   totalPrice={totalPrice}
                   driverEarn={driverEarn}
                   buttonTitle={getButtonTitle()}
-                  disabled={disabled || isRejecting}
+                  disabled={
+                    disabled ||
+                    isRejecting ||
+                    getButtonTitle() === "Waiting..."
+                  }
                   isRejecting={isRejecting}
                   onButtonClick={onButtonClick}
                   hideActionButton={hideActionButton}

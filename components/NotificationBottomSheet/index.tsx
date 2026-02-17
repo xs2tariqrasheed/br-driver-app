@@ -112,6 +112,81 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
           {notification.messageBody}
         </Typography>
 
+        {/* Trip/Job details for clearer identification */}
+        {(notification.pickupAddress ||
+          notification.dropoffAddress ||
+          notification.rideTime != null ||
+          notification.rideDistance != null) && (
+          <View style={{ gap: 10 }}>
+            {notification.pickupAddress ? (
+              <View style={styles.detailRow}>
+                <Typography
+                  type="bodyMedium"
+                  weight="medium"
+                  style={styles.detailLabel}
+                >
+                  PU:
+                </Typography>
+                <Typography
+                  type="bodySmall"
+                  weight="regular"
+                  style={styles.detailValue}
+                  numberOfLines={3}
+                >
+                  {notification.pickupAddress}
+                </Typography>
+              </View>
+            ) : null}
+            {notification.dropoffAddress ? (
+              <View style={styles.detailRow}>
+                <Typography
+                  type="bodyMedium"
+                  weight="medium"
+                  style={styles.detailLabel}
+                >
+                  Drop-off
+                </Typography>
+                <Typography
+                  type="bodySmall"
+                  weight="regular"
+                  style={styles.detailValue}
+                  numberOfLines={3}
+                >
+                  {notification.dropoffAddress}
+                </Typography>
+              </View>
+            ) : null}
+            {(notification.rideTime != null ||
+              notification.rideDistance != null) && (
+              <View style={styles.detailRow}>
+                <Typography
+                  type="bodyMedium"
+                  weight="medium"
+                  style={styles.detailLabel}
+                >
+                  Time/Distance
+                </Typography>
+                <Typography
+                  type="bodySmall"
+                  weight="regular"
+                  style={styles.detailValue}
+                >
+                  {[
+                    notification.rideTime != null
+                      ? `${notification.rideTime} min`
+                      : null,
+                    notification.rideDistance != null
+                      ? `${Number(notification.rideDistance).toFixed(1)} mi`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" / ")}
+                </Typography>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Expired Offer Message */}
         {notification?.notificationType ===
           NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER &&
@@ -199,6 +274,20 @@ const styles = StyleSheet.create({
   },
   messageBody: {
     color: textColors.grey800,
+    lineHeight: 20,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    gap: 4,
+  },
+  detailLabel: {
+    color: textColors.grey900,
+  },
+  detailValue: {
+    color: textColors.grey900,
     lineHeight: 20,
   },
   replySection: {

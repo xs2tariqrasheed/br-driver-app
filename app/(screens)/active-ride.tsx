@@ -1416,36 +1416,9 @@ export default function ActiveRideScreen() {
       disabled: isCompletingRide,
     },
     {
-      icon: "make-stop.png",
-      onPress: handleStop,
-      key: "make-stop",
-      disabled:
-        isActionLoading ||
-        currentRideState !== RIDE_STATES.LOADED ||
-        isCompletingRide,
-    },
-    {
-      icon: "add-toll.png",
-      onPress: handleAddToll,
-      key: "add-toll",
-      disabled: isCompletingRide,
-    },
-    {
-      icon: "circling.png",
-      onPress: handleCircling,
-      key: "circling",
-      disabled: isActionLoading || isCompletingRide,
-    },
-    {
       icon: "cancel-ride.png",
       onPress: handleCancelRide,
       key: "cancel-ride",
-      disabled: isCompletingRide,
-    },
-    {
-      icon: "update-eta.png",
-      onPress: handleUpdateETA,
-      key: "update-eta",
       disabled: isCompletingRide,
     },
     {
@@ -1458,6 +1431,38 @@ export default function ActiveRideScreen() {
       icon: "contact-customer.png",
       onPress: handleContactCustomer,
       key: "contact-customer",
+      disabled: isCompletingRide,
+    },
+    {
+      icon: "update-eta.png",
+      onPress: handleUpdateETA,
+      key: "update-eta",
+      disabled:
+        isCompletingRide ||
+        currentRideState !== RIDE_STATES.EN_ROUTE,
+    },
+    {
+      icon: "circling.png",
+      onPress: handleCircling,
+      key: "circling",
+      disabled:
+        isActionLoading ||
+        isCompletingRide ||
+        currentRideState !== RIDE_STATES.ON_SCENE,
+    },
+    {
+      icon: "make-stop.png",
+      onPress: handleStop,
+      key: "make-stop",
+      disabled:
+        isActionLoading ||
+        currentRideState !== RIDE_STATES.LOADED ||
+        isCompletingRide,
+    },
+    {
+      icon: "add-toll.png",
+      onPress: handleAddToll,
+      key: "add-toll",
       disabled: isCompletingRide,
     },
   ];
@@ -1967,50 +1972,101 @@ export default function ActiveRideScreen() {
         />
       </View>
 
-      {toggleValue === toggleMap && showSwipe && (
-        <Animated.View style={{ opacity: swipeOpacity }}>
-          <RideAction
-            leftComponent={
-              <Image
-                source={require("@/assets/images/actions/circling.png")}
-                style={{
-                  width: 20,
-                  height: 20,
-                  opacity: isActionLoading || isCompletingRide ? 0.5 : 1,
+      {toggleValue === toggleMap &&
+        showSwipe &&
+        (() => {
+          const isEnRoute = currentRideState === RIDE_STATES.EN_ROUTE;
+          const isOnScene = currentRideState === RIDE_STATES.ON_SCENE;
+          const isStopped = currentRideState === RIDE_STATES.STOPPED;
+          const isOtherStateNotStopped =
+            !isEnRoute &&
+            !isOnScene &&
+            (currentRideState === RIDE_STATES.LOADED ||
+              currentRideState === RIDE_STATES.COMPLETED);
+
+          // When Stopped: hide left/right icons entirely (only swipe button visible)
+          const showSideActions = !isStopped;
+
+          // Left: En route / On scene = Contact Customer; other (Loaded/Completed) = Toll; Stopped = hidden
+          const leftContactCustomer = isEnRoute || isOnScene;
+          const leftIconSource = leftContactCustomer
+            ? require("@/assets/images/actions/contact-customer.png")
+            : require("@/assets/images/actions/add-toll.png");
+          const onLeftPressAction = leftContactCustomer
+            ? handleContactCustomer
+            : handleAddToll;
+          const leftDisabled = isCompletingRide;
+
+          // Right: En route = Update ETA; On scene = Circling; other (Loaded) = Make Stop; Stopped = hidden
+          const rightIconSource = isEnRoute
+            ? require("@/assets/images/actions/update-eta.png")
+            : isOnScene
+              ? require("@/assets/images/actions/circling.png")
+              : require("@/assets/images/actions/make-stop.png");
+          const onRightPressAction = isEnRoute
+            ? handleUpdateETA
+            : isOnScene
+              ? handleCircling
+              : handleStop;
+          const rightDisabled =
+            isCompletingRide ||
+            (isOnScene && isActionLoading) ||
+            (isOtherStateNotStopped &&
+              currentRideState !== RIDE_STATES.LOADED);
+
+          return (
+            <Animated.View style={{ opacity: swipeOpacity }}>
+              <RideAction
+                leftComponent={
+                  showSideActions ? (
+                    <Image
+                      source={leftIconSource}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        opacity: leftDisabled ? 0.5 : 1,
+                      }}
+                      resizeMode="contain"
+                    />
+                  ) : null
+                }
+                swipeTitle={
+                  isActionLoading || isCompletingRide
+                    ? swipeProcessing
+                    : (swipeTitleByState[swipeButtonState] ?? swipeMarkArrived)
+                }
+                onSwipeComplete={() => {
+                  if (!isActionLoading && !isCompletingRide) {
+                    handleSwipeComplete();
+                  }
                 }}
+                disabled={
+                  isActionLoading ||
+                  isCompletingRide ||
+                  !isMapReady ||
+                  isLoadingData
+                }
+                leftDisabled={leftDisabled}
+                rightDisabled={rightDisabled}
+                onLeftPress={onLeftPressAction}
+                onRightPress={onRightPressAction}
+                rightComponent={
+                  showSideActions ? (
+                    <Image
+                      source={rightIconSource}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        opacity: rightDisabled ? 0.5 : 1,
+                      }}
+                      resizeMode="contain"
+                    />
+                  ) : null
+                }
               />
-            }
-            swipeTitle={
-              isActionLoading || isCompletingRide
-                ? swipeProcessing
-                : (swipeTitleByState[swipeButtonState] ?? swipeMarkArrived)
-            }
-            onSwipeComplete={() => {
-              if (!isActionLoading && !isCompletingRide) {
-                handleSwipeComplete();
-              }
-            }}
-            disabled={
-              isActionLoading ||
-              isCompletingRide ||
-              !isMapReady ||
-              isLoadingData
-            }
-            onLeftPress={handleCircling}
-            onRightPress={handleContactCustomer}
-            rightComponent={
-              <Image
-                source={require("@/assets/images/actions/contact-customer.png")}
-                style={{
-                  width: 20,
-                  height: 20,
-                  opacity: isActionLoading || isCompletingRide ? 0.5 : 1,
-                }}
-              />
-            }
-          />
-        </Animated.View>
-      )}
+            </Animated.View>
+          );
+        })()}
 
       {/* Contact Customer Bottom Sheet */}
       <BottomSheet

@@ -29,6 +29,10 @@ export interface RideActionProps {
   onLeftPress?: () => void;
   /** Called when right button is pressed */
   onRightPress?: () => void;
+  /** Disable only the left action button (overrides disabled for left side when set) */
+  leftDisabled?: boolean;
+  /** Disable only the right action button (overrides disabled for right side when set) */
+  rightDisabled?: boolean;
 }
 
 /**
@@ -46,14 +50,21 @@ const RideAction: React.FC<RideActionProps> = ({
   sticky = true,
   onLeftPress,
   onRightPress,
+  leftDisabled,
+  rightDisabled,
 }) => {
   const { overlayBottomInset } = useOverlayInsets();
+  const isLeftDisabled = disabled || (leftDisabled ?? false);
+  const isRightDisabled = disabled || (rightDisabled ?? false);
   // Render a placeholder to preserve layout and keep the center truly centered
   const Left = (
     <TouchableOpacity
       onPress={onLeftPress}
-      disabled={disabled}
-      style={leftComponent ? styles.sideBox : styles.sideEmpty}
+      disabled={isLeftDisabled}
+      style={[
+        leftComponent ? styles.sideBox : styles.sideEmpty,
+        isLeftDisabled && styles.sideDisabled,
+      ]}
     >
       {leftComponent ?? <View style={styles.sideFiller} />}
     </TouchableOpacity>
@@ -61,8 +72,11 @@ const RideAction: React.FC<RideActionProps> = ({
   const Right = (
     <TouchableOpacity
       onPress={onRightPress}
-      disabled={disabled}
-      style={rightComponent ? styles.sideBox : styles.sideEmpty}
+      disabled={isRightDisabled}
+      style={[
+        rightComponent ? styles.sideBox : styles.sideEmpty,
+        isRightDisabled && styles.sideDisabled,
+      ]}
     >
       {rightComponent ?? <View style={styles.sideFiller} />}
     </TouchableOpacity>
@@ -134,6 +148,9 @@ const styles = StyleSheet.create({
     backgroundColor: textColors.white,
     alignItems: "center",
     justifyContent: "center",
+  },
+  sideDisabled: {
+    opacity: 0.5,
   },
   sideFiller: {
     width: 1,
