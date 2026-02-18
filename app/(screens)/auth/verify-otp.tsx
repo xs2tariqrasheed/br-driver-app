@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 
 import Header from "@/components/Header";
@@ -20,10 +20,10 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS, DRIVER_ENDPOINTS } from "@/constants/endpoints";
 import {
-  API_CLIENT_TYPES,
-  DRIVER_TYPES,
-  OTP_LENGTH,
-  OTP_RESEND_SECONDS,
+    API_CLIENT_TYPES,
+    DRIVER_TYPES,
+    OTP_LENGTH,
+    OTP_RESEND_SECONDS,
 } from "@/constants/global";
 import { VERIFY_OTP_CONTENT_KEYS } from "@/content/(screens)/auth/verify-otp-keys";
 import { useAuth } from "@/context/AuthContext";
@@ -515,16 +515,16 @@ export default function VerifyOtpScreen() {
       const driverId =
         user.driver_rec_id != null ? String(user.driver_rec_id) : "";
 
-      // Extract driver name from personal_information
-      const firstName = user.personal_information?.first_name || "";
-      const lastName = user.personal_information?.last_name || "";
+      // Extract driver name from flat user (first_name, last_name at top level)
+      const firstName = user.first_name || "";
+      const lastName = user.last_name || "";
       const driverName = `${firstName} ${lastName}`.trim() || "Driver";
 
       // Extract driver type from driver_type field
       // Map backend driver_type to app DRIVER_TYPES
       let driverType: string = DRIVER_TYPES.INDEPENDENT_OPERATOR; // default
       if (user.driver_type) {
-        const backendDriverType = user.driver_type.toUpperCase();
+        const backendDriverType = String(user.driver_type).toUpperCase();
         if (
           backendDriverType.includes("NETWORK_IO") ||
           backendDriverType.includes("IO")
@@ -538,8 +538,11 @@ export default function VerifyOtpScreen() {
         }
       }
 
-      // Extract online status
-      const isOnline = user.is_online === "YES" || user.is_online === true;
+      // Extract online status (login response may not include is_online; active_status indicates account status)
+      const isOnline =
+        user.is_online === "YES" ||
+        user.is_online === true ||
+        false;
 
       // Set auth context with full user data (including all driver details for profile screen)
       // Store the complete user object so profile screen can access all information

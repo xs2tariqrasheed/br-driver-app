@@ -114,57 +114,58 @@ export default function ProfileScreen() {
   const [auth] = useAuth();
   const [driver] = useDriver();
 
-  // Extract driver information from auth user object (contains full driver data from login)
+  // Helper: show value from login user or "Not available"
+  const fromUser = (value: string | number | undefined | null) =>
+    value !== undefined && value !== null && String(value).trim() !== ""
+      ? String(value)
+      : valueNa;
+
+  // Extract driver information from auth user (flat login API response shape)
   const user = auth?.user as any;
-  const personalInfo = user?.personal_information || {};
-  const contactInfo = user?.contact_information || {};
-  const paymentInfo = user?.payment_and_compensation || {};
-  const activity = user?.activity || {};
 
-  // Personal Information
-  const firstName = personalInfo?.first_name || "";
-  const lastName = personalInfo?.last_name || "";
+  // Personal Information (from flat user: first_name, last_name, years_of_experience only)
+  const firstName = user?.first_name ?? "";
+  const lastName = user?.last_name ?? "";
   const fullName = `${firstName} ${lastName}`.trim() || nameFallback;
-  const dateOfBirth = personalInfo?.date_of_birth || valueNa;
-  const gender = personalInfo?.gender || valueNa;
-  const ethnicity = personalInfo?.ethnicity || valueNa;
-  const languages = personalInfo?.driver_language || valueNa;
-  const ssn = personalInfo?.social_security_number || valueNa;
-  const yearsOfExperience = user?.years_of_experience || valueNa;
+  const dateOfBirth = valueNa; // not in login response
+  const gender = valueNa;
+  const ethnicity = valueNa;
+  const languages = valueNa;
+  const yearsOfExperience = fromUser(user?.years_of_experience);
 
-  // Contact Information
-  const email = contactInfo?.primary_email_address || valueNa;
-  const phone = contactInfo?.primary_phone_number || valueNa;
-  const whatsapp = contactInfo?.whatsapp_contact_number || valueNa;
+  // Contact Information (flat: primary_email_address, primary_phone_number, whatsapp_contact_number)
+  const email = fromUser(user?.primary_email_address);
+  const phone = fromUser(user?.primary_phone_number);
+  const whatsapp = fromUser(user?.whatsapp_contact_number);
 
-  // Driver Details
-  const driverNumber = user?.driver_number || valueNa;
-  const driverRecId = user?.driver_rec_id || user?.id || valueNa;
-  const driverNetworkNumber = user?.driver_network_number || valueNa;
-  const driverType = user?.driver_type || valueNa;
-  const availability = user?.availability || valueNa;
-  const grade = user?.grade || valueNa;
-  const currentRideStatus = user?.current_ride_status || valueNa;
+  // Driver Details (flat: driver_id, driver_rec_id, driver_type, availability, active_status)
+  const driverNumber = fromUser(user?.driver_id);
+  const driverRecId = fromUser(user?.driver_rec_id ?? user?.id);
+  const driverNetworkNumber = valueNa; // not in login response
+  const driverType = fromUser(user?.driver_type);
+  const availability = fromUser(user?.availability);
+  const grade = valueNa;
+  const currentRideStatus = valueNa;
   const isOnline =
     user?.is_online === "YES" ||
     user?.is_online === true ||
-    driver?.online ||
+    driver?.online === true ||
     false;
 
-  // Activity
-  const numberOfRides = activity?.number_of_rides || 0;
-  const lastActiveAt = activity?.last_active_at || valueNa;
-  const lastSignInAt = activity?.last_sign_in_at || valueNa;
+  // Activity (not in login response)
+  const numberOfRides = valueNa;
+  const lastActiveAt = valueNa;
+  const lastSignInAt = valueNa;
 
-  // Payment Information
-  const commissionPercentage = paymentInfo?.commission_percentage || valueNa;
-  const hourlyRate = paymentInfo?.hourly_rate || valueNa;
-  const distanceRate = paymentInfo?.distance_rate || valueNa;
-  const paymentCycle = paymentInfo?.payment_cycle || valueNa;
-  const paymentDay = paymentInfo?.payment_day || valueNa;
-  const bankName = paymentInfo?.payment_bank_name || valueNa;
-  const bankAccountName = paymentInfo?.payment_bank_account_name || valueNa;
-  const bankAccountNumber = paymentInfo?.payment_bank_account_number || valueNa;
+  // Payment Information (not in login response)
+  const commissionPercentage = valueNa;
+  const hourlyRate = valueNa;
+  const distanceRate = valueNa;
+  const paymentCycle = valueNa;
+  const paymentDay = valueNa;
+  const bankName = valueNa;
+  const bankAccountName = valueNa;
+  const bankAccountNumber = valueNa;
 
   // Format dates for display
   const formatDate = (dateStr: string) => {
@@ -234,7 +235,10 @@ export default function ProfileScreen() {
   // Activity Section
   const activityItems: InfoTableDataItem[] = useMemo(
     () => [
-      { label: activityTotalRidesLabel, value: String(numberOfRides) },
+      {
+        label: activityTotalRidesLabel,
+        value: typeof numberOfRides === "number" ? String(numberOfRides) : numberOfRides,
+      },
       { label: activityLastActiveLabel, value: formatDate(lastActiveAt) },
       { label: activityLastSignInLabel, value: formatDate(lastSignInAt) },
     ],

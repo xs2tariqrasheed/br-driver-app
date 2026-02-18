@@ -452,7 +452,6 @@ export default function HomeScreen() {
     if (isGoingOnline) {
       try {
         // Optimistic update: move toggle to Online immediately so first tap is visible
-        await setDriver({ ...(driver ?? {}), online: true });
         setIsTogglingOnline(true);
 
         // Get current location for first post (permission already granted by PermissionGate)
@@ -504,7 +503,7 @@ export default function HomeScreen() {
         } catch (error) {
           log("[HomeScreen] Failed to connect socket:", error);
         }
-
+        await setDriver({ ...(driver ?? {}), online: true });
         showToast(toastNowOnline, { variant: "success" });
         // Interval loop is managed centrally in OnlineLocationTracker
       } catch (error) {
