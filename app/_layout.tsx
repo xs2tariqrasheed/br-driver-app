@@ -7,10 +7,11 @@ import NotificationModal from "@/components/NotificationModal";
 import OnlineLocationTracker from "@/components/OnlineLocationTracker";
 import PackageInfoModal from "@/components/PackageInfoModal";
 import SpecialRequirementsModal from "@/components/SpecialRequirementsModal";
-import { showToast, ToastProvider } from "@/components/Toast";
+import { ToastProvider } from "@/components/Toast";
 import { updateBaseUrls } from "@/config/apiConfig";
 import {
   DEPLOYED_BASE_URL_STORAGE_KEY,
+  NEW_JOB_OFFER_PUSH_NOTIFICATION,
   NOTIFICATION_TYPES,
 } from "@/constants/global";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -71,7 +72,7 @@ function PushNotificationsBootstrap() {
     response: Notifications.NotificationResponse,
     isReplayFromColdStart: boolean,
   ) => {
-    const data = response.notification.request.content.data;
+    const { title, body, data } = response.notification.request.content;
     const type = (data as any)?.type as string | undefined;
     const tripId = coerceTripId(data);
 
@@ -81,6 +82,16 @@ function PushNotificationsBootstrap() {
       } catch {
         router.push("/(screens)/chat");
       }
+      return;
+    }
+
+    const isNewJobOffer =
+      title === NEW_JOB_OFFER_PUSH_NOTIFICATION.title ||
+      body === NEW_JOB_OFFER_PUSH_NOTIFICATION.body ||
+      type === "trip-offer";
+
+    if (isNewJobOffer) {
+      router.replace("/(tabs)");
       return;
     }
 
@@ -144,13 +155,20 @@ function PushNotificationsBootstrap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When a push is received while app is in foreground (banner suppressed; show toast + add to notification center)
+  // When a push is received while app is in foreground (banner suppressed; add to notification center only — no toast)
   useEffect(() => {
     if (!receivedSub.current) {
       receivedSub.current = Notifications.addNotificationReceivedListener(
         (notification) => {
           const { title, body, data } = notification.request.content;
           const type = (data as any)?.type;
+          // Do not add new job offer push notification to context/AsyncStorage (handled by socket + modal)
+          if (
+            title === NEW_JOB_OFFER_PUSH_NOTIFICATION.title ||
+            body === NEW_JOB_OFFER_PUSH_NOTIFICATION.body
+          ) {
+            return;
+          }
           addNotification?.({
             id: `push-${type}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             messageTitle: title ?? "Notification",
@@ -158,10 +176,6 @@ function PushNotificationsBootstrap() {
             dateTime: formatDateTimestamp(Date.now()),
             messageType: "unread",
             notificationType: NOTIFICATION_TYPES.INFO,
-          });
-          showToast(title || body || "New notification", {
-            variant: "success",
-            position: "top",
           });
         },
       );

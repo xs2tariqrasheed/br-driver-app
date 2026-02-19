@@ -1,7 +1,9 @@
-import { useDevSettings } from "@/context/DevSettingsContext";
+import Typography from "@/components/Typography";
+import { textColors } from "@/constants/colors";
 import type { FloatingButtonPosition } from "@/context/DevSettingsContext";
+import { useDevSettings } from "@/context/DevSettingsContext";
 import { usePathname, useRouter } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Dimensions,
   PanResponder,
@@ -9,8 +11,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import Typography from "@/components/Typography";
-import { textColors } from "@/constants/colors";
 
 const BUTTON_SIZE = 48;
 const TAP_THRESHOLD = 10;
@@ -26,11 +26,8 @@ export default function DevFloatingButton() {
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
   pathnameRef.current = pathname;
-  const {
-    floatingButtonPosition,
-    setFloatingButtonPosition,
-    isHydrated,
-  } = useDevSettings();
+  const { floatingButtonPosition, setFloatingButtonPosition, isHydrated } =
+    useDevSettings();
 
   const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
   const touchStartRef = useRef({ x: 0, y: 0 });
@@ -45,7 +42,10 @@ export default function DevFloatingButton() {
     y: floatingButtonPosition.y * screenHeight,
   };
 
-  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const [dragPosition, setDragPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const clamp = useCallback(
     (x: number, y: number) => {
@@ -74,7 +74,10 @@ export default function DevFloatingButton() {
         const { pageX, pageY } = ev.nativeEvent;
         touchStartRef.current = { x: pageX, y: pageY };
         const currentPx = currentCenterPxRef.current;
-        buttonStartRef.current = { x: pageX - currentPx.x, y: pageY - currentPx.y };
+        buttonStartRef.current = {
+          x: pageX - currentPx.x,
+          y: pageY - currentPx.y,
+        };
       },
       onPanResponderMove: (ev) => {
         const { pageX, pageY } = ev.nativeEvent;

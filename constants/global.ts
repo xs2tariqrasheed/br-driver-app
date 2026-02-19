@@ -497,3 +497,8 @@ export const DB_ACTION_CODES = {
 
 export type DbActionCode =
   (typeof DB_ACTION_CODES)[keyof typeof DB_ACTION_CODES];
+
+export const NEW_JOB_OFFER_PUSH_NOTIFICATION = {
+  title: "🚗 New Job Offer Incoming!",
+  body: "We’re about to assign you a new job. Please open the app and stay active to receive the job. If the app stays closed, the ride may be reassigned to another driver.",
+} as const;

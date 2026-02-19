@@ -120,18 +120,18 @@ interface RideOfferContextType {
   submitBid: (
     bidAmount: number,
     eta?: number | string,
-    boostAmount?: number
+    boostAmount?: number,
   ) => Promise<{ success: boolean } | undefined>;
   submitBidForBroadcastOffer: (
     tripId: string,
     bidAmount: number,
     eta?: number | string,
-    boostAmount?: number
+    boostAmount?: number,
   ) => Promise<{ success: boolean } | undefined>;
   markSequentialOfferAsExpired: (tripId: string) => void;
   updateCurrentOfferStatus: (
     status: "bidding" | "rejected" | "expired" | "offer-expired",
-    tripId?: string
+    tripId?: string,
   ) => void;
   setHasAnyActiveOffer: (hasActive: boolean) => Promise<void>;
   // Temporary ride methods
@@ -143,7 +143,7 @@ interface RideOfferContextType {
 }
 
 const RideOfferContext = createContext<RideOfferContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function RideOfferProvider({ children }: { children: ReactNode }) {
@@ -155,19 +155,19 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   // API hooks for driver responses
   const { execute: submitDriverResponse } = usePost(
     LIVE_JOB_ENDPOINTS.driverResponse,
-    API_CLIENT_TYPES.AUCTION
+    API_CLIENT_TYPES.AUCTION,
   );
 
   // API hook for updating ETA (non-blocking, used after trip acceptance)
   const { execute: updateETA } = usePost(
     ACTIVE_TRIP_ROUTES.UPDATE_ETA,
-    API_CLIENT_TYPES.ACTIVE_TRIP
+    API_CLIENT_TYPES.ACTIVE_TRIP,
   );
 
   const [isRideOfferModalVisible, setIsRideOfferModalVisible] = useState(false);
   const [currentOffer, setCurrentOffer] = useState<RideOffer | null>(null);
   const [modalCallbacks, setModalCallbacks] = useState<ModalCallbacks | null>(
-    null
+    null,
   );
   const [isETABottomSheetVisible, setIsETABottomSheetVisible] = useState(false);
   const [hasAnyActiveOffer, setHasAnyActiveOfferState] = useState(false);
@@ -185,7 +185,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
 
   // Local expiry timer for sequential offers
   const sequentialExpiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
 
   /**
@@ -193,7 +193,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
    */
   const setHasAnyActiveOffer = useCallback(async (hasActive: boolean) => {
     console.log(
-      `[RideOfferContext] setHasAnyActiveOffer called with: ${hasActive}`
+      `[RideOfferContext] setHasAnyActiveOffer called with: ${hasActive}`,
     );
     setHasAnyActiveOfferState(hasActive);
   }, []);
@@ -205,7 +205,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   const updateCurrentOfferStatus = useCallback(
     (
       status: "bidding" | "rejected" | "expired" | "offer-expired",
-      tripId?: string
+      tripId?: string,
     ) => {
       // IMPORTANT: do NOT rely on the captured `currentOffer` here.
       // Socket listeners may hold an older function reference; using functional updates
@@ -218,14 +218,15 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       }
 
       console.log(
-        `📱 Updating offer status for trip ${targetTripId} to: ${status}`
+        `📱 Updating offer status for trip ${targetTripId} to: ${status}`,
       );
 
       // 1. Update currentOffer if it matches
       setCurrentOffer((prev) => {
         if (!prev) return prev;
         // Use loose equality or cast to string to handle potential type mismatches (string vs number)
-        if (String(prev.tripOffer?.tripId) !== String(targetTripId)) return prev;
+        if (String(prev.tripOffer?.tripId) !== String(targetTripId))
+          return prev;
         return {
           ...prev,
           status: status as
@@ -246,15 +247,16 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
             found = true;
           }
         });
-        if (found) console.log(`✅ Updated temporary ride status to: ${status}`);
+        if (found)
+          console.log(`✅ Updated temporary ride status to: ${status}`);
         return updated;
       });
 
       console.log(
-        `✅ Current offer and temporary rides status updated to: ${status}`
+        `✅ Current offer and temporary rides status updated to: ${status}`,
       );
     },
-    []
+    [],
   );
 
   /**
@@ -265,8 +267,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     setTemporaryRides((prev) => {
       const filtered = Object.fromEntries(
         Object.entries(prev).filter(
-          ([_, rideOffer]) => String(rideOffer.tripOffer.tripId) !== String(tripId)
-        )
+          ([_, rideOffer]) =>
+            String(rideOffer.tripOffer.tripId) !== String(tripId),
+        ),
       );
       return filtered;
     });
@@ -317,7 +320,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
 
         // Offer expired (not bid expired)
         setCurrentOffer((prev) =>
-          prev ? { ...prev, status: "offer-expired" as const } : null
+          prev ? { ...prev, status: "offer-expired" as const } : null,
         );
 
         // Hide the modal and clear state
@@ -332,7 +335,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         console.log("✅ Sequential offer marked as expired successfully");
       } else {
         console.log(
-          `📱 Current offer does not match expired tripId: ${tripId}`
+          `📱 Current offer does not match expired tripId: ${tripId}`,
         );
         // Even if current offer doesn't match, set hasAnyActiveOffer to false
         // as the sequential offer has expired
@@ -345,7 +348,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       removeTemporaryRidesByTripId,
       hideRideOfferModal,
       setHasAnyActiveOffer,
-    ]
+    ],
   );
 
   /**
@@ -378,7 +381,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         // For Android, the GlobalRideOfferModal component will handle the modal display
       } catch {}
     },
-    []
+    [],
   );
 
   /**
@@ -390,7 +393,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     try {
       console.log(
         "🌐 Global skip price for ride offer:",
-        currentOffer.tripOffer.tripId
+        currentOffer.tripOffer.tripId,
       );
 
       // Submit driver response to API
@@ -410,7 +413,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
         console.log(
           "✅ Removed temporary rides for skipped tripId:",
-          currentOffer.tripOffer.tripId
+          currentOffer.tripOffer.tripId,
         );
       }
       // Set hasAnyActiveOffer to false on successful skip
@@ -432,7 +435,10 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
           removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
         } catch {}
         try {
-          updateCurrentOfferStatus("offer-expired", currentOffer.tripOffer.tripId);
+          updateCurrentOfferStatus(
+            "offer-expired",
+            currentOffer.tripOffer.tripId,
+          );
         } catch {}
         try {
           hideRideOfferModal();
@@ -478,7 +484,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
         console.log(
           "✅ Removed temporary rides for hidden tripId:",
-          currentOffer.tripOffer.tripId
+          currentOffer.tripOffer.tripId,
         );
       }
 
@@ -502,7 +508,10 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
           removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
         } catch {}
         try {
-          updateCurrentOfferStatus("offer-expired", currentOffer.tripOffer.tripId);
+          updateCurrentOfferStatus(
+            "offer-expired",
+            currentOffer.tripOffer.tripId,
+          );
         } catch {}
         try {
           hideRideOfferModal();
@@ -556,7 +565,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
 
     console.log(
       "⏭️ Skipping price for ride offer:",
-      currentOffer.tripOffer.tripId
+      currentOffer.tripOffer.tripId,
     );
 
     try {
@@ -579,7 +588,10 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
           removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
         } catch {}
         try {
-          updateCurrentOfferStatus("offer-expired", currentOffer.tripOffer.tripId);
+          updateCurrentOfferStatus(
+            "offer-expired",
+            currentOffer.tripOffer.tripId,
+          );
         } catch {}
         // Close modal and reset active offer state on expired trips
         try {
@@ -632,7 +644,10 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
           removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
         } catch {}
         try {
-          updateCurrentOfferStatus("offer-expired", currentOffer.tripOffer.tripId);
+          updateCurrentOfferStatus(
+            "offer-expired",
+            currentOffer.tripOffer.tripId,
+          );
         } catch {}
         // Close modal and reset active offer state on expired trips
         try {
@@ -661,112 +676,118 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
    */
   const submitETA = useCallback(
     async (eta: number) => {
-    if (!currentOffer) return;
+      if (!currentOffer) return;
 
-    try {
-      setIsSubmitETALoading(true);
-
-      console.log(
-        "🌐 Submitting ETA for ride offer:",
-        currentOffer.tripOffer.tripId,
-        "ETA:",
-        eta
-      );
-
-      // Store tripId before clearing currentOffer
-      const tripId = currentOffer.tripOffer.tripId;
-
-      // Submit driver response to API with ETA
-      await submitDriverResponse({
-        driverId: driverId,
-        tripId: tripId,
-        response: TRIP_OFFER_ACTIONS.ACCEPT,
-        eta: eta,
-      });
-
-      console.log("✅ Ride offer accepted with ETA successfully");
-      showToast("Ride offer accepted successfully!", {
-        variant: "success",
-        position: "top",
-      });
-      
-      // NEW: Remove temporary rides for expired offers
-      if (tripId) {
-        removeTemporaryRidesByTripId(tripId);
-          console.log("✅ Removed temporary rides for accepted tripId:", tripId);
-      }
-
-      // Set hasAnyActiveOffer to false on successful acceptance
-      await setHasAnyActiveOffer(false);
-
-      // Hide ETA modal and the ride offer modal, clear current offer
-      setIsETABottomSheetVisible(false);
-      setIsRideOfferModalVisible(false);
-      setCurrentOffer(null);
-      setModalCallbacks(null);
-
-      // Add a small delay before redirecting to allow backend to initialize the trip
-      // This prevents "Active trip resource not found" error
-        console.log(
-          "⏳ Waiting for backend to initialize trip before redirecting..."
-        );
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
-
-      // Non-blocking: Try to update ETA in the database (don't block navigation if it fails)
-      // This is for non-biddable offers where ETA was provided but may not be stored in DB
       try {
-          console.log(
-            "🔄 Attempting to update ETA in database (non-blocking)..."
-          );
-        await updateETA({
-          tripId: tripId,
+        setIsSubmitETALoading(true);
+
+        console.log(
+          "🌐 Submitting ETA for ride offer:",
+          currentOffer.tripOffer.tripId,
+          "ETA:",
+          eta,
+        );
+
+        // Store tripId before clearing currentOffer
+        const tripId = currentOffer.tripOffer.tripId;
+
+        // Submit driver response to API with ETA
+        await submitDriverResponse({
           driverId: driverId,
+          tripId: tripId,
+          response: TRIP_OFFER_ACTIONS.ACCEPT,
           eta: eta,
         });
-        console.log("✅ ETA updated in database successfully");
-      } catch (etaError) {
-        // Don't block the user - just notify them that ETA update failed
+
+        console.log("✅ Ride offer accepted with ETA successfully");
+        showToast("Ride offer accepted successfully!", {
+          variant: "success",
+          position: "top",
+        });
+
+        // NEW: Remove temporary rides for expired offers
+        if (tripId) {
+          removeTemporaryRidesByTripId(tripId);
+          console.log(
+            "✅ Removed temporary rides for accepted tripId:",
+            tripId,
+          );
+        }
+
+        // Set hasAnyActiveOffer to false on successful acceptance
+        await setHasAnyActiveOffer(false);
+
+        // Hide ETA modal and the ride offer modal, clear current offer
+        setIsETABottomSheetVisible(false);
+        setIsRideOfferModalVisible(false);
+        setCurrentOffer(null);
+        setModalCallbacks(null);
+
+        // Add a small delay before redirecting to allow backend to initialize the trip
+        // This prevents "Active trip resource not found" error
+        console.log(
+          "⏳ Waiting for backend to initialize trip before redirecting...",
+        );
+        await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
+
+        // Non-blocking: Try to update ETA in the database (don't block navigation if it fails)
+        // This is for non-biddable offers where ETA was provided but may not be stored in DB
+        try {
+          console.log(
+            "🔄 Attempting to update ETA in database (non-blocking)...",
+          );
+          await updateETA({
+            tripId: tripId,
+            driverId: driverId,
+            eta: eta,
+          });
+          console.log("✅ ETA updated in database successfully");
+        } catch (etaError) {
+          // Don't block the user - just notify them that ETA update failed
           console.warn(
             "⚠️ Failed to update ETA in database (non-blocking):",
-            etaError
+            etaError,
           );
-        showToast(
-          "Ride accepted! ETA update failed. You can update it later during the active ride.",
-          {
-            variant: "error",
-            position: "top",
-          }
-        );
-      }
+          showToast(
+            "Ride accepted! ETA update failed. You can update it later during the active ride.",
+            {
+              variant: "error",
+              position: "top",
+            },
+          );
+        }
 
-      // Navigate to active-ride screen
-      console.log("🚀 Redirecting to active-ride screen");
-      router.replace("/(screens)/active-ride");
-    } catch (error) {
-      console.error("❌ Error in submit ETA:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to accept ride offer. Please try again.";
-      showToast(errorMessage, {
-        variant: "error",
-        position: "top",
-      });
+        // Navigate to active-ride screen
+        console.log("🚀 Redirecting to active-ride screen");
+        router.replace("/(screens)/active-ride");
+      } catch (error) {
+        console.error("❌ Error in submit ETA:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to accept ride offer. Please try again.";
+        showToast(errorMessage, {
+          variant: "error",
+          position: "top",
+        });
         if (
           errorMessage.toLowerCase().includes("expired") &&
           currentOffer?.tripOffer?.tripId
         ) {
           try {
-        removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
+            removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
           } catch {}
           try {
-            updateCurrentOfferStatus("offer-expired", currentOffer.tripOffer.tripId);
+            updateCurrentOfferStatus(
+              "offer-expired",
+              currentOffer.tripOffer.tripId,
+            );
           } catch {}
           try {
-      await setHasAnyActiveOffer(false);
+            await setHasAnyActiveOffer(false);
           } catch {}
           try {
-      hideRideOfferModal();
+            hideRideOfferModal();
           } catch {}
         }
         // On error, keep the ETA bottom sheet open so user can retry
@@ -783,7 +804,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       updateCurrentOfferStatus,
       hideRideOfferModal,
       updateETA,
-    ]
+    ],
   );
 
   /**
@@ -791,60 +812,63 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
    */
   const submitBid = useCallback(
     async (bidAmount: number, eta?: number | string, boostAmount?: number) => {
-    if (!currentOffer) return;
+      if (!currentOffer) return;
 
-    try {
-      setIsSubmitBidLoading(true);
-      console.log(
-        "🌐 Submitting bid for ride offer:",
-        currentOffer.tripOffer.tripId,
-        "bidAmount:",
-        bidAmount,
-        "eta:",
-        eta,
-        "boostAmount:",
-        boostAmount
-      );
+      try {
+        setIsSubmitBidLoading(true);
+        console.log(
+          "🌐 Submitting bid for ride offer:",
+          currentOffer.tripOffer.tripId,
+          "bidAmount:",
+          bidAmount,
+          "eta:",
+          eta,
+          "boostAmount:",
+          boostAmount,
+        );
 
-      await submitDriverResponse({
-        driverId: driverId,
-        tripId: currentOffer.tripOffer.tripId,
-        response: TRIP_OFFER_ACTIONS.BID,
-        bidAmount,
-        eta,
-        boostAmount,
-      });
+        await submitDriverResponse({
+          driverId: driverId,
+          tripId: currentOffer.tripOffer.tripId,
+          response: TRIP_OFFER_ACTIONS.BID,
+          bidAmount,
+          eta,
+          boostAmount,
+        });
 
-      console.log("✅ Bid submitted successfully context");
-      showToast("Bid submitted successfully!", {
-        variant: "success",
-        position: "top",
-      });
+        console.log("✅ Bid submitted successfully context");
+        showToast("Bid submitted successfully!", {
+          variant: "success",
+          position: "top",
+        });
         // Mirror broadcast behavior: once bidding, don't expire locally.
         try {
           updateCurrentOfferStatus("bidding", currentOffer.tripOffer.tripId);
         } catch {}
-      setIsSubmitBidLoading(false);
-      return { success: true };
-      // Note: hasAnyActiveOffer will be set to false when bid response is received via socket
-    } catch (error) {
-      console.error("❌ Error submitting bid:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to submit bid. Please try again.";
-      showToast(errorMessage, {
-        variant: "error",
-        position: "top",
-      });
+        setIsSubmitBidLoading(false);
+        return { success: true };
+        // Note: hasAnyActiveOffer will be set to false when bid response is received via socket
+      } catch (error) {
+        console.error("❌ Error submitting bid:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to submit bid. Please try again.";
+        showToast(errorMessage, {
+          variant: "error",
+          position: "top",
+        });
 
-      // If trip is expired, remove it and close modal
-      if (errorMessage.toLowerCase().includes("expired")) {
+        // If trip is expired, remove it and close modal
+        if (errorMessage.toLowerCase().includes("expired")) {
           try {
             removeTemporaryRidesByTripId(currentOffer.tripOffer.tripId);
           } catch {}
           try {
-            updateCurrentOfferStatus("offer-expired", currentOffer.tripOffer.tripId);
+            updateCurrentOfferStatus(
+              "offer-expired",
+              currentOffer.tripOffer.tripId,
+            );
           } catch {}
           try {
             hideRideOfferModal();
@@ -852,11 +876,11 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
           try {
             await setHasAnyActiveOffer(false);
           } catch {}
-      }
+        }
 
-      setIsSubmitBidLoading(false);
-      throw error;
-    }
+        setIsSubmitBidLoading(false);
+        throw error;
+      }
     },
     [
       currentOffer,
@@ -866,7 +890,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       removeTemporaryRidesByTripId,
       hideRideOfferModal,
       setHasAnyActiveOffer,
-    ]
+    ],
   );
 
   /**
@@ -874,69 +898,69 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
    */
   const submitBidForBroadcastOffer = useCallback(
     async (
-    tripId: string,
-    bidAmount: number,
-    eta?: number | string,
-    boostAmount?: number
-  ) => {
-    if (!tripId || !driverId) {
-      console.error("❌ Missing tripId or driverId for bid submission");
-      return;
-    }
+      tripId: string,
+      bidAmount: number,
+      eta?: number | string,
+      boostAmount?: number,
+    ) => {
+      if (!tripId || !driverId) {
+        console.error("❌ Missing tripId or driverId for bid submission");
+        return;
+      }
 
-    try {
-      setIsSubmitBidLoading(true);
-      console.log(
-        "🌐 Submitting bid for broadcast offer:",
-        tripId,
-        "bidAmount:",
-        bidAmount,
-        "eta:",
-        eta,
-        "boostAmount:",
-        boostAmount
-      );
+      try {
+        setIsSubmitBidLoading(true);
+        console.log(
+          "🌐 Submitting bid for broadcast offer:",
+          tripId,
+          "bidAmount:",
+          bidAmount,
+          "eta:",
+          eta,
+          "boostAmount:",
+          boostAmount,
+        );
 
-      await submitDriverResponse({
-        driverId: driverId,
-        tripId: tripId,
-        response: TRIP_OFFER_ACTIONS.BID,
-        bidAmount,
-        eta,
-        boostAmount,
-      });
+        await submitDriverResponse({
+          driverId: driverId,
+          tripId: tripId,
+          response: TRIP_OFFER_ACTIONS.BID,
+          bidAmount,
+          eta,
+          boostAmount,
+        });
 
-      console.log("✅ Bid submitted successfully for broadcast offer");
-      showToast("Bid submitted successfully!", {
-        variant: "success",
-        position: "top",
-      });
-      setIsSubmitBidLoading(false);
-      return { success: true };
-      // Note: hasAnyActiveOffer will be set to false when bid response is received via socket
-    } catch (error) {
-      console.error("❌ Error submitting bid for broadcast offer:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to submit bid. Please try again.";
-      showToast(errorMessage, {
-        variant: "error",
-        position: "top",
-      });
+        console.log("✅ Bid submitted successfully for broadcast offer");
+        showToast("Bid submitted successfully!", {
+          variant: "success",
+          position: "top",
+        });
+        setIsSubmitBidLoading(false);
+        return { success: true };
+        // Note: hasAnyActiveOffer will be set to false when bid response is received via socket
+      } catch (error) {
+        console.error("❌ Error submitting bid for broadcast offer:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to submit bid. Please try again.";
+        showToast(errorMessage, {
+          variant: "error",
+          position: "top",
+        });
 
-      // If trip is expired, ensure state is cleaned up
-      if (errorMessage.toLowerCase().includes("expired")) {
+        // If trip is expired, ensure state is cleaned up
+        if (errorMessage.toLowerCase().includes("expired")) {
           try {
             await setHasAnyActiveOffer(false);
           } catch {}
-      }
+        }
 
-      setIsSubmitBidLoading(false);
-      throw error;
-    }
+        setIsSubmitBidLoading(false);
+        throw error;
+      }
     },
-    [driverId, submitDriverResponse, setHasAnyActiveOffer]
+    [driverId, submitDriverResponse, setHasAnyActiveOffer],
   );
 
   /**
@@ -945,14 +969,14 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   const saveTemporaryRide = useCallback(
     (notificationId: string, rideOffer: RideOffer) => {
       console.log(
-        `💾 Saving temporary ride for notification: ${notificationId}`
+        `💾 Saving temporary ride for notification: ${notificationId}`,
       );
-    setTemporaryRides((prev) => ({
-      ...prev,
-      [notificationId]: rideOffer,
-    }));
+      setTemporaryRides((prev) => ({
+        ...prev,
+        [notificationId]: rideOffer,
+      }));
     },
-    []
+    [],
   );
 
   /**
@@ -960,9 +984,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
    */
   const getTemporaryRide = useCallback(
     (notificationId: string): RideOffer | null => {
-    return temporaryRides[notificationId] || null;
+      return temporaryRides[notificationId] || null;
     },
-    [temporaryRides]
+    [temporaryRides],
   );
 
   /**
@@ -975,7 +999,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       const rides = Object.values(temporaryRides);
       return rides.find((r) => r?.tripOffer?.tripId === tripId) || null;
     },
-    [temporaryRides]
+    [temporaryRides],
   );
 
   /**
@@ -983,7 +1007,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
    */
   const removeTemporaryRide = useCallback((notificationId: string) => {
     console.log(
-      `🗑️ Removing temporary ride for notification: ${notificationId}`
+      `🗑️ Removing temporary ride for notification: ${notificationId}`,
     );
     setTemporaryRides((prev) => {
       const { [notificationId]: removed, ...rest } = prev;
@@ -1045,7 +1069,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
 
           if (Number.isFinite(expiredAtMs) && expiredAtMs <= now) {
             console.log(
-              `⏰ Local expiry triggered for trip ${offer.tripOffer.tripId}`
+              `⏰ Local expiry triggered for trip ${offer.tripOffer.tripId}`,
             );
             showToast("Ride offer expired!", {
               variant: "warning",
