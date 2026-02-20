@@ -188,6 +188,8 @@ export default function DesiredDestinationsScreen() {
     useState<boolean>(false);
   const [destinationToDelete, setDestinationToDelete] =
     useState<DesiredDestination | null>(null);
+  const [isDeletingDestination, setIsDeletingDestination] =
+    useState<boolean>(false);
 
   // Logger function
   const log = logger();
@@ -240,10 +242,11 @@ export default function DesiredDestinationsScreen() {
   // Show error toast when destinationsError changes
   useEffect(() => {
     if (destinationsError) {
-      showToast(toastSaveFailed, {
-        variant: "error",
-        position: "top",
-      });
+      // showToast("Failed to load data", {
+      //   variant: "error",
+      //   position: "top",
+      // });
+      return;
     }
   }, [destinationsError]);
 
@@ -375,6 +378,8 @@ export default function DesiredDestinationsScreen() {
         commissionPercentage: commission,
       } as any);
 
+      await fetchDesiredDestinations();
+
       showToast(toastAdded, {
         variant: "success",
         position: "top",
@@ -396,6 +401,7 @@ export default function DesiredDestinationsScreen() {
     commission,
     canAddMore,
     createDestinationAPI,
+    fetchDesiredDestinations,
     closeAddSheet,
   ]);
 
@@ -774,26 +780,31 @@ export default function DesiredDestinationsScreen() {
         description={deleteConfirmDescription}
         cancelButtonText={deleteConfirmCancel}
         confirmButtonText={deleteConfirmConfirm}
+        loading={isDeletingDestination}
         onCancel={() => {
+          if (isDeletingDestination) return;
           setDeleteConfirmSheetOpen(false);
           setDestinationToDelete(null);
         }}
         onConfirm={async () => {
-          setDeleteConfirmSheetOpen(false);
           const dest = destinationToDelete;
-          setDestinationToDelete(null);
           if (!dest) return;
+          setIsDeletingDestination(true);
           try {
             await deleteDestinationAPI(dest.id);
             showToast(toastDeleted, {
               variant: "success",
               position: "top",
             });
+            setDeleteConfirmSheetOpen(false);
+            setDestinationToDelete(null);
           } catch (error: any) {
             showToast(error?.message ?? toastDeleteFailed, {
               variant: "error",
               position: "top",
             });
+          } finally {
+            setIsDeletingDestination(false);
           }
         }}
       />

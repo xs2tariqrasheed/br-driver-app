@@ -125,7 +125,7 @@ const NotificationBottomSheet: React.FC<NotificationBottomSheetProps> = ({
                   weight="medium"
                   style={styles.detailLabel}
                 >
-                  PU:
+                  Pick-up:
                 </Typography>
                 <Typography
                   type="bodySmall"

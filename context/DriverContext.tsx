@@ -11,6 +11,7 @@ import {
   NotificationType,
   RETRIEVAL_ID_STORAGE_KEY,
   RIDE_STATE_STORAGE_KEY,
+  SKIP_DEMO_CONTENT_DRIVER_ID,
   TRIP_ID_STORAGE_KEY,
   TRIP_OFFER_ACTIONS,
   type LocalJobStatus,
@@ -445,6 +446,10 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           );
           return;
         }
+        if (String(driverId) === String(SKIP_DEMO_CONTENT_DRIVER_ID)) {
+          log("[DriverContext] fetchNotifications: skipping demo notifications for driver id", driverId);
+          return;
+        }
         const demoNotifications = createDemoNotifications();
         // Ensure all demo notifications are unread
         const unreadDemoNotifications = demoNotifications.map((n) => ({
@@ -566,6 +571,11 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        if (String(driverId) === String(SKIP_DEMO_CONTENT_DRIVER_ID)) {
+          log("[DriverContext] fetchNotifications: skipping demo notifications for driver id", driverId);
+          return;
+        }
+
         // Fallback to demo notifications - all unread
         const demoNotifications = createDemoNotifications();
         const unreadDemoNotifications = demoNotifications.map((n) => ({
@@ -590,7 +600,7 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsFetchingNotifications(false);
     }
-  }, [auth?.token, setDriver, log]); // Removed state.driver from dependencies
+  }, [auth?.token, driverId, setDriver, log]); // Removed state.driver from dependencies
 
   // Mark notification as read
   const markNotificationAsRead = useCallback(
@@ -1388,15 +1398,32 @@ export function DriverProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Transform backend destinations to mobile app format
-      // Backend returns data in jData.driverDesiredDestinations array
+      // Backend returns data in jData.driver_desired_destinations array
       const backendDestinations =
         responseData?.data?.jData?.driver_desired_destinations || [];
       console.log(
         "📥 [DriverContext] Backend destinations:",
         JSON.stringify(backendDestinations, null, 2),
       );
+      // If backend sent empty array or only empty/placeholder objects, return []
+      const hasMeaningfulData = (dest: any) => {
+        if (!dest || typeof dest !== "object") return false;
+        return (
+          (dest.desired_destination_id != null &&
+            dest.desired_destination_id !== "") ||
+          (dest.desired_destination != null &&
+            String(dest.desired_destination).trim() !== "") ||
+          (dest.target_zip_code != null &&
+            String(dest.target_zip_code).trim() !== "") ||
+          dest.latitude != null ||
+          dest.longitude != null
+        );
+      };
+      const nonEmptyBackend = Array.isArray(backendDestinations)
+        ? backendDestinations.filter(hasMeaningfulData)
+        : [];
       const transformedDestinations: DesiredDestination[] =
-        backendDestinations.map(
+        nonEmptyBackend.map(
           (dest: any) =>
             ({
               id: dest.desired_destination_id || Date.now(),

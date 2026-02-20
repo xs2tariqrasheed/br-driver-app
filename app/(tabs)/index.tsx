@@ -18,6 +18,7 @@ import {
   DRIVER_TYPES,
   OFFER_TYPES,
   PREVIOUS_LOCATION_STORAGE_KEY,
+  SKIP_DEMO_CONTENT_DRIVER_ID,
   URLS,
   type DriverStatusLabel,
 } from "@/constants/global";
@@ -270,10 +271,13 @@ export default function HomeScreen() {
     }
   }, [settingsError, clearSettingsError]);
 
-  // Initialize demo notifications on mount
+  const skipDemoContent = String(auth?.user?.id) === String(SKIP_DEMO_CONTENT_DRIVER_ID);
+
+  // Initialize demo notifications on mount (skipped when driver id is SKIP_DEMO_CONTENT_DRIVER_ID)
   useEffect(() => {
-    // Skip if already initialized
-    if (demoNotificationsInitialized.current) {
+    // Skip if already initialized or driver should not see demo content
+    if (demoNotificationsInitialized.current || skipDemoContent) {
+      if (skipDemoContent) demoNotificationsInitialized.current = true;
       return;
     }
 
@@ -297,7 +301,7 @@ export default function HomeScreen() {
     };
 
     initializeDemoNotifications();
-  }, [notifications, addNotifications, log]);
+  }, [notifications, addNotifications, log, skipDemoContent]);
 
   const [economy, setEconomy] = useState<boolean>(
     settings.ridePreferences.rideTypes.economy,

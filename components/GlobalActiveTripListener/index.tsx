@@ -45,7 +45,7 @@ export function GlobalActiveTripListener() {
   const { onActiveTripEvent, onActiveTripDisconnect, socketStatus } =
     useActiveTripSocket();
   const pathname = usePathname();
-  
+
   // Check if driver is on chat screen
   const isOnChatScreen = pathname === "/(screens)/chat";
 
@@ -58,7 +58,7 @@ export function GlobalActiveTripListener() {
 
         if (!retrievalId || !tripId) {
           log(
-            "🔴 No active trip found (missing retrievalId or tripId), skipping active trip listeners setup"
+            "🔴 No active trip found (missing retrievalId or tripId), skipping active trip listeners setup",
           );
           return false;
         }
@@ -78,7 +78,7 @@ export function GlobalActiveTripListener() {
     // Check if network is suitable for socket operations
     if (!isNetworkSuitableFor("socket")) {
       log(
-        `🔴 Network quality (${networkQuality}) not suitable for socket operations, skipping active trip listeners setup`
+        `🔴 Network quality (${networkQuality}) not suitable for socket operations, skipping active trip listeners setup`,
       );
       return;
     }
@@ -95,21 +95,21 @@ export function GlobalActiveTripListener() {
       const disconnectCleanup = onActiveTripDisconnect(
         async (reason: string) => {
           log("🔌 Active trip socket disconnected:", reason);
-          showToast("Trip connection lost - You may miss important updates", {
-            variant: "warning",
-            position: "top",
-          });
-        }
+          // showToast("Trip connection lost - You may miss important updates", {
+          //   variant: "warning",
+          //   position: "top",
+          // });
+        },
       );
       cleanupFunctions.push(disconnectCleanup);
 
       // 1.1. Active Trip Socket Reconnect Event (Connection Restored)
       const reconnectCleanup = onActiveTripEvent("reconnect", async () => {
         log("🔄 Active trip socket reconnected");
-        showToast("Trip connection restored - You'll receive updates", {
-          variant: "success",
-          position: "top",
-        });
+        // showToast("Trip connection restored - You'll receive updates", {
+        //   variant: "success",
+        //   position: "top",
+        // });
       });
       cleanupFunctions.push(reconnectCleanup);
 
@@ -152,7 +152,7 @@ export function GlobalActiveTripListener() {
               position: "top",
             });
           }
-        }
+        },
       );
       cleanupFunctions.push(tripStopAddedCleanup);
 
@@ -182,7 +182,7 @@ export function GlobalActiveTripListener() {
                 messageBody:
                   message || "You have a new message from the customer.",
                 dateTime: formatDateTimestamp(
-                  new Date(ts || Date.now()).toISOString()
+                  new Date(ts || Date.now()).toISOString(),
                 ),
                 messageType: "unread" as const,
                 notificationType: NOTIFICATION_TYPES.INFO as NotificationType,
@@ -199,7 +199,7 @@ export function GlobalActiveTripListener() {
               position: "top",
             });
           }
-        }
+        },
       );
       cleanupFunctions.push(newMessageCleanup);
 

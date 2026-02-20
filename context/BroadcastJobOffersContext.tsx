@@ -1,5 +1,19 @@
-import { CAR_TYPE, RIDE_TYPES, TRIP_OFFER_TYPES, type CarType } from "@/constants/global";
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import {
+  CAR_TYPE,
+  RIDE_TYPES,
+  SKIP_DEMO_CONTENT_DRIVER_ID,
+  TRIP_OFFER_TYPES,
+  type CarType,
+} from "@/constants/global";
+import { useAuth } from "@/context/AuthContext";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 export interface BroadcastJobOffer {
   // Basic job offer info
@@ -74,7 +88,7 @@ interface BroadcastJobOffersContextType {
   removeBroadcastOffer: (offerId: string) => void;
   updateBroadcastOffer: (
     offerId: string,
-    updates: Partial<BroadcastJobOffer>
+    updates: Partial<BroadcastJobOffer>,
   ) => void;
   clearAllBroadcastOffers: () => void;
   clearNonDemoBroadcastOffers: () => void;
@@ -103,8 +117,16 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       tripOffer: {
         tripId: "demo-offer-1",
         customerId: "demo-customer-1",
-        pickup: { lat: 40.7128, lng: -74.006, address: "123 Main St, New York, NY" },
-        dropoff: { lat: 40.7589, lng: -73.9851, address: "456 Broadway, New York, NY" },
+        pickup: {
+          lat: 40.7128,
+          lng: -74.006,
+          address: "123 Main St, New York, NY",
+        },
+        dropoff: {
+          lat: 40.7589,
+          lng: -73.9851,
+          address: "456 Broadway, New York, NY",
+        },
         biddable: true,
         type: "broadcast",
         fare: 45,
@@ -140,8 +162,16 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       tripOffer: {
         tripId: "demo-offer-2",
         customerId: "demo-customer-2",
-        pickup: { lat: 40.7580, lng: -73.9855, address: "789 5th Ave, New York, NY" },
-        dropoff: { lat: 40.7489, lng: -73.9680, address: "321 1st Ave, New York, NY" },
+        pickup: {
+          lat: 40.758,
+          lng: -73.9855,
+          address: "789 5th Ave, New York, NY",
+        },
+        dropoff: {
+          lat: 40.7489,
+          lng: -73.968,
+          address: "321 1st Ave, New York, NY",
+        },
         biddable: false,
         type: "broadcast",
         fare: 28,
@@ -177,8 +207,16 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       tripOffer: {
         tripId: "demo-offer-3",
         customerId: "demo-customer-3",
-        pickup: { lat: 40.7505, lng: -73.9934, address: "555 Times Square, New York, NY" },
-        dropoff: { lat: 40.7589, lng: -73.9851, address: "456 Broadway, New York, NY" },
+        pickup: {
+          lat: 40.7505,
+          lng: -73.9934,
+          address: "555 Times Square, New York, NY",
+        },
+        dropoff: {
+          lat: 40.7589,
+          lng: -73.9851,
+          address: "456 Broadway, New York, NY",
+        },
         biddable: true,
         type: "broadcast",
         fare: 65,
@@ -214,8 +252,16 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       tripOffer: {
         tripId: "demo-offer-4",
         customerId: "demo-customer-4",
-        pickup: { lat: 40.7074, lng: -74.0113, address: "100 Wall St, New York, NY" },
-        dropoff: { lat: 40.7282, lng: -73.9942, address: "200 Greenwich St, New York, NY" },
+        pickup: {
+          lat: 40.7074,
+          lng: -74.0113,
+          address: "100 Wall St, New York, NY",
+        },
+        dropoff: {
+          lat: 40.7282,
+          lng: -73.9942,
+          address: "200 Greenwich St, New York, NY",
+        },
         biddable: false,
         type: "broadcast",
         fare: 22.5,
@@ -251,8 +297,16 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       tripOffer: {
         tripId: "demo-offer-5",
         customerId: "demo-customer-5",
-        pickup: { lat: 40.7829, lng: -73.9654, address: "300 Central Park West, New York, NY" },
-        dropoff: { lat: 40.7614, lng: -73.9776, address: "500 Columbus Ave, New York, NY" },
+        pickup: {
+          lat: 40.7829,
+          lng: -73.9654,
+          address: "300 Central Park West, New York, NY",
+        },
+        dropoff: {
+          lat: 40.7614,
+          lng: -73.9776,
+          address: "500 Columbus Ave, New York, NY",
+        },
         biddable: true,
         type: "broadcast",
         fare: 35,
@@ -288,8 +342,16 @@ function createDemoBroadcastOffers(): BroadcastJobOffer[] {
       tripOffer: {
         tripId: "demo-offer-6",
         customerId: "demo-customer-6",
-        pickup: { lat: 40.7406, lng: -73.9897, address: "700 Park Ave, New York, NY" },
-        dropoff: { lat: 40.7484, lng: -73.9857, address: "800 Lexington Ave, New York, NY" },
+        pickup: {
+          lat: 40.7406,
+          lng: -73.9897,
+          address: "700 Park Ave, New York, NY",
+        },
+        dropoff: {
+          lat: 40.7484,
+          lng: -73.9857,
+          address: "800 Lexington Ave, New York, NY",
+        },
         biddable: false,
         type: "broadcast",
         fare: 18,
@@ -325,8 +387,13 @@ export function BroadcastJobOffersProvider({
 }: {
   children: ReactNode;
 }) {
+  const [auth] = useAuth();
+  const driverId = auth?.user?.id;
+  const skipDemoContent =
+    String(driverId) === String(SKIP_DEMO_CONTENT_DRIVER_ID);
+
   const [broadcastOffers, setBroadcastOffers] = useState<BroadcastJobOffer[]>(
-    []
+    [],
   );
   const demoOffersInitialized = useRef(false);
 
@@ -334,26 +401,26 @@ export function BroadcastJobOffersProvider({
   const addBroadcastOffer = (offer: BroadcastJobOffer) => {
     setBroadcastOffers((prev) => {
       console.log(
-        `[BroadcastJobOffersContext] Previous offers count: ${prev.length}`
+        `[BroadcastJobOffersContext] Previous offers count: ${prev.length}`,
       );
 
       // Check if offer already exists - if so, replace it instead of skipping
       const existingIndex = prev.findIndex(
-        (existing) => existing.id === offer.id
+        (existing) => existing.id === offer.id,
       );
       if (existingIndex !== -1) {
         console.log(
-          `[BroadcastJobOffersContext] Offer ${offer.id} already exists, replacing with new status: ${offer.status}`
+          `[BroadcastJobOffersContext] Offer ${offer.id} already exists, replacing with new status: ${offer.status}`,
         );
         // Replace the existing offer with the new one
         const newOffers = [...prev];
         newOffers[existingIndex] = offer;
         console.log(
-          `[BroadcastJobOffersContext] Replaced offer - offers count: ${newOffers.length}`
+          `[BroadcastJobOffersContext] Replaced offer - offers count: ${newOffers.length}`,
         );
         console.log(
           `[BroadcastJobOffersContext] All offers after replacement:`,
-          newOffers.map((o) => ({ id: o.id, status: o.status }))
+          newOffers.map((o) => ({ id: o.id, status: o.status })),
         );
         return newOffers;
       }
@@ -361,11 +428,11 @@ export function BroadcastJobOffersProvider({
       // If offer doesn't exist, add it to the beginning
       const newOffers = [offer, ...prev];
       console.log(
-        `[BroadcastJobOffersContext] New offer added - offers count: ${newOffers.length}`
+        `[BroadcastJobOffersContext] New offer added - offers count: ${newOffers.length}`,
       );
       console.log(
         `[BroadcastJobOffersContext] All offers:`,
-        newOffers.map((o) => ({ id: o.id, status: o.status }))
+        newOffers.map((o) => ({ id: o.id, status: o.status })),
       );
 
       return newOffers;
@@ -377,7 +444,7 @@ export function BroadcastJobOffersProvider({
     // Prevent removal of demo offers (they should only be hidden/skipped, not removed)
     if (offerId.startsWith("demo-")) {
       console.log(
-        `[BroadcastJobOffersContext] Skipping removal of demo offer: ${offerId}`
+        `[BroadcastJobOffersContext] Skipping removal of demo offer: ${offerId}`,
       );
       return;
     }
@@ -387,28 +454,28 @@ export function BroadcastJobOffersProvider({
   // Update a specific broadcast offer
   const updateBroadcastOffer = (
     offerId: string,
-    updates: Partial<BroadcastJobOffer>
+    updates: Partial<BroadcastJobOffer>,
   ) => {
     console.log(
       `[BroadcastJobOffersContext] Updating offer ${offerId}:`,
-      updates
+      updates,
     );
 
     setBroadcastOffers((prev) => {
       console.log(
-        `[BroadcastJobOffersContext] Before update - offers count: ${prev.length}`
+        `[BroadcastJobOffersContext] Before update - offers count: ${prev.length}`,
       );
 
       const updated = prev.map((offer) =>
-        offer.id === offerId ? { ...offer, ...updates } : offer
+        offer.id === offerId ? { ...offer, ...updates } : offer,
       );
 
       console.log(
-        `[BroadcastJobOffersContext] After update - offers count: ${updated.length}`
+        `[BroadcastJobOffersContext] After update - offers count: ${updated.length}`,
       );
       console.log(
         `[BroadcastJobOffersContext] All offers after update:`,
-        updated.map((o) => ({ id: o.id, status: o.status }))
+        updated.map((o) => ({ id: o.id, status: o.status })),
       );
 
       return updated;
@@ -423,8 +490,12 @@ export function BroadcastJobOffersProvider({
 
   // Clear only non-demo broadcast offers, keep demo offers intact
   const clearNonDemoBroadcastOffers = () => {
-    console.log(`[BroadcastJobOffersContext] Clearing non-demo broadcast offers`);
-    setBroadcastOffers((prev) => prev.filter((offer) => offer.id.startsWith("demo-")));
+    console.log(
+      `[BroadcastJobOffersContext] Clearing non-demo broadcast offers`,
+    );
+    setBroadcastOffers((prev) =>
+      prev.filter((offer) => offer.id.startsWith("demo-")),
+    );
   };
 
   // Get a specific broadcast offer
@@ -447,8 +518,12 @@ export function BroadcastJobOffersProvider({
 
     // Remove the offer from the list
     setBroadcastOffers((prev) => {
-      const filtered = prev.filter((offer) => offer.tripOffer.tripId !== tripId);
-      console.log(`📡 Removed offer with tripId ${tripId}. Count: ${prev.length} -> ${filtered.length}`);
+      const filtered = prev.filter(
+        (offer) => offer.tripOffer.tripId !== tripId,
+      );
+      console.log(
+        `📡 Removed offer with tripId ${tripId}. Count: ${prev.length} -> ${filtered.length}`,
+      );
       return filtered;
     });
 
@@ -457,14 +532,18 @@ export function BroadcastJobOffersProvider({
 
   // Reset demo offers to default state
   const resetDemoOffers = async () => {
-    console.log("[BroadcastJobOffersContext] Resetting demo offers to default state");
-    
+    console.log(
+      "[BroadcastJobOffersContext] Resetting demo offers to default state",
+    );
+
     // Remove all demo offers
-    setBroadcastOffers((prev) => prev.filter((offer) => !offer.id.startsWith("demo-")));
-    
+    setBroadcastOffers((prev) =>
+      prev.filter((offer) => !offer.id.startsWith("demo-")),
+    );
+
     // Reset initialization flag
     demoOffersInitialized.current = false;
-    
+
     // Re-initialize demo offers
     const demoOffers = createDemoBroadcastOffers();
     setBroadcastOffers((prev) => {
@@ -473,46 +552,60 @@ export function BroadcastJobOffersProvider({
       demoOffersInitialized.current = true;
       return [...demoOffers, ...filtered];
     });
-    
+
     console.log(
-      `[BroadcastJobOffersContext] Reset and re-initialized ${demoOffers.length} demo offers`
+      `[BroadcastJobOffersContext] Reset and re-initialized ${demoOffers.length} demo offers`,
     );
   };
 
-  // Initialize demo offers on mount (only once)
+  // Demo offers: skip for driver SKIP_DEMO_CONTENT_DRIVER_ID (e.g. 9); otherwise init once.
+  // When skipDemoContent is true, also remove any demo offers already in state (e.g. auth loaded after mount).
   useEffect(() => {
-    if (demoOffersInitialized.current) {
+    if (skipDemoContent) {
+      // Keep demo offers disabled for this driver, but allow re-init if user switches later.
+      demoOffersInitialized.current = false;
+      setBroadcastOffers((prev) => {
+        const withoutDemo = prev.filter(
+          (offer) => !offer.id.startsWith("demo-"),
+        );
+        if (withoutDemo.length === prev.length) return prev;
+        console.log(
+          "[BroadcastJobOffersContext] Removed demo offers for driver id",
+          driverId,
+          "count:",
+          prev.length - withoutDemo.length,
+        );
+        return withoutDemo;
+      });
+      return;
+    }
+    if (demoOffersInitialized.current) return;
+
+    const hasDemoOffers = broadcastOffers.some((offer) =>
+      offer.id.startsWith("demo-"),
+    );
+    if (hasDemoOffers) {
+      demoOffersInitialized.current = true;
       return;
     }
 
-    // Check if demo offers already exist in current state
-    const hasDemoOffers = broadcastOffers.some((offer) =>
-      offer.id.startsWith("demo-")
-    );
-
-    if (!hasDemoOffers) {
-      console.log("[BroadcastJobOffersContext] Initializing demo offers");
-      const demoOffers = createDemoBroadcastOffers();
-      // Add all demo offers at once
-      setBroadcastOffers((prev) => {
-        // Double-check no demo offers exist
-        const hasExistingDemo = prev.some((offer) =>
-          offer.id.startsWith("demo-")
-        );
-        if (hasExistingDemo) {
-          demoOffersInitialized.current = true;
-          return prev;
-        }
-        demoOffersInitialized.current = true;
-        return [...demoOffers, ...prev];
-      });
-      console.log(
-        `[BroadcastJobOffersContext] Initialized ${demoOffers.length} demo offers`
+    console.log("[BroadcastJobOffersContext] Initializing demo offers");
+    const demoOffers = createDemoBroadcastOffers();
+    setBroadcastOffers((prev) => {
+      const hasExistingDemo = prev.some((offer) =>
+        offer.id.startsWith("demo-"),
       );
-    } else {
+      if (hasExistingDemo) {
+        demoOffersInitialized.current = true;
+        return prev;
+      }
       demoOffersInitialized.current = true;
-    }
-  }, [broadcastOffers]);
+      return [...demoOffers, ...prev];
+    });
+    console.log(
+      `[BroadcastJobOffersContext] Initialized ${demoOffers.length} demo offers`,
+    );
+  }, [broadcastOffers, skipDemoContent, driverId]);
 
   const contextValue: BroadcastJobOffersContextType = {
     broadcastOffers,
@@ -537,7 +630,7 @@ export function useBroadcastJobOffers(): BroadcastJobOffersContextType {
   const context = useContext(BroadcastJobOffersContext);
   if (context === undefined) {
     throw new Error(
-      "useBroadcastJobOffers must be used within a BroadcastJobOffersProvider"
+      "useBroadcastJobOffers must be used within a BroadcastJobOffersProvider",
     );
   }
   return context;

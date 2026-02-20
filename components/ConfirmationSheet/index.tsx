@@ -37,6 +37,10 @@ export interface ConfirmationSheetProps {
    * Text for the confirm button
    */
   confirmButtonText: string;
+  /**
+   * Loading state for confirm action. Disables both actions while true.
+   */
+  loading?: boolean;
 }
 
 const ConfirmationSheet: React.FC<ConfirmationSheetProps> = ({
@@ -47,6 +51,7 @@ const ConfirmationSheet: React.FC<ConfirmationSheetProps> = ({
   onCancel,
   cancelButtonText,
   confirmButtonText,
+  loading = false,
 }) => {
   return (
     <CustomBottomSheet
@@ -56,7 +61,7 @@ const ConfirmationSheet: React.FC<ConfirmationSheetProps> = ({
       showHeader={false}
       backdrop={true}
       swipeToClose={false}
-      onClose={onCancel}
+      onClose={loading ? undefined : onCancel}
     >
       <View style={styles.sheetContainer}>
         <Typography
@@ -79,7 +84,8 @@ const ConfirmationSheet: React.FC<ConfirmationSheetProps> = ({
             variant="outlined"
             rounded="half"
             block="half"
-            onPress={onCancel}
+            onPress={loading ? undefined : onCancel}
+            disabled={loading}
           >
             {cancelButtonText}
           </Button>
@@ -87,7 +93,9 @@ const ConfirmationSheet: React.FC<ConfirmationSheetProps> = ({
             variant="danger"
             rounded="half"
             block="half"
-            onPress={onConfirm}
+            onPress={loading ? undefined : onConfirm}
+            loading={loading}
+            disabled={loading}
           >
             {confirmButtonText}
           </Button>

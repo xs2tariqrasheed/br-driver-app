@@ -16,6 +16,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -143,6 +144,24 @@ const NotificationsScreen: React.FC = () => {
         isActive = false;
       };
     }, [fetchNotifications]),
+  );
+
+  // Hardware back: close notification sheet first; only then allow leaving the screen
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (bottomSheetOpen) {
+          handleBottomSheetClose();
+          return true; // consumed: do not go back
+        }
+        return false; // allow default back (leave screen)
+      };
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+      return () => subscription.remove();
+    }, [bottomSheetOpen]),
   );
 
   // Check if any API operation is in progress

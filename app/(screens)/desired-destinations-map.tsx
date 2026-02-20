@@ -50,6 +50,7 @@ export default function DesiredDestinationsMapScreen() {
   } | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string>("");
   const [selectedZipCode, setSelectedZipCode] = useState<string>("");
+  const [hasContinued, setHasContinued] = useState<boolean>(false);
 
   // Google Maps API key is imported from global constants
 
@@ -122,20 +123,20 @@ export default function DesiredDestinationsMapScreen() {
   };
 
   const handleContinue = () => {
-    if (selectedCoordinates) {
-      // Pass the selected address, coordinates, placeId, zipCode, and sheet context so desired-destinations reopens the correct sheet (add vs edit)
-      router.push({
-        pathname: "/(screens)/desired-destinations",
-        params: {
-          selectedAddress: address,
-          selectedCoordinates: JSON.stringify(selectedCoordinates),
-          selectedPlaceId: selectedPlaceId || "",
-          selectedZipCode: selectedZipCode || "",
-          sheetMode,
-          editingIndex: editingIndexParam,
-        },
-      });
-    }
+    if (hasContinued || !selectedCoordinates) return;
+    setHasContinued(true);
+    // Pass the selected address, coordinates, placeId, zipCode, and sheet context so desired-destinations reopens the correct sheet (add vs edit)
+    router.push({
+      pathname: "/(screens)/desired-destinations",
+      params: {
+        selectedAddress: address,
+        selectedCoordinates: JSON.stringify(selectedCoordinates),
+        selectedPlaceId: selectedPlaceId || "",
+        selectedZipCode: selectedZipCode || "",
+        sheetMode,
+        editingIndex: editingIndexParam,
+      },
+    });
   };
 
   return (
@@ -169,7 +170,13 @@ export default function DesiredDestinationsMapScreen() {
         <Button
           rounded="half"
           variant="primary"
-          disabled={!address.trim() || !selectedCoordinates || !selectedPlaceId}
+          loading={hasContinued}
+          disabled={
+            hasContinued ||
+            !address.trim() ||
+            !selectedCoordinates ||
+            !selectedPlaceId
+          }
           onPress={handleContinue}
         >
           {continueButtonText}

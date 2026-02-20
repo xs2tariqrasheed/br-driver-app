@@ -17,6 +17,7 @@ import {
 import { MORE_CONTENT_KEYS } from "@/content/(tabs)/more-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
+import { useRideOffer } from "@/context/RideOfferContext";
 import { SETTINGS_STORAGE_KEY } from "@/context/SettingsContext";
 import { useDelete } from "@/hooks/useDelete";
 import { useGetContent } from "@/hooks/useGetContent";
@@ -49,6 +50,7 @@ type MoreItem = {
   title: string;
   icon: any;
   onClick?: () => void;
+  disabled?: boolean;
 };
 
 type BaseOfficeContactDetails = {
@@ -169,7 +171,16 @@ export default function MoreScreen() {
   const [auth, setAuth] = useAuth();
   const [driver, setDriver] = useDriver();
   const { removeRetrievalId, removeTripId } = useDriver();
+  const { setHasAnyActiveOffer, temporaryRides, removeTemporaryRide } =
+    useRideOffer();
+  const hasActiveRide = !!(
+    driver?.retrievalId != null &&
+    driver?.retrievalId !== "" &&
+    driver?.tripId != null &&
+    driver?.tripId !== ""
+  );
   const [logoutSheetOpen, setLogoutSheetOpen] = useState(false);
+  const [isLogoutLoading, setIsLogoutLoading] = useState(false);
   const [deleteProfileSheetOpen, setDeleteProfileSheetOpen] = useState(false);
   const [contactBaseSheetOpen, setContactBaseSheetOpen] = useState(false);
   const [baseOfficeContactDetails, setBaseOfficeContactDetails] =
@@ -256,39 +267,83 @@ export default function MoreScreen() {
   }, [contactBaseSheetOpen]);
 
   const handleLogout = async () => {
-    // Mark driver as offline via API
-    if (driver?.online) {
+    setIsLogoutLoading(true);
+    try {
+      // Mark driver as offline via API
+      if (driver?.online) {
+        try {
+          log("[MoreScreen] Marking driver as offline via API");
+          await deleteOnlineLocation();
+          log("[MoreScreen] Driver successfully marked as offline");
+        } catch (error) {
+          log("[MoreScreen] Error marking driver offline:", error);
+          // Continue with logout even if API call fails
+        }
+      }
+
+      // Update driver context to mark as offline
       try {
-        log("[MoreScreen] Marking driver as offline via API");
-        await deleteOnlineLocation();
-        log("[MoreScreen] Driver successfully marked as offline");
+        if (driver) {
+          await setDriver({
+            ...driver,
+            online: false,
+          });
+          log("[MoreScreen] Driver state updated to offline");
+        }
       } catch (error) {
-        log("[MoreScreen] Error marking driver offline:", error);
-        // Continue with logout even if API call fails
+        log("[MoreScreen] Error updating driver state:", error);
+        // Continue with logout even if state update fails
       }
-    }
 
-    // Update driver context to mark as offline
-    try {
-      if (driver) {
-        await setDriver({
-          ...driver,
-          online: false,
+      // Remove retrieval ID from context and AsyncStorage
+      try {
+        await removeRetrievalId();
+        log("[MoreScreen] Retrieval ID removed successfully");
+      } catch (error) {
+        log("[MoreScreen] Error removing retrieval ID:", error);
+        // Continue with logout/delete even if retrieval ID removal fails
+      }
+
+      // Remove trip ID from context and AsyncStorage
+      try {
+        await removeTripId();
+        log("[MoreScreen] Trip ID removed successfully");
+      } catch (error) {
+        log("[MoreScreen] Error removing trip ID:", error);
+        // Continue with logout/delete even if trip ID removal fails
+      }
+
+      // Disconnect socket
+      try {
+        disconnectSocket();
+        log("[MoreScreen] Socket disconnected successfully");
+      } catch (err) {
+        log("[MoreScreen] Error disconnecting socket:", err);
+        // Continue with logout even if socket disconnect fails
+      }
+
+      // Reset active offer state and clear temporary rides
+      try {
+        await setHasAnyActiveOffer(false);
+        log("[MoreScreen] Active offer state reset");
+      } catch (error) {
+        log("[MoreScreen] Error resetting active offer state:", error);
+      }
+
+      try {
+        const temporaryRideIds = Object.keys(temporaryRides || {});
+        temporaryRideIds.forEach((notificationId) => {
+          removeTemporaryRide(notificationId);
         });
-        log("[MoreScreen] Driver state updated to offline");
+        log(
+          "[MoreScreen] Temporary rides cleared:",
+          temporaryRideIds.length,
+        );
+      } catch (error) {
+        log("[MoreScreen] Error clearing temporary rides:", error);
       }
-    } catch (error) {
-      log("[MoreScreen] Error updating driver state:", error);
-      // Continue with logout even if state update fails
-    }
-
-    // Disconnect socket
-    try {
-      disconnectSocket();
-      log("[MoreScreen] Socket disconnected successfully");
-    } catch (err) {
-      log("[MoreScreen] Error disconnecting socket:", err);
-      // Continue with logout even if socket disconnect fails
+    } finally {
+      setIsLogoutLoading(false);
     }
   };
 
@@ -407,23 +462,32 @@ export default function MoreScreen() {
     if (item.key === "change-password") {
       return {
         ...item,
-        onClick: () => router.push("/(screens)/more/update-password"),
+        onClick: hasActiveRide
+          ? undefined
+          : () => router.push("/(screens)/more/update-password"),
+        disabled: hasActiveRide,
       };
     }
     if (item.key === "delete-profile") {
       return {
         ...item,
-        onClick: () => {
-          setDeleteProfileSheetOpen(true);
-        },
+        onClick: hasActiveRide
+          ? undefined
+          : () => {
+              setDeleteProfileSheetOpen(true);
+            },
+        disabled: hasActiveRide,
       };
     }
     if (item.key === "logout") {
       return {
         ...item,
-        onClick: () => {
-          setLogoutSheetOpen(true);
-        },
+        onClick: hasActiveRide
+          ? undefined
+          : () => {
+              setLogoutSheetOpen(true);
+            },
+        disabled: hasActiveRide,
       };
     }
     if (item.key === "contact-base") {
@@ -453,19 +517,26 @@ export default function MoreScreen() {
     return item;
   });
 
-  const renderItem = ({ item }: { item: MoreItem }) => (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      style={styles.card}
-      onPress={item.onClick}
-      disabled={!item.onClick}
-    >
-      <Image source={item.icon} style={styles.icon} />
-      <Typography type="bodyLarge" weight="bold" style={styles.cardTitle}>
-        {item.title}
-      </Typography>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: MoreItem }) => {
+    const isDisabled = item.disabled || !item.onClick;
+    return (
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={[styles.card, isDisabled && styles.cardDisabled]}
+        onPress={item.onClick}
+        disabled={isDisabled}
+      >
+        <Image source={item.icon} style={styles.icon} />
+        <Typography
+          type="bodyLarge"
+          weight="bold"
+          style={[styles.cardTitle, isDisabled && styles.cardTitleDisabled]}
+        >
+          {item.title}
+        </Typography>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -495,9 +566,14 @@ export default function MoreScreen() {
         description={logoutConfirmDescription}
         cancelButtonText={logoutConfirmCancel}
         confirmButtonText={logoutConfirmConfirm}
-        onCancel={() => setLogoutSheetOpen(false)}
-        onConfirm={() => {
-          handleLogout();
+        loading={isLogoutLoading}
+        onCancel={() => {
+          if (isLogoutLoading) return;
+          setLogoutSheetOpen(false);
+        }}
+        onConfirm={async () => {
+          if (isLogoutLoading) return;
+          await handleLogout();
           setLogoutSheetOpen(false);
           router.replace("/(screens)/auth/login");
         }}
@@ -666,6 +742,12 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: textColors.grey800,
+  },
+  cardDisabled: {
+    opacity: 0.5,
+  },
+  cardTitleDisabled: {
+    color: textColors.grey500,
   },
 
   addressRow: {

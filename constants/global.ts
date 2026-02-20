@@ -78,6 +78,9 @@ export const URLS = {
   earningsPortal: "https://google.com",
 };
 
+/** Driver ID for which demo notifications and demo offers are skipped (e.g. production driver). */
+export const SKIP_DEMO_CONTENT_DRIVER_ID = 9;
+
 // DB action defaults for driver app (aligned with @br-backend/constants DbActionDefaults)
 // Used when the backend does not provide company/affiliate in the user (e.g. base-office contact-details)
 // Prefer auth.user.company_id / auth.user.affiliate_num when the API returns them

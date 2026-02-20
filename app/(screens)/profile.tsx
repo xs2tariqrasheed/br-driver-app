@@ -237,7 +237,10 @@ export default function ProfileScreen() {
     () => [
       {
         label: activityTotalRidesLabel,
-        value: typeof numberOfRides === "number" ? String(numberOfRides) : numberOfRides,
+        value:
+          typeof numberOfRides === "number"
+            ? String(numberOfRides)
+            : numberOfRides,
       },
       { label: activityLastActiveLabel, value: formatDate(lastActiveAt) },
       { label: activityLastSignInLabel, value: formatDate(lastSignInAt) },
@@ -348,18 +351,18 @@ export default function ProfileScreen() {
         />
 
         {/* Activity */}
-        <InfoTable
+        {/* <InfoTable
           title={sectionActivityLabel}
           data={activityItems}
           showFooter={false}
-        />
+        /> */}
 
         {/* Payment Information */}
-        <InfoTable
+        {/* <InfoTable
           title={sectionPaymentLabel}
           data={paymentInfoItems}
           showFooter={false}
-        />
+        /> */}
 
         {/* Edit Profile Button */}
         <View style={styles.buttonContainer}>
