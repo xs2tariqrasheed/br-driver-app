@@ -37,6 +37,10 @@ import { PackageInfoProvider } from "@/context/PackageInfoContext";
 import { RideOfferProvider, useRideOffer } from "@/context/RideOfferContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { SpecialRequirementsProvider } from "@/context/SpecialRequirementsContext";
+import {
+  AutoLogoutProvider,
+  useAutoLogout,
+} from "@/context/AutoLogoutContext";
 import { registerTokenIfNeeded } from "@/services/pushNotificationService";
 import { coerceTripId } from "@/types/pushNotifications";
 import { formatDateTimestamp, getStorageItem } from "@/utils/helpers";
@@ -46,7 +50,7 @@ import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
 import { SplashScreen, Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { AppState, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Host } from "react-native-portalize";
@@ -223,6 +227,21 @@ function PushNotificationsBootstrap() {
   return null;
 }
 
+function IdleTouchCapture({ children }: { children: ReactNode }) {
+  const { resetIdleTimer } = useAutoLogout();
+  return (
+    <View
+      style={{ flex: 1 }}
+      onStartShouldSetResponderCapture={() => {
+        resetIdleTimer();
+        return false;
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const [loaded] = useFonts({
     "SF-Pro-Display-Regular": require("../assets/fonts/SF-Pro-Display-Regular.otf"),
@@ -274,139 +293,143 @@ export default function RootLayout() {
                           <ModalManagerProvider>
                             <ChatProvider>
                               <RideOfferProvider>
-                                <SpecialRequirementsProvider>
-                                  <PackageInfoProvider>
-                                    <BroadcastJobOffersProvider>
-                                      <BidExpiredProvider>
-                                        <BidBottomSheetProvider>
-                                          <BidWaitingTimerProvider>
-                                            <BidAcceptedProvider>
-                                              <BidUnsuccessfulProvider>
-                                                <FutureJobOffersProvider>
-                                                  <NotificationProvider>
-                                                    <ToastProvider>
-                                                      <Stack
-                                                        initialRouteName="(screens)/auth"
-                                                        screenOptions={{
-                                                          contentStyle:
-                                                            Platform.OS ===
-                                                            "android"
-                                                              ? {
-                                                                  paddingTop: 24,
-                                                                }
-                                                              : undefined,
-                                                        }}
-                                                      >
-                                                        <Stack.Screen
-                                                          name="(screens)/auth"
-                                                          options={{
-                                                            headerShown: false,
-                                                          }}
-                                                        />
-                                                        <Stack.Screen
-                                                          name="(screens)/base-url-setup"
-                                                          options={{
-                                                            headerShown: false,
-                                                          }}
-                                                        />
-                                                        <Stack.Screen
-                                                          name="(screens)/more"
-                                                          options={{
-                                                            headerShown: false,
-                                                          }}
-                                                        />
-                                                        <Stack.Screen
-                                                          name="(tabs)"
-                                                          options={{
-                                                            headerShown: false,
-                                                          }}
-                                                        />
-                                                        <Stack.Screen name="+not-found" />
-                                                        <Stack.Screen
-                                                          name="(screens)/notifications"
-                                                          options={{
-                                                            title:
-                                                              "Notifications",
-                                                          }}
-                                                        />
-                                                        <Stack.Screen
-                                                          name="(screens)/heat-map"
-                                                          options={{
-                                                            headerShown: false,
-                                                          }}
-                                                        />
-                                                        <Stack.Screen
-                                                          name="(screens)/chat"
-                                                          options={{
-                                                            headerShown: false,
-                                                            presentation:
-                                                              "fullScreenModal",
-                                                          }}
-                                                        />
-                                                        <Stack.Screen
-                                                          name="(screens)/ride-offer"
-                                                          options={{
-                                                            headerShown: false,
-                                                            // iOS fix: don't present as a native full-screen modal, otherwise
-                                                            // provider-level RN Modals (e.g. ETAModal) can appear behind it.
-                                                            presentation:
-                                                              Platform.OS ===
-                                                              "ios"
-                                                                ? "card"
-                                                                : "fullScreenModal",
-                                                          }}
-                                                        />
-                                                        <Stack.Screen
-                                                          name="(screens)/in-app-webview"
-                                                          options={{
-                                                            headerShown: false,
-                                                          }}
-                                                        />
-                                                        <Stack.Screen
-                                                          name="(screens)/developer-settings"
-                                                          options={{
-                                                            title:
-                                                              "Developer Settings",
-                                                          }}
-                                                        />
-                                                      </Stack>
-                                                      <StatusBar style="dark" />
-                                                      <PushNotificationsBootstrap />
-                                                      <GlobalNotificationSocketListener />
-                                                      {/* Global Socket Listener */}
-                                                      <GlobalSocketListener />
-                                                      {/* Global Active Trip Socket Listener */}
-                                                      <GlobalActiveTripListener />
-                                                      {/* Online Location Tracker */}
-                                                      <OnlineLocationTracker />
-                                                      {/* Global Modals */}
-                                                      <NotificationModal />
-                                                      <NetworkNotification />
-                                                      <PackageInfoModal />
-                                                      <SpecialRequirementsModal />
-                                                      <View
-                                                        style={{
-                                                          position: "absolute",
-                                                          top: 0,
-                                                          left: 0,
-                                                          right: 0,
-                                                          bottom: 0,
-                                                        }}
-                                                        pointerEvents="box-none"
-                                                      >
-                                                        <DevFloatingButton />
-                                                      </View>
-                                                    </ToastProvider>
-                                                  </NotificationProvider>
-                                                </FutureJobOffersProvider>
-                                              </BidUnsuccessfulProvider>
-                                            </BidAcceptedProvider>
-                                          </BidWaitingTimerProvider>
-                                        </BidBottomSheetProvider>
-                                      </BidExpiredProvider>
-                                    </BroadcastJobOffersProvider>
-                                  </PackageInfoProvider>
-                                </SpecialRequirementsProvider>
+                                <AutoLogoutProvider>
+                                  <IdleTouchCapture>
+                                    <SpecialRequirementsProvider>
+                                      <PackageInfoProvider>
+                                        <BroadcastJobOffersProvider>
+                                          <BidExpiredProvider>
+                                            <BidBottomSheetProvider>
+                                              <BidWaitingTimerProvider>
+                                                <BidAcceptedProvider>
+                                                  <BidUnsuccessfulProvider>
+                                                    <FutureJobOffersProvider>
+                                                      <NotificationProvider>
+                                                        <ToastProvider>
+                                                          <Stack
+                                                            initialRouteName="(screens)/auth"
+                                                            screenOptions={{
+                                                              contentStyle:
+                                                                Platform.OS ===
+                                                                "android"
+                                                                  ? {
+                                                                      paddingTop: 24,
+                                                                    }
+                                                                  : undefined,
+                                                            }}
+                                                          >
+                                                            <Stack.Screen
+                                                              name="(screens)/auth"
+                                                              options={{
+                                                                headerShown: false,
+                                                              }}
+                                                            />
+                                                            <Stack.Screen
+                                                              name="(screens)/base-url-setup"
+                                                              options={{
+                                                                headerShown: false,
+                                                              }}
+                                                            />
+                                                            <Stack.Screen
+                                                              name="(screens)/more"
+                                                              options={{
+                                                                headerShown: false,
+                                                              }}
+                                                            />
+                                                            <Stack.Screen
+                                                              name="(tabs)"
+                                                              options={{
+                                                                headerShown: false,
+                                                              }}
+                                                            />
+                                                            <Stack.Screen name="+not-found" />
+                                                            <Stack.Screen
+                                                              name="(screens)/notifications"
+                                                              options={{
+                                                                title:
+                                                                  "Notifications",
+                                                              }}
+                                                            />
+                                                            <Stack.Screen
+                                                              name="(screens)/heat-map"
+                                                              options={{
+                                                                headerShown: false,
+                                                              }}
+                                                            />
+                                                            <Stack.Screen
+                                                              name="(screens)/chat"
+                                                              options={{
+                                                                headerShown: false,
+                                                                presentation:
+                                                                  "fullScreenModal",
+                                                              }}
+                                                            />
+                                                            <Stack.Screen
+                                                              name="(screens)/ride-offer"
+                                                              options={{
+                                                                headerShown: false,
+                                                                // iOS fix: don't present as a native full-screen modal, otherwise
+                                                                // provider-level RN Modals (e.g. ETAModal) can appear behind it.
+                                                                presentation:
+                                                                  Platform.OS ===
+                                                                  "ios"
+                                                                    ? "card"
+                                                                    : "fullScreenModal",
+                                                              }}
+                                                            />
+                                                            <Stack.Screen
+                                                              name="(screens)/in-app-webview"
+                                                              options={{
+                                                                headerShown: false,
+                                                              }}
+                                                            />
+                                                            <Stack.Screen
+                                                              name="(screens)/developer-settings"
+                                                              options={{
+                                                                title:
+                                                                  "Developer Settings",
+                                                              }}
+                                                            />
+                                                          </Stack>
+                                                          <StatusBar style="dark" />
+                                                          <PushNotificationsBootstrap />
+                                                          <GlobalNotificationSocketListener />
+                                                          {/* Global Socket Listener */}
+                                                          <GlobalSocketListener />
+                                                          {/* Global Active Trip Socket Listener */}
+                                                          <GlobalActiveTripListener />
+                                                          {/* Online Location Tracker */}
+                                                          <OnlineLocationTracker />
+                                                          {/* Global Modals */}
+                                                          <NotificationModal />
+                                                          <NetworkNotification />
+                                                          <PackageInfoModal />
+                                                          <SpecialRequirementsModal />
+                                                          <View
+                                                            style={{
+                                                              position: "absolute",
+                                                              top: 0,
+                                                              left: 0,
+                                                              right: 0,
+                                                              bottom: 0,
+                                                            }}
+                                                            pointerEvents="box-none"
+                                                          >
+                                                            <DevFloatingButton />
+                                                          </View>
+                                                        </ToastProvider>
+                                                      </NotificationProvider>
+                                                    </FutureJobOffersProvider>
+                                                  </BidUnsuccessfulProvider>
+                                                </BidAcceptedProvider>
+                                              </BidWaitingTimerProvider>
+                                            </BidBottomSheetProvider>
+                                          </BidExpiredProvider>
+                                        </BroadcastJobOffersProvider>
+                                      </PackageInfoProvider>
+                                    </SpecialRequirementsProvider>
+                                  </IdleTouchCapture>
+                                </AutoLogoutProvider>
                               </RideOfferProvider>
                             </ChatProvider>
                           </ModalManagerProvider>

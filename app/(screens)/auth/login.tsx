@@ -23,6 +23,7 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import {
+  APP_VERSION,
   API_CLIENT_TYPES,
   BiometricMethod,
   SYSTEM_SETTINGS_KEYS,
@@ -850,6 +851,16 @@ export default function LoginScreen() {
           >
             {actionRequestRegistration}
           </Button>
+
+          <View style={styles.centeredRow}>
+            <Typography
+              type="labelMedium"
+              weight="regular"
+              style={styles.versionText}
+            >
+              Version: {APP_VERSION}
+            </Typography>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1157,5 +1168,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: textColors.black,
+  },
+  versionText: {
+    color: textColors.grey700,
   },
 });

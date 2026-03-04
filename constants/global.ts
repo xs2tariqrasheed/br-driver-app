@@ -492,6 +492,9 @@ export const API_VERSION = "1.0.1";
 // Client Version (from app.json version)
 export const CLIENT_VERSION = "1.0.0";
 
+// App version
+export const APP_VERSION = "1.0.1";
+
 // DB Action Codes
 // Common action codes used across the app for database operations
 export const DB_ACTION_CODES = {
@@ -514,3 +517,8 @@ export const SYSTEM_SETTINGS_KEYS = {
 
 export type SystemSettingsKey =
   (typeof SYSTEM_SETTINGS_KEYS)[keyof typeof SYSTEM_SETTINGS_KEYS];
+
+// Auto-logout idle timeout in minutes.
+// The driver will be automatically logged out after this many minutes of inactivity,
+// provided there is no active trip in progress.
+export const AUTO_LOGOUT_IDLE_TIMEOUT_MINUTES = 30;

@@ -28,6 +28,7 @@ import {
   logger,
   setStorageItem,
 } from "@/utils/helpers";
+import { performLogout } from "@/utils/logout";
 import { buildRequest } from "@/utils/requestBuilder";
 import { disconnectSocket } from "@/utils/socket";
 import { useRouter } from "expo-router";
@@ -269,79 +270,16 @@ export default function MoreScreen() {
   const handleLogout = async () => {
     setIsLogoutLoading(true);
     try {
-      // Mark driver as offline via API
-      if (driver?.online) {
-        try {
-          log("[MoreScreen] Marking driver as offline via API");
-          await deleteOnlineLocation();
-          log("[MoreScreen] Driver successfully marked as offline");
-        } catch (error) {
-          log("[MoreScreen] Error marking driver offline:", error);
-          // Continue with logout even if API call fails
-        }
-      }
-
-      // Update driver context to mark as offline
-      try {
-        if (driver) {
-          await setDriver({
-            ...driver,
-            online: false,
-          });
-          log("[MoreScreen] Driver state updated to offline");
-        }
-      } catch (error) {
-        log("[MoreScreen] Error updating driver state:", error);
-        // Continue with logout even if state update fails
-      }
-
-      // Remove retrieval ID from context and AsyncStorage
-      try {
-        await removeRetrievalId();
-        log("[MoreScreen] Retrieval ID removed successfully");
-      } catch (error) {
-        log("[MoreScreen] Error removing retrieval ID:", error);
-        // Continue with logout/delete even if retrieval ID removal fails
-      }
-
-      // Remove trip ID from context and AsyncStorage
-      try {
-        await removeTripId();
-        log("[MoreScreen] Trip ID removed successfully");
-      } catch (error) {
-        log("[MoreScreen] Error removing trip ID:", error);
-        // Continue with logout/delete even if trip ID removal fails
-      }
-
-      // Disconnect socket
-      try {
-        disconnectSocket();
-        log("[MoreScreen] Socket disconnected successfully");
-      } catch (err) {
-        log("[MoreScreen] Error disconnecting socket:", err);
-        // Continue with logout even if socket disconnect fails
-      }
-
-      // Reset active offer state and clear temporary rides
-      try {
-        await setHasAnyActiveOffer(false);
-        log("[MoreScreen] Active offer state reset");
-      } catch (error) {
-        log("[MoreScreen] Error resetting active offer state:", error);
-      }
-
-      try {
-        const temporaryRideIds = Object.keys(temporaryRides || {});
-        temporaryRideIds.forEach((notificationId) => {
-          removeTemporaryRide(notificationId);
-        });
-        log(
-          "[MoreScreen] Temporary rides cleared:",
-          temporaryRideIds.length,
-        );
-      } catch (error) {
-        log("[MoreScreen] Error clearing temporary rides:", error);
-      }
+      await performLogout({
+        driverId: auth?.user?.id,
+        driver,
+        setDriver,
+        removeRetrievalId,
+        removeTripId,
+        setHasAnyActiveOffer,
+        temporaryRides,
+        removeTemporaryRide,
+      });
     } finally {
       setIsLogoutLoading(false);
     }
