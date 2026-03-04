@@ -94,6 +94,8 @@ export const DB_ACTION_DEFAULTS = {
 export const CONTENT_APP_NAME = "driverapp" as const;
 export const CONTENT_VIEW_NAME = "APP_CONTENT" as const;
 export const CONTENT_ACTION_CODE = "CMN.S.APP_CONTENT" as const;
+export const SYSTEM_SETTINGS_VIEW_NAME = "SYSTEM_SETTINGS" as const;
+export const SYSTEM_SETTINGS_ACTION_CODE = "CMN.S.SYSTEM_SETTINGS" as const;
 export const CONTENT_AFFILIATE_NUM = 101 as const;
 
 // OTP / Verification
@@ -461,7 +463,7 @@ export const NETWORK_MONITORING = {
 export type NetworkQuality =
   (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];
 
-const BASE_URL = "http://3.84.108.176";
+const BASE_URL = "http://192.168.1.5";
 // Testing purpose constant for all the services
 // When IS_TESTING is true, these URLs will be used instead of environment variables
 // All URLs should include the http:// protocol prefix for local testing
@@ -505,3 +507,10 @@ export const NEW_JOB_OFFER_PUSH_NOTIFICATION = {
   title: "🚗 New Job Offer Incoming!",
   body: "We’re about to assign you a new job. Please open the app and stay active to receive the job. If the app stays closed, the ride may be reassigned to another driver.",
 } as const;
+
+export const SYSTEM_SETTINGS_KEYS = {
+  DRIVER_WEB_APP_PRODUCTION_URL: "driver-web-app-production-url",
+} as const;
+
+export type SystemSettingsKey =
+  (typeof SYSTEM_SETTINGS_KEYS)[keyof typeof SYSTEM_SETTINGS_KEYS];

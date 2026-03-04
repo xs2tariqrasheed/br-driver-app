@@ -32,6 +32,25 @@ export function flattenContent(
 }
 
 /**
+ * Flatten system settings rows (array of objects) into key → value map.
+ * Expected shape for each row:
+ *   { object_key: string; object_value: string; ... }
+ */
+export function flattenSystemSettings(
+  systemSettings: Array<{ object_key?: string; object_value?: string }> | null
+): FlattenedContent {
+  const flattened: FlattenedContent = {};
+
+  (systemSettings || []).forEach((row) => {
+    if (row?.object_key && typeof row.object_value === "string") {
+      flattened[row.object_key] = row.object_value;
+    }
+  });
+
+  return flattened;
+}
+
+/**
  * Creates a content getter function using closure.
  */
 export function createContentGetterByKey(

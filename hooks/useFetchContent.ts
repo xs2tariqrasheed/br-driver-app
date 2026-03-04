@@ -4,20 +4,31 @@
  * Fetches dynamic content from Settings Service and updates ContentContext.
  */
 
-import { APP_ENDPOINTS } from "@/constants/endpoints";
+import {
+  APP_ENDPOINTS,
+  SYSTEM_SETTINGS_ENDPOINTS,
+} from "@/constants/endpoints";
 import { API_CLIENT_TYPES } from "@/constants/global";
 import { useContent } from "@/context/ContentContext";
 import { usePost } from "@/hooks/usePost";
-import { flattenContent } from "@/utils/content";
-import { buildAppContentRequest } from "@/utils/requestBuilder";
+import { flattenContent, flattenSystemSettings } from "@/utils/content";
+import {
+  buildAppContentRequest,
+  buildSystemSettingsRequest,
+} from "@/utils/requestBuilder";
 import { useCallback, useEffect, useRef } from "react";
 
 const MAX_CONTENT_FETCH_ATTEMPTS = 3;
 
 export function useFetchContent() {
-  const { content, setContent, setIsLoading, setError } = useContent();
-  const { execute, loading } = usePost<any, any>(
+  const { content, setContent, setIsLoading, setError, setSystemSettings } =
+    useContent();
+  const { execute: fetchContentRequest, loading } = usePost<any, any>(
     APP_ENDPOINTS.content,
+    API_CLIENT_TYPES.SETTINGS,
+  );
+  const { execute: fetchSystemSettingsRequest } = usePost<any, any>(
+    SYSTEM_SETTINGS_ENDPOINTS.getAll,
     API_CLIENT_TYPES.SETTINGS,
   );
 
@@ -80,14 +91,56 @@ export function useFetchContent() {
 
     try {
       const requestJson = await buildAppContentRequest();
-      const response = await execute(requestJson);
+      const response = await fetchContentRequest(requestJson);
       const contents =
         (response as any)?.jData?.contents ||
         (response as any)?.data?.jData?.contents ||
         {};
 
       const flattened = flattenContent(contents);
-      setContent(flattened);
+      let nextContent = flattened;
+
+      // After content is fetched successfully, fetch system settings content as well
+      try {
+        const systemSettingsRequest = await buildSystemSettingsRequest();
+        const systemSettingsDbResponse = await fetchSystemSettingsRequest(
+          systemSettingsRequest,
+        );
+        console.log(
+          "useFetchContent - System settings response:",
+          systemSettingsDbResponse,
+        );
+
+        // Normalize DB response: prefer jData.system_settings, then jData
+        const jData =
+          (systemSettingsDbResponse as any)?.jData ||
+          (systemSettingsDbResponse as any)?.data?.jData ||
+          systemSettingsDbResponse;
+        const systemSettingsArray =
+          (jData && (jData as any).system_settings) || [];
+
+        const flattenedSystemSettings =
+          flattenSystemSettings(systemSettingsArray);
+
+        // Persist flattened system settings separately if needed
+        setSystemSettings(flattenedSystemSettings);
+
+        // Merge system settings content into main content map so getContent can access it
+        nextContent = {
+          ...flattened,
+          ...flattenedSystemSettings,
+        };
+      } catch (systemErr: any) {
+        console.warn(
+          "[useFetchContent] Failed to fetch system settings content:",
+          systemErr,
+        );
+        // Fall back to just app content if system settings fetch fails
+        nextContent = flattened;
+      }
+
+      setContent(nextContent);
+
       hasFetchedRef.current = true;
       failureCountRef.current = 0;
     } catch (err: any) {
@@ -109,7 +162,14 @@ export function useFetchContent() {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [execute, setContent, setError, setIsLoading]);
+  }, [
+    fetchContentRequest,
+    fetchSystemSettingsRequest,
+    setContent,
+    setError,
+    setIsLoading,
+    setSystemSettings,
+  ]);
 
   return {
     fetchContent,

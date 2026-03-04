@@ -89,6 +89,11 @@ export const APP_ENDPOINTS = {
   content: "/settings-service/content/app",
 } as const;
 
+export const SYSTEM_SETTINGS_ENDPOINTS = {
+  /** Get all system settings (global settings content) */
+  getAll: "/settings-service/settings/all",
+} as const;
+
 export const DRIVER_SETTINGS_ENDPOINTS = {
   /** Get driver settings */
   getSettings: "/settings-service/driver/settings",

@@ -116,7 +116,14 @@ export default function DevFloatingButton() {
     }),
   ).current;
 
-  if (!isHydrated) return null;
+  // Hide the dev floating button when user is on the in-app webview screen
+  if (
+    !isHydrated ||
+    pathname === "/(screens)/in-app-webview" ||
+    pathname.endsWith("/in-app-webview")
+  ) {
+    return null;
+  }
 
   const displayPosition = dragPosition ?? {
     x: floatingButtonPosition.x * screenWidth,

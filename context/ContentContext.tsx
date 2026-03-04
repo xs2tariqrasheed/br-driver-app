@@ -19,19 +19,22 @@ type ContentState = {
   isHydrated: boolean;
   isLoading: boolean;
   error: Error | null;
+  systemSettings: unknown | null;
 };
 
 type ContentAction =
   | { type: "SET_CONTENT"; payload: ContentObject }
   | { type: "HYDRATE_CONTENT"; payload: ContentObject }
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_ERROR"; payload: Error | null };
+  | { type: "SET_ERROR"; payload: Error | null }
+  | { type: "SET_SYSTEM_SETTINGS"; payload: unknown | null };
 
 const initialState: ContentState = {
   content: {},
   isHydrated: false,
   isLoading: false,
   error: null,
+  systemSettings: null,
 };
 
 function contentReducer(
@@ -63,6 +66,11 @@ function contentReducer(
         ...state,
         error: action.payload,
       };
+    case "SET_SYSTEM_SETTINGS":
+      return {
+        ...state,
+        systemSettings: action.payload,
+      };
     default:
       return state;
   }
@@ -76,6 +84,8 @@ type ContentContextValue = {
   setIsLoading: (value: boolean) => void;
   error: Error | null;
   setError: (value: Error | null) => void;
+  systemSettings: unknown | null;
+  setSystemSettings: (value: unknown | null) => void;
 };
 
 const ContentContext = createContext<ContentContextValue | undefined>(
@@ -96,6 +106,10 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
 
   const setError = useCallback((value: Error | null) => {
     dispatch({ type: "SET_ERROR", payload: value });
+  }, []);
+
+  const setSystemSettings = useCallback((value: unknown | null) => {
+    dispatch({ type: "SET_SYSTEM_SETTINGS", payload: value });
   }, []);
 
   useEffect(() => {
@@ -155,6 +169,8 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
       setIsLoading,
       error: state.error,
       setError,
+       systemSettings: state.systemSettings,
+       setSystemSettings,
     }),
     [
       state.content,
@@ -164,6 +180,8 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
       setContent,
       setIsLoading,
       setError,
+      state.systemSettings,
+      setSystemSettings,
     ]
   );
 

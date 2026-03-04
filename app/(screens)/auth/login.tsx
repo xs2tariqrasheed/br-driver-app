@@ -22,7 +22,11 @@ import { showToast } from "@/components/Toast";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
-import { API_CLIENT_TYPES, BiometricMethod, URLS } from "@/constants/global";
+import {
+  API_CLIENT_TYPES,
+  BiometricMethod,
+  SYSTEM_SETTINGS_KEYS,
+} from "@/constants/global";
 import { LOGIN_CONTENT_KEYS } from "@/content/(screens)/auth/login-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useOverlayInsets } from "@/context/OverlayInsetsContext";
@@ -128,6 +132,7 @@ export default function LoginScreen() {
     successSheetButtonContinue,
     errorGeneric,
     inAppWebviewRequestRegistrationTitle,
+    driverWebAppProdUrl,
   } = useMemo(() => {
     const get = getContent;
     return {
@@ -239,6 +244,9 @@ export default function LoginScreen() {
       errorGeneric: get(LOGIN_CONTENT_KEYS.ERROR_GENERIC),
       inAppWebviewRequestRegistrationTitle: get(
         LOGIN_CONTENT_KEYS.IN_APP_WEBVIEW_REQUEST_REGISTRATION_TITLE,
+      ),
+      driverWebAppProdUrl: get(
+        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
       ),
     };
   }, [getContent]);
@@ -834,7 +842,7 @@ export default function LoginScreen() {
               router.push({
                 pathname: "/(screens)/in-app-webview",
                 params: {
-                  url: URLS.requestRegistration,
+                  url: driverWebAppProdUrl,
                   title: inAppWebviewRequestRegistrationTitle,
                 },
               })
@@ -858,7 +866,7 @@ export default function LoginScreen() {
               label: forgotSheetOptionPassword,
               onPress: () => {
                 closeForgotSheet();
-                router.push("/(screens)/auth/forgot-password");
+                router.push("/(screens)/auth/forgot-password" as any);
               },
             },
             {

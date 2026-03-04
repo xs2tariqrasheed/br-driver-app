@@ -17,6 +17,7 @@ import {
   CONTENT_VIEW_NAME,
   DEFAULT_ACCESS_KEY,
   DEFAULT_ACCESS_TOKEN,
+  SYSTEM_SETTINGS_ACTION_CODE,
 } from "@/constants/global";
 import type { DbRequestJson, GpsData, JHeader } from "@/types/dbRequest";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -409,6 +410,26 @@ export async function buildAppContentRequest(): Promise<DbRequestJson> {
     P_ACTION_CODE: CONTENT_ACTION_CODE,
     P_AFFILIATE_NUM: CONTENT_AFFILIATE_NUM,
     P_APP_NAME: CONTENT_APP_NAME,
+  };
+
+  return {
+    jHeader,
+    jMetaData: {},
+    jData,
+  };
+}
+
+/**
+ * Builds a content fetch request for Settings Service (/content/app).
+ */
+export async function buildSystemSettingsRequest(): Promise<DbRequestJson> {
+  const jHeader = await buildRequestHeader(CONTENT_VIEW_NAME, "driverapp", {
+    includeGPS: false,
+  });
+
+  const jData = {
+    P_ACTION_CODE: SYSTEM_SETTINGS_ACTION_CODE,
+    P_AFFILIATE_NUM: CONTENT_AFFILIATE_NUM,
   };
 
   return {

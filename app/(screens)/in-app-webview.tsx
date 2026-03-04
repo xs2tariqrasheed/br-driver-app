@@ -1,14 +1,17 @@
-import Header from "@/components/Header";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { WebView } from "react-native-webview";
 
 // Placeholder URL when no url param is provided (e.g. before web app is deployed)
 const DEFAULT_WEBVIEW_URL = "https://example.com";
 
 export default function InAppWebViewScreen() {
-  const router = useRouter();
   const params = useLocalSearchParams<{ url?: string; title?: string }>();
 
   const uri = useMemo(() => {
@@ -19,18 +22,8 @@ export default function InAppWebViewScreen() {
     return DEFAULT_WEBVIEW_URL;
   }, [params.url]);
 
-  const title = useMemo(
-    () => params.title?.trim() || "Web",
-    [params.title],
-  );
-
   return (
     <SafeAreaView style={styles.container}>
-      <Header
-        title={title}
-        hideBackIcon={false}
-        onBackPress={() => router.back()}
-      />
       <View style={styles.webviewWrap}>
         <WebView
           source={{ uri }}
