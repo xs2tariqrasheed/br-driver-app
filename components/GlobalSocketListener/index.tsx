@@ -256,9 +256,7 @@ export function GlobalSocketListener() {
               type: NOTIFICATION_TYPES.INFO,
               title: "New Broadcast Job",
               subtitle: "Available Now",
-              message: `You have a new broadcast job offer! with fare of $${broadcastOffer.tripOffer.fare.toFixed(
-                2,
-              )}`,
+              message: `You have a new broadcast job offer! with fare of $${broadcastOffer?.tripOffer?.fare}`,
             });
 
             // Add notification to notification center with pickup/dropoff for clarity
@@ -267,9 +265,7 @@ export function GlobalSocketListener() {
                 broadcastOffer.tripOffer.tripId
               }-${Date.now()}`,
               messageTitle: "New Broadcast Job",
-              messageBody: `Broadcast job offer available. Fare: $${broadcastOffer.tripOffer.fare.toFixed(
-                2,
-              )}`,
+              messageBody: `Broadcast job offer available. Fare: $${broadcastOffer?.tripOffer?.fare}`,
               dateTime: formatDateTimestamp(broadcastOffer.timestamp),
               messageType: "unread" as const,
               notificationType: NOTIFICATION_TYPES.INFO as NotificationType,

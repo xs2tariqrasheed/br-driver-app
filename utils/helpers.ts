@@ -1,10 +1,10 @@
-import { DESIRED_DESTINATION_EXPIRY_MS, TOKEN_KEY } from "@/constants/global";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import dayjs from "dayjs";
-import * as IntentLauncher from "expo-intent-launcher";
-import * as Linking from "expo-linking";
-import * as Location from "expo-location";
-import { Alert, Platform } from "react-native";
+import { DESIRED_DESTINATION_EXPIRY_MS, TOKEN_KEY } from '@/constants/global';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import dayjs from 'dayjs';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as Linking from 'expo-linking';
+import * as Location from 'expo-location';
+import { Alert, Platform } from 'react-native';
 
 // Types for destination management
 export type DesiredDestination = {
@@ -31,8 +31,8 @@ type StorageValue = string;
  * @returns {boolean} True when environment is dev, false otherwise.
  */
 export const isDevEnvironment = (): boolean => {
-  const env = process.env.EXPO_PUBLIC_ENVIRONMENT || "production";
-  return env.toLowerCase() === "dev";
+  const env = process.env.EXPO_PUBLIC_ENVIRONMENT || 'production';
+  return env.toLowerCase() === 'dev';
 };
 
 /**
@@ -71,8 +71,8 @@ export function formatMinutesToHrMins(totalMinutes: number): string {
   const hrs = Math.floor(safe / 60);
   const mins = safe % 60;
 
-  const hrLabel = hrs === 1 ? "hr" : "hrs";
-  const minLabel = mins === 1 ? "min" : "mins";
+  const hrLabel = hrs === 1 ? 'hr' : 'hrs';
+  const minLabel = mins === 1 ? 'min' : 'mins';
 
   if (hrs <= 0) return `${mins} ${minLabel}`;
   if (mins <= 0) return `${hrs} ${hrLabel}`;
@@ -103,7 +103,7 @@ export function formatMetersToKmMeters(totalMiles: number): string {
  */
 export const setStorageItem = async (
   key: string,
-  value: StorageValue,
+  value: StorageValue
 ): Promise<void> => {
   await AsyncStorage.setItem(key, value);
 };
@@ -150,7 +150,7 @@ export const clearStorage = async (): Promise<void> => {
  * ```
  */
 export const clearStorageSelectively = async (
-  keysToPreserve: string[] = [],
+  keysToPreserve: string[] = []
 ): Promise<void> => {
   try {
     // Get all storage keys
@@ -164,7 +164,7 @@ export const clearStorageSelectively = async (
       await AsyncStorage.multiRemove(keysToRemove);
     }
   } catch (error) {
-    console.error("Error clearing storage selectively:", error);
+    console.error('Error clearing storage selectively:', error);
     // Re-throw to allow caller to handle
     throw error;
   }
@@ -187,7 +187,7 @@ export const getAllStorageKeys = async (): Promise<readonly string[]> => {
  * @returns {Promise<void>} Resolves when all pairs are saved.
  */
 export const multiSetStorageItems = async (
-  entries: Array<[string, StorageValue]>,
+  entries: Array<[string, StorageValue]>
 ): Promise<void> => {
   await AsyncStorage.multiSet(entries);
 };
@@ -199,7 +199,7 @@ export const multiSetStorageItems = async (
  * @returns {Promise<ReadonlyArray<[string, string | null]>>} Array of [key, value] tuples.
  */
 export const multiGetStorageItems = async (
-  keys: readonly string[],
+  keys: readonly string[]
 ): Promise<ReadonlyArray<[string, string | null]>> => {
   return AsyncStorage.multiGet(keys);
 };
@@ -289,19 +289,19 @@ export interface WebViewMessageData {
  * ```
  */
 export const getCurrentLocation = async (
-  fallbackRegion?: MapRegion,
+  fallbackRegion?: MapRegion
 ): Promise<MapRegion> => {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
+    if (status !== 'granted') {
       Alert.alert(
-        "Permission denied",
-        "Location permission is required to show your current location.",
+        'Permission denied',
+        'Location permission is required to show your current location.'
       );
       if (fallbackRegion) {
         return fallbackRegion;
       }
-      throw new Error("Location permission denied");
+      throw new Error('Location permission denied');
     }
 
     const location = await Location.getCurrentPositionAsync({});
@@ -312,7 +312,7 @@ export const getCurrentLocation = async (
       longitudeDelta: 0.0421,
     };
   } catch (error) {
-    console.error("Error getting location:", error);
+    console.error('Error getting location:', error);
     if (fallbackRegion) {
       return fallbackRegion;
     }
@@ -337,11 +337,11 @@ export const getCurrentLocation = async (
 export const reverseGeocode = async (
   latitude: number,
   longitude: number,
-  apiKey: string,
+  apiKey: string
 ): Promise<string> => {
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
     );
     const data = await response.json();
 
@@ -350,7 +350,7 @@ export const reverseGeocode = async (
     }
     return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
   } catch (error) {
-    console.error("Geocoding error:", error);
+    console.error('Geocoding error:', error);
     return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
   }
 };
@@ -372,13 +372,13 @@ export const reverseGeocode = async (
  */
 export const geocodeAddress = async (
   address: string,
-  apiKey: string,
+  apiKey: string
 ): Promise<LocationCoordinates | null> => {
   try {
     const response = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        address,
-      )}&key=${apiKey}`,
+        address
+      )}&key=${apiKey}`
     );
     const data = await response.json();
 
@@ -391,7 +391,7 @@ export const geocodeAddress = async (
     }
     return null;
   } catch (error) {
-    console.error("Geocoding error:", error);
+    console.error('Geocoding error:', error);
     return null;
   }
 };
@@ -415,20 +415,20 @@ export const geocodeAddress = async (
 export const getDirections = async (
   origin: LocationCoordinates,
   destination: LocationCoordinates,
-  apiKey: string,
+  apiKey: string
 ): Promise<any> => {
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`,
+      `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`
     );
     const data = await response.json();
 
-    if (data.status === "OK" && data.routes && data.routes.length > 0) {
+    if (data.status === 'OK' && data.routes && data.routes.length > 0) {
       return data;
     }
     return null;
   } catch (error) {
-    console.error("Directions API error:", error);
+    console.error('Directions API error:', error);
     return null;
   }
 };
@@ -451,8 +451,8 @@ export const generateMapHTML = (
   region: MapRegion,
   apiKey: string,
   autoSelectCurrentLocation: boolean = true,
-  pickupIconUrl: string = "",
-  userLocation: LocationCoordinates | null = null,
+  pickupIconUrl: string = '',
+  userLocation: LocationCoordinates | null = null
 ): string => {
   const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
 
@@ -594,7 +594,7 @@ export const generateMapHTML = (
               console.log('No user location provided, skipping auto-selection');
             }
             `
-                : ""
+                : ''
             }
 
             // Add click listener to map
@@ -704,7 +704,7 @@ export interface HeatmapDataPoint {
   lng: number;
   weight: number;
   eta?: string;
-  demandLevel?: "high" | "medium" | "low";
+  demandLevel?: 'high' | 'medium' | 'low';
 }
 
 /**
@@ -752,8 +752,8 @@ export const generateHeatmapHTML = (
   apiKey: string,
   heatmapData: HeatmapDataPoint[] = [],
   options: HeatmapOptions = {},
-  pickupIconUrl: string = "",
-  userLocation: LocationCoordinates | null = null,
+  pickupIconUrl: string = '',
+  userLocation: LocationCoordinates | null = null
 ): string => {
   const { latitude, longitude } = region;
   const { radius = 50, opacity = 0.7, showETALabels = true } = options;
@@ -913,7 +913,7 @@ export const generateHeatmapHTML = (
                   addETALabel(point);
                 }
                 `
-                    : ""
+                    : ''
                 }
               });
             }
@@ -1075,7 +1075,7 @@ export const generateHeatmapHTML = (
                 addETALabel(point);
               }
               `
-                  : ""
+                  : ''
               }
             });
           }
@@ -1131,7 +1131,7 @@ export const calculateDistance = (
   lat1: number,
   lng1: number,
   lat2: number,
-  lng2: number,
+  lng2: number
 ): number => {
   const R = 6371; // Earth's radius in kilometers
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -1151,7 +1151,7 @@ export const calculateDistance = (
  */
 export const calculateDistanceMeters = (
   prev: { lat: number; lng: number } | null,
-  curr: { lat: number; lng: number } | null,
+  curr: { lat: number; lng: number } | null
 ): number => {
   if (!prev || !curr) return Number.POSITIVE_INFINITY;
   const km = calculateDistance(prev.lat, prev.lng, curr.lat, curr.lng);
@@ -1165,7 +1165,7 @@ export const calculateDistanceMeters = (
 export const computeDeltaMetersAgainstThreshold = (
   prev: { lat: number; lng: number } | null,
   curr: { lat: number; lng: number } | null,
-  mentionedDistanceMeters: number,
+  mentionedDistanceMeters: number
 ): number => {
   const meters = calculateDistanceMeters(prev, curr);
   if (!isFinite(meters)) return Number.POSITIVE_INFINITY;
@@ -1182,13 +1182,13 @@ export const computeDeltaMetersAgainstThreshold = (
 export const calculateETA = (
   userLocation: LocationCoordinates,
   demandLocation: { lat: number; lng: number },
-  demandLevel: "high" | "medium" | "low" = "medium",
+  demandLevel: 'high' | 'medium' | 'low' = 'medium'
 ): string => {
   const distance = calculateDistance(
     userLocation.latitude,
     userLocation.longitude,
     demandLocation.lat,
-    demandLocation.lng,
+    demandLocation.lng
   );
 
   // Average speed assumptions based on demand level (traffic conditions)
@@ -1204,9 +1204,9 @@ export const calculateETA = (
 
   // Format the time
   if (timeInMinutes < 1) {
-    return "< 1 min";
+    return '< 1 min';
   } else if (timeInMinutes === 1) {
-    return "1 min";
+    return '1 min';
   } else if (timeInMinutes < 60) {
     return `${timeInMinutes} mins`;
   } else {
@@ -1215,11 +1215,11 @@ export const calculateETA = (
     const remainingMinutes = timeInMinutes % 60;
 
     if (remainingMinutes === 0) {
-      return hours === 1 ? "1hr" : `${hours}hrs`;
+      return hours === 1 ? '1hr' : `${hours}hrs`;
     } else {
-      const hourText = hours === 1 ? "1hr" : `${hours}hrs`;
+      const hourText = hours === 1 ? '1hr' : `${hours}hrs`;
       const minText =
-        remainingMinutes === 1 ? "1 min" : `${remainingMinutes} mins`;
+        remainingMinutes === 1 ? '1 min' : `${remainingMinutes} mins`;
       return `${hourText} ${minText}`;
     }
   }
@@ -1243,24 +1243,24 @@ export const calculateETA = (
 export const handleWebViewLocationMessage = (
   event: any,
   onLocationSelect: (data: LocationSelectData) => void,
-  onMapPress?: (latitude: number, longitude: number) => void,
+  onMapPress?: (latitude: number, longitude: number) => void
 ): void => {
   const log = logger();
 
   try {
     const data: WebViewMessageData = JSON.parse(event.nativeEvent.data);
-    log("WebView message received:", data);
+    log('WebView message received:', data);
 
-    if (data.type === "location_selected") {
+    if (data.type === 'location_selected') {
       // If address is provided, use it directly; otherwise, fall back to coordinates
       if (data.address) {
         log(
-          "Calling onLocationSelect with address:",
+          'Calling onLocationSelect with address:',
           data.address,
-          "placeId:",
+          'placeId:',
           data.placeId,
-          "zipCode:",
-          data.zipCode,
+          'zipCode:',
+          data.zipCode
         );
         onLocationSelect({
           address: data.address,
@@ -1272,14 +1272,14 @@ export const handleWebViewLocationMessage = (
           zipCode: data.zipCode,
         });
       } else {
-        log("Calling onMapPress with coordinates");
+        log('Calling onMapPress with coordinates');
         if (onMapPress) {
           onMapPress(data.latitude, data.longitude);
         }
       }
     }
   } catch (error) {
-    console.error("Error parsing WebView message:", error);
+    console.error('Error parsing WebView message:', error);
   }
 };
 
@@ -1295,7 +1295,7 @@ export const handleWebViewLocationMessage = (
  * @returns {string} The extracted postal code or empty string if not found
  */
 export const extractZipCodeFromAddress = (address: string): string => {
-  if (!address) return "";
+  if (!address) return '';
 
   // Common postal code patterns:
   // US: 5 digits (12345) or 5+4 (12345-6789)
@@ -1322,7 +1322,7 @@ export const extractZipCodeFromAddress = (address: string): string => {
   const ukPattern = /\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/i;
   const ukMatch = address.match(ukPattern);
   if (ukMatch) {
-    return ukMatch[0].replace(/\s+/g, "");
+    return ukMatch[0].replace(/\s+/g, '');
   }
 
   // Try generic 4-6 digit pattern
@@ -1332,7 +1332,7 @@ export const extractZipCodeFromAddress = (address: string): string => {
     return genericMatch[0];
   }
 
-  return "";
+  return '';
 };
 
 /**
@@ -1429,7 +1429,7 @@ export function filterExpiredDestinations(destinations: DesiredDestination[]): {
  * ```
  */
 export function getValidDestinations(
-  destinations: DesiredDestination[],
+  destinations: DesiredDestination[]
 ): DesiredDestination[] {
   return destinations.filter((dest) => !isDestinationExpired(dest.expired_at));
 }
@@ -1452,7 +1452,7 @@ export function formatExpirationTime(expiredAt: string): string {
   const diffMs = expiry.getTime() - now.getTime();
 
   if (diffMs <= 0) {
-    return "Expired";
+    return 'Expired';
   }
 
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -1471,29 +1471,29 @@ export function formatExpirationTime(expiredAt: string): string {
  * @returns string - Formatted date string (MM/DD/YYYY hh:mm A)
  */
 export const formatDateTimestamp = (
-  timestamp: string | number | null | undefined,
+  timestamp: string | number | null | undefined
 ): string => {
   try {
-    if (timestamp == null) return dayjs().format("MM/DD/YYYY hh:mm A");
+    if (timestamp == null) return dayjs().format('MM/DD/YYYY hh:mm A');
     // Support numeric epoch seconds or milliseconds
-    if (typeof timestamp === "number") {
+    if (typeof timestamp === 'number') {
       const ms = timestamp < 1e12 ? timestamp * 1000 : timestamp; // seconds -> ms
-      return dayjs(ms).format("MM/DD/YYYY hh:mm A");
+      return dayjs(ms).format('MM/DD/YYYY hh:mm A');
     }
     // String case: try parse numeric, else treat as ISO
     const trimmed = String(timestamp).trim();
-    if (!trimmed) return dayjs().format("MM/DD/YYYY hh:mm A");
+    if (!trimmed) return dayjs().format('MM/DD/YYYY hh:mm A');
     if (/^\d+$/.test(trimmed)) {
       const num = Number(trimmed);
       const ms = num < 1e12 ? num * 1000 : num;
-      return dayjs(ms).format("MM/DD/YYYY hh:mm A");
+      return dayjs(ms).format('MM/DD/YYYY hh:mm A');
     }
     const d = dayjs(trimmed);
     return d.isValid()
-      ? d.format("MM/DD/YYYY hh:mm A")
-      : dayjs().format("MM/DD/YYYY hh:mm A");
+      ? d.format('MM/DD/YYYY hh:mm A')
+      : dayjs().format('MM/DD/YYYY hh:mm A');
   } catch {
-    return dayjs().format("MM/DD/YYYY hh:mm A");
+    return dayjs().format('MM/DD/YYYY hh:mm A');
   }
 };
 
@@ -1506,11 +1506,11 @@ export const formatDateTimestamp = (
  * @returns boolean indicating if running on simulator
  */
 const isSimulator = (): boolean => {
-  if (Platform.OS === "ios") {
+  if (Platform.OS === 'ios') {
     return (
       !Platform.isPad &&
       !Platform.isTV &&
-      Platform.constants.systemName === "iOS Simulator"
+      Platform.constants.systemName === 'iOS Simulator'
     );
   }
   return false;
@@ -1529,36 +1529,36 @@ const isSimulator = (): boolean => {
  */
 export const openPhoneDialer = async (phoneNumber: string): Promise<void> => {
   try {
-    console.log("Attempting to open phone dialer for:", phoneNumber);
+    console.log('Attempting to open phone dialer for:', phoneNumber);
 
-    if (Platform.OS === "android") {
+    if (Platform.OS === 'android') {
       // For Android, use IntentLauncher for better compatibility
       try {
-        await IntentLauncher.startActivityAsync("android.intent.action.CALL", {
+        await IntentLauncher.startActivityAsync('android.intent.action.CALL', {
           data: `tel:${phoneNumber}`,
         });
-        console.log("Phone dialer opened via IntentLauncher");
+        console.log('Phone dialer opened via IntentLauncher');
         return;
       } catch (intentError) {
-        console.log("IntentLauncher failed, trying Linking:", intentError);
+        console.log('IntentLauncher failed, trying Linking:', intentError);
         // Fallback to Linking
         await Linking.openURL(`tel:${phoneNumber}`);
-        console.log("Phone dialer opened via Linking");
+        console.log('Phone dialer opened via Linking');
         return;
       }
     } else {
       // For iOS, use standard Linking
       await Linking.openURL(`tel:${phoneNumber}`);
-      console.log("Phone dialer opened successfully");
+      console.log('Phone dialer opened successfully');
     }
   } catch (error) {
-    console.error("Error opening phone dialer:", error);
+    console.error('Error opening phone dialer:', error);
 
     const message = isSimulator()
-      ? "Phone calls are not available in the simulator. On a real device, this would open the phone dialer with: " +
+      ? 'Phone calls are not available in the simulator. On a real device, this would open the phone dialer with: ' +
         phoneNumber
-      : "Unable to open phone dialer. Please manually dial: " + phoneNumber;
-    Alert.alert("Phone Not Available", message);
+      : 'Unable to open phone dialer. Please manually dial: ' + phoneNumber;
+    Alert.alert('Phone Not Available', message);
   }
 };
 
@@ -1575,39 +1575,39 @@ export const openPhoneDialer = async (phoneNumber: string): Promise<void> => {
  */
 export const openSMSApp = async (phoneNumber: string): Promise<void> => {
   try {
-    console.log("Attempting to open SMS app for:", phoneNumber);
+    console.log('Attempting to open SMS app for:', phoneNumber);
 
-    if (Platform.OS === "android") {
+    if (Platform.OS === 'android') {
       // For Android, use IntentLauncher for better compatibility
       try {
         await IntentLauncher.startActivityAsync(
-          "android.intent.action.SENDTO",
+          'android.intent.action.SENDTO',
           {
             data: `sms:${phoneNumber}`,
-          },
+          }
         );
-        console.log("SMS app opened via IntentLauncher");
+        console.log('SMS app opened via IntentLauncher');
         return;
       } catch (intentError) {
-        console.log("IntentLauncher failed, trying Linking:", intentError);
+        console.log('IntentLauncher failed, trying Linking:', intentError);
         // Fallback to Linking
         await Linking.openURL(`sms:${phoneNumber}`);
-        console.log("SMS app opened via Linking");
+        console.log('SMS app opened via Linking');
         return;
       }
     } else {
       // For iOS, use standard Linking
       await Linking.openURL(`sms:${phoneNumber}`);
-      console.log("SMS app opened successfully");
+      console.log('SMS app opened successfully');
     }
   } catch (error) {
-    console.error("Error opening SMS app:", error);
+    console.error('Error opening SMS app:', error);
 
     const message = isSimulator()
-      ? "SMS is not available in the simulator. On a real device, this would open the messaging app with: " +
+      ? 'SMS is not available in the simulator. On a real device, this would open the messaging app with: ' +
         phoneNumber
-      : "Unable to open SMS app. Please manually text: " + phoneNumber;
-    Alert.alert("SMS Not Available", message);
+      : 'Unable to open SMS app. Please manually text: ' + phoneNumber;
+    Alert.alert('SMS Not Available', message);
   }
 };
 
@@ -1626,7 +1626,7 @@ export const openSMSApp = async (phoneNumber: string): Promise<void> => {
 export const openWhatsApp = async (phoneNumber: string): Promise<void> => {
   try {
     // Format phone number for WhatsApp (remove any non-digit characters)
-    const formattedPhone = phoneNumber.replace(/\D/g, "");
+    const formattedPhone = phoneNumber.replace(/\D/g, '');
     const whatsappUrl = `whatsapp://send?phone=${formattedPhone}`;
 
     const canOpen = await Linking.canOpenURL(whatsappUrl);
@@ -1639,8 +1639,8 @@ export const openWhatsApp = async (phoneNumber: string): Promise<void> => {
       await Linking.openURL(whatsappWebUrl);
     }
   } catch (error) {
-    console.error("Error opening WhatsApp:", error);
-    Alert.alert("Error", "Failed to open WhatsApp");
+    console.error('Error opening WhatsApp:', error);
+    Alert.alert('Error', 'Failed to open WhatsApp');
     throw error;
   }
 };
@@ -1651,7 +1651,7 @@ export const openWhatsApp = async (phoneNumber: string): Promise<void> => {
  * @returns Duration in milliseconds, or null if expiredAt is invalid
  */
 export function calculateProgressTimerDuration(
-  expiredAt: string | Date | null | undefined,
+  expiredAt: string | Date | null | undefined
 ): number | null {
   if (!expiredAt) {
     return null;
@@ -1698,7 +1698,7 @@ export interface TransformedBidPrices {
  * // Returns: { systemSuggestedBids: [...], boostedPrices: [...] }
  */
 export const transformBidPrices = (
-  systemSuggestedPrices: Record<string, any> | null | undefined,
+  systemSuggestedPrices: Record<string, any> | null | undefined
 ): TransformedBidPrices => {
   const result: TransformedBidPrices = {
     systemSuggestedBids: [],
@@ -1707,7 +1707,7 @@ export const transformBidPrices = (
     driverPayoutPercentage: null,
   };
 
-  if (!systemSuggestedPrices || typeof systemSuggestedPrices !== "object") {
+  if (!systemSuggestedPrices || typeof systemSuggestedPrices !== 'object') {
     return result;
   }
 
@@ -1725,7 +1725,7 @@ export const transformBidPrices = (
     systemSuggestedPrices.driver_payout_percentage !== null
   ) {
     const payoutPercentage = Number(
-      systemSuggestedPrices.driver_payout_percentage,
+      systemSuggestedPrices.driver_payout_percentage
     );
     if (!isNaN(payoutPercentage)) {
       result.driverPayoutPercentage = payoutPercentage;
@@ -1811,47 +1811,47 @@ export function transformTripDetailsFromDb(dbResponse: any): any {
   // Transform customer details
   const customerDetails = trip.customerDetails
     ? {
-        customerName: trip.customerDetails.customerName || "Customer",
-        requiredCarType: trip.customerDetails.requiredCarType || "",
+        customerName: trip.customerDetails.customerName || 'Customer',
+        requiredCarType: trip.customerDetails.requiredCarType || '',
         offerPrice: trip.customerDetails.offerPrice || 0,
-        accountNumber: trip.customerDetails.accountNumber || "",
-        profileNumber: trip.customerDetails.profileNumber || "",
+        accountNumber: trip.customerDetails.accountNumber || '',
+        profileNumber: trip.customerDetails.profileNumber || '',
       }
     : {};
 
   return {
     tripId:
-      trip.tripId || trip.trip_number || trip.trips_rec_id?.toString() || "",
-    tripNumber: trip.tripNumber || trip.trip_number || "",
+      trip.tripId || trip.trip_number || trip.trips_rec_id?.toString() || '',
+    tripNumber: trip.tripNumber || trip.trip_number || '',
     dateTime,
-    rideType: trip.rideType || trip.trip_type || "ONE_WAY",
+    rideType: trip.rideType || trip.trip_type || 'ONE_WAY',
     peopleCount:
       trip.noOfPassengers ?? trip.peopleCount ?? trip.people_count ?? 1,
     rating: (() => {
       const r = trip.passengerRating ?? trip.passenger_rating ?? trip.rating;
       if (r == null) return 0;
-      if (typeof r === "number") return Number.isNaN(r) ? 0 : r;
+      if (typeof r === 'number') return Number.isNaN(r) ? 0 : r;
       const n = parseFloat(String(r).trim());
       return Number.isNaN(n) ? 0 : n;
     })(),
-    carType: trip.carType || trip.car_type || "",
+    carType: trip.carType || trip.car_type || '',
     expiredAt: trip.expiredAt || trip.expired_at || null,
     hasSpecialRequirements:
       trip.hasSpecialRequirements || trip.has_special_requirements || false,
     hasPackage: trip.hasPackage || trip.has_package || false,
     pickupTime: trip.pickupTime || trip.pickup_time || 0,
     pickupDistance: trip.pickupDistance || trip.pickup_distance || 0,
-    pickupAddress: trip.pickupAddress || trip.pickup_address || "",
+    pickupAddress: trip.pickupAddress || trip.pickup_address || '',
     scheduledPickupTime,
     dropoffTime: trip.dropoffTime || trip.dropoff_time || 0,
     dropoffDistance: trip.dropoffDistance || trip.dropoff_distance || 0,
-    dropoffAddress: trip.dropoffAddress || trip.dropoff_address || "",
+    dropoffAddress: trip.dropoffAddress || trip.dropoff_address || '',
     rideTime: trip.rideTime || trip.ride_time || 0,
     rideDistance: trip.rideDistance || trip.ride_distance || 0,
     totalPrice: trip.totalPrice || trip.total_price || 0,
     driverEarn: trip.driverEarn || trip.driver_earn || 0,
     driverInstructions:
-      trip.driverInstructions || trip.driver_instructions || "",
+      trip.driverInstructions || trip.driver_instructions || '',
     fareDetails,
     customerDetails,
   };
@@ -1866,37 +1866,37 @@ export function transformTripDetailsToJobOffer(tripDetails: any): any {
   // Format dateTime for display
   const formattedDateTime = tripDetails.dateTime
     ? formatDateTimeToReadableFormat(tripDetails.dateTime)
-    : "";
+    : '';
 
   // Transform fare details to InfoTable format
   const fareDetailsItems = tripDetails.fareDetails
     ? [
         {
-          label: "Ride Price",
+          label: 'Ride Price',
           value: `$${(tripDetails.fareDetails.ridePrice || 0).toFixed(2)}`,
         },
         {
-          label: "Tolls (EZ Pass)",
+          label: 'Tolls (EZ Pass)',
           value: `$${(tripDetails.fareDetails.tolls || 0).toFixed(2)}`,
         },
         {
-          label: "Tips",
+          label: 'Tips',
           value: `$${(tripDetails.fareDetails.tips || 0).toFixed(2)}`,
         },
         {
-          label: "Discount",
+          label: 'Discount',
           value: `$${(tripDetails.fareDetails.discount || 0).toFixed(2)}`,
         },
         {
-          label: "Service Charges",
+          label: 'Service Charges',
           value: `$${(tripDetails.fareDetails.serviceCharges || 0).toFixed(2)}`,
         },
         {
-          label: "Fuel Surcharge",
+          label: 'Fuel Surcharge',
           value: `$${(tripDetails.fareDetails.fuelSurcharge || 0).toFixed(2)}`,
         },
         {
-          label: "NYC Congestion Surcharge",
+          label: 'NYC Congestion Surcharge',
           value: `$${(
             tripDetails.fareDetails.nycCongestionSurcharge || 0
           ).toFixed(2)}`,
@@ -1908,30 +1908,30 @@ export function transformTripDetailsToJobOffer(tripDetails: any): any {
   const customerDetailsItems = tripDetails.customerDetails
     ? [
         {
-          label: "Name",
-          value: tripDetails.customerDetails.customerName || "Customer",
+          label: 'Name',
+          value: tripDetails.customerDetails.customerName || 'Customer',
         },
         {
-          label: "Required Car Type",
-          value: tripDetails.customerDetails.requiredCarType || "",
+          label: 'Required Car Type',
+          value: tripDetails.customerDetails.requiredCarType || '',
         },
         {
-          label: "Offer Price",
+          label: 'Offer Price',
           value: `$${(tripDetails.customerDetails.offerPrice || 0).toFixed(2)}`,
         },
         {
-          label: "Account No.",
-          value: tripDetails.customerDetails.accountNumber || "",
+          label: 'Account No.',
+          value: tripDetails.customerDetails.accountNumber || '',
         },
         {
-          label: "Profile No.",
-          value: tripDetails.customerDetails.profileNumber || "",
+          label: 'Profile No.',
+          value: tripDetails.customerDetails.profileNumber || '',
         },
       ]
     : [];
 
   return {
-    id: tripDetails.tripId || tripDetails.tripNumber || "",
+    id: tripDetails.tripId || tripDetails.tripNumber || '',
     dateTime: formattedDateTime,
     rideType: tripDetails.rideType,
     peopleCount: tripDetails.peopleCount,
@@ -1959,112 +1959,172 @@ export function transformTripDetailsToJobOffer(tripDetails: any): any {
   };
 }
 
+const NA = 'N/A';
+
+function displayValue(value: unknown): string {
+  if (value === null || value === undefined) return NA;
+  if (typeof value === 'string' && value.trim() === '') return NA;
+  return String(value);
+}
+
+/** Formats a numeric amount as dollar string for trip details, or NA if not a valid number. */
+function formatDollarOrNa(amount: unknown): string {
+  if (amount == null) return NA;
+  const num = Number(amount);
+  if (Number.isNaN(num)) return NA;
+  return `$${num.toFixed(2)}`;
+}
+
 /**
- * Use trip details API response directly for JobDetails (no frontend formatting).
- * API returns data already formatted (camelCase). We only ensure id/callbacks and
- * that fareDetails/customerDetails are arrays if the component expects them.
+ * Maps trip-by-number API response to JobDetails format.
+ * API shape: trip with pickup_address.street_address.full_address, dropoff_address,
+ * preferredVehicle.customer_offered_price, passenger, billing, etc.
+ * Uses "N/A" for null/undefined/empty. Safe when API omits fareDetails or nested objects.
  */
 export function tripDetailsApiResponseToJobOffer(apiData: any): any {
   if (!apiData) return null;
   const trip = apiData.trip ?? apiData;
 
-  const id =
+  const tripId =
     trip.id ??
     trip.tripId ??
     trip.trip_number ??
+    trip.trips_rec_id?.toString() ??
     trip.trip_rec_id?.toString() ??
-    "";
+    '';
 
-  // If API already sends arrays, use as-is; otherwise build from objects for JobDetails
-  const fareDetails = Array.isArray(trip.fareDetails)
-    ? trip.fareDetails
-    : trip.fareDetails && typeof trip.fareDetails === "object"
-      ? [
-          {
-            label: "Ride Price",
-            value: `$${Number(trip.fareDetails.ridePrice ?? 0).toFixed(2)}`,
-          },
-          {
-            label: "Tolls (EZ Pass)",
-            value: `$${Number(trip.fareDetails.tolls ?? 0).toFixed(2)}`,
-          },
-          {
-            label: "Tips",
-            value: `$${Number(trip.fareDetails.tips ?? 0).toFixed(2)}`,
-          },
-          {
-            label: "Discount",
-            value: `$${Number(trip.fareDetails.discount ?? 0).toFixed(2)}`,
-          },
-          {
-            label: "Service Charges",
-            value: `$${Number(trip.fareDetails.serviceCharges ?? 0).toFixed(2)}`,
-          },
-          {
-            label: "Fuel Surcharge",
-            value: `$${Number(trip.fareDetails.fuelSurcharge ?? 0).toFixed(2)}`,
-          },
-          {
-            label: "NYC Congestion Surcharge",
-            value: `$${Number(
-              trip.fareDetails.nycCongestionSurcharge ?? 0,
-            ).toFixed(2)}`,
-          },
-        ]
-      : [];
+  const pickupStreetAddress =
+    trip.pickupAddress ??
+    trip.pickup_address?.street_address?.full_address ??
+    null;
+  const dropoffStreetAddress =
+    trip.dropoffAddress ??
+    trip.dropoff_address?.street_address?.full_address ??
+    null;
 
-  const customerDetails = Array.isArray(trip.customerDetails)
-    ? trip.customerDetails
-    : trip.customerDetails && typeof trip.customerDetails === "object"
-      ? [
-          {
-            label: "Name",
-            value: trip.customerDetails.customerName ?? "Customer",
-          },
-          {
-            label: "Required Car Type",
-            value: trip.customerDetails.requiredCarType ?? "",
-          },
-          {
-            label: "Offer Price",
-            value: `$${Number(trip.customerDetails.offerPrice ?? 0).toFixed(2)}`,
-          },
-          {
-            label: "Account No.",
-            value: trip.customerDetails.accountNumber ?? "",
-          },
-          {
-            label: "Profile No.",
-            value: trip.customerDetails.profileNumber ?? "",
-          },
-        ]
-      : [];
+  const customerOfferedPrice =
+    trip.offered_amount ??
+    trip.preferredVehicle?.customer_offered_price ??
+    trip.customer_offered_price ??
+    null;
+  const fareBreakdown = trip.fareDetails;
 
-  const dateTime = trip.dateTime
-    ? formatDateTimeToReadableFormat(trip.dateTime)
-    : "";
+  const ridePriceAmount =
+    fareBreakdown?.ridePrice ?? customerOfferedPrice ?? null;
 
-  const peopleCount =
-    trip.noOfPassengers ?? trip.peopleCount ?? trip.people_count ?? 1;
-  const rating = (() => {
-    const r = trip.passengerRating ?? trip.passenger_rating ?? trip.rating;
-    if (r == null) return 0;
-    if (typeof r === "number") return Number.isNaN(r) ? 0 : r;
-    const n = parseFloat(String(r).trim());
-    return Number.isNaN(n) ? 0 : n;
+  const fareDetailsRows = [
+    { label: 'Ride Price', value: formatDollarOrNa(ridePriceAmount) },
+    { label: 'Tolls (EZ Pass)', value: formatDollarOrNa(fareBreakdown?.tolls) },
+    { label: 'Tips', value: formatDollarOrNa(fareBreakdown?.tips) },
+    { label: 'Discount', value: formatDollarOrNa(fareBreakdown?.discount) },
+    {
+      label: 'Service Charges',
+      value: formatDollarOrNa(fareBreakdown?.serviceCharges),
+    },
+    {
+      label: 'Fuel Surcharge',
+      value: formatDollarOrNa(fareBreakdown?.fuelSurcharge),
+    },
+    {
+      label: 'NYC Congestion Surcharge',
+      value: formatDollarOrNa(fareBreakdown?.nycCongestionSurcharge),
+    },
+  ];
+
+  const passengerFirst = trip.passenger?.firstName ?? '';
+  const passengerLast = trip.passenger?.lastName ?? '';
+  const passengerFullName =
+    [passengerFirst, passengerLast].filter(Boolean).join(' ') || null;
+  const requiredCarType =
+    trip.preferredVehicle?.vehicle_class_name ??
+    trip.requested_car_type ??
+    trip.trip_service_type ??
+    null;
+  const creditCardFromBilling = trip.billing?.prepaid?.credit_card;
+  const accountOrCardDisplay = creditCardFromBilling?.credit_card_last_4_digits
+    ? `****${creditCardFromBilling.credit_card_last_4_digits}`
+    : creditCardFromBilling?.credit_card_number ?? null;
+  const profileNumber =
+    trip.customer?.profileNumber ?? trip.passenger?.profileNumber ?? null;
+
+  const customerDetailsRows = [
+    { label: 'Name', value: displayValue(passengerFullName) },
+    { label: 'Required Car Type', value: displayValue(requiredCarType) },
+    { label: 'Offer Price', value: formatDollarOrNa(customerOfferedPrice) },
+    { label: 'Account No.', value: displayValue(accountOrCardDisplay) },
+    { label: 'Profile No.', value: displayValue(profileNumber) },
+  ];
+
+  const tripCreatedAt = trip.created_at ?? trip.dateTime ?? null;
+  const formattedDateTime = tripCreatedAt
+    ? formatDateTimeToReadableFormat(tripCreatedAt)
+    : NA;
+
+  const numberOfPassengers =
+    trip.no_of_passengers ?? trip.number_of_passengers ?? 1;
+
+  const passengerRatingRaw =
+    trip.passenger_rating ?? trip.passengerRating ?? trip.rating;
+  const passengerRatingNumber = (() => {
+    if (passengerRatingRaw == null) return 0;
+    if (typeof passengerRatingRaw === 'number')
+      return Number.isNaN(passengerRatingRaw) ? 0 : passengerRatingRaw;
+    const parsed = parseFloat(String(passengerRatingRaw).trim());
+    return Number.isNaN(parsed) ? 0 : parsed;
   })();
 
+  const driverInstructionsText =
+    trip.driverInstructions ?? trip.driver_instructions ?? null;
+  const rideTypeDisplay = trip.rideType ?? trip.trip_type ?? undefined;
+
+  const hasSpecialRequirements = trip?.has_trip_options ?? false;
+
+  const hasPackage = trip?.is_package_pickup ?? false;
+
+  const driveTimeMinutes =
+    trip.drive_time ?? trip.rideTime ?? trip.ride_time ?? null;
+  const driveDistanceMiles =
+    trip.drive_distance ?? trip.rideDistance ?? trip.ride_distance ?? null;
+
+  const carTypeDisplay =
+    trip.carType ??
+    trip.preferredVehicle?.vehicle_class_name ??
+    trip.requested_car_type ??
+    trip.trip_service_type ??
+    undefined;
+    
+  const driverEarn = calculateDriverEarn(
+    customerOfferedPrice,
+    trip?.driver_final_payout
+  );
+
   return {
-    ...trip,
-    id,
-    dateTime,
-    peopleCount,
-    rating,
-    fareDetails,
-    customerDetails,
+    id: tripId,
+    dateTime: formattedDateTime,
+    rideType: rideTypeDisplay,
+    peopleCount: numberOfPassengers,
+    rating: passengerRatingNumber,
+    hasSpecialRequirements,
     onPressSpecialRequirements: trip.onPressSpecialRequirements ?? (() => {}),
+    hasPackage,
     onPressPackage: trip.onPressPackage ?? (() => {}),
+    pickupTime: undefined, // this will be set in the trip details screen and from the actual offer data coming from the socket
+    pickupDistance: undefined, // this will be set in the trip details screen and from the actual offer data coming from the socket
+    pickupAddress: displayValue(pickupStreetAddress),
+    dropoffTime: undefined, // this will be set in the trip details screen and from the actual offer data coming from the socket
+    dropoffDistance: undefined, // this will be set in the trip details screen and from the actual offer data coming from the socket
+    dropoffAddress: displayValue(dropoffStreetAddress),
+    rideTime: driveTimeMinutes != null ? Number(driveTimeMinutes) : undefined,
+    rideDistance:
+      driveDistanceMiles != null ? Number(driveDistanceMiles) : undefined,
+    totalPrice:
+      customerOfferedPrice != null ? Number(customerOfferedPrice) : undefined,
+    driverEarn: driverEarn,
+    driverInstructions: displayValue(driverInstructionsText),
+    fareDetails: fareDetailsRows,
+    customerDetails: customerDetailsRows,
     showActionBar: false,
+    carType: carTypeDisplay,
   };
 }
 
@@ -2072,7 +2132,7 @@ export function tripDetailsApiResponseToJobOffer(apiData: any): any {
  * Transform trip details to feedback screen fare summary format
  */
 export function transformTripDetailsToFareSummary(
-  tripDetails: any,
+  tripDetails: any
 ): Array<{ label: string; value: string }> {
   if (!tripDetails || !tripDetails.fareDetails) {
     return [];
@@ -2080,19 +2140,19 @@ export function transformTripDetailsToFareSummary(
 
   const fare = tripDetails.fareDetails;
   return [
-    { label: "Ride Price", value: `$${(fare.ridePrice || 0).toFixed(2)}` },
-    { label: "Tolls", value: `$${(fare.tolls || 0).toFixed(2)}` },
-    { label: "Discount", value: `$${(fare.discount || 0).toFixed(2)}` },
+    { label: 'Ride Price', value: `$${(fare.ridePrice || 0).toFixed(2)}` },
+    { label: 'Tolls', value: `$${(fare.tolls || 0).toFixed(2)}` },
+    { label: 'Discount', value: `$${(fare.discount || 0).toFixed(2)}` },
     {
-      label: "UnBilled Tolls",
+      label: 'UnBilled Tolls',
       value: `$${(fare.unbilledTolls || 0).toFixed(2)}`,
     },
     {
-      label: "Extra Wait Time",
+      label: 'Extra Wait Time',
       value: `$${(fare.extraWaitTime || 0).toFixed(2)}`,
     },
     {
-      label: "Additional Stops",
+      label: 'Additional Stops',
       value: `$${(fare.additionalStops || 0).toFixed(2)}`,
     },
   ];
@@ -2104,12 +2164,12 @@ export function transformTripDetailsToFareSummary(
  * Returns 0 if the driver ID is invalid or cannot be converted.
  */
 export function getNumericDriverId(
-  driverId: string | number | undefined,
+  driverId: string | number | undefined
 ): number {
   if (!driverId) {
     return 0;
   }
-  if (typeof driverId === "number") {
+  if (typeof driverId === 'number') {
     return driverId;
   }
   const driverIdStr = String(driverId);
@@ -2123,10 +2183,10 @@ export function getNumericDriverId(
  * Used to compute adjusted bid amount from offer price, e.g. $55 + 5% = $57.75.
  */
 export function getPercentFromAutoBidStrategy(
-  value: number | string | null | undefined,
+  value: number | string | null | undefined
 ): number {
-  if (value == null || value === "") return 0;
-  if (typeof value === "number" && !Number.isNaN(value)) return value;
+  if (value == null || value === '') return 0;
+  if (typeof value === 'number' && !Number.isNaN(value)) return value;
   const n = parseInt(String(value).trim(), 10);
   return Number.isNaN(n) ? 0 : n;
 }
@@ -2137,27 +2197,48 @@ export function getPercentFromAutoBidStrategy(
  * @returns The formatted date string (e.g., "Wednesday, February 4, 2026 10:00 AM")
  */
 export function formatDateTimeToReadableFormat(
-  dateString: string | Date,
+  dateString: string | Date
 ): string {
-  if (!dateString) return "";
-  if (typeof dateString === "string") {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
+  if (!dateString) return '';
+  if (typeof dateString === 'string') {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
       hour12: true,
     });
   }
-  return dateString.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+  return dateString.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
     hour12: true,
   });
+}
+
+/**
+ * Calculate the driver earn from the fare and deduction percent
+ * @param fare - The fare amount
+ * @param deductionPercent - The deduction percent
+ * @returns The driver earn amount
+ */
+export function calculateDriverEarn(
+  fare: number,
+  deductionPercent: number
+): number {
+  if (
+    Number.isFinite(fare) &&
+    deductionPercent != null &&
+    Number.isFinite(deductionPercent)
+  ) {
+    const driverShare = (100 - deductionPercent) / 100;
+    return Math.round(fare * driverShare * 100) / 100;
+  }
+  return 0;
 }

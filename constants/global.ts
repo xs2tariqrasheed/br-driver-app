@@ -54,7 +54,7 @@ export const RIDE_TOGGLE_LABELS = {
 // Previous location storage key (used for online location posting)
 export const PREVIOUS_LOCATION_STORAGE_KEY = "@previous_location";
 // Offer timeout (in milliseconds) - matches backend OFFER_TIMEOUT
-export const OFFER_TIMEOUT = 20000; // 20 seconds
+export const OFFER_TIMEOUT = 120000; // 2 minutes
 // Threshold in meters before re-posting location
 export const MENTIONED_DISTANCE = 10;
 // Interval (ms) for posting driver's online location
@@ -273,9 +273,9 @@ export const EMPTY_STATE_MESSAGES = {
 
 // Bid Waiting Timer
 // Duration for the bid waiting timer in milliseconds
-// Default: 60 seconds - matches backend CUSTOMER_BID_RESPONSE_TIMEOUT
-// This ensures driver timer matches the actual backend timeout for customer bid response
-export const BID_WAITING_TIMER_DURATION_MS = 60000; // 60 seconds
+// Default: 30 seconds - matches backend CUSTOMER_BID_RESPONSE_TIMEOUT
+// This ensures driver timer matches the backend timeout for customer bid response
+export const BID_WAITING_TIMER_DURATION_MS = 30000; // 30 seconds
 
 // Bid Status Types
 export const BID_STATUS = {
@@ -463,7 +463,7 @@ export const NETWORK_MONITORING = {
 export type NetworkQuality =
   (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];
 
-const BASE_URL = "http://192.168.1.5";
+const BASE_URL = "http://192.168.100.58";
 // Testing purpose constant for all the services
 // When IS_TESTING is true, these URLs will be used instead of environment variables
 // All URLs should include the http:// protocol prefix for local testing

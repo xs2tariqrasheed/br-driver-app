@@ -1,4 +1,4 @@
-import { CAR_TYPE, OFFER_TIMEOUT, RIDE_TYPES } from "@/constants/global";
+import { CAR_TYPE, OFFER_TIMEOUT, RIDE_TYPES } from '@/constants/global';
 
 /**
  * Server socket data structure from terminal output
@@ -12,13 +12,14 @@ interface ServerSocketData {
     pickup: { lat: number; lng: number; address?: string };
     dropoff: { lat: number; lng: number; address?: string };
     biddable: boolean;
-    type: "sequential" | "broadcast";
+    type: 'sequential' | 'broadcast';
     fare?: number;
+    driverPayoutAmount?: number;
     timestamp?: number;
-    for?: "io" | "hired";
-    tripType?: "ONE_WAY" | "ROUND_TRIP" | "HOURLY";
-    tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE";
-    serviceType?: "ECONOMY_LITE" | "ECONOMY" | "SEDAN" | "SUV";
+    for?: 'io' | 'hired';
+    tripType?: 'ONE_WAY' | 'ROUND_TRIP' | 'HOURLY';
+    tripCategory?: 'INDIVIDUAL' | 'FOOD' | 'PACKAGE';
+    serviceType?: 'ECONOMY_LITE' | 'ECONOMY' | 'SEDAN' | 'SUV';
     /** Passenger count (1–5) and rating ("1.0" to "5.0") from API/socket */
     noOfPassengers?: number;
     passengerRating?: string;
@@ -34,90 +35,6 @@ interface ServerSocketData {
 }
 
 /**
- * Frontend data structure for trip offers
- */
-export interface FormattedTripOffer {
-  tripId: string;
-  customerId: string;
-  driverId?: string; // Will be set per driver during distribution
-  pickup: {
-    lat: number;
-    lng: number;
-  };
-  dropoff: {
-    lat: number;
-    lng: number;
-  };
-  fare: number;
-  biddable: boolean;
-  type: "sequential" | "broadcast";
-
-  // Comprehensive ride details for frontend
-  rideDetails: {
-    id: string;
-    rideType: (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES]; // Value type: "one-way" | "round-trip" | "hourly"
-    peopleCount: number;
-    rating: number;
-    hasSpecialRequirements: boolean;
-    hasPackage: boolean;
-    pickupTime: number; // Minutes to reach pickup point
-    pickupDistance: number; // Miles
-    pickupAddress: string;
-    dropoffTime: number; // Minutes
-    dropoffDistance: number; // Miles
-    dropoffAddress: string;
-    rideTime: number; // Total ride time in minutes
-    rideDistance: number; // Total ride distance in miles
-    totalPrice: number;
-    driverEarn: number; // 80% of total price
-    carType: string;
-    created_at: string;
-    driverInstructions: string;
-    expiredAt: string | Date | null;
-  };
-
-  specialRequirements: {
-    totalPassengers: string;
-    totalBags: string;
-    hasPets: boolean;
-    needWheelchair: boolean;
-    childSeat: {
-      infantCount: string;
-      toddlerCount: string;
-      boosterCount: string;
-    };
-    isArmed: boolean;
-    language: string;
-  };
-
-  packageInfo: {
-    totalPackages: string;
-    weight: string;
-    phoneNumber: string;
-    recipientName: string;
-    instructions: string;
-  };
-
-  fareDetails: {
-    ridePrice: string;
-    tollsPrice: string;
-    tips: string;
-    discount: string;
-    serviceCharges: string;
-    fuelSurcharge: string;
-    NYCCongestionSurcharge: string;
-  };
-
-  customerDetails: {
-    name: string;
-    carType: string;
-    offerPrice: string;
-    accountNumber: string;
-    profileNumber: string;
-  };
-}
-
-/**
  * Default values for missing data
  */
 const DEFAULT_VALUES = {
@@ -129,72 +46,65 @@ const DEFAULT_VALUES = {
   hasPackage: false,
   pickupTime: 5,
   pickupDistance: 0.8,
-  pickupAddress: "123 Main St, New York, NY 10001",
+  pickupAddress: '123 Main St, New York, NY 10001',
   dropoffTime: 15,
   dropoffDistance: 3.2,
-  dropoffAddress: "456 Broadway, New York, NY 10013",
+  dropoffAddress: '456 Broadway, New York, NY 10013',
   rideTime: 20,
   rideDistance: 4.0,
-  carType: "Sedan",
-  driverInstructions: "Please call customer when you arrive",
+  carType: 'Sedan',
+  driverInstructions: 'Please call customer when you arrive',
 
   // Special requirements defaults
   specialRequirements: {
-    totalPassengers: "2",
-    totalBags: "1",
+    totalPassengers: '2',
+    totalBags: '1',
     hasPets: false,
     needWheelchair: false,
     childSeat: {
-      infantCount: "0",
-      toddlerCount: "0",
-      boosterCount: "0",
+      infantCount: '0',
+      toddlerCount: '0',
+      boosterCount: '0',
     },
     isArmed: false,
-    language: "English",
+    language: 'English',
   },
 
   // Package info defaults
   packageInfo: {
-    totalPackages: "0",
-    weight: "0",
-    phoneNumber: "+1-555-0123",
-    recipientName: "John Doe",
-    instructions: "Leave at front door",
+    totalPackages: '0',
+    weight: '0',
+    phoneNumber: '+1-555-0123',
+    recipientName: 'John Doe',
+    instructions: 'Leave at front door',
   },
 
   // Fare details defaults
   fareDetails: {
-    ridePrice: "0",
-    tollsPrice: "2.50",
-    tips: "0.00",
-    discount: "0.00",
-    serviceCharges: "1.50",
-    fuelSurcharge: "1.00",
-    NYCCongestionSurcharge: "2.75",
+    ridePrice: '0',
+    tollsPrice: '2.50',
+    tips: '0.00',
+    discount: '0.00',
+    serviceCharges: '1.50',
+    fuelSurcharge: '1.00',
+    NYCCongestionSurcharge: '2.75',
   },
 
   // Customer details defaults
   customerDetails: {
-    name: "John Smith",
-    carType: "Sedan",
-    offerPrice: "0",
-    accountNumber: "123456789",
-    profileNumber: "987654321",
+    name: 'John Smith',
+    carType: 'Sedan',
+    offerPrice: '0',
+    accountNumber: '123456789',
+    profileNumber: '987654321',
   },
 };
 
 /**
- * Helper function to calculate driver earnings (80% of total price)
- */
-function calculateDriverEarn(totalPrice: number): number {
-  return Math.round(totalPrice * 0.8);
-}
-
-/**
  * Helper function to format fare as string with 2 decimal places
  */
-function formatFare(fare: number): string {
-  return fare.toFixed(2);
+function formatNumberTo2DecimalPlaces(number: number): string | undefined {
+  return number != null ? number.toFixed(2) : undefined;
 }
 
 /**
@@ -203,13 +113,13 @@ function formatFare(fare: number): string {
 function generateAddressFromCoordinates(
   lat: number,
   lng: number,
-  type: "pickup" | "dropoff"
+  type: 'pickup' | 'dropoff'
 ): string {
   // This is a simplified version - in production, you'd use reverse geocoding
   const baseAddress =
-    type === "pickup"
-      ? "123 Main St, New York, NY 10001"
-      : "456 Broadway, New York, NY 10013";
+    type === 'pickup'
+      ? '123 Main St, New York, NY 10001'
+      : '456 Broadway, New York, NY 10013';
 
   // Add some variation based on coordinates
   const variation = Math.abs(lat + lng) % 1000;
@@ -220,7 +130,7 @@ function generateAddressFromCoordinates(
  * Maps backend tripType to frontend RIDE_TYPES values
  */
 function mapTripType(
-  backendTripType?: "ONE_WAY" | "ROUND_TRIP" | "HOURLY"
+  backendTripType?: 'ONE_WAY' | 'ROUND_TRIP' | 'HOURLY'
 ): (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES] {
   if (!backendTripType) {
     return DEFAULT_VALUES.rideType;
@@ -229,7 +139,7 @@ function mapTripType(
   // Map backend enum values to frontend RIDE_TYPES values (not keys)
   // Component expects: "one-way" | "round-trip" | "hourly"
   const mapping: Record<
-    "ONE_WAY" | "ROUND_TRIP" | "HOURLY",
+    'ONE_WAY' | 'ROUND_TRIP' | 'HOURLY',
     (typeof RIDE_TYPES)[keyof typeof RIDE_TYPES]
   > = {
     ONE_WAY: RIDE_TYPES.ONE_WAY, // "one-way"
@@ -245,7 +155,7 @@ function mapTripType(
  * Handles case-insensitive matching for flexibility
  */
 function mapServiceType(
-  backendServiceType?: "ECONOMY_LITE" | "ECONOMY" | "SEDAN" | "SUV" | string
+  backendServiceType?: 'ECONOMY_LITE' | 'ECONOMY' | 'SEDAN' | 'SUV' | string
 ): string {
   if (!backendServiceType) {
     return DEFAULT_VALUES.carType;
@@ -269,7 +179,7 @@ function mapServiceType(
  * Handles case-insensitive matching
  */
 function hasPackageFromCategory(
-  tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE" | string
+  tripCategory?: 'INDIVIDUAL' | 'FOOD' | 'PACKAGE' | string
 ): boolean {
   if (!tripCategory) {
     return false;
@@ -277,7 +187,7 @@ function hasPackageFromCategory(
 
   // Normalize to uppercase for case-insensitive matching
   const normalized = tripCategory.toUpperCase().trim();
-  return normalized === "FOOD" || normalized === "PACKAGE";
+  return normalized === 'FOOD' || normalized === 'PACKAGE';
 }
 
 /**
@@ -285,7 +195,7 @@ function hasPackageFromCategory(
  * Special requirements might be needed for FOOD or PACKAGE deliveries
  */
 function hasSpecialRequirementsFromCategory(
-  tripCategory?: "INDIVIDUAL" | "FOOD" | "PACKAGE" | string
+  tripCategory?: 'INDIVIDUAL' | 'FOOD' | 'PACKAGE' | string
 ): boolean {
   if (!tripCategory) {
     return DEFAULT_VALUES.hasSpecialRequirements;
@@ -293,10 +203,10 @@ function hasSpecialRequirementsFromCategory(
 
   // Normalize to uppercase for case-insensitive matching
   const normalized = tripCategory.toUpperCase().trim();
-  
+
   // FOOD and PACKAGE deliveries might have special requirements
   // You can adjust this logic based on your business rules
-  return normalized === "FOOD" || normalized === "PACKAGE";
+  return normalized === 'FOOD' || normalized === 'PACKAGE';
 }
 
 /**
@@ -309,16 +219,17 @@ function hasSpecialRequirementsFromCategory(
 export function formatSocketDataToTripOffer(
   serverData: ServerSocketData,
   driverId?: string
-): FormattedTripOffer {
+): any {
   const { tripOffer, timeout, timestamp } = serverData;
 
   // Determine offer type - use the type directly from the backend
-  const offerType = tripOffer.type as "sequential" | "broadcast";
+  const offerType = tripOffer.type as 'sequential' | 'broadcast';
 
   // Calculate derived values - handle optional fare
-  const fare = tripOffer.fare || 0;
-  const driverEarn = calculateDriverEarn(fare);
-  const formattedFare = formatFare(fare);
+  const formattedFare = formatNumberTo2DecimalPlaces(tripOffer?.fare ?? 0);
+  const driverEarn =
+    formatNumberTo2DecimalPlaces(tripOffer?.driverPayoutAmount ?? 0) ??
+    formattedFare;
 
   // Use server addresses if available, otherwise generate from coordinates
   const pickupAddress =
@@ -326,36 +237,40 @@ export function formatSocketDataToTripOffer(
     generateAddressFromCoordinates(
       tripOffer.pickup.lat,
       tripOffer.pickup.lng,
-      "pickup"
+      'pickup'
     );
   const dropoffAddress =
     tripOffer.dropoff.address ||
     generateAddressFromCoordinates(
       tripOffer.dropoff.lat,
       tripOffer.dropoff.lng,
-      "dropoff"
+      'dropoff'
     );
 
   // Map backend fields to frontend values
   const rideType = mapTripType(tripOffer.tripType);
   const carType = mapServiceType(tripOffer.serviceType);
   const hasPackage = hasPackageFromCategory(tripOffer.tripCategory);
-  const hasSpecialRequirements = hasSpecialRequirementsFromCategory(tripOffer.tripCategory);
+  const hasSpecialRequirements = hasSpecialRequirementsFromCategory(
+    tripOffer.tripCategory
+  );
 
   // Calculate expiration time using actual timeout from server (in milliseconds)
   // Use server timestamp if available, otherwise use current time
-  const serverTimestamp = timestamp ? new Date(timestamp).getTime() : Date.now();
+  const serverTimestamp = timestamp
+    ? new Date(timestamp).getTime()
+    : Date.now();
   const expirationTime = serverTimestamp + (timeout || OFFER_TIMEOUT);
 
   // Debug logging
-  console.log("[formatSocketDataToTripOffer] Backend data:", {
+  console.log('[formatSocketDataToTripOffer] Backend data:', {
     tripType: tripOffer.tripType,
     serviceType: tripOffer.serviceType,
     tripCategory: tripOffer.tripCategory,
     timeout,
     timestamp,
   });
-  console.log("[formatSocketDataToTripOffer] Mapped values:", {
+  console.log('[formatSocketDataToTripOffer] Mapped values:', {
     rideType,
     carType,
     hasPackage,
@@ -376,7 +291,7 @@ export function formatSocketDataToTripOffer(
       lat: tripOffer.dropoff.lat,
       lng: tripOffer.dropoff.lng,
     },
-    fare: fare,
+    fare: formattedFare,
     biddable: tripOffer.biddable,
     type: offerType,
 
@@ -384,11 +299,10 @@ export function formatSocketDataToTripOffer(
     rideDetails: {
       id: tripOffer.tripId,
       rideType: rideType,
-      peopleCount:
-        tripOffer.noOfPassengers ?? DEFAULT_VALUES.peopleCount,
+      peopleCount: tripOffer.noOfPassengers ?? DEFAULT_VALUES.peopleCount,
       rating: (() => {
         const r = tripOffer.passengerRating;
-        if (r == null || r === "") return DEFAULT_VALUES.rating;
+        if (r == null || r === '') return DEFAULT_VALUES.rating;
         const n = parseFloat(String(r).trim());
         return Number.isNaN(n) ? DEFAULT_VALUES.rating : n;
       })(),
@@ -398,11 +312,12 @@ export function formatSocketDataToTripOffer(
       pickupDistance: tripOffer.pickupDistance ?? DEFAULT_VALUES.pickupDistance,
       pickupAddress,
       dropoffTime: tripOffer.dropoffTime ?? DEFAULT_VALUES.dropoffTime,
-      dropoffDistance: tripOffer.dropoffDistance ?? DEFAULT_VALUES.dropoffDistance,
+      dropoffDistance:
+        tripOffer.dropoffDistance ?? DEFAULT_VALUES.dropoffDistance,
       dropoffAddress,
       rideTime: tripOffer.rideTime ?? DEFAULT_VALUES.rideTime,
       rideDistance: tripOffer.rideDistance ?? DEFAULT_VALUES.rideDistance,
-      totalPrice: fare,
+      totalPrice: formattedFare,
       driverEarn,
       carType: carType,
       created_at: tripOffer.timestamp
@@ -446,7 +361,7 @@ export function formatSocketDataToRideOffer(
     // Basic ride offer info
     id: formattedTripOffer.tripId,
     type: formattedTripOffer.type as any,
-    status: "offered" as const,
+    status: 'offered' as const,
     bidable: formattedTripOffer.biddable,
 
     // Trip offer details
@@ -459,7 +374,7 @@ export function formatSocketDataToRideOffer(
       type: formattedTripOffer.type,
       fare: formattedTripOffer.fare,
       timestamp: serverData.tripOffer.timestamp || Date.now(),
-      for: (serverData.tripOffer.for || "io") as "io" | "hired",
+      for: (serverData.tripOffer.for || 'io') as 'io' | 'hired',
       tripType: serverData.tripOffer.tripType,
       tripCategory: serverData.tripOffer.tripCategory,
       serviceType: serverData.tripOffer.serviceType,
@@ -493,7 +408,7 @@ export function formatSocketDataToRideOffer(
     driverEarn: formattedTripOffer.rideDetails.driverEarn,
 
     // Button details
-    buttonTitle: formattedTripOffer.biddable ? "Bid" : "Accept",
+    buttonTitle: formattedTripOffer.biddable ? 'Bid' : 'Accept',
 
     // Timestamps
     timestamp: serverData.timestamp,
@@ -512,11 +427,16 @@ export function formatSocketDataToBroadcastOffer(
 ) {
   const formattedTripOffer = formatSocketDataToTripOffer(serverData, driverId);
 
+  console.log(
+    '📡 Formatted trip offer:',
+    JSON.stringify(formattedTripOffer, null, 2)
+  );
+
   return {
     // Basic job offer info
     id: formattedTripOffer.tripId,
     type: formattedTripOffer.type as any,
-    status: "offered" as const,
+    status: 'offered' as const,
     bidable: formattedTripOffer.biddable,
 
     // Trip offer details
@@ -529,7 +449,7 @@ export function formatSocketDataToBroadcastOffer(
       type: formattedTripOffer.type,
       fare: formattedTripOffer.fare,
       timestamp: serverData.tripOffer.timestamp || Date.now(),
-      for: (serverData.tripOffer.for || "io") as "io" | "hired",
+      for: (serverData.tripOffer.for || 'io') as 'io' | 'hired',
       tripType: serverData.tripOffer.tripType,
       tripCategory: serverData.tripOffer.tripCategory,
       serviceType: serverData.tripOffer.serviceType,
@@ -563,7 +483,7 @@ export function formatSocketDataToBroadcastOffer(
     driverEarn: formattedTripOffer.rideDetails.driverEarn,
 
     // Button details
-    buttonTitle: formattedTripOffer.biddable ? "Bid" : "Accept",
+    buttonTitle: formattedTripOffer.biddable ? 'Bid' : 'Accept',
 
     // Timestamps
     timestamp: serverData.timestamp,

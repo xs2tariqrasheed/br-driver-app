@@ -1,21 +1,21 @@
-import { textColors } from "@/constants/colors";
-import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
+import { textColors } from '@/constants/colors';
+import { LIVE_JOB_ENDPOINTS } from '@/constants/endpoints';
 import {
   API_CLIENT_TYPES,
   ETA_BUFFER_MINUTES_MAX,
   ETA_BUFFER_MINUTES_MIN,
-} from "@/constants/global";
+} from '@/constants/global';
 
-import { BID_BOTTOM_SHEET_CONTENT_KEYS } from "@/content/components/bid-bottom-sheet-keys";
-import { useSettings } from "@/context/SettingsContext";
-import { useFetch } from "@/hooks/useFetch";
-import { useGetContent } from "@/hooks/useGetContent";
+import { BID_BOTTOM_SHEET_CONTENT_KEYS } from '@/content/components/bid-bottom-sheet-keys';
+import { useSettings } from '@/context/SettingsContext';
+import { useFetch } from '@/hooks/useFetch';
+import { useGetContent } from '@/hooks/useGetContent';
 import {
   getPercentFromAutoBidStrategy,
   SystemSuggestedBid,
   transformBidPrices,
-} from "@/utils/helpers";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+} from '@/utils/helpers';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -25,16 +25,16 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import Button from "../Button";
-import Counter from "../Counter";
-import Divider from "../Divider";
-import Toggle from "../Form/Toggle";
-import SkeletonLoader from "../Loader/SkeletonLoader";
-import Typography from "../Typography";
+} from 'react-native';
+import Button from '../Button';
+import Counter from '../Counter';
+import Divider from '../Divider';
+import Toggle from '../Form/Toggle';
+import SkeletonLoader from '../Loader/SkeletonLoader';
+import Typography from '../Typography';
 
 export interface BidData {
-  amount: number;
+  amount: number | string;
   bosstedAmount: number;
   driverEarn: number;
   numberOfBids: number;
@@ -70,14 +70,23 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
   isLoading = false,
 }) => {
   const {
-    amount,
+    amount: rawAmount,
     systemEta,
     systemSuggestedBids: initialSystemSuggestedBids,
     boostedPrices: initialBoostedPrices,
     numberOfBids,
   } = bid;
 
-  const { height: screenHeight } = Dimensions.get("window");
+  // Ensure amount is always a number (backend/parent may send "30.00" as string)
+  const amount =
+    typeof rawAmount === 'number'
+      ? rawAmount
+      : (() => {
+          const parsed = parseFloat(String(rawAmount));
+          return Number.isFinite(parsed) ? parsed : 0;
+        })();
+
+  const { height: screenHeight } = Dimensions.get('window');
   const MAX_HEIGHT = screenHeight * 0.95;
 
   // Get content
@@ -95,13 +104,13 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
     return {
       headerTitle: get(BID_BOTTOM_SHEET_CONTENT_KEYS.HEADER_TITLE),
       sectionAdjustPrice: get(
-        BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ADJUST_PRICE,
+        BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ADJUST_PRICE
       ),
       sectionEtaLabel: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ETA_LABEL),
       sectionEtaSuffix: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_ETA_SUFFIX),
       sectionBoostLabel: get(BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_BOOST_LABEL),
       sectionBoostSuffix: get(
-        BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_BOOST_SUFFIX,
+        BID_BOTTOM_SHEET_CONTENT_KEYS.SECTION_BOOST_SUFFIX
       ),
       actionSubmit: get(BID_BOTTOM_SHEET_CONTENT_KEYS.ACTION_SUBMIT),
     };
@@ -110,7 +119,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
   // Fetch system suggested bid prices
   const { execute: fetchBidPrices, loading: isLoadingPrices } = useFetch(
     LIVE_JOB_ENDPOINTS.getSystemSuggestedBidPrices,
-    API_CLIENT_TYPES.AUCTION,
+    API_CLIENT_TYPES.AUCTION
   );
 
   // State for fetched prices
@@ -146,7 +155,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
       const etaMinutes = settings.etaBufferMinutes ?? 0;
       const etaVal = Math.min(
         ETA_BUFFER_MINUTES_MAX,
-        Math.max(ETA_BUFFER_MINUTES_MIN, systemEta + etaMinutes),
+        Math.max(ETA_BUFFER_MINUTES_MIN, systemEta + etaMinutes)
       );
       setEta(etaVal);
 
@@ -191,7 +200,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
           const responseCode = response?.jHeader?.responseCode;
           const isSuccess =
             responseCode === 0 ||
-            responseCode === "0" ||
+            responseCode === '0' ||
             responseCode === undefined;
 
           if (isSuccess && response) {
@@ -215,17 +224,17 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
               }
               if (transformed.driverPayoutPercentage !== null) {
                 setFetchedDriverPayoutPercentage(
-                  transformed.driverPayoutPercentage,
+                  transformed.driverPayoutPercentage
                 );
               }
             } else {
               console.log(
-                "⚠️ [BidBottomSheetModal] No system_suggested_prices found in response",
+                '⚠️ [BidBottomSheetModal] No system_suggested_prices found in response'
               );
             }
           }
         } catch (error) {
-          console.error("Error fetching bid prices:", error);
+          console.error('Error fetching bid prices:', error);
           // Continue with initial prices if fetch fails
         }
       };
@@ -248,7 +257,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
 
   // Find the selected bid data
   const selectedBidData = systemSuggestedBids.find(
-    (b) => b.amount === selectedBid,
+    (b) => b.amount === selectedBid
   );
 
   // Calculate driver earnings for selected bid
@@ -320,7 +329,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
               <View />
               <View style={styles.peopleSection}>
                 <Image
-                  source={require("@/assets/images/peoples.png")}
+                  source={require('@/assets/images/peoples.png')}
                   style={styles.peopleIcon}
                 />
                 {isLoadingPrices ? (
@@ -430,7 +439,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                 weight="semibold"
                 style={styles.etaSectionTitle}
               >
-                {sectionEtaLabel}{" "}
+                {sectionEtaLabel}{' '}
                 <Typography
                   type="bodyLarge"
                   weight="regular"
@@ -472,7 +481,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                   weight="semibold"
                   style={styles.sectionTitle}
                 >
-                  {sectionBoostLabel}{" "}
+                  {sectionBoostLabel}{' '}
                   <Typography
                     type="bodyLarge"
                     weight="regular"
@@ -557,7 +566,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
                     <View
                       style={[
                         styles.counterSection,
-                        { marginTop: isBoosted ? -10 : "auto" },
+                        { marginTop: isBoosted ? -10 : 'auto' },
                       ]}
                     >
                       <Counter
@@ -578,7 +587,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
             <View
               style={[
                 styles.submitSection,
-                { marginTop: isBoosted ? -24 : "auto" },
+                { marginTop: isBoosted ? -24 : 'auto' },
               ]}
               onStartShouldSetResponder={() => false}
             >
@@ -602,8 +611,8 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
     zIndex: 10001,
     elevation: 10001,
   },
@@ -618,18 +627,18 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: textColors.grey100,
   },
   peopleSectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
   closeButton: {
@@ -639,13 +648,13 @@ const styles = StyleSheet.create({
     backgroundColor: textColors.white,
     borderWidth: 2,
     borderColor: textColors.black,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButtonText: {
     fontSize: 18,
     color: textColors.black,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   headerTitle: {
     color: textColors.black,
@@ -659,21 +668,21 @@ const styles = StyleSheet.create({
     fontSize: 21,
   },
   peopleSection: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   peopleIcon: {
     width: 24,
     height: 24,
-    resizeMode: "contain",
+    resizeMode: 'contain',
   },
   peopleText: {
     color: textColors.black,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   suggestedBidsContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
     marginBottom: 10,
   },
@@ -684,8 +693,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: textColors.grey200,
     backgroundColor: textColors.white,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectedBidButton: {
     borderColor: textColors.teal900,
@@ -706,13 +715,13 @@ const styles = StyleSheet.create({
   },
   counterSkeletonContainer: {
     marginTop: 16,
-    width: "100%",
+    width: '100%',
   },
   etaCounterContainer: {
-    width: "100%",
+    width: '100%',
   },
   etaSection: {
-    flexDirection: "column",
+    flexDirection: 'column',
     gap: 0,
     marginBottom: 24,
   },
@@ -730,13 +739,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   boostHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   boostButtonsContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
     marginBottom: 24,
   },

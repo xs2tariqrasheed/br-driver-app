@@ -1,22 +1,22 @@
-import Header from "@/components/Header";
-import JobDetails from "@/components/JobDetails";
-import Typography from "@/components/Typography";
-import { activeTripApiClient } from "@/config/apiConfig";
-import { textColors } from "@/constants/colors";
-import { ACTIVE_TRIP_ROUTES } from "@/constants/endpoints";
-import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
+import Header from '@/components/Header';
+import JobDetails from '@/components/JobDetails';
+import Typography from '@/components/Typography';
+import { activeTripApiClient } from '@/config/apiConfig';
+import { textColors } from '@/constants/colors';
+import { ACTIVE_TRIP_ROUTES } from '@/constants/endpoints';
+import { useBroadcastJobOffers } from '@/context/BroadcastJobOffersContext';
 import {
   TRIP_DETAILS_CONTENT_KEYS,
   TRIP_DETAILS_CUSTOMER_LABEL_KEYS,
   TRIP_DETAILS_FARE_LABEL_KEYS,
-} from "@/content/trip-details-keys";
-import { useGetContent } from "@/hooks/useGetContent";
+} from '@/content/trip-details-keys';
+import { useGetContent } from '@/hooks/useGetContent';
 import {
   formatDateTimeToReadableFormat,
   tripDetailsApiResponseToJobOffer,
-} from "@/utils/helpers";
-import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+} from '@/utils/helpers';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -24,8 +24,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
+import { useRideOffer } from '@/context/RideOfferContext';
 
 /**
  * Apply content labels to job offer fare/customer details (for API-sourced data).
@@ -82,9 +84,11 @@ function transformBroadcastOfferToJobOfferForDemo(
     totalPrice: broadcastOffer.totalPrice,
     driverEarn: broadcastOffer.driverEarn,
     buttonTitle: broadcastOffer.buttonTitle,
-    disabled: broadcastOffer.status !== "offered",
+    disabled: broadcastOffer.status !== 'offered',
     onButtonClick: () => {},
-    driverInstructions: getContent(TRIP_DETAILS_CONTENT_KEYS.DEMO_INSTRUCTIONS_LABEL),
+    driverInstructions: getContent(
+      TRIP_DETAILS_CONTENT_KEYS.DEMO_INSTRUCTIONS_LABEL
+    ),
     fareDetails: [
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.FARE_RIDE_PRICE_LABEL),
@@ -92,33 +96,33 @@ function transformBroadcastOfferToJobOfferForDemo(
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.FARE_TOLLS_LABEL),
-        value: "$0.00",
+        value: '$0.00',
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.FARE_TIPS_LABEL),
-        value: "$0.00",
+        value: '$0.00',
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.FARE_DISCOUNT_LABEL),
-        value: "$0.00",
+        value: '$0.00',
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.FARE_SERVICE_CHARGES_LABEL),
-        value: "$1.50",
+        value: '$1.50',
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.FARE_FUEL_SURCHARGE_LABEL),
-        value: "$1.00",
+        value: '$1.00',
       },
     ],
     customerDetails: [
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.CUSTOMER_NAME_LABEL),
-        value: "Customer",
+        value: 'Customer',
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.CUSTOMER_CAR_TYPE_LABEL),
-        value: "Sedan",
+        value: 'Sedan',
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.CUSTOMER_OFFER_PRICE_LABEL),
@@ -126,11 +130,11 @@ function transformBroadcastOfferToJobOfferForDemo(
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.CUSTOMER_ACCOUNT_LABEL),
-        value: "123456789",
+        value: '123456789',
       },
       {
         label: getContent(TRIP_DETAILS_CONTENT_KEYS.CUSTOMER_PROFILE_NO_LABEL),
-        value: "987654321",
+        value: '987654321',
       },
     ],
     expiredAt: broadcastOffer.expiredAt,
@@ -144,15 +148,20 @@ export default function TripDetailsScreen() {
   }>();
   const { getContent } = useGetContent();
   const { broadcastOffers } = useBroadcastJobOffers();
+  const { currentOffer: sequentialOffer, getTemporaryRideByTripId } =
+    useRideOffer();
   const [jobOfferData, setJobOfferData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const content = useMemo(
     () => ({
       headerTitle: getContent(TRIP_DETAILS_CONTENT_KEYS.HEADER_TITLE),
-      errorPrefixLabel: getContent(TRIP_DETAILS_CONTENT_KEYS.ERROR_PREFIX_LABEL),
-      actionRetryLabel: getContent(TRIP_DETAILS_CONTENT_KEYS.ACTION_RETRY_LABEL),
+      errorPrefixLabel: getContent(
+        TRIP_DETAILS_CONTENT_KEYS.ERROR_PREFIX_LABEL
+      ),
+      actionRetryLabel: getContent(
+        TRIP_DETAILS_CONTENT_KEYS.ACTION_RETRY_LABEL
+      ),
       emptyStateLabel: getContent(TRIP_DETAILS_CONTENT_KEYS.EMPTY_STATE_LABEL),
       errorFetchLabel: getContent(TRIP_DETAILS_CONTENT_KEYS.ERROR_FETCH_LABEL),
       errorLoadLabel: getContent(TRIP_DETAILS_CONTENT_KEYS.ERROR_LOAD_LABEL),
@@ -166,7 +175,7 @@ export default function TripDetailsScreen() {
   const loadDemoDetails = () => {
     setJobOfferData(
       transformBroadcastOfferToJobOfferForDemo(
-        broadcastOffers.find((o) => o.id === params.offerId) ?? {},
+        broadcastOffers?.find((o: any) => o.id === params.offerId) ?? {},
         getContent
       )
     );
@@ -174,84 +183,99 @@ export default function TripDetailsScreen() {
   };
 
   /**
-   * Load trip details from API
+   * Load trip details from API (single source of truth for real trips).
+   * Empty/null values from API are shown as "N/A".
    */
   const loadTripDetailsFromApi = async () => {
-    // If tripNumber or offerId is provided, fetch from API
-    if (params.tripNumber || params.offerId) {
-      try {
-        const tripNumber = params.tripNumber || params.offerId;
-        setIsLoading(true);
-        setError(null);
-        const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${tripNumber}`;
+    if (!params.tripNumber && !params.offerId) return;
+    const tripNumber = params.tripNumber || params.offerId;
+    try {
+      setIsLoading(true);
+      setError(null);
 
-        const response = await activeTripApiClient.get(endpoint);
-        const responseData = response.data as any;
+      const activeBroadcastOffer =
+        broadcastOffers?.find((o: any) => o.id === tripNumber) ?? null;
+      const activeSequentialOffer =
+        sequentialOffer &&
+        String(sequentialOffer.tripOffer?.tripId) === String(tripNumber)
+          ? sequentialOffer
+          : tripNumber
+          ? getTemporaryRideByTripId(tripNumber)
+          : null;
 
-        const responseCode = responseData?.jHeader?.responseCode;
-        const isSuccess =
-          responseCode === 0 ||
-          responseCode === "0" ||
-          responseCode === undefined;
+      const activeOffer = activeBroadcastOffer ?? activeSequentialOffer ?? null;
 
-        if (isSuccess && responseData?.data) {
-          const jobOfferDataFromApi = tripDetailsApiResponseToJobOffer(
-            responseData.data
+      const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${tripNumber}`;
+
+      // Add a client-side timeout so slow or hanging networks don't keep the loader spinning forever.
+      const REQUEST_TIMEOUT_MS = 15000; // 15 seconds
+      const timeoutError = new Error(
+        "Request timed out. Please check your internet connection and try again.",
+      );
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(timeoutError), REQUEST_TIMEOUT_MS),
+      );
+
+      const response = (await Promise.race([
+        activeTripApiClient.get(endpoint),
+        timeoutPromise,
+      ])) as any;
+      const responseData = response.data as any;
+
+      const isSuccess =
+        responseData?.success === true && responseData?.data?.trip != null;
+      const tripPayload = responseData?.data?.trip ?? responseData?.data;
+
+      if (isSuccess && tripPayload) {
+        const jobOfferFromApi = tripDetailsApiResponseToJobOffer(tripPayload);
+        if (jobOfferFromApi) {
+          const appendRideTimeAndDistance = {
+            ...jobOfferFromApi,
+            pickupTime: activeOffer?.pickupTime ?? 0,
+            pickupDistance: activeOffer?.pickupDistance ?? 0,
+            dropoffTime: activeOffer?.dropoffTime ?? 0,
+            dropoffDistance: Number(activeOffer?.dropoffDistance) ?? 0,
+            rideTime: activeOffer?.rideTime ?? 0,
+            rideDistance: Number(activeOffer?.rideDistance) ?? 0,
+          };
+          setJobOfferData(
+            applyContentLabelsToJobOffer(appendRideTimeAndDistance, getContent)
           );
-          const jobOfferDataFromBroadcast = broadcastOffers.find(
-            (o) => o.id === tripNumber
-          );
-
-          if (jobOfferDataFromBroadcast || jobOfferDataFromApi) {
-            const merged = {
-              ...jobOfferDataFromBroadcast,
-              fareDetails: jobOfferDataFromApi?.fareDetails,
-              customerDetails: jobOfferDataFromApi?.customerDetails,
-              driverInstructions: jobOfferDataFromApi?.driverInstructions,
-              dateTime: formatDateTimeToReadableFormat(
-                jobOfferDataFromBroadcast?.timestamp ??
-                  jobOfferDataFromApi?.dateTime
-              ),
-            };
-            setJobOfferData(applyContentLabelsToJobOffer(merged, getContent));
-          }
+          setIsLoading(false);
         } else {
-          const errorMsg =
-            responseData?.jHeader?.message ||
-            getContent(TRIP_DETAILS_CONTENT_KEYS.ERROR_FETCH_LABEL);
-          console.error("❌ [TripDetails] API Error:", errorMsg);
-          console.error("❌ [TripDetails] Response Code:", responseCode);
-          setError(errorMsg);
+          setIsLoading(false);
+          setError(getContent(TRIP_DETAILS_CONTENT_KEYS.ERROR_FETCH_LABEL));
         }
-      } catch (err: any) {
-        console.error("❌ [TripDetails] Error Type:", err?.name);
-        if (err?.response) {
-          console.error(
-            "❌ [TripDetails] Error Response Status:",
-            err.response.status
-          );
-        }
-        setError(
-          err?.message ||
-            getContent(TRIP_DETAILS_CONTENT_KEYS.ERROR_LOAD_LABEL)
-        );
-      } finally {
+      } else {
+        const errorMsg =
+          responseData?.message ??
+          responseData?.error ??
+          getContent(TRIP_DETAILS_CONTENT_KEYS.ERROR_FETCH_LABEL);
+        setError(errorMsg);
         setIsLoading(false);
       }
-      return;
+    } catch (err: any) {
+      const message =
+        err?.message ||
+        getContent(TRIP_DETAILS_CONTENT_KEYS.ERROR_LOAD_LABEL);
+      setError(message);
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    const isDemoOffer = params?.offerId?.includes("demo-");
-    // If demo offer, set job offer data from broadcast offers for the demo details
+    const isDemoOffer = params?.offerId?.includes('demo-');
+    // Demo offers: use broadcast offers for testing only
     if (isDemoOffer) {
       loadDemoDetails();
     } else {
-      // Otherwise, load trip data from API
+      // Real trips: single source of truth from API (N/A for empty/null)
       loadTripDetailsFromApi();
     }
-  }, [params.offerId, params.tripNumber, broadcastOffers]);
+  }, [params.offerId, params.tripNumber, broadcastOffers, sequentialOffer]);
 
   if (isLoading) {
     return (
@@ -259,7 +283,7 @@ export default function TripDetailsScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <Header title={content.headerTitle} onBackPress={() => router.back()} />
         <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color={textColors.teal900} />
+          <ActivityIndicator size="large" color={textColors.teal900}/>
         </View>
       </SafeAreaView>
     );
@@ -271,11 +295,15 @@ export default function TripDetailsScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <Header title={content.headerTitle} onBackPress={() => router.back()} />
         <View style={styles.emptyContainer}>
-          <Text>
+          <Typography
+            type="bodyMedium"
+            weight="regular"
+            style={styles.errorMessage}
+          >
             {content.errorPrefixLabel}
             {error}
-          </Text>
-          <Pressable
+          </Typography>
+          <TouchableOpacity
             style={styles.retryButton}
             onPress={() => loadTripDetailsFromApi()}
             disabled={isLoading}
@@ -287,7 +315,7 @@ export default function TripDetailsScreen() {
             >
               {content.actionRetryLabel}
             </Typography>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -346,16 +374,27 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   retryButton: {
     marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: textColors.teal900,
   },
   retryButtonText: {
     fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-    color: textColors.white,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: textColors.teal900,
+  },
+  errorMessage: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: textColors.black,
   },
 });

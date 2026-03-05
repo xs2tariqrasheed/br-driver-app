@@ -4,17 +4,11 @@ import ETABottomSheet from "@/components/ETABottomSheet";
 import TextArea from "@/components/Form/TextArea";
 import Toggle from "@/components/Form/Toggle";
 import Header from "@/components/Header";
-import JobDetails from "@/components/JobDetails";
 import RideAction from "@/components/RideAction";
 import RideLocations from "@/components/RideLocations";
 import RideMap from "@/components/RideMap";
-import { activeTripApiClient } from "@/config/apiConfig";
 import { textColors } from "@/constants/colors";
-import {
-  openPhoneDialer,
-  openWhatsApp,
-  tripDetailsApiResponseToJobOffer,
-} from "@/utils/helpers";
+import { openPhoneDialer, openWhatsApp } from "@/utils/helpers";
 
 import AddTollBottomSheet from "@/components/AddTollBottomSheet";
 import { useToast } from "@/components/Toast";
@@ -652,205 +646,6 @@ export default function ActiveRideScreen() {
     }
   }, [jobOfferData?.id, driverId, loadDriverETA]);
 
-  // Fetch full trip details from API on load (same as trip-details screen: GET trip-by-number)
-  const [tripDetailsFetchedOnLoad, setTripDetailsFetchedOnLoad] =
-    useState(false);
-  const tripDetailsLoadedFromApiRef = useRef(false);
-  useEffect(() => {
-    const fetchTripDetailsOnLoad = async () => {
-      if (!jobOfferData || tripDetailsFetchedOnLoad) return;
-
-      const tripNumber =
-        jobOfferData.tripNumber || jobOfferData.trip_number || jobOfferData.id;
-
-      if (!tripNumber) {
-        setTripDetailsFetchedOnLoad(true);
-        return;
-      }
-      // Skip if trip number looks like a UUID (API expects numeric trip number)
-      if (tripNumber.includes("-") && tripNumber.length > 20) {
-        setTripDetailsFetchedOnLoad(true);
-        return;
-      }
-
-      try {
-        const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${tripNumber}`;
-        const response = await activeTripApiClient.get(endpoint);
-        const responseData = response.data as any;
-
-        const responseCode = responseData?.jHeader?.responseCode;
-        const isSuccess =
-          responseCode === 0 ||
-          responseCode === "0" ||
-          responseCode === undefined;
-        if (isSuccess && responseData?.data) {
-          const fetchedJobOffer = tripDetailsApiResponseToJobOffer(
-            responseData.data,
-          );
-          if (fetchedJobOffer) {
-            const mergedJobOffer = {
-              ...jobOfferData,
-              ...fetchedJobOffer,
-              id: jobOfferData?.id ?? fetchedJobOffer.id,
-              pickupAddress:
-                jobOfferData?.pickupAddress ?? fetchedJobOffer.pickupAddress,
-              dropoffAddress:
-                jobOfferData?.dropoffAddress ?? fetchedJobOffer.dropoffAddress,
-              totalPrice:
-                jobOfferData?.totalPrice ?? fetchedJobOffer.totalPrice,
-              driverEarn:
-                jobOfferData?.driverEarn ?? fetchedJobOffer.driverEarn,
-              rideType: jobOfferData?.rideType ?? fetchedJobOffer.rideType,
-              carType: jobOfferData?.carType ?? fetchedJobOffer.carType,
-              hasSpecialRequirements:
-                jobOfferData?.hasSpecialRequirements ??
-                fetchedJobOffer.hasSpecialRequirements,
-              hasPackage:
-                jobOfferData?.hasPackage ?? fetchedJobOffer.hasPackage,
-              pickupTime:
-                jobOfferData?.pickupTime ?? fetchedJobOffer.pickupTime,
-              pickupDistance:
-                jobOfferData?.pickupDistance ?? fetchedJobOffer.pickupDistance,
-              dropoffTime:
-                jobOfferData?.dropoffTime ?? fetchedJobOffer.dropoffTime,
-              dropoffDistance:
-                jobOfferData?.dropoffDistance ??
-                fetchedJobOffer.dropoffDistance,
-              rideTime: jobOfferData?.rideTime ?? fetchedJobOffer.rideTime,
-              rideDistance:
-                jobOfferData?.rideDistance ?? fetchedJobOffer.rideDistance,
-              peopleCount:
-                jobOfferData.peopleCount ?? fetchedJobOffer?.peopleCount,
-              rating: jobOfferData.rating ?? fetchedJobOffer?.rating,
-              dateTime: jobOfferData.dateTime ?? fetchedJobOffer?.dateTime,
-            };
-            setJobOfferData(mergedJobOffer);
-            tripDetailsLoadedFromApiRef.current = true;
-          }
-        }
-      } catch (err) {
-        console.warn(
-          "⚠️ [ActiveRide] Could not fetch trip details on load:",
-          err,
-        );
-      } finally {
-        setTripDetailsFetchedOnLoad(true);
-      }
-    };
-
-    fetchTripDetailsOnLoad();
-  }, [jobOfferData, tripDetailsFetchedOnLoad]);
-
-  // Fetch trip details when switching to details view (fallback if not yet loaded)
-  const [tripDetailsFetched, setTripDetailsFetched] = useState(false);
-
-  useEffect(() => {
-    const loadTripDetailsForDetailsView = async () => {
-      // Only fetch when toggle is switched to DETAILS view
-      if (toggleValue !== toggleDetails) {
-        // Reset fetch flag when switching away from details
-        if (tripDetailsFetched) {
-          setTripDetailsFetched(false);
-        }
-        return;
-      }
-
-      // If already fetched for this session, skip
-      if (tripDetailsFetched) {
-        console.log(
-          "📥 [ActiveRide] Trip details already fetched in this session, skipping",
-        );
-        return;
-      }
-
-      // If jobOfferData doesn't exist yet, wait
-      if (!jobOfferData) {
-        console.log(
-          "📥 [ActiveRide] Job offer data not available yet, waiting...",
-        );
-        return;
-      }
-
-      // If we already loaded full details from API (on load or when Details tab fetched), skip
-      if (tripDetailsLoadedFromApiRef.current) {
-        setTripDetailsFetched(true);
-        return;
-      }
-
-      try {
-        // Get tripNumber from jobOfferData or tripId
-        const { tripId: storedTripId } = await getTripId();
-        const tripNumber =
-          jobOfferData?.tripNumber ||
-          jobOfferData?.trip_number ||
-          jobOfferData?.id ||
-          storedTripId;
-
-        if (!tripNumber) {
-          console.warn(
-            "📥 [ActiveRide] No trip number available for fetching details",
-          );
-          return;
-        }
-
-        // Skip if tripNumber looks like a UUID (contains dashes and is long)
-        if (tripNumber.includes("-") && tripNumber.length > 20) {
-          console.warn(
-            "📥 [ActiveRide] Trip number appears to be UUID, skipping fetch",
-          );
-          return;
-        }
-
-        const endpoint = `${ACTIVE_TRIP_ROUTES.GET_TRIP_BY_NUMBER}/${tripNumber}`;
-        const response = await activeTripApiClient.get(endpoint);
-        const responseData = response.data as any;
-
-        const responseCode = responseData?.jHeader?.responseCode;
-        const isSuccess =
-          responseCode === 0 ||
-          responseCode === "0" ||
-          responseCode === undefined;
-
-        if (isSuccess && responseData?.data) {
-          const fetchedJobOffer = tripDetailsApiResponseToJobOffer(
-            responseData.data,
-          );
-
-          if (fetchedJobOffer) {
-            const mergedJobOffer = {
-              ...jobOfferData,
-              ...fetchedJobOffer,
-              id: jobOfferData?.id ?? fetchedJobOffer.id,
-              pickupAddress:
-                jobOfferData?.pickupAddress ?? fetchedJobOffer.pickupAddress,
-              dropoffAddress:
-                jobOfferData?.dropoffAddress ?? fetchedJobOffer.dropoffAddress,
-              peopleCount:
-                fetchedJobOffer.peopleCount ?? jobOfferData?.peopleCount,
-              rating: fetchedJobOffer.rating ?? jobOfferData?.rating,
-            };
-
-            setJobOfferData(mergedJobOffer);
-            setTripDetailsFetched(true);
-            tripDetailsLoadedFromApiRef.current = true;
-          }
-        } else {
-          const errorMsg =
-            responseData?.jHeader?.message || "Failed to fetch trip details";
-          console.error("❌ [ActiveRide] API Error:", errorMsg);
-          console.error("❌ [ActiveRide] Response Code:", responseCode);
-        }
-      } catch (err: any) {
-        console.error(
-          "❌ [ActiveRide] Error Response Status:",
-          err?.response?.status ?? err,
-        );
-      }
-    };
-
-    loadTripDetailsForDetailsView();
-  }, [toggleValue, jobOfferData, getTripId, tripDetailsFetched]);
-
   // Handle API data when fetched
   useEffect(() => {
     if (apiData && !apiLoading && !params.activeTripData) {
@@ -1181,7 +976,32 @@ export default function ActiveRideScreen() {
   );
   const [cancelComments, setCancelComments] = useState<string>("");
 
+  // Navigate to trip-details screen (single source of truth for job details from API)
+  const navigateToTripDetails = useCallback(async () => {
+    const tripNumber =
+      jobOfferData?.tripNumber ??
+      jobOfferData?.trip_number ??
+      jobOfferData?.id;
+    const { tripId } = await getTripId();
+    const finalTripNumber = tripNumber ?? tripId;
+    if (finalTripNumber && String(finalTripNumber).trim() !== "") {
+      router.push({
+        pathname: "/(screens)/trip-details",
+        params: { tripNumber: String(finalTripNumber) },
+      });
+    }
+  }, [
+    jobOfferData?.tripNumber,
+    jobOfferData?.trip_number,
+    jobOfferData?.id,
+    getTripId,
+  ]);
+
   const handleToggle = (next: string) => {
+    if (next === toggleDetails) {
+      navigateToTripDetails();
+      return;
+    }
     setToggleValue(next as RideToggleLabel);
   };
 
@@ -1214,7 +1034,7 @@ export default function ActiveRideScreen() {
   };
 
   const handleDetails = () => {
-    setToggleValue(toggleDetails as RideToggleLabel);
+    navigateToTripDetails();
   };
 
   // Handle stop action
@@ -1928,18 +1748,6 @@ export default function ActiveRideScreen() {
         />
       </View>
 
-      {/* Always render both components, but control visibility */}
-      <View
-        style={[
-          styles.detailsContainer,
-          {
-            display: toggleValue === toggleDetails ? "flex" : "none",
-          },
-        ]}
-      >
-        <JobDetails jobOffer={jobOfferData} showActionBar={false} />
-      </View>
-
       <View
         style={[
           styles.mapContainer,
@@ -2399,9 +2207,6 @@ const styles = StyleSheet.create({
   },
   rideLocationsContainer: {
     padding: 10,
-  },
-  detailsContainer: {
-    flex: 1,
   },
   mapContainer: {
     flex: 1,

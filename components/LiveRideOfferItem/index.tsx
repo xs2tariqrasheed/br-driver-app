@@ -63,6 +63,8 @@ import { calculateProgressTimerDuration } from "@/utils/helpers";
 export type ItemStatus = LocalJobStatus;
 
 export interface LiveRideOfferItemProps {
+  /** Whether to show the timer */
+  showTimer?: boolean;
   /** Unique identifier for the ride offer */
   id: string;
   /** The type of ride to display */
@@ -162,6 +164,7 @@ export interface LiveRideOfferItemProps {
  * ```
  */
 export default function LiveRideOfferItem({
+  showTimer = true,
   id,
   rideType,
   peopleCount,
@@ -607,7 +610,7 @@ export default function LiveRideOfferItem({
                 ]}
               >
                 {/* Countdown Timer - Only show and run if offer is still in "offered" state */}
-                {itemStatus === LIVE_JOB_STATUS.OFFERED &&
+                {showTimer && itemStatus === LIVE_JOB_STATUS.OFFERED &&
                   expiredAt &&
                   calculateProgressTimerDuration(expiredAt) && (
                     <View>

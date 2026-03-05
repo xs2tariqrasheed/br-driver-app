@@ -298,6 +298,7 @@ export default function JobDetails({
             rideDistance={rideDistance || 0}
             totalPrice={totalPrice || 0}
             driverEarn={driverEarn || 0}
+            showTimer={false}
             disabled={disabled}
             onButtonClick={onButtonClick || (() => {})}
             hideActionButton={true}
