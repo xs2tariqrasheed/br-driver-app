@@ -29,11 +29,16 @@ export class ExpirationService {
     data: {
       tripId: string;
       timestamp?: string;
+      dbStatus?: string;
     },
     contexts: ExpirationContexts
   ): Promise<void> {
     try {
-      const { tripId, timestamp } = data;
+      const { tripId, timestamp, dbStatus } = data as {
+        tripId: string;
+        timestamp?: string;
+        dbStatus?: string;
+      };
 
       // Skip expiration for demo offers
       if (tripId.startsWith("demo-")) {
@@ -77,11 +82,20 @@ export class ExpirationService {
         `🔍 Found offer: ${offerInfo.type} (${offerInfo.context}) for tripId: ${tripId}`
       );
 
-      // Show consistent toast message for all expired offers
-      showToast("Ride offer expired!", {
-        variant: "warning",
-        position: "top",
-      });
+      // Show appropriate toast message:
+      // - If DB status is CANCELLED, this was an explicit customer cancel
+      // - Otherwise, it's a normal timeout expiration
+      if (dbStatus === "CANCELLED") {
+        showToast(`Customer has canceled this ${tripId} ride`, {
+          variant: "warning",
+          position: "top",
+        });
+      } else {
+        showToast("Ride offer expired!", {
+          variant: "warning",
+          position: "top",
+        });
+      }
 
       // Handle expiration based on discovered offer type
       if (offerInfo.type === TRIP_OFFER_TYPES.SEQUENTIAL) {
