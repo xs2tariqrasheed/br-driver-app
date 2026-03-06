@@ -21,19 +21,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { Platform } from "react-native";
-
-interface TripOffer {
-  tripId: string;
-  customerId: string;
-  pickup: { lat: number; lng: number; address?: string };
-  dropoff: { lat: number; lng: number; address?: string };
-  biddable: boolean;
-  type: "sequential" | "broadcast";
-  fare?: number;
-  timestamp?: number;
-  for?: "io" | "hired"; // temporary field
-}
 
 interface RideOffer {
   // Basic ride offer info
@@ -54,7 +41,7 @@ interface RideOffer {
     | "offer-expired";
 
   // Trip offer details
-  tripOffer: TripOffer;
+  tripOffer: any;
   bidable: boolean;
 
   // LiveRideOfferItem required fields
@@ -111,7 +98,7 @@ interface RideOfferContextType {
   // Temporary ride state for notifications
   temporaryRides: { [notificationId: string]: RideOffer };
   // Actions
-  showRideOfferModal: (offer: RideOffer, callbacks?: ModalCallbacks) => void;
+  showRideOfferModal: (offer: any, callbacks?: ModalCallbacks) => void;
   hideRideOfferModal: () => void;
   acceptRideOffer: () => Promise<void>;
   skipRideOfferPrice: () => Promise<void>;
@@ -357,7 +344,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
    * @param callbacks - Optional callbacks for accept, skip price, and hide actions
    */
   const showRideOfferModal = useCallback(
-    (offer: RideOffer, callbacks?: ModalCallbacks) => {
+    (offer: any, callbacks?: ModalCallbacks) => {
       console.log("🔔 Showing ride offer modal:", offer);
       // Ensure we always have an expiration timestamp for local countdown logic.
       // Prefer existing expiredAt; otherwise compute from offer.timestamp + offer.timeout.
@@ -372,13 +359,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         expiredAt: offer.expiredAt ?? computedExpiredAt,
       });
       setModalCallbacks(callbacks || null);
-      setIsRideOfferModalVisible(true);
+      setIsRideOfferModalVisible(false);
       try {
-        // iOS: Use screen route, Android: Use modal (handled by GlobalRideOfferModal)
-        if (Platform.OS === "ios") {
-          router.push("/(screens)/ride-offer");
-        }
-        // For Android, the GlobalRideOfferModal component will handle the modal display
+        router.push("/(screens)/ride-offer");
       } catch {}
     },
     [],

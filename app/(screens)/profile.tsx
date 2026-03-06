@@ -4,7 +4,7 @@ import InfoTable, { InfoTableDataItem } from "@/components/InfoTable";
 import Logo from "@/components/Logo";
 import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
-import { URLS } from "@/constants/global";
+import { SYSTEM_SETTINGS_KEYS } from "@/constants/global";
 import { PROFILE_CONTENT_KEYS } from "@/content/profile-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useDriver } from "@/context/DriverContext";
@@ -56,6 +56,7 @@ export default function ProfileScreen() {
     paymentAccountNumberLabel,
     actionEditPortal,
     noteEditInfo,
+    driverWebAppProdUrl,
   } = useMemo(() => {
     const get = getContent;
     return {
@@ -107,6 +108,9 @@ export default function ProfileScreen() {
       ),
       actionEditPortal: get(PROFILE_CONTENT_KEYS.ACTION_EDIT_PORTAL),
       noteEditInfo: get(PROFILE_CONTENT_KEYS.NOTE_EDIT_INFO),
+      driverWebAppProdUrl: get(
+        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
+      ),
     };
   }, [getContent]);
 
@@ -294,10 +298,15 @@ export default function ProfileScreen() {
   );
 
   const handleEditProfile = () => {
+    const base = (driverWebAppProdUrl || "").replace(/\/$/, "");
+    const url = base
+      ? `${base}/profile?token=${auth?.token ?? ""}`
+      : undefined;
+    if (!url) return;
     router.push({
       pathname: "/(screens)/in-app-webview",
       params: {
-        url: URLS.driverPortal,
+        url,
         title: actionEditPortal,
       },
     });

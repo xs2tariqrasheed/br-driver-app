@@ -609,8 +609,10 @@ export default function LiveRideOfferItem({
                   style,
                 ]}
               >
-                {/* Countdown Timer - Only show and run if offer is still in "offered" state */}
-                {showTimer && itemStatus === LIVE_JOB_STATUS.OFFERED &&
+                {/* Countdown Timer - Always show while offer exists, regardless of driver actions.
+                    The timer should run for the full server-provided timeout window (2 minutes)
+                    and only stop early if the offer is accepted or fully expired. */}
+                {showTimer &&
                   expiredAt &&
                   calculateProgressTimerDuration(expiredAt) && (
                     <View>
@@ -619,18 +621,25 @@ export default function LiveRideOfferItem({
                         onComplete={() => {
                           // Check if this is a sequential offer (has onTimerComplete callback)
                           if (onTimerComplete) {
-                            // For sequential offers, use the provided callback
-                            // The callback should check if offer is still in "offered" state
+                            // For sequential offers, use the provided callback.
+                            // The callback is responsible for honoring acceptance/expires rules.
                             onTimerComplete();
                             return;
                           }
 
                           // For broadcast offers, use existing logic
-                          // Only remove if offer is still in "offered" state
-                          // If driver has performed any action (bid, accept, etc.), status would have changed
                           const currentOffer = getBroadcastOffer(id);
-                          if (currentOffer && currentOffer.status === LIVE_JOB_STATUS.OFFERED) {
-                            // Remove the offer when timer completes
+                          if (currentOffer) {
+                            // If the customer has already accepted this offer, do NOT expire it.
+                            if (currentOffer.status === LIVE_JOB_STATUS.ACCEPTED) {
+                              console.log(
+                                `[LiveRideOfferItem] Skipping expiration for ${id} - offer already accepted`
+                              );
+                              return;
+                            }
+
+                            // For all other states (offered, bidding, rejected, bid-expired, etc.),
+                            // the 2-minute timeout should be enforced and the offer removed.
                             removeBroadcastOffer(id);
                             showToast("Offer expired", {
                               variant: "warning",
@@ -639,15 +648,15 @@ export default function LiveRideOfferItem({
                             setHasAnyActiveOffer(false);
                             closeAllModals();
                             hideRideOfferModal();
-                          } else {
-                            // Offer status has changed (driver performed action), don't expire
-                            console.log(
-                              `[LiveRideOfferItem] Skipping expiration for ${id} - status changed to: ${currentOffer?.status}`
-                            );
                           }
                         }}
                         height={4}
-                        isActive={itemStatus === LIVE_JOB_STATUS.OFFERED}
+                        // Keep timer running for the entire timeout window unless the offer
+                        // is accepted or explicitly marked as offer-expired.
+                        isActive={
+                          itemStatus !== LIVE_JOB_STATUS.ACCEPTED &&
+                          itemStatus !== "offer-expired"
+                        }
                       />
                     </View>
                   )}

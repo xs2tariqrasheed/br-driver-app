@@ -179,6 +179,7 @@ export function GlobalSocketListener() {
 
             // Use the helper function to format socket data to RideOffer format
             const rideOffer = formatSocketDataToRideOffer(data, auth?.user?.id);
+            console.log("🔍 Ride offer:", JSON.stringify(rideOffer, null, 2));
 
             // Check mute settings before speaking
             if (
@@ -192,9 +193,7 @@ export function GlobalSocketListener() {
             const notification = {
               id: `ride-offer-${rideOffer.tripOffer.tripId}-${Date.now()}`,
               messageTitle: "Special Ride Offer",
-              messageBody: `Sequential ride offer received. Fare: $${rideOffer.tripOffer.fare.toFixed(
-                2,
-              )}`,
+              messageBody: `Sequential ride offer received. Fare: $${rideOffer?.tripOffer?.fare}`,
               dateTime: formatDateTimestamp(rideOffer?.timestamp),
               messageType: "unread" as const,
               notificationType:
@@ -203,7 +202,7 @@ export function GlobalSocketListener() {
               pickupAddress: rideOffer.pickupAddress,
               dropoffAddress: rideOffer.dropoffAddress,
               tripId: rideOffer.tripOffer.tripId,
-              fare: rideOffer.tripOffer.fare,
+              fare: rideOffer?.tripOffer?.fare,
               rideTime: rideOffer.rideTime,
               rideDistance: rideOffer.rideDistance,
             };

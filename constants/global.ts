@@ -492,9 +492,6 @@ export const API_VERSION = "1.0.1";
 // Client Version (from app.json version)
 export const CLIENT_VERSION = "1.0.0";
 
-// App version
-export const APP_VERSION = "1.0.1";
-
 // DB Action Codes
 // Common action codes used across the app for database operations
 export const DB_ACTION_CODES = {

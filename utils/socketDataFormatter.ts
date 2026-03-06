@@ -224,6 +224,11 @@ export function formatSocketDataToTripOffer(
 
   // Determine offer type - use the type directly from the backend
   const offerType = tripOffer.type as 'sequential' | 'broadcast';
+  // IMPORTANT: Sequential offers are always non-biddable in the driver app.
+  // Even if the backend accidentally flags them as biddable, we force biddable=false here
+  // so that no bid / rebid UI or logic is ever shown for sequential offers.
+  const isBiddable =
+    offerType === 'sequential' ? false : !!tripOffer.biddable;
 
   // Calculate derived values - handle optional fare
   const formattedFare = formatNumberTo2DecimalPlaces(tripOffer?.fare ?? 0);
@@ -292,7 +297,7 @@ export function formatSocketDataToTripOffer(
       lng: tripOffer.dropoff.lng,
     },
     fare: formattedFare,
-    biddable: tripOffer.biddable,
+    biddable: isBiddable,
     type: offerType,
 
     // Comprehensive ride details (use server values when provided for dynamic miles/times)
@@ -370,7 +375,8 @@ export function formatSocketDataToRideOffer(
       customerId: formattedTripOffer.customerId,
       pickup: formattedTripOffer.pickup,
       dropoff: formattedTripOffer.dropoff,
-      biddable: formattedTripOffer.biddable,
+    // Sequential offers are always non-biddable (enforced above via isBiddable)
+    biddable: formattedTripOffer.biddable,
       type: formattedTripOffer.type,
       fare: formattedTripOffer.fare,
       timestamp: serverData.tripOffer.timestamp || Date.now(),

@@ -19,7 +19,7 @@ import {
   OFFER_TYPES,
   PREVIOUS_LOCATION_STORAGE_KEY,
   SKIP_DEMO_CONTENT_DRIVER_ID,
-  URLS,
+  SYSTEM_SETTINGS_KEYS,
   type DriverStatusLabel,
 } from "@/constants/global";
 import { ACTIVE_JOB_CONTENT_KEYS } from "@/content/(tabs)/active-job-keys";
@@ -77,11 +77,15 @@ export default function HomeScreen() {
     sheetSortPickupDistance,
     sheetSortReset,
     sheetSortApply,
+    driverWebAppProdUrl,
   } = useMemo(() => {
     const get = getContent;
     return {
       offlineMessage: get(ACTIVE_JOB_CONTENT_KEYS.OFFLINE_MESSAGE),
       headerTitle: get(HOME_CONTENT_KEYS.HEADER_TITLE),
+      driverWebAppProdUrl: get(
+        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
+      ),
       statusOfflineLabel: get(HOME_CONTENT_KEYS.STATUS_OFFLINE),
       statusOnlineLabel: get(HOME_CONTENT_KEYS.STATUS_ONLINE),
       alertActiveRideTitle: get(HOME_CONTENT_KEYS.ALERT_ACTIVE_RIDE_TITLE),
@@ -688,10 +692,14 @@ export default function HomeScreen() {
       } else if (iconKey === "settings") {
         router.push("/(tabs)/settings" as any);
       } else if (iconKey === "jump-portal") {
-        router.push({
-          pathname: "/(screens)/in-app-webview",
-          params: { url: URLS.driverPortal, title: "Driver Portal" },
-        });
+        const base = (driverWebAppProdUrl || "").replace(/\/$/, "");
+        const url = base ? `${base}?token=${auth?.token ?? ""}` : undefined;
+        if (url) {
+          router.push({
+            pathname: "/(screens)/in-app-webview",
+            params: { url, title: "Driver Portal" },
+          });
+        }
       } else if (iconKey === "mute-notifications") {
         openMuteSheet();
       }

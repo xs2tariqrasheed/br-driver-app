@@ -23,7 +23,6 @@ import Typography from "@/components/Typography";
 import { textColors } from "@/constants/colors";
 import { AUTH_ENDPOINTS } from "@/constants/endpoints";
 import {
-  APP_VERSION,
   API_CLIENT_TYPES,
   BiometricMethod,
   SYSTEM_SETTINGS_KEYS,
@@ -37,6 +36,7 @@ import { usePost } from "@/hooks/usePost";
 import { logger } from "@/utils/helpers";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useFocusEffect, useRouter } from "expo-router";
+import { APP_SETTINGS_CONTENT_KEYS } from "@/content/(screens)/more/app-settings-keys";
 
 type LoginFormValues = {
   companyId: string;
@@ -134,6 +134,7 @@ export default function LoginScreen() {
     errorGeneric,
     inAppWebviewRequestRegistrationTitle,
     driverWebAppProdUrl,
+    appVersion,
   } = useMemo(() => {
     const get = getContent;
     return {
@@ -249,6 +250,7 @@ export default function LoginScreen() {
       driverWebAppProdUrl: get(
         SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
       ),
+      appVersion: get(APP_SETTINGS_CONTENT_KEYS.APP_VERSION),
     };
   }, [getContent]);
   // Page Content End
@@ -843,7 +845,7 @@ export default function LoginScreen() {
               router.push({
                 pathname: "/(screens)/in-app-webview",
                 params: {
-                  url: driverWebAppProdUrl,
+                  url: `${driverWebAppProdUrl}?token=${auth?.token}`,
                   title: inAppWebviewRequestRegistrationTitle,
                 },
               })
@@ -858,7 +860,7 @@ export default function LoginScreen() {
               weight="regular"
               style={styles.versionText}
             >
-              Version: {APP_VERSION}
+              Version: {appVersion}
             </Typography>
           </View>
         </ScrollView>

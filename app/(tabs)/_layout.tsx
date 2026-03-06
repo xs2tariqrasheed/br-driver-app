@@ -1,6 +1,6 @@
 import Typography from "@/components/Typography";
 import { useOverlayInsets } from "@/context/OverlayInsetsContext";
-import { Tabs, usePathname } from "expo-router";
+import { Tabs, usePathname, useRouter } from "expo-router";
 import { useEffect, useMemo } from "react";
 import {
   Image,
@@ -15,7 +15,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { textColors } from "@/constants/colors";
+import { SYSTEM_SETTINGS_KEYS } from "@/constants/global";
 import { TABS_CONTENT_KEYS } from "@/content/(tabs)/tabs-keys";
+import { useAuth } from "@/context/AuthContext";
 import { useGetContent } from "@/hooks/useGetContent";
 
 const SHOW_EXAMPLES = process.env.EXPO_PUBLIC_SHOW_EXAMPLES === "true";
@@ -35,12 +37,15 @@ const TAB_HIDDEN_PATHS = [
 export default function TabLayout() {
   // Page Content Start
   const { getContent } = useGetContent();
+  const router = useRouter();
+  const [auth] = useAuth();
   const {
     homeTabLabel,
     activeJobTabLabel,
     earningsTabLabel,
     moreTabLabel,
     examplesTabLabel,
+    driverWebAppProdUrl,
   } = useMemo(() => {
     const get = getContent;
     return {
@@ -49,8 +54,24 @@ export default function TabLayout() {
       earningsTabLabel: get(TABS_CONTENT_KEYS.EARNINGS_TAB_LABEL),
       moreTabLabel: get(TABS_CONTENT_KEYS.MORE_TAB_LABEL),
       examplesTabLabel: get(TABS_CONTENT_KEYS.EXAMPLES_TAB_LABEL),
+      driverWebAppProdUrl: get(
+        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
+      ),
     };
   }, [getContent]);
+
+  const handleEarningsTabPress = () => {
+    const base = (driverWebAppProdUrl || "").replace(/\/$/, "");
+    const url = base
+      ? `${base}/earnings?token=${auth?.token ?? ""}`
+      : undefined;
+    if (url) {
+      router.push({
+        pathname: "/(screens)/in-app-webview",
+        params: { url, title: earningsTabLabel },
+      });
+    }
+  };
   // Page Content End
 
   const pathname = usePathname();
@@ -142,6 +163,13 @@ export default function TabLayout() {
               label={earningsTabLabel}
               focused={focused}
               source={require("@/assets/images/earnings-icon.png")}
+            />
+          ),
+          tabBarButton: (props) => (
+            <HapticTab
+              {...props}
+              pressColor={textColors.teal200}
+              onPress={handleEarningsTabPress}
             />
           ),
         }}
