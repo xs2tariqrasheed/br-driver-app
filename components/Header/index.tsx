@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
       </View>
 
       <View style={styles.titleWrap}>
-        <Typography type="headingSmall" weight="medium" style={styles.title}>
+        <Typography type="headingSmall" weight="medium" style={[styles.title, { marginRight: 16 }]}>
           {title}
         </Typography>
       </View>

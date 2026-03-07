@@ -1,7 +1,13 @@
 import { textColors } from "@/constants/colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useState } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 import SwipeButton from "rn-swipe-button";
 interface SwipeableButtonProps {
@@ -12,6 +18,9 @@ interface SwipeableButtonProps {
   disabled?: boolean;
 }
 
+/** Space reserved for side buttons, thumb, and padding so title can wrap within remaining width */
+const TITLE_HORIZONTAL_RESERVED = 130;
+
 export function SwipeableButton({
   title,
   onComplete,
@@ -19,6 +28,9 @@ export function SwipeableButton({
   autoReset = false,
   disabled = false,
 }: SwipeableButtonProps) {
+   const { width: windowWidth } = useWindowDimensions();
+  const maxTitleWidth = Math.max(120, windowWidth - TITLE_HORIZONTAL_RESERVED);
+
   let forceResetLastButton: any = null;
   let forceCompleteCallback: any = null;
   const [finishSwipeAnimDuration, setFinishSwipeAnimDuration] =
@@ -35,6 +47,23 @@ export function SwipeableButton({
       }, 1000);
     }
   }, [onComplete, autoReset, completionThreshold]);
+
+  const titleComponent = useCallback(
+    () => (
+      <View style={[styles.titleWrapper, { maxWidth: maxTitleWidth }]}>
+        <Text
+          numberOfLines={3}
+          style={[
+            styles.titleText,
+            disabled ? styles.disabledTitle : styles.activeTitle,
+          ]}
+        >
+          {title}
+        </Text>
+      </View>
+    ),
+    [title, disabled, maxTitleWidth]
+  );
 
   return (
     <View style={{ position: "relative" }}>
@@ -68,13 +97,13 @@ export function SwipeableButton({
           disabled ? styles.disabledThumbIcon : styles.activeThumbIcon
         }
         title={title}
+        titleComponent={titleComponent}
         thumbIconComponent={() => (
           <Image
             source={require("../../assets/images/arrow-right.png")}
             style={{ width: 20, height: 20 }}
           />
         )}
-        titleStyles={disabled ? styles.disabledTitle : styles.activeTitle}
       />
     </View>
   );
@@ -89,9 +118,8 @@ const styles = StyleSheet.create({
   disabledTitle: {
     color: textColors.black,
     fontSize: 14,
-    fontWeight: 500,
+    fontWeight: "500",
     textAlign: "center",
-    marginLeft: 20,
     opacity: 0.5,
   },
   disabledContainer: {
@@ -117,12 +145,17 @@ const styles = StyleSheet.create({
     bottom: 5,
     borderRadius: 100,
   },
+  titleWrapper: {
+    marginLeft: 42,
+    alignSelf: "center",
+  },
+  titleText: {
+    textAlign: "center",
+  },
   activeTitle: {
     color: textColors.white,
     fontSize: 14,
-    fontWeight: 600,
-    textAlign: "center",
-    marginLeft: 42,
+    fontWeight: "600",
   },
   disabledThumbIcon: {
     opacity: 0.5,

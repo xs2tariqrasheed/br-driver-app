@@ -391,7 +391,7 @@ export default function RootLayout() {
                                                               }}
                                                             />
                                                           </Stack>
-                                                          <StatusBar style="dark" />
+                                                          <StatusBar style="dark" backgroundColor="#ffffff" translucent={false} />
                                                           <PushNotificationsBootstrap />
                                                           <GlobalNotificationSocketListener />
                                                           {/* Global Socket Listener */}

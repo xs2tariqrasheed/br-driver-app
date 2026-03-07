@@ -398,6 +398,14 @@ export default function LiveJobOffersScreen({
         setSelectedJobForBid(job);
 
         // Handle bidable offers - show bid bottom sheet
+        const tripId = job?.tripOffer?.tripId;
+        const rawCompanyId = auth?.user?.company_id ?? auth?.user?.companyId;
+        const companyId: number | string =
+          rawCompanyId !== undefined && rawCompanyId !== null
+            ? typeof rawCompanyId === 'number'
+              ? rawCompanyId
+              : Number(rawCompanyId) || String(rawCompanyId)
+            : 1;
         const bidData = {
           amount: job?.fare || job?.tripOffer?.fare, // Default bid amount - this should come from the job data
           bosstedAmount: 5,
@@ -413,8 +421,11 @@ export default function LiveJobOffersScreen({
           ],
           boostedPrices: [1, 3, 4, 7],
           createdAt: job.timestamp,
+          tripId,
+          companyId,
         };
 
+        console.log("Bid Data that has some static data: ", JSON.stringify(bidData, null, 2));
         // Show bid bottom sheet with submission callback
         showBidBottomSheet(bidData, (bidData) =>
           handleBidSubmitted(bidData, job),
@@ -433,6 +444,8 @@ export default function LiveJobOffersScreen({
       showBidBottomSheet,
       updateBroadcastOffer,
       toastWaitingCustomer,
+      auth?.user?.company_id,
+      auth?.user?.companyId,
     ],
   );
 
@@ -614,39 +627,31 @@ export default function LiveJobOffersScreen({
         setIsETAModalOpen(false);
         setSelectedJobForAccept(null);
 
-        // Add a small delay before redirecting to allow backend to initialize the trip
-        // This prevents "Active trip resource not found" error
-        log(
-          "[LiveJobOffersScreen] Waiting for backend to initialize trip before redirecting...",
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
-
-        // Redirect to active ride screen first so driver always lands there after accept (non-biddable)
-        log("[LiveJobOffersScreen] Redirecting to active-ride screen");
-        router.replace("/(screens)/active-ride");
-
-        // Non-blocking: Try to update ETA in the database after redirect (don't block or prevent navigation)
-        // This is for non-biddable offers where ETA was provided but may not be stored in DB
-        updateETA({
-          tripId: tripId,
-          driverId: driverId,
-          eta: eta,
-        })
-          .then(() => {
-            log(
-              "[LiveJobOffersScreen] ✅ ETA updated in database successfully",
-            );
+        // Non-blocking: Try to update ETA in the database.
+        // Navigation to the active-ride screen is handled centrally by the
+        // ACCEPTED_RESPONSE socket event in GlobalSocketListener.
+        setTimeout(() => {
+          updateETA({
+            tripId: tripId,
+            driverId: driverId,
+            eta: eta,
           })
-          .catch((etaError) => {
-            log(
-              "[LiveJobOffersScreen] ⚠️ Failed to update ETA in database (non-blocking):",
-              etaError,
-            );
-            showToast(toastEtaUpdateFailed, {
-              variant: "error",
-              position: "top",
+            .then(() => {
+              log(
+                "[LiveJobOffersScreen] ✅ ETA updated in database successfully",
+              );
+            })
+            .catch((etaError) => {
+              log(
+                "[LiveJobOffersScreen] ⚠️ Failed to update ETA in database (non-blocking):",
+                etaError,
+              );
+              showToast(toastEtaUpdateFailed, {
+                variant: "error",
+                position: "top",
+              });
             });
-          });
+        }, 1500);
       } catch (error) {
         log(
           "[LiveJobOffersScreen] Failed to submit ETA for broadcast offer:",

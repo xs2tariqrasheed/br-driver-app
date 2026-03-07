@@ -706,43 +706,37 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         setCurrentOffer(null);
         setModalCallbacks(null);
 
-        // Add a small delay before redirecting to allow backend to initialize the trip
-        // This prevents "Active trip resource not found" error
-        console.log(
-          "⏳ Waiting for backend to initialize trip before redirecting...",
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
-
-        // Non-blocking: Try to update ETA in the database (don't block navigation if it fails)
-        // This is for non-biddable offers where ETA was provided but may not be stored in DB
-        try {
-          console.log(
-            "🔄 Attempting to update ETA in database (non-blocking)...",
-          );
-          await updateETA({
-            tripId: tripId,
-            driverId: driverId,
-            eta: eta,
-          });
-          console.log("✅ ETA updated in database successfully");
-        } catch (etaError) {
-          // Don't block the user - just notify them that ETA update failed
-          console.warn(
-            "⚠️ Failed to update ETA in database (non-blocking):",
-            etaError,
-          );
-          showToast(
-            "Ride accepted! ETA update failed. You can update it later during the active ride.",
-            {
-              variant: "error",
-              position: "top",
-            },
-          );
-        }
-
-        // Navigate to active-ride screen
-        console.log("🚀 Redirecting to active-ride screen");
-        router.replace("/(screens)/active-ride");
+        // Non-blocking: Try to update ETA in the database.
+        // We keep a small delay to give the Active Trip service time to initialize,
+        // but navigation to the active-ride screen is now handled centrally by the
+        // ACCEPTED_RESPONSE socket event in GlobalSocketListener to avoid races.
+        setTimeout(() => {
+          (async () => {
+            try {
+              console.log(
+                "🔄 Attempting to update ETA in database (non-blocking)...",
+              );
+              await updateETA({
+                tripId: tripId,
+                driverId: driverId,
+                eta: eta,
+              });
+              console.log("✅ ETA updated in database successfully");
+            } catch (etaError) {
+              console.warn(
+                "⚠️ Failed to update ETA in database (non-blocking):",
+                etaError,
+              );
+              showToast(
+                "Ride accepted! ETA update failed. You can update it later during the active ride.",
+                {
+                  variant: "error",
+                  position: "top",
+                },
+              );
+            }
+          })();
+        }, 1500);
       } catch (error) {
         console.error("❌ Error in submit ETA:", error);
         const errorMessage =

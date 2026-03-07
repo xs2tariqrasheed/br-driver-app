@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { router } from "expo-router";
 
 import {
   NOTIFICATION_TYPES,
@@ -110,6 +111,9 @@ export function GlobalSocketListener() {
   useEffect(() => {
     broadcastOffersRef.current = broadcastOffers;
   }, [broadcastOffers]);
+
+  // Guard to deduplicate redirects to the active-ride screen
+  const navigatingToActiveRideRef = useRef(false);
 
   // Bid context hooks
   const { showBidAccepted } = useBidAccepted();
@@ -308,13 +312,35 @@ export function GlobalSocketListener() {
                 log("❌ Failed to store tripId from accept-response:", e);
               }
             }
-            // Close all modals first, then show bid accepted modal
+            // Close all modals first
             hideRideOfferModal();
             closeAllModals();
-            log("✅ Ride offer accepted - showing accepted sheet");
+            log("✅ Ride offer accepted - closing modals");
 
             // Set hasAnyActiveOffer to false on successful acceptance
             setHasAnyActiveOffer(false);
+
+            // Centralized, deduplicated redirect to active-ride screen.
+            // This ensures the driver is taken to the active ride even if local
+            // ETA submit flows race or their navigation is interrupted.
+            if (!navigatingToActiveRideRef.current) {
+              navigatingToActiveRideRef.current = true;
+              setTimeout(() => {
+                try {
+                  log(
+                    "🚀 Navigating to active-ride from ACCEPTED_RESPONSE socket event",
+                  );
+                  router.replace("/(screens)/active-ride");
+                } catch (navError) {
+                  log(
+                    "❌ Failed to navigate to active-ride from ACCEPTED_RESPONSE:",
+                    navError,
+                  );
+                } finally {
+                  navigatingToActiveRideRef.current = false;
+                }
+              }, 1500);
+            }
           } else {
             // Close all modals first, then show bid unsuccessful modal
             closeAllModals();

@@ -42,6 +42,10 @@ export interface BidData {
   systemSuggestedBids: SystemSuggestedBid[];
   boostedPrices: number[];
   createdAt: string;
+  /** Trip ID for system suggested bid prices API */
+  tripId?: string;
+  /** Company ID for system suggested bid prices API */
+  companyId?: number | string;
 }
 
 export interface BidBottomSheetModalProps {
@@ -189,12 +193,22 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
     initialSystemSuggestedBids,
   ]);
 
-  // Fetch prices when modal opens
+  // Fetch prices when modal opens (requires tripId and companyId from mobile for API)
   useEffect(() => {
     if (open) {
       const loadBidPrices = async () => {
+        const tripId = bid.tripId;
+        const companyId = bid.companyId != null ? String(bid.companyId) : undefined;
+        console.log('🔔 [BidBottomSheetModal] Fetching bid prices for BID DATA', JSON.stringify(bid, null, 2));
+        if (!tripId || !companyId) {
+          console.log(
+            '[BidBottomSheetModal] Skipping system suggested bid prices fetch: tripId or companyId missing',
+            { tripId, companyId }
+          );
+          return;
+        }
         try {
-          const response = await fetchBidPrices();
+          const response = await fetchBidPrices({ tripId, companyId });
 
           // Check DB response format
           const responseCode = response?.jHeader?.responseCode;
@@ -241,7 +255,7 @@ const BidBottomSheetModal: React.FC<BidBottomSheetModalProps> = ({
 
       loadBidPrices();
     }
-  }, [open, fetchBidPrices]);
+  }, [open, fetchBidPrices, bid.tripId, bid.companyId]);
 
   // Get min and max values from suggested bids
   // const minBid =
