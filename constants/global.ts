@@ -463,7 +463,7 @@ export const NETWORK_MONITORING = {
 export type NetworkQuality =
   (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];
 
-const BASE_URL = "http://192.168.100.58";
+const BASE_URL = "http://3.84.108.176";
 // Testing purpose constant for all the services
 // When IS_TESTING is true, these URLs will be used instead of environment variables
 // All URLs should include the http:// protocol prefix for local testing
