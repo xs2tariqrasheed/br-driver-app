@@ -1,5 +1,8 @@
 import { showToast } from "@/components/Toast";
-import { TRIP_OFFER_TYPES } from "@/constants/global";
+import {
+  EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER,
+  TRIP_OFFER_TYPES,
+} from "@/constants/global";
 import { ExpirationContexts } from "@/types/OfferExpiration";
 import { logger } from "@/utils/helpers";
 
@@ -30,15 +33,19 @@ export class ExpirationService {
       tripId: string;
       timestamp?: string;
       dbStatus?: string;
+      reason?: string;
     },
     contexts: ExpirationContexts
   ): Promise<void> {
     try {
-      const { tripId, timestamp, dbStatus } = data as {
+      const { tripId, dbStatus, reason } = data as {
         tripId: string;
         timestamp?: string;
         dbStatus?: string;
+        reason?: string;
       };
+      const isAssignedElsewhere =
+        reason === EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER;
 
       // Skip expiration for demo offers
       if (tripId.startsWith("demo-")) {
@@ -57,10 +64,15 @@ export class ExpirationService {
         );
         // Even if we can't locate the offer object (e.g. user backed out and currentOffer was cleared),
         // we MUST still clear the "active offer" flag so the driver doesn't get stuck.
-        showToast("Ride offer expired!", {
-          variant: "warning",
-          position: "top",
-        });
+        showToast(
+          isAssignedElsewhere
+            ? "Another driver was assigned to this trip."
+            : "Ride offer expired!",
+          {
+            variant: "warning",
+            position: "top",
+          },
+        );
 
         if (contexts.closeAllModals) {
           this.log("🔽 Closing all modals due to offer expiration (offer not found)");
@@ -85,7 +97,12 @@ export class ExpirationService {
       // Show appropriate toast message:
       // - If DB status is CANCELLED, this was an explicit customer cancel
       // - Otherwise, it's a normal timeout expiration
-      if (dbStatus === "CANCELLED") {
+      if (isAssignedElsewhere) {
+        showToast("Another driver was assigned to this trip.", {
+          variant: "warning",
+          position: "top",
+        });
+      } else if (dbStatus === "CANCELLED") {
         showToast(`Customer has canceled this ${tripId} ride`, {
           variant: "warning",
           position: "top",
@@ -152,7 +169,7 @@ export class ExpirationService {
     // 1. Check Sequential offers (RideOfferContext)
     if (
       contexts.currentOffer &&
-      contexts.currentOffer.tripOffer?.tripId === tripId
+      String(contexts.currentOffer.tripOffer?.tripId) === String(tripId)
     ) {
       this.log(`📱 Found sequential offer for tripId: ${tripId}`);
       return {
@@ -165,7 +182,7 @@ export class ExpirationService {
     // 2. Check Broadcast offers (BroadcastJobOffersContext)
     if (contexts.broadcastOffers) {
       const broadcastOffer = contexts.broadcastOffers.find(
-        (offer) => offer.tripOffer?.tripId === tripId
+        (offer) => String(offer.tripOffer?.tripId) === String(tripId),
       );
 
       if (broadcastOffer) {

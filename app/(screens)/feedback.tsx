@@ -22,6 +22,7 @@ import {
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  BackHandler,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -177,6 +178,20 @@ const FeedbackScreen: React.FC = () => {
 
     loadTripDetails();
   }, [tripNumber, tripId]);
+
+  // Android hardware back: go home instead of exiting the app (root stack has nothing to pop)
+  useEffect(() => {
+    if (Platform.OS !== "android") {
+      return;
+    }
+
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      router.replace("/(tabs)");
+      return true;
+    });
+
+    return () => sub.remove();
+  }, []);
 
   // Handle keyboard events
   useEffect(() => {

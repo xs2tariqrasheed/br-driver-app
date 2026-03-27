@@ -3,6 +3,10 @@ import Button from "@/components/Button";
 import ConfirmationSheet from "@/components/ConfirmationSheet";
 import Counter from "@/components/Counter";
 import DesiredLocationItem from "@/components/DesiredLocationItem";
+import {
+  GooglePlacesAddressField,
+  type ResolvedPlacePayload,
+} from "@/components/GooglePlacesAddressField";
 import Header from "@/components/Header";
 import Loader from "@/components/Loader";
 import Logo from "@/components/Logo";
@@ -328,6 +332,24 @@ export default function DesiredDestinationsScreen() {
     setCommission(0);
   }, []);
 
+  /** Typing clears map/Places resolution until user picks again (required for API). */
+  const handleAddressInputChange = useCallback((text: string) => {
+    setInputAddress(text);
+    setSelectedCoordinates(null);
+    setSelectedPlaceId("");
+    setSelectedZipCode("");
+  }, []);
+
+  const applyResolvedPlace = useCallback((p: ResolvedPlacePayload) => {
+    setInputAddress(p.address);
+    setSelectedCoordinates({
+      latitude: p.latitude,
+      longitude: p.longitude,
+    });
+    setSelectedPlaceId(p.placeId);
+    setSelectedZipCode(p.postalCode);
+  }, []);
+
   const handleAddDestination = () => {
     log("handleAddDestination called");
     if (destinations.length >= MAX_DESIRED_LOCATIONS) {
@@ -411,17 +433,21 @@ export default function DesiredDestinationsScreen() {
     const trimmed = inputAddress.trim();
     const existingDest = destinations[editingIndex];
     const destWithExtras = existingDest as any;
+    const addressUnchanged = trimmed === existingDest.address;
 
     const finalCoordinates =
       selectedCoordinates ||
-      (destWithExtras.latitude && destWithExtras.longitude
+      (addressUnchanged &&
+      destWithExtras.latitude != null &&
+      destWithExtras.longitude != null
         ? {
             latitude: destWithExtras.latitude,
             longitude: destWithExtras.longitude,
           }
         : null);
     const finalPlaceId =
-      selectedPlaceId || destWithExtras.googleReferenceNumber || "";
+      selectedPlaceId ||
+      (addressUnchanged ? destWithExtras.googleReferenceNumber || "" : "");
     const finalZipCode =
       selectedZipCode ||
       destWithExtras.targetZipCode ||
@@ -431,6 +457,14 @@ export default function DesiredDestinationsScreen() {
       commission ?? destWithExtras.commissionPercentage ?? 0;
 
     if (!finalCoordinates) {
+      showToast(toastSelectLocationUpdate, {
+        variant: "error",
+        position: "top",
+      });
+      return;
+    }
+
+    if (!addressUnchanged && !selectedPlaceId) {
       showToast(toastSelectLocationUpdate, {
         variant: "error",
         position: "top",
@@ -474,6 +508,30 @@ export default function DesiredDestinationsScreen() {
     destinations,
     updateDestinationAPI,
     closeEditSheet,
+    toastSelectLocationUpdate,
+  ]);
+
+  const canSubmitEdit = useMemo(() => {
+    if (editingIndex === null) return false;
+    const trimmed = inputAddress.trim();
+    if (!trimmed) return false;
+    const existing = destinations[editingIndex];
+    const unchanged = trimmed === existing.address;
+    const ex = existing as any;
+    const hasCoords =
+      selectedCoordinates != null ||
+      (unchanged &&
+        ex.latitude != null &&
+        ex.longitude != null);
+    if (!hasCoords) return false;
+    if (!unchanged && !selectedPlaceId) return false;
+    return true;
+  }, [
+    editingIndex,
+    inputAddress,
+    destinations,
+    selectedCoordinates,
+    selectedPlaceId,
   ]);
 
   return (
@@ -593,8 +651,12 @@ export default function DesiredDestinationsScreen() {
       {/* Add Destination Bottom Sheet */}
       <BottomSheet
         scrollable
-        snapPoints={["50%", "70%"]}
-        snapPointsWhenKeyboardVisible={["75%", "95%"]}
+        expandToContentWhenKeyboardHidden
+        keyboardSnapPoints={["95%"]}
+        maxDynamicContentSizeFraction={0.9}
+        snapPoints={["80%"]}
+        snapPointsWhenKeyboardVisible={["90%"]}
+        initialSnapIndex={0}
         open={isSheetOpen && editingIndex === null}
         onClose={closeAddSheet}
         headerTitle={sheetAddTitle}
@@ -621,22 +683,13 @@ export default function DesiredDestinationsScreen() {
               {sheetSelectFromMap}
             </Typography>
           </TouchableOpacity>
-          <View
-            style={[
-              styles.addressDisplayBox,
-              !inputAddress.trim() && styles.addressDisplayBoxPlaceholder,
-            ]}
-          >
-            <Typography
-              type="bodyMedium"
-              weight="regular"
-              style={[
-                styles.addressDisplayText,
-                !inputAddress.trim() && styles.addressDisplayTextPlaceholder,
-              ]}
-            >
-              {inputAddress.trim() || sheetAddressPlaceholder}
-            </Typography>
+          <View style={styles.addressFieldWrap}>
+            <GooglePlacesAddressField
+              value={inputAddress}
+              onChangeText={handleAddressInputChange}
+              onPlaceResolved={applyResolvedPlace}
+              placeholder={sheetAddressPlaceholder}
+            />
           </View>
 
           <View style={[styles.section, { marginTop: 24 }]}>
@@ -688,8 +741,12 @@ export default function DesiredDestinationsScreen() {
       {/* Edit Destination Bottom Sheet */}
       <BottomSheet
         scrollable
-        snapPoints={["50%", "70%"]}
-        snapPointsWhenKeyboardVisible={["75%", "95%"]}
+        expandToContentWhenKeyboardHidden
+        keyboardSnapPoints={["95%"]}
+        maxDynamicContentSizeFraction={0.9}
+        snapPoints={["80%"]}
+        snapPointsWhenKeyboardVisible={["90%"]}
+        initialSnapIndex={0}
         open={isSheetOpen && editingIndex !== null}
         onClose={closeEditSheet}
         headerTitle={sheetEditTitle}
@@ -716,22 +773,13 @@ export default function DesiredDestinationsScreen() {
               {sheetSelectFromMap}
             </Typography>
           </TouchableOpacity>
-          <View
-            style={[
-              styles.addressDisplayBox,
-              !inputAddress.trim() && styles.addressDisplayBoxPlaceholder,
-            ]}
-          >
-            <Typography
-              type="bodyMedium"
-              weight="regular"
-              style={[
-                styles.addressDisplayText,
-                !inputAddress.trim() && styles.addressDisplayTextPlaceholder,
-              ]}
-            >
-              {inputAddress.trim() || sheetAddressPlaceholder}
-            </Typography>
+          <View style={styles.addressFieldWrap}>
+            <GooglePlacesAddressField
+              value={inputAddress}
+              onChangeText={handleAddressInputChange}
+              onPlaceResolved={applyResolvedPlace}
+              placeholder={sheetAddressPlaceholder}
+            />
           </View>
 
           <View style={[styles.section, { marginTop: 24 }]}>
@@ -764,7 +812,7 @@ export default function DesiredDestinationsScreen() {
               rounded="half"
               variant="primary"
               loading={isSavingEdit}
-              disabled={!inputAddress.trim() || isSavingEdit}
+              disabled={!canSubmitEdit || isSavingEdit}
               onPress={handleUpdateDestination}
             >
               {isSavingEdit ? sheetButtonUpdating : sheetButtonUpdate}
@@ -834,28 +882,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "flex-end",
-    paddingVertical: 16,
+    paddingVertical: 8,
     width: "100%",
   },
-  addressDisplayBox: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: textColors.grey200,
-    borderRadius: 8,
-    minHeight: 44,
-    backgroundColor: textColors.grey100,
-    opacity: 0.8,
-  },
-  addressDisplayBoxPlaceholder: {
-    opacity: 0.7,
-  },
-  addressDisplayText: {
-    color: textColors.grey900,
-    flexWrap: "wrap",
-  },
-  addressDisplayTextPlaceholder: {
-    color: textColors.grey900,
+  addressFieldWrap: {
+    width: "100%",
+    marginTop: 4,
   },
   loadingOverlay: {
     position: "absolute",

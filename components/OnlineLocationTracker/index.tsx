@@ -14,6 +14,7 @@ import {
   logger,
   setStorageItem,
 } from "@/utils/helpers";
+import { connectSocket as connectOffersSocket, isOffersSocketConnected } from "@/utils/socket";
 import * as Location from "expo-location";
 import { usePathname } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -34,6 +35,10 @@ const OnlineLocationTracker: React.FC = () => {
   const isTickInFlightRef = useRef(false);
   const lastSentLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const socketReconnectAttemptedRef = useRef(false); // Track socket reconnection attempts
+  /** Sync with AppState without stale React closures (used for resume detection). */
+  const appStateRef = useRef(AppState.currentState);
+  /** Whether the location interval was already running for this "online + active" stretch. */
+  const wasTrackingLocationRef = useRef(false);
   const [appIsActive, setAppIsActive] = useState(
     AppState.currentState === "active"
   );
@@ -54,24 +59,31 @@ const OnlineLocationTracker: React.FC = () => {
     }, appIsActive: ${appIsActive}, socketStatus: ${socketStatus}, trackingBlocked: ${trackingBlocked}, shouldTrack: ${shouldTrack}`
   );
 
-  // Listen to AppState changes - Handle location tracking and socket reconnection
+  // Listen to AppState changes - socket + UI state
   // Note: We do NOT call offline API or disconnect socket on background
   // because the driver should stay online even when app is backgrounded
   useEffect(() => {
     const sub = AppState.addEventListener("change", async (nextState) => {
+      const prevState = appStateRef.current;
+      appStateRef.current = nextState;
+
       const isActive = nextState === "active";
-      const wasActive = appIsActive;
+      const wasActive = prevState === "active";
+      const becameActive = !wasActive && isActive;
 
       log(
         `[OnlineLocationTracker] AppState changed to: ${nextState} (active: ${isActive}, wasActive: ${wasActive})`
       );
 
-      // Track if we were in background
-      if (!wasActive && isActive) {
+      if (becameActive) {
         setWasInBackground(true);
         log(
-          "[OnlineLocationTracker] App became active from background/inactive state"
+          "[OnlineLocationTracker] App became active from background/inactive/killed resume"
         );
+        // Allow socket reconnect effect to try again after errors / new process
+        socketReconnectAttemptedRef.current = false;
+        // Tracking effect will run a forced location POST when shouldTrack turns true again
+        wasTrackingLocationRef.current = false;
       } else if (wasActive && !isActive) {
         setWasInBackground(false);
         log("[OnlineLocationTracker] App went to background/inactive state");
@@ -79,26 +91,28 @@ const OnlineLocationTracker: React.FC = () => {
 
       setAppIsActive(isActive);
 
-      // Reconnect socket when app becomes active and driver is online
+      // Reconnect offers socket after resume if the TCP connection is gone (do not force new
+      // socket when still connected — connectSocket() would tear down unnecessarily).
       if (
-        !wasActive &&
-        isActive &&
+        becameActive &&
         driver?.online &&
-        socketStatus !== "connected"
+        !trackingBlocked &&
+        auth?.token &&
+        !isOffersSocketConnected()
       ) {
         try {
           log(
             "[OnlineLocationTracker] Reconnecting socket after app became active..."
           );
-          await connectSocket();
-          log("[OnlineLocationTracker] Socket reconnected successfully");
+          await connectOffersSocket();
+          log("[OnlineLocationTracker] Socket reconnect finished after resume");
         } catch (error) {
           log("[OnlineLocationTracker] Failed to reconnect socket:", error);
         }
       }
     });
     return () => sub.remove();
-  }, [log, appIsActive, driver?.online, socketStatus, connectSocket]);
+  }, [log, driver?.online, trackingBlocked, auth?.token]);
 
   // Handle socket reconnection when driver comes online
   useEffect(() => {
@@ -155,6 +169,7 @@ const OnlineLocationTracker: React.FC = () => {
     }
 
     if (!shouldTrack) {
+      wasTrackingLocationRef.current = false;
       log(
         "[OnlineLocationTracker] Tracking disabled - interval cleared and not restarting"
       );
@@ -164,6 +179,9 @@ const OnlineLocationTracker: React.FC = () => {
     log(
       "[OnlineLocationTracker] Starting location tracking - driver is online and conditions allow tracking"
     );
+
+    const wasAlreadyTracking = wasTrackingLocationRef.current;
+    wasTrackingLocationRef.current = true;
 
     // Function to run tracking tick
     const runTrackingTick = async () => {
@@ -253,14 +271,39 @@ const OnlineLocationTracker: React.FC = () => {
       }
     };
 
-    // Run immediately
-    runTrackingTick();
+    const kickoff = async () => {
+      // After background, kill, or first time going "online + active": push location once
+      // so the backend geo index / online-drivers sees the driver even if GPS hasn't moved.
+      if (!wasAlreadyTracking) {
+        try {
+          const loc = await Location.getCurrentPositionAsync({});
+          const current = {
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+          };
+          log(
+            "[OnlineLocationTracker] Resume/track-start — posting location to backend"
+          );
+          await postOnlineLocation(current as any);
+          await setStorageItem(
+            PREVIOUS_LOCATION_STORAGE_KEY,
+            JSON.stringify(current)
+          );
+          lastSentLocationRef.current = current;
+        } catch (e) {
+          log("[OnlineLocationTracker] Resume location sync failed", e);
+        }
+      }
 
-    // Start interval
-    intervalRef.current = setInterval(
-      runTrackingTick,
-      ONLINE_LOCATION_INTERVAL_MS
-    );
+      await runTrackingTick();
+
+      intervalRef.current = setInterval(
+        runTrackingTick,
+        ONLINE_LOCATION_INTERVAL_MS
+      );
+    };
+
+    void kickoff();
 
     // Cleanup on unmount or when shouldTrack changes
     return () => {

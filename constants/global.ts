@@ -360,6 +360,10 @@ export const SOCKET_EVENTS = {
   EXPIRED_OFFER: "expired-offer",
 } as const;
 
+/** Matches auction `expired-offer` payload when another driver was assigned. */
+export const EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER = "ASSIGNED_TO_OTHER" as const;
+export const SPEECH_EXPIRED_OFFER_ASSIGNED_TO_OTHER = "Another driver was assigned to this trip." as const;
+
 export const ACTIVE_TRIP_SOCKET_EVENTS = {
   TRIP_STOP_ADDED: "trip-stop-added",
   NEW_MESSAGE: "new-message",
@@ -463,7 +467,7 @@ export const NETWORK_MONITORING = {
 export type NetworkQuality =
   (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];
 
-const BASE_URL = "http://3.84.108.176";
+const BASE_URL = "http://192.168.100.123";
 // Testing purpose constant for all the services
 // When IS_TESTING is true, these URLs will be used instead of environment variables
 // All URLs should include the http:// protocol prefix for local testing
@@ -489,8 +493,8 @@ export const DEFAULT_ACCESS_KEY =
 // API Version (matches backend APIVersion)
 export const API_VERSION = "1.0.1";
 
-// Client Version (from app.json version)
-export const CLIENT_VERSION = "1.0.0";
+// Client Version (keep in sync with app.json expo.version)
+export const CLIENT_VERSION = "1.2.0";
 
 // DB Action Codes
 // Common action codes used across the app for database operations
@@ -519,3 +523,4 @@ export type SystemSettingsKey =
 // The driver will be automatically logged out after this many minutes of inactivity,
 // provided there is no active trip in progress.
 export const AUTO_LOGOUT_IDLE_TIMEOUT_MINUTES = 30;
+

@@ -1,7 +1,7 @@
-import Typography from "@/components/Typography";
-import { useOverlayInsets } from "@/context/OverlayInsetsContext";
-import { Tabs, usePathname, useRouter } from "expo-router";
-import { useEffect, useMemo } from "react";
+import Typography from '@/components/Typography';
+import { useOverlayInsets } from '@/context/OverlayInsetsContext';
+import { Tabs, usePathname, useRouter } from 'expo-router';
+import { useEffect, useMemo } from 'react';
 import {
   Image,
   ImageProps,
@@ -9,29 +9,29 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HapticTab } from "@/components/HapticTab";
-import TabBarBackground from "@/components/ui/TabBarBackground";
-import { textColors } from "@/constants/colors";
-import { SYSTEM_SETTINGS_KEYS } from "@/constants/global";
-import { TABS_CONTENT_KEYS } from "@/content/(tabs)/tabs-keys";
-import { useAuth } from "@/context/AuthContext";
-import { useGetContent } from "@/hooks/useGetContent";
+import { HapticTab } from '@/components/HapticTab';
+import TabBarBackground from '@/components/ui/TabBarBackground';
+import { textColors } from '@/constants/colors';
+import { SYSTEM_SETTINGS_KEYS } from '@/constants/global';
+import { TABS_CONTENT_KEYS } from '@/content/(tabs)/tabs-keys';
+import { useAuth } from '@/context/AuthContext';
+import { useGetContent } from '@/hooks/useGetContent';
 
-const SHOW_EXAMPLES = process.env.EXPO_PUBLIC_SHOW_EXAMPLES === "true";
+const SHOW_EXAMPLES = process.env.EXPO_PUBLIC_SHOW_EXAMPLES === 'true';
 
 // Only hide tabs on active ride related screens
 const TAB_HIDDEN_PATHS = [
-  "/(screens)/active-ride",
-  "/(screens)/chat",
-  "/(screens)/ride-offer",
-  "/(screens)/trip-details",
-  "/(screens)/feedback",
-  "/(screens)/desired-destinations-map",
-  "/(tabs)/desired-destinations-map",
-  "/desired-destinations-map", // Add path without group prefix
+  '/(screens)/active-ride',
+  '/(screens)/chat',
+  '/(screens)/ride-offer',
+  '/(screens)/trip-details',
+  '/(screens)/feedback',
+  '/(screens)/desired-destinations-map',
+  '/(tabs)/desired-destinations-map',
+  '/desired-destinations-map', // Add path without group prefix
 ];
 
 export default function TabLayout() {
@@ -55,19 +55,21 @@ export default function TabLayout() {
       moreTabLabel: get(TABS_CONTENT_KEYS.MORE_TAB_LABEL),
       examplesTabLabel: get(TABS_CONTENT_KEYS.EXAMPLES_TAB_LABEL),
       driverWebAppProdUrl: get(
-        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
+        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL
       ),
     };
   }, [getContent]);
 
   const handleEarningsTabPress = () => {
-    const base = (driverWebAppProdUrl || "").replace(/\/$/, "");
+    const base = (driverWebAppProdUrl || '').replace(/\/$/, '');
     const url = base
-      ? `${base}/earnings?token=${auth?.token ?? ""}`
+      ? `${base}/auth/auto-login?token=${auth?.token ?? ''}&driverId=${
+          auth?.user?.id
+        }&source=DRIVER`
       : undefined;
     if (url) {
       router.push({
-        pathname: "/(screens)/in-app-webview",
+        pathname: '/(screens)/in-app-webview',
         params: { url, title: earningsTabLabel },
       });
     }
@@ -80,7 +82,7 @@ export default function TabLayout() {
   // Show tabs on all other screens including notifications, settings, desired-destinations, etc.
   const hideTabs =
     TAB_HIDDEN_PATHS.some((route) => pathname?.startsWith(route)) ||
-    pathname?.includes("desired-destinations-map");
+    pathname?.includes('desired-destinations-map');
   const insets = useSafeAreaInsets();
 
   // Calculate dynamic tab bar height
@@ -90,7 +92,7 @@ export default function TabLayout() {
   const minPadding = 8;
   const tabBarHeight = Math.max(
     baseTabHeight + minPadding,
-    baseTabHeight + insets.bottom + minPadding,
+    baseTabHeight + insets.bottom + minPadding
   );
 
   // Expose tab bar height to overlays (modals/bottom sheets) so they can add bottom padding
@@ -112,7 +114,7 @@ export default function TabLayout() {
           Platform.select({
             ios: {
               // Use a transparent background on iOS to show the blur effect
-              position: "absolute",
+              position: 'absolute',
               height: tabBarHeight,
               // paddingBottom: Math.max(insets.bottom, minPadding),
               paddingTop: 18,
@@ -120,11 +122,11 @@ export default function TabLayout() {
             default: {
               height: tabBarHeight,
               paddingTop:
-                Platform.OS === "android" ? 16 : Math.max(insets.top, 8),
+                Platform.OS === 'android' ? 16 : Math.max(insets.top, 8),
               paddingBottom: Math.max(insets.bottom, minPadding),
             },
           }),
-          hideTabs ? { display: "none" } : null,
+          hideTabs ? { display: 'none' } : null,
         ] as any,
       }}
     >
@@ -136,7 +138,7 @@ export default function TabLayout() {
             <TabItem
               label={homeTabLabel}
               focused={focused}
-              source={require("@/assets/images/home-icon.png")}
+              source={require('@/assets/images/home-icon.png')}
             />
           ),
         }}
@@ -149,7 +151,7 @@ export default function TabLayout() {
             <TabItem
               label={activeJobTabLabel}
               focused={focused}
-              source={require("@/assets/images/active-jobs-icon.png")}
+              source={require('@/assets/images/active-jobs-icon.png')}
             />
           ),
         }}
@@ -162,7 +164,7 @@ export default function TabLayout() {
             <TabItem
               label={earningsTabLabel}
               focused={focused}
-              source={require("@/assets/images/earnings-icon.png")}
+              source={require('@/assets/images/earnings-icon.png')}
             />
           ),
           tabBarButton: (props) => (
@@ -182,7 +184,7 @@ export default function TabLayout() {
             <TabItem
               label={moreTabLabel}
               focused={focused}
-              source={require("@/assets/images/more-icon.png")}
+              source={require('@/assets/images/more-icon.png')}
             />
           ),
         }}
@@ -197,7 +199,7 @@ export default function TabLayout() {
             <TabItem
               label={examplesTabLabel}
               focused={focused}
-              source={require("@/assets/images/more-icon.png")}
+              source={require('@/assets/images/more-icon.png')}
             />
           ),
         }}
@@ -244,7 +246,7 @@ function TabItem({
 }: {
   label: string;
   focused: boolean;
-  source: ImageProps["source"];
+  source: ImageProps['source'];
 }) {
   const { width } = useWindowDimensions();
   // Make tab item width responsive - ensure "Active Job" fits on small screens
@@ -283,13 +285,13 @@ const styles = StyleSheet.create({
     // width is now dynamic based on screen size
     height: 64,
     paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "transparent",
-    backgroundColor: "transparent",
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
   },
   itemContainerFocused: {
     borderColor: textColors.teal500,
@@ -305,12 +307,12 @@ const styles = StyleSheet.create({
   },
   label: {
     color: textColors.grey700,
-    textAlign: "center",
+    textAlign: 'center',
     flexShrink: 0, // Prevent text from shrinking
   },
   labelFocused: {
     color: textColors.teal900,
-    textAlign: "center",
+    textAlign: 'center',
     flexShrink: 0, // Prevent text from shrinking
   },
 });

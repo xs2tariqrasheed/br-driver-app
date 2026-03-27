@@ -143,6 +143,7 @@ export default function LiveJobOffersScreen({
     submitBid,
     submitBidForBroadcastOffer,
     isSubmitBidLoading,
+    subscribeToHideETA,
   } = useRideOffer();
   const { openSpecialRequirements } = useSpecialRequirements();
   const { openPackageInfo } = usePackageInfo();
@@ -183,6 +184,15 @@ export default function LiveJobOffersScreen({
       isNavigatingToTripDetailsRef.current = false;
     }, []),
   );
+
+  // Same ETAModal state as RideOfferProvider — socket hideETAModal must close this copy too.
+  useEffect(() => {
+    return subscribeToHideETA(() => {
+      setIsETAModalOpen(false);
+      setSelectedJobForAccept(null);
+      setIsSubmitETALoading(false);
+    });
+  }, [subscribeToHideETA]);
 
   // Track which offer is being processed (skip/hide operation)
   const [processingOfferId, setProcessingOfferId] = useState<string | null>(

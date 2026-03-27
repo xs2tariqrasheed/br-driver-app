@@ -1,17 +1,17 @@
-import Button from "@/components/Button";
-import Header from "@/components/Header";
-import InfoTable, { InfoTableDataItem } from "@/components/InfoTable";
-import Logo from "@/components/Logo";
-import Typography from "@/components/Typography";
-import { textColors } from "@/constants/colors";
-import { SYSTEM_SETTINGS_KEYS } from "@/constants/global";
-import { PROFILE_CONTENT_KEYS } from "@/content/profile-keys";
-import { useAuth } from "@/context/AuthContext";
-import { useDriver } from "@/context/DriverContext";
-import { useGetContent } from "@/hooks/useGetContent";
-import { Stack, useRouter } from "expo-router";
-import { useMemo } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
+import Button from '@/components/Button';
+import Header from '@/components/Header';
+import InfoTable, { InfoTableDataItem } from '@/components/InfoTable';
+import Logo from '@/components/Logo';
+import Typography from '@/components/Typography';
+import { textColors } from '@/constants/colors';
+import { SYSTEM_SETTINGS_KEYS } from '@/constants/global';
+import { PROFILE_CONTENT_KEYS } from '@/content/profile-keys';
+import { useAuth } from '@/context/AuthContext';
+import { useDriver } from '@/context/DriverContext';
+import { useGetContent } from '@/hooks/useGetContent';
+import { Stack, useRouter } from 'expo-router';
+import { useMemo } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function ProfileScreen() {
   const { getContent } = useGetContent();
@@ -66,19 +66,19 @@ export default function ProfileScreen() {
       sectionPersonalLabel: get(PROFILE_CONTENT_KEYS.SECTION_PERSONAL),
       sectionContactLabel: get(PROFILE_CONTENT_KEYS.SECTION_CONTACT),
       sectionDriverDetailsLabel: get(
-        PROFILE_CONTENT_KEYS.SECTION_DRIVER_DETAILS,
+        PROFILE_CONTENT_KEYS.SECTION_DRIVER_DETAILS
       ),
       sectionActivityLabel: get(PROFILE_CONTENT_KEYS.SECTION_ACTIVITY),
       sectionPaymentLabel: get(PROFILE_CONTENT_KEYS.SECTION_PAYMENT),
       personalFullNameLabel: get(PROFILE_CONTENT_KEYS.PERSONAL_FULL_NAME),
       personalDateOfBirthLabel: get(
-        PROFILE_CONTENT_KEYS.PERSONAL_DATE_OF_BIRTH,
+        PROFILE_CONTENT_KEYS.PERSONAL_DATE_OF_BIRTH
       ),
       personalGenderLabel: get(PROFILE_CONTENT_KEYS.PERSONAL_GENDER),
       personalEthnicityLabel: get(PROFILE_CONTENT_KEYS.PERSONAL_ETHNICITY),
       personalLanguagesLabel: get(PROFILE_CONTENT_KEYS.PERSONAL_LANGUAGES),
       personalYearsOfExperienceLabel: get(
-        PROFILE_CONTENT_KEYS.PERSONAL_YEARS_OF_EXPERIENCE,
+        PROFILE_CONTENT_KEYS.PERSONAL_YEARS_OF_EXPERIENCE
       ),
       contactEmailLabel: get(PROFILE_CONTENT_KEYS.CONTACT_EMAIL),
       contactPhoneLabel: get(PROFILE_CONTENT_KEYS.CONTACT_PHONE),
@@ -104,12 +104,12 @@ export default function ProfileScreen() {
       paymentBankNameLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_BANK_NAME),
       paymentAccountNameLabel: get(PROFILE_CONTENT_KEYS.PAYMENT_ACCOUNT_NAME),
       paymentAccountNumberLabel: get(
-        PROFILE_CONTENT_KEYS.PAYMENT_ACCOUNT_NUMBER,
+        PROFILE_CONTENT_KEYS.PAYMENT_ACCOUNT_NUMBER
       ),
       actionEditPortal: get(PROFILE_CONTENT_KEYS.ACTION_EDIT_PORTAL),
       noteEditInfo: get(PROFILE_CONTENT_KEYS.NOTE_EDIT_INFO),
       driverWebAppProdUrl: get(
-        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
+        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL
       ),
     };
   }, [getContent]);
@@ -120,7 +120,7 @@ export default function ProfileScreen() {
 
   // Helper: show value from login user or "Not available"
   const fromUser = (value: string | number | undefined | null) =>
-    value !== undefined && value !== null && String(value).trim() !== ""
+    value !== undefined && value !== null && String(value).trim() !== ''
       ? String(value)
       : valueNa;
 
@@ -128,8 +128,8 @@ export default function ProfileScreen() {
   const user = auth?.user as any;
 
   // Personal Information (from flat user: first_name, last_name, years_of_experience only)
-  const firstName = user?.first_name ?? "";
-  const lastName = user?.last_name ?? "";
+  const firstName = user?.first_name ?? '';
+  const lastName = user?.last_name ?? '';
   const fullName = `${firstName} ${lastName}`.trim() || nameFallback;
   const dateOfBirth = valueNa; // not in login response
   const gender = valueNa;
@@ -151,7 +151,7 @@ export default function ProfileScreen() {
   const grade = valueNa;
   const currentRideStatus = valueNa;
   const isOnline =
-    user?.is_online === "YES" ||
+    user?.is_online === 'YES' ||
     user?.is_online === true ||
     driver?.online === true ||
     false;
@@ -173,7 +173,7 @@ export default function ProfileScreen() {
 
   // Format dates for display
   const formatDate = (dateStr: string) => {
-    if (!dateStr || dateStr === valueNa || dateStr.includes("0000-00-00"))
+    if (!dateStr || dateStr === valueNa || dateStr.includes('0000-00-00'))
       return valueNa;
     try {
       const date = new Date(dateStr);
@@ -196,7 +196,7 @@ export default function ProfileScreen() {
         value: String(yearsOfExperience),
       },
     ],
-    [fullName, dateOfBirth, gender, ethnicity, languages, yearsOfExperience],
+    [fullName, dateOfBirth, gender, ethnicity, languages, yearsOfExperience]
   );
 
   // Contact Information Section
@@ -206,7 +206,7 @@ export default function ProfileScreen() {
       { label: contactPhoneLabel, value: phone },
       { label: contactWhatsappLabel, value: whatsapp },
     ],
-    [email, phone, whatsapp],
+    [email, phone, whatsapp]
   );
 
   // Driver Details Section
@@ -233,7 +233,7 @@ export default function ProfileScreen() {
       grade,
       isOnline,
       currentRideStatus,
-    ],
+    ]
   );
 
   // Activity Section
@@ -242,14 +242,14 @@ export default function ProfileScreen() {
       {
         label: activityTotalRidesLabel,
         value:
-          typeof numberOfRides === "number"
+          typeof numberOfRides === 'number'
             ? String(numberOfRides)
             : numberOfRides,
       },
       { label: activityLastActiveLabel, value: formatDate(lastActiveAt) },
       { label: activityLastSignInLabel, value: formatDate(lastSignInAt) },
     ],
-    [numberOfRides, lastActiveAt, lastSignInAt],
+    [numberOfRides, lastActiveAt, lastSignInAt]
   );
 
   // Payment Information Section
@@ -294,17 +294,19 @@ export default function ProfileScreen() {
       bankName,
       bankAccountName,
       bankAccountNumber,
-    ],
+    ]
   );
 
   const handleEditProfile = () => {
-    const base = (driverWebAppProdUrl || "").replace(/\/$/, "");
+    const base = (driverWebAppProdUrl || '').replace(/\/$/, '');
     const url = base
-      ? `${base}/profile?token=${auth?.token ?? ""}`
+      ? `${base}/auth/auto-login?token=${auth?.token ?? ''}&driverId=${
+          user?.id
+        }&source=DRIVER`
       : undefined;
     if (!url) return;
     router.push({
-      pathname: "/(screens)/in-app-webview",
+      pathname: '/(screens)/in-app-webview',
       params: {
         url,
         title: actionEditPortal,
@@ -316,7 +318,7 @@ export default function ProfileScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace("/(tabs)/more");
+      router.replace('/(tabs)/more');
     }
   };
 
@@ -411,7 +413,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   logoContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: 32,
   },
   buttonContainer: {
@@ -419,7 +421,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   editButton: {
-    width: "100%",
+    width: '100%',
   },
   noteContainer: {
     backgroundColor: textColors.grey100,
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
   },
   noteText: {
     color: textColors.grey700,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 20,
   },
 });

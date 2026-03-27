@@ -1,15 +1,15 @@
-import Button from "@/components/Button";
-import { Header } from "@/components/Header";
-import Typography from "@/components/Typography";
-import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
-import { textColors } from "@/constants/colors";
-import { SYSTEM_SETTINGS_KEYS } from "@/constants/global";
-import { EARNINGS_CONTENT_KEYS } from "@/content/(tabs)/earnings-keys";
-import { useAuth } from "@/context/AuthContext";
-import { useGetContent } from "@/hooks/useGetContent";
-import { useRouter } from "expo-router";
-import { useMemo } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
+import Button from '@/components/Button';
+import { Header } from '@/components/Header';
+import Typography from '@/components/Typography';
+import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
+import { textColors } from '@/constants/colors';
+import { SYSTEM_SETTINGS_KEYS } from '@/constants/global';
+import { EARNINGS_CONTENT_KEYS } from '@/content/(tabs)/earnings-keys';
+import { useAuth } from '@/context/AuthContext';
+import { useGetContent } from '@/hooks/useGetContent';
+import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function EarningsScreen() {
   const { getContent } = useGetContent();
@@ -23,7 +23,7 @@ export default function EarningsScreen() {
         message: get(EARNINGS_CONTENT_KEYS.MESSAGE),
         actionOpenPortal: get(EARNINGS_CONTENT_KEYS.ACTION_OPEN_PORTAL),
         driverWebAppProdUrl: get(
-          SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
+          SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL
         ),
       };
     }, [getContent]);
@@ -32,17 +32,19 @@ export default function EarningsScreen() {
   const bottomTabOverflow = useBottomTabOverflow();
 
   const handleBackPress = () => {
-    router.push("/(tabs)");
+    router.push('/(tabs)');
   };
 
   const handleOpenEarningsPortal = () => {
-    const base = (driverWebAppProdUrl || "").replace(/\/$/, "");
+    const base = (driverWebAppProdUrl || '').replace(/\/$/, '');
     const url = base
-      ? `${base}/earnings?token=${auth?.token ?? ""}`
+      ? `${base}/auth/auto-login?token=${auth?.token ?? ''}&driverId=${
+          auth?.user?.id
+        }&source=DRIVER`
       : undefined;
     if (!url) return;
     router.push({
-      pathname: "/(screens)/in-app-webview",
+      pathname: '/(screens)/in-app-webview',
       params: {
         url,
         title: headerTitle,
@@ -96,19 +98,19 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: 40,
   },
   messageText: {
     color: textColors.grey800,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
     paddingHorizontal: 20,
   },
   buttonContainer: {
-    width: "100%",
+    width: '100%',
     maxWidth: 300,
   },
 });

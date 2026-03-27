@@ -100,6 +100,13 @@ interface RideOfferContextType {
   // Actions
   showRideOfferModal: (offer: any, callbacks?: ModalCallbacks) => void;
   hideRideOfferModal: () => void;
+  /** Close the sequential-offer ETA modal overlay without affecting the ride-offer modal. */
+  hideETAModal: () => void;
+  /**
+   * LiveJobOffersScreen mounts its own ETAModal; subscribe so hideETAModal (socket/expiry)
+   * dismisses that copy too. Returns unsubscribe.
+   */
+  subscribeToHideETA: (listener: () => void) => () => void;
   acceptRideOffer: () => Promise<void>;
   skipRideOfferPrice: () => Promise<void>;
   hideRideOffer: () => Promise<void>;
@@ -174,6 +181,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   const sequentialExpiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+
+  /** Extra ETAModal instances (e.g. LiveJobOffersScreen) register here so hideETAModal clears them. */
+  const hideETAListenersRef = useRef<Set<() => void>>(new Set());
 
   /**
    * Set hasAnyActiveOffer state
@@ -262,11 +272,32 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const subscribeToHideETA = useCallback((listener: () => void) => {
+    hideETAListenersRef.current.add(listener);
+    return () => {
+      hideETAListenersRef.current.delete(listener);
+    };
+  }, []);
+
+  /** Sequential "Provide ETA" overlay (RN Modal) — must clear whenever the ride-offer flow ends. */
+  const hideETAModal = useCallback(() => {
+    setIsETABottomSheetVisible(false);
+    setIsSubmitETALoading(false);
+    hideETAListenersRef.current.forEach((fn) => {
+      try {
+        fn();
+      } catch (e) {
+        console.warn("[RideOfferContext] hideETA subscriber error:", e);
+      }
+    });
+  }, []);
+
   /**
    * Hide the ride offer modal and reset state
    */
   const hideRideOfferModal = useCallback(() => {
     console.log("🔽 Hiding ride offer modal");
+    hideETAModal();
     setIsRideOfferModalVisible(false);
     setCurrentOffer(null);
     setModalCallbacks(null);
@@ -283,7 +314,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
         router.replace("/(tabs)");
       } catch {}
     }
-  }, []);
+  }, [hideETAModal]);
 
   /**
    * Mark a sequential offer as expired by tripId
@@ -292,6 +323,9 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
   const markSequentialOfferAsExpired = useCallback(
     (tripId: string) => {
       console.log(`⏰ Marking sequential offer as expired: ${tripId}`);
+
+      // RN Modal (Provide ETA) is not in ModalManager — always dismiss explicitly.
+      hideETAModal();
 
       // Close all modals and bottom sheets when offer expires
       closeAllModals();
@@ -333,6 +367,7 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
       currentOffer,
       closeAllModals,
       removeTemporaryRidesByTripId,
+      hideETAModal,
       hideRideOfferModal,
       setHasAnyActiveOffer,
     ],
@@ -1005,6 +1040,8 @@ export function RideOfferProvider({ children }: { children: ReactNode }) {
     temporaryRides,
     showRideOfferModal,
     hideRideOfferModal,
+    hideETAModal,
+    subscribeToHideETA,
     acceptRideOffer,
     skipRideOfferPrice,
     hideRideOffer,

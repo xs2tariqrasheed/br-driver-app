@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import {
   Image,
   KeyboardAvoidingView,
@@ -10,33 +10,33 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 
-import BottomSheet from "@/components/BottomSheet";
-import Button from "@/components/Button";
-import Input from "@/components/Form/Input";
-import Header from "@/components/Header";
-import Loader from "@/components/Loader";
-import Logo from "@/components/Logo";
-import { showToast } from "@/components/Toast";
-import Typography from "@/components/Typography";
-import { textColors } from "@/constants/colors";
-import { AUTH_ENDPOINTS } from "@/constants/endpoints";
+import BottomSheet from '@/components/BottomSheet';
+import Button from '@/components/Button';
+import Input from '@/components/Form/Input';
+import Header from '@/components/Header';
+import Loader from '@/components/Loader';
+import Logo from '@/components/Logo';
+import { showToast } from '@/components/Toast';
+import Typography from '@/components/Typography';
+import { textColors } from '@/constants/colors';
+import { AUTH_ENDPOINTS } from '@/constants/endpoints';
 import {
   API_CLIENT_TYPES,
   BiometricMethod,
   SYSTEM_SETTINGS_KEYS,
-} from "@/constants/global";
-import { LOGIN_CONTENT_KEYS } from "@/content/(screens)/auth/login-keys";
-import { useAuth } from "@/context/AuthContext";
-import { useOverlayInsets } from "@/context/OverlayInsetsContext";
-import { useSettings } from "@/context/SettingsContext";
-import { useGetContent } from "@/hooks/useGetContent";
-import { usePost } from "@/hooks/usePost";
-import { logger } from "@/utils/helpers";
-import * as LocalAuthentication from "expo-local-authentication";
-import { useFocusEffect, useRouter } from "expo-router";
-import { APP_SETTINGS_CONTENT_KEYS } from "@/content/(screens)/more/app-settings-keys";
+} from '@/constants/global';
+import { LOGIN_CONTENT_KEYS } from '@/content/(screens)/auth/login-keys';
+import { useAuth } from '@/context/AuthContext';
+import { useOverlayInsets } from '@/context/OverlayInsetsContext';
+import { useSettings } from '@/context/SettingsContext';
+import { useGetContent } from '@/hooks/useGetContent';
+import { usePost } from '@/hooks/usePost';
+import { getAppVersionLabel } from '@/utils/appVersion';
+import { logger } from '@/utils/helpers';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 type LoginFormValues = {
   companyId: string;
@@ -45,9 +45,9 @@ type LoginFormValues = {
 };
 
 const LOGIN_DEFAULT_VALUES: LoginFormValues = {
-  companyId: "1",
-  loginId: "mk@example.com",
-  password: "123456",
+  companyId: '1',
+  loginId: 'mk@example.com',
+  password: '123456',
 };
 
 /**
@@ -134,7 +134,6 @@ export default function LoginScreen() {
     errorGeneric,
     inAppWebviewRequestRegistrationTitle,
     driverWebAppProdUrl,
-    appVersion,
   } = useMemo(() => {
     const get = getContent;
     return {
@@ -144,113 +143,112 @@ export default function LoginScreen() {
       introDescription: get(LOGIN_CONTENT_KEYS.INTRO_DESCRIPTION),
       formCompanyIdLabel: get(LOGIN_CONTENT_KEYS.FORM_COMPANY_ID_LABEL),
       formCompanyIdPlaceholder: get(
-        LOGIN_CONTENT_KEYS.FORM_COMPANY_ID_PLACEHOLDER,
+        LOGIN_CONTENT_KEYS.FORM_COMPANY_ID_PLACEHOLDER
       ),
       formCompanyIdValidationRequired: get(
-        LOGIN_CONTENT_KEYS.FORM_COMPANY_ID_VALIDATION_REQUIRED,
+        LOGIN_CONTENT_KEYS.FORM_COMPANY_ID_VALIDATION_REQUIRED
       ),
       formLoginIdLabel: get(LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_LABEL),
       formLoginIdPlaceholder: get(LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_PLACEHOLDER),
       formLoginIdValidationRequired: get(
-        LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_VALIDATION_REQUIRED,
+        LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_VALIDATION_REQUIRED
       ),
       formLoginIdValidationInvalid: get(
-        LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_VALIDATION_INVALID,
+        LOGIN_CONTENT_KEYS.FORM_LOGIN_ID_VALIDATION_INVALID
       ),
       formPasswordLabel: get(LOGIN_CONTENT_KEYS.FORM_PASSWORD_LABEL),
       formPasswordPlaceholder: get(
-        LOGIN_CONTENT_KEYS.FORM_PASSWORD_PLACEHOLDER,
+        LOGIN_CONTENT_KEYS.FORM_PASSWORD_PLACEHOLDER
       ),
       formPasswordValidationRequired: get(
-        LOGIN_CONTENT_KEYS.FORM_PASSWORD_VALIDATION_REQUIRED,
+        LOGIN_CONTENT_KEYS.FORM_PASSWORD_VALIDATION_REQUIRED
       ),
       formPasswordValidationMinLength: get(
-        LOGIN_CONTENT_KEYS.FORM_PASSWORD_VALIDATION_MIN_LENGTH,
+        LOGIN_CONTENT_KEYS.FORM_PASSWORD_VALIDATION_MIN_LENGTH
       ),
       forgotLink: get(LOGIN_CONTENT_KEYS.FORGOT_LINK),
       actionSign: get(LOGIN_CONTENT_KEYS.ACTION_SIGN_IN),
       actionSigningIn: get(LOGIN_CONTENT_KEYS.ACTION_SIGNING_IN),
       dividerOr: get(LOGIN_CONTENT_KEYS.DIVIDER_OR),
       biometricFingerprintTitle: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_FINGERPRINT_TITLE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_FINGERPRINT_TITLE
       ),
       biometricFaceIdTitle: get(LOGIN_CONTENT_KEYS.BIOMETRIC_FACE_ID_TITLE),
       biometricFaceRecognitionTitle: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_FACE_RECOGNITION_TITLE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_FACE_RECOGNITION_TITLE
       ),
       biometricNotSupportedReason: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_SUPPORTED_REASON,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_SUPPORTED_REASON
       ),
       biometricUnsupportedFingerprintTitle: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FINGERPRINT_TITLE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FINGERPRINT_TITLE
       ),
       biometricUnsupportedFaceIdTitle: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FACE_ID_TITLE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FACE_ID_TITLE
       ),
       biometricUnsupportedFaceRecognitionTitle: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FACE_RECOGNITION_TITLE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_FACE_RECOGNITION_TITLE
       ),
       biometricUnsupportedDescriptionDefault: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_DEFAULT,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_DEFAULT
       ),
       biometricUnsupportedDescriptionAndroidFace: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_ANDROID_FACE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_ANDROID_FACE
       ),
       biometricUnsupportedDescriptionIosFace: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_IOS_FACE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_UNSUPPORTED_DESCRIPTION_IOS_FACE
       ),
       biometricNotEnabledFaceTitle: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FACE_TITLE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FACE_TITLE
       ),
       biometricNotEnabledFingerprintTitle: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FINGERPRINT_TITLE,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FINGERPRINT_TITLE
       ),
       biometricNotEnabledFaceDescription: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FACE_DESCRIPTION,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FACE_DESCRIPTION
       ),
       biometricNotEnabledFingerprintDescription: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FINGERPRINT_DESCRIPTION,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_NOT_ENABLED_FINGERPRINT_DESCRIPTION
       ),
       biometricPromptMessage: get(LOGIN_CONTENT_KEYS.BIOMETRIC_PROMPT_MESSAGE),
       biometricPromptCancel: get(LOGIN_CONTENT_KEYS.BIOMETRIC_PROMPT_CANCEL),
       footerNoAccount: get(LOGIN_CONTENT_KEYS.FOOTER_NO_ACCOUNT),
       actionRequestRegistration: get(
-        LOGIN_CONTENT_KEYS.ACTION_REQUEST_REGISTRATION,
+        LOGIN_CONTENT_KEYS.ACTION_REQUEST_REGISTRATION
       ),
       forgotSheetHeaderTitle: get(LOGIN_CONTENT_KEYS.FORGOT_SHEET_HEADER_TITLE),
       forgotSheetOptionPassword: get(
-        LOGIN_CONTENT_KEYS.FORGOT_SHEET_OPTION_PASSWORD,
+        LOGIN_CONTENT_KEYS.FORGOT_SHEET_OPTION_PASSWORD
       ),
       forgotSheetOptionUserId: get(
-        LOGIN_CONTENT_KEYS.FORGOT_SHEET_OPTION_USER_ID,
+        LOGIN_CONTENT_KEYS.FORGOT_SHEET_OPTION_USER_ID
       ),
       biometricSheetButtonOpenSettings: get(
-        LOGIN_CONTENT_KEYS.BIOMETRIC_SHEET_BUTTON_OPEN_SETTINGS,
+        LOGIN_CONTENT_KEYS.BIOMETRIC_SHEET_BUTTON_OPEN_SETTINGS
       ),
       successSheetTitle: get(LOGIN_CONTENT_KEYS.SUCCESS_SHEET_TITLE),
       successSheetWelcomePrefix: get(
-        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_WELCOME_PREFIX,
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_WELCOME_PREFIX
       ),
       successSheetWelcomeSuffix: get(
-        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_WELCOME_SUFFIX,
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_WELCOME_SUFFIX
       ),
       successSheetDescriptionCommunity: get(
-        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_DESCRIPTION_COMMUNITY,
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_DESCRIPTION_COMMUNITY
       ),
       successSheetDescriptionJourney: get(
-        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_DESCRIPTION_JOURNEY,
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_DESCRIPTION_JOURNEY
       ),
       successSheetButtonContinue: get(
-        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_BUTTON_CONTINUE,
+        LOGIN_CONTENT_KEYS.SUCCESS_SHEET_BUTTON_CONTINUE
       ),
       errorGeneric: get(LOGIN_CONTENT_KEYS.ERROR_GENERIC),
       inAppWebviewRequestRegistrationTitle: get(
-        LOGIN_CONTENT_KEYS.IN_APP_WEBVIEW_REQUEST_REGISTRATION_TITLE,
+        LOGIN_CONTENT_KEYS.IN_APP_WEBVIEW_REQUEST_REGISTRATION_TITLE
       ),
       driverWebAppProdUrl: get(
-        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL,
+        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL
       ),
-      appVersion: get(APP_SETTINGS_CONTENT_KEYS.APP_VERSION),
     };
   }, [getContent]);
   // Page Content End
@@ -262,7 +260,7 @@ export default function LoginScreen() {
     formState: { errors },
   } = useForm<LoginFormValues>({
     defaultValues: LOGIN_DEFAULT_VALUES,
-    mode: "onChange",
+    mode: 'onChange',
   });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -290,7 +288,7 @@ export default function LoginScreen() {
    * @param data Parsed and validated form values
    */
   const onSubmit = async (data: LoginFormValues) => {
-    log("Login submit", data);
+    log('Login submit', data);
 
     // Note: loginId field in UI represents emailOrPhone behind the scenes
     // The request interceptor in apiConfig.ts automatically transforms
@@ -313,7 +311,7 @@ export default function LoginScreen() {
       await submitLogin(apiPayload);
     } catch (e) {
       const message = e instanceof Error ? e.message : errorGeneric;
-      showToast(message, { variant: "error", position: "top" });
+      showToast(message, { variant: 'error', position: 'top' });
       setIsLoggingIn(false);
     }
   };
@@ -329,9 +327,9 @@ export default function LoginScreen() {
     // After login successful login, require OTP verification before granting access
     // Pass login response data to verify-otp screen
     router.push({
-      pathname: "/(screens)/auth/verify-otp",
+      pathname: '/(screens)/auth/verify-otp',
       params: {
-        context: "login",
+        context: 'login',
         loginData: JSON.stringify(loginResponse),
       },
     });
@@ -342,19 +340,19 @@ export default function LoginScreen() {
     // Fetch settings from backend when component mounts
     // This ensures settings are synced even if user is already logged in
     if (auth?.token) {
-      log("Fetching settings on login screen - token exists");
+      log('Fetching settings on login screen - token exists');
       fetchSettings().catch((error) => {
-        log("Failed to fetch settings on login screen:", error);
+        log('Failed to fetch settings on login screen:', error);
         // Continue with local settings if fetch fails
       });
     } else {
-      log("No token found, skipping settings fetch on login screen");
+      log('No token found, skipping settings fetch on login screen');
     }
   }, []); // Only run once on mount
 
   // Log current settings state for debugging
   useEffect(() => {
-    log("Login screen - Current settings state:", {
+    log('Login screen - Current settings state:', {
       enableFingerprint: settings.loginSettings.enableFingerprint,
       enableFaceId: settings.loginSettings.enableFaceId,
       enableFaceRecognition: settings.loginSettings.enableFaceRecognition,
@@ -367,7 +365,7 @@ export default function LoginScreen() {
    * Reflect asynchronous submit errors via toast notifications.
    */
   useEffect(() => {
-    console.log("Login data", loginData);
+    console.log('Login data', loginData);
     if (loginData?.token) {
       // Bridge the gap between login and settings loading by
       // keeping isLoggingIn true until post-login side-effects complete
@@ -381,7 +379,7 @@ export default function LoginScreen() {
     }
 
     if (submitError) {
-      showToast(submitError, { variant: "error", position: "top" });
+      showToast(submitError, { variant: 'error', position: 'top' });
       setIsLoggingIn(false);
     }
   }, [submitError, loginData]);
@@ -389,14 +387,14 @@ export default function LoginScreen() {
   // Bottom sheet state & handlers
   const [forgotSheetOpen, setForgotSheetOpen] = useState<boolean>(false);
   const [biometricSheetOpen, setBiometricSheetOpen] = useState<boolean>(false);
-  const [biometricTitle, setBiometricTitle] = useState<string>("");
-  const [biometricDescription, setBiometricDescription] = useState<string>("");
+  const [biometricTitle, setBiometricTitle] = useState<string>('');
+  const [biometricDescription, setBiometricDescription] = useState<string>('');
   const [supportedTypes, setSupportedTypes] = useState<number[]>([]);
   const [successSheetOpen, setSuccessSheetOpen] = useState<boolean>(false);
   /**
    * Memoized snap points for the Forgot bottom sheet to prevent unnecessary recalculations.
    */
-  const snapPoints = useMemo(() => ["30%"], []);
+  const snapPoints = useMemo(() => ['30%'], []);
   /**
    * Opens the Forgot options bottom sheet.
    * Preconditions: `forgotSheetRef` must point to a mounted BottomSheetModal.
@@ -418,7 +416,7 @@ export default function LoginScreen() {
   useFocusEffect(
     useCallback(() => {
       reset(LOGIN_DEFAULT_VALUES);
-    }, [reset]),
+    }, [reset])
   );
 
   /**
@@ -430,7 +428,7 @@ export default function LoginScreen() {
       setBiometricDescription(description);
       setBiometricSheetOpen(true);
     },
-    [],
+    []
   );
 
   /** Closes the biometric bottom sheet. */
@@ -452,27 +450,27 @@ export default function LoginScreen() {
    * Human-friendly labels and messages for unsupported or not-enabled biometrics
    */
   const getMethodDisplayName = (method: BiometricMethod): string => {
-    if (method === "fingerprint") return biometricFingerprintTitle;
-    if (method === "faceId") return biometricFaceIdTitle;
+    if (method === 'fingerprint') return biometricFingerprintTitle;
+    if (method === 'faceId') return biometricFaceIdTitle;
     return biometricFaceRecognitionTitle;
   };
 
   const getUnsupportedCopy = (method: BiometricMethod) => {
     let title: string;
     let description: string;
-    if (method === "fingerprint") {
+    if (method === 'fingerprint') {
       title = biometricUnsupportedFingerprintTitle;
       description = biometricUnsupportedDescriptionDefault;
-    } else if (method === "faceId") {
+    } else if (method === 'faceId') {
       title = biometricUnsupportedFaceIdTitle;
       description =
-        Platform.OS === "android"
+        Platform.OS === 'android'
           ? biometricUnsupportedDescriptionAndroidFace
           : biometricUnsupportedDescriptionIosFace;
     } else {
       title = biometricUnsupportedFaceRecognitionTitle;
       description =
-        Platform.OS === "android"
+        Platform.OS === 'android'
           ? biometricUnsupportedDescriptionAndroidFace
           : biometricUnsupportedDescriptionIosFace;
     }
@@ -480,7 +478,7 @@ export default function LoginScreen() {
   };
 
   const getNotEnabledCopy = (method: BiometricMethod) => {
-    const isFace = method !== "fingerprint";
+    const isFace = method !== 'fingerprint';
     const title = isFace
       ? biometricNotEnabledFaceTitle
       : biometricNotEnabledFingerprintTitle;
@@ -519,23 +517,23 @@ export default function LoginScreen() {
             setIsFetchingSettings(true);
             await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure token/context are settled
             await fetchSettings();
-            log("Settings fetched successfully after biometric login");
+            log('Settings fetched successfully after biometric login');
           } catch (error) {
             setIsFetchingSettings(false);
-            log("Failed to fetch settings after biometric login:", error);
+            log('Failed to fetch settings after biometric login:', error);
             // Continue with local settings if fetch fails
           } finally {
             setIsFetchingSettings(false);
           }
           // Skip identity verified sheet for biometric login and go home directly
-          router.replace("/(tabs)");
+          router.replace('/(tabs)');
         }
       } catch (err) {
         const { title, description } = getNotEnabledCopy(method);
         openBiometricSheet(title, description);
       }
     },
-    [openBiometricSheet],
+    [openBiometricSheet]
   );
 
   /** On mount, read supported device biometric types. */
@@ -556,16 +554,17 @@ export default function LoginScreen() {
    */
   const isMethodSupported = (method: BiometricMethod) => {
     if (!supportedTypes || supportedTypes.length === 0) return false;
-    if (method === "fingerprint") {
+    if (method === 'fingerprint') {
       return supportedTypes.includes(
-        LocalAuthentication.AuthenticationType.FINGERPRINT,
+        LocalAuthentication.AuthenticationType.FINGERPRINT
       );
     }
     // Both Face ID and Face Recognition map to FACIAL_RECOGNITION at the API level
     return supportedTypes.includes(
-      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION,
+      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION
     );
   };
+
   return (
     <SafeAreaView
       style={[styles.container, { paddingBottom: overlayBottomInset }]}
@@ -583,7 +582,7 @@ export default function LoginScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
         <ScrollView
@@ -653,7 +652,7 @@ export default function LoginScreen() {
 
                   if (
                     emailRegex.test(trimmed) ||
-                    phoneRegex.test(trimmed.replace(/[\s\-\(\)]/g, ""))
+                    phoneRegex.test(trimmed.replace(/[\s\-\(\)]/g, ''))
                   ) {
                     return true;
                   }
@@ -744,25 +743,25 @@ export default function LoginScreen() {
               <View style={styles.authRow}>
                 {[
                   {
-                    icon: require("@/assets/images/finger-print.png"),
+                    icon: require('@/assets/images/finger-print.png'),
                     title: biometricFingerprintTitle,
-                    method: "fingerprint" as BiometricMethod,
+                    method: 'fingerprint' as BiometricMethod,
                   },
                   {
-                    icon: require("@/assets/images/face-id.png"),
+                    icon: require('@/assets/images/face-id.png'),
                     title: biometricFaceIdTitle,
-                    method: "faceId" as BiometricMethod,
+                    method: 'faceId' as BiometricMethod,
                   },
                   {
-                    icon: require("@/assets/images/facial-recognition.png"),
+                    icon: require('@/assets/images/facial-recognition.png'),
                     title: biometricFaceRecognitionTitle,
-                    method: "faceRecognition" as BiometricMethod,
+                    method: 'faceRecognition' as BiometricMethod,
                   },
                 ]
                   .filter((option) => {
-                    if (option.method === "fingerprint")
+                    if (option.method === 'fingerprint')
                       return settings.loginSettings.enableFingerprint;
-                    if (option.method === "faceId")
+                    if (option.method === 'faceId')
                       return settings.loginSettings.enableFaceId;
                     return settings.loginSettings.enableFaceRecognition;
                   })
@@ -783,7 +782,7 @@ export default function LoginScreen() {
                     ];
                     const reasonText = !supported
                       ? biometricNotSupportedReason
-                      : "";
+                      : '';
 
                     return (
                       <TouchableOpacity
@@ -795,7 +794,7 @@ export default function LoginScreen() {
                             void checkAndPromptBiometrics(option.method);
                           } else {
                             const { title, description } = getUnsupportedCopy(
-                              option.method,
+                              option.method
                             );
                             openBiometricSheet(title, description);
                           }
@@ -843,9 +842,9 @@ export default function LoginScreen() {
             disabled={isLoggingIn}
             onPress={() =>
               router.push({
-                pathname: "/(screens)/in-app-webview",
+                pathname: '/(screens)/in-app-webview',
                 params: {
-                  url: `${driverWebAppProdUrl}?token=${auth?.token}`,
+                  url: `${driverWebAppProdUrl}/auth/auto-login?token=${auth?.token}&driverId=${auth?.user?.id}&source=DRIVER`,
                   title: inAppWebviewRequestRegistrationTitle,
                 },
               })
@@ -860,7 +859,7 @@ export default function LoginScreen() {
               weight="regular"
               style={styles.versionText}
             >
-              Version: {appVersion}
+              Version: {getAppVersionLabel()}
             </Typography>
           </View>
         </ScrollView>
@@ -879,14 +878,14 @@ export default function LoginScreen() {
               label: forgotSheetOptionPassword,
               onPress: () => {
                 closeForgotSheet();
-                router.push("/(screens)/auth/forgot-password" as any);
+                router.push('/(screens)/auth/forgot-password' as any);
               },
             },
             {
               label: forgotSheetOptionUserId,
               onPress: () => {
                 closeForgotSheet();
-                router.push("/(screens)/auth/forgot-user-id");
+                router.push('/(screens)/auth/forgot-user-id');
               },
             },
           ].map((item) => (
@@ -905,7 +904,7 @@ export default function LoginScreen() {
                   {item.label}
                 </Typography>
                 <Image
-                  source={require("@/assets/images/black-arrow-right.png")}
+                  source={require('@/assets/images/black-arrow-right.png')}
                   style={styles.iconSize16}
                 />
               </TouchableOpacity>
@@ -946,13 +945,13 @@ export default function LoginScreen() {
       <BottomSheet
         open={successSheetOpen}
         onClose={() => {}}
-        snapPoints={["50%"]}
+        snapPoints={['50%']}
         showHeader={false}
       >
         <View style={styles.sheetContainer}>
           <View style={styles.successIconWrapper}>
             <Image
-              source={require("@/assets/images/identity-confirmed.png")}
+              source={require('@/assets/images/identity-confirmed.png')}
               style={styles.successIcon}
             />
           </View>
@@ -992,7 +991,7 @@ export default function LoginScreen() {
             rounded="half"
             onPress={() => {
               setSuccessSheetOpen(false);
-              router.replace("/(tabs)");
+              router.replace('/(tabs)');
             }}
           >
             {successSheetButtonContinue}
@@ -1009,7 +1008,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: 'white',
   },
   content: {
     paddingHorizontal: 12,
@@ -1017,7 +1016,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   centeredRow: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   titleGroup: {
     gap: 4,
@@ -1026,8 +1025,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   orRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   hr: {
@@ -1042,13 +1041,13 @@ const styles = StyleSheet.create({
     color: textColors.grey700,
   },
   authRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
   },
   authCard: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: textColors.teal700,
     borderRadius: 8,
@@ -1063,7 +1062,7 @@ const styles = StyleSheet.create({
   authIcon: {
     width: 36,
     height: 36,
-    resizeMode: "contain",
+    resizeMode: 'contain',
     marginBottom: 8,
   },
   authIconDisabled: {
@@ -1093,8 +1092,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: textColors.grey100,
   },
   sheetDivider: {
@@ -1103,13 +1102,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   sheetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 14,
   },
   alignEndRow: {
-    alignItems: "flex-end",
+    alignItems: 'flex-end',
   },
   sheetTitleText: {
     fontSize: 21,
@@ -1136,19 +1135,19 @@ const styles = StyleSheet.create({
     height: 16,
   },
   successIconWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
   },
   successIcon: {
     width: 64,
     height: 64,
-    resizeMode: "contain",
+    resizeMode: 'contain',
   },
   successTitle: {
     fontSize: 24,
     color: textColors.black,
-    textAlign: "left",
+    textAlign: 'left',
     marginBottom: 8,
   },
   successDescription: {
@@ -1157,15 +1156,15 @@ const styles = StyleSheet.create({
   },
 
   loadingOverlay: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     zIndex: 1000,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: 12,
   },
   loadingText: {

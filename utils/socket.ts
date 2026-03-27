@@ -19,6 +19,10 @@ import io from "socket.io-client";
 
 let socket: ReturnType<typeof io> | null = null;
 
+/** True when the auction/offers socket exists and is connected (avoids force-reconnect on resume). */
+export const isOffersSocketConnected = (): boolean =>
+  Boolean(socket?.connected);
+
 type SocketHandler = (...args: any[]) => void;
 
 const eventHandlers = new Map<string, Set<SocketHandler>>();

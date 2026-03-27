@@ -1,40 +1,42 @@
-import { useEffect, useMemo, useRef } from "react";
-import { router } from "expo-router";
+import { useEffect, useMemo, useRef } from 'react';
+import { router } from 'expo-router';
 
 import {
+  EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER,
   NOTIFICATION_TYPES,
   NotificationType,
   SOCKET_EVENTS,
   TRIP_OFFER_ACTIONS,
   TRIP_OFFER_TYPES,
-} from "@/constants/global";
-import { useSocket } from "@/hooks/useSocket";
+  SPEECH_EXPIRED_OFFER_ASSIGNED_TO_OTHER,
+} from '@/constants/global';
+import { useSocket } from '@/hooks/useSocket';
 
-import { LIVE_JOB_ENDPOINTS } from "@/constants/endpoints";
-import { API_CLIENT_TYPES } from "@/constants/global";
-import { BID_STATUS_MODAL_CONTENT_KEYS } from "@/content/components/bid-status-modal-keys";
-import { useAuth } from "@/context/AuthContext";
-import { useBidAccepted } from "@/context/BidAcceptedContext";
-import { useBidExpired } from "@/context/BidExpiredContext";
-import { useBidUnsuccessful } from "@/context/BidUnsuccessfulContext";
-import { useBidWaitingTimer } from "@/context/BidWaitingTimerContext";
-import { useBroadcastJobOffers } from "@/context/BroadcastJobOffersContext";
-import { useDriver } from "@/context/DriverContext";
-import { useModalManager } from "@/context/ModalManagerContext";
-import { useNotification } from "@/context/NotificationContext";
-import { useRideOffer } from "@/context/RideOfferContext";
-import { useSettings } from "@/context/SettingsContext";
-import { useGetContent } from "@/hooks/useGetContent";
-import { useNetworkMonitoring } from "@/hooks/useNetworkMonitoring";
-import { usePost } from "@/hooks/usePost";
-import { expirationService } from "@/services/ExpirationService";
-import { formatDateTimestamp, logger } from "@/utils/helpers";
+import { LIVE_JOB_ENDPOINTS } from '@/constants/endpoints';
+import { API_CLIENT_TYPES } from '@/constants/global';
+import { BID_STATUS_MODAL_CONTENT_KEYS } from '@/content/components/bid-status-modal-keys';
+import { useAuth } from '@/context/AuthContext';
+import { useBidAccepted } from '@/context/BidAcceptedContext';
+import { useBidExpired } from '@/context/BidExpiredContext';
+import { useBidUnsuccessful } from '@/context/BidUnsuccessfulContext';
+import { useBidWaitingTimer } from '@/context/BidWaitingTimerContext';
+import { useBroadcastJobOffers } from '@/context/BroadcastJobOffersContext';
+import { useDriver } from '@/context/DriverContext';
+import { useModalManager } from '@/context/ModalManagerContext';
+import { useNotification } from '@/context/NotificationContext';
+import { useRideOffer } from '@/context/RideOfferContext';
+import { useSettings } from '@/context/SettingsContext';
+import { useGetContent } from '@/hooks/useGetContent';
+import { useNetworkMonitoring } from '@/hooks/useNetworkMonitoring';
+import { usePost } from '@/hooks/usePost';
+import { expirationService } from '@/services/ExpirationService';
+import { formatDateTimestamp, logger } from '@/utils/helpers';
 import {
   formatSocketDataToBroadcastOffer,
   formatSocketDataToRideOffer,
-} from "@/utils/socketDataFormatter";
-import { speechManager } from "@/utils/speechManager";
-import { showToast } from "../Toast";
+} from '@/utils/socketDataFormatter';
+import { speechManager } from '@/utils/speechManager';
+import { showToast } from '../Toast';
 
 /**
  * Global Socket Listener - Centralized Event Management for React Native
@@ -64,7 +66,7 @@ export function GlobalSocketListener() {
     const get = getContent;
     return {
       speechNewRideOffer: get(
-        BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_NEW_RIDE_OFFER,
+        BID_STATUS_MODAL_CONTENT_KEYS.SPEECH_NEW_RIDE_OFFER
       ),
     };
   }, [getContent]);
@@ -86,6 +88,7 @@ export function GlobalSocketListener() {
     markSequentialOfferAsExpired,
     updateCurrentOfferStatus,
     hideRideOfferModal,
+    hideETAModal,
     saveTemporaryRide,
     removeTemporaryRide,
     removeTemporaryRidesByTripId,
@@ -124,42 +127,42 @@ export function GlobalSocketListener() {
   // API hooks
   const { execute: expireBid } = usePost(
     LIVE_JOB_ENDPOINTS.expireBid,
-    API_CLIENT_TYPES.AUCTION,
+    API_CLIENT_TYPES.AUCTION
   );
 
   useEffect(() => {
     if (!driver?.online) {
       log(
-        `🔴 Driver not online OR Socket status is ${socketStatus}, skipping global listeners setup`,
+        `🔴 Driver not online OR Socket status is ${socketStatus}, skipping global listeners setup`
       );
-      log("Socket status:", socketStatus);
+      log('Socket status:', socketStatus);
       return;
     }
 
     // Check if network is suitable for socket operations
-    if (!isNetworkSuitableFor("socket")) {
+    if (!isNetworkSuitableFor('socket')) {
       log(
-        `🔴 Network quality (${networkQuality}) not suitable for socket operations, skipping global listeners setup`,
+        `🔴 Network quality (${networkQuality}) not suitable for socket operations, skipping global listeners setup`
       );
       return;
     }
 
-    log("🟢 Setting up global socket listeners...");
+    log('🟢 Setting up global socket listeners...');
     const cleanupFunctions: (() => void)[] = [];
 
     // 1. Socket Disconnect Event (Critical Global Event)
     const disconnectCleanup = onDisconnect(async (reason: string) => {
-      log("🔌 Socket disconnected:", reason);
-      log("Socket disconnected:", reason);
+      log('🔌 Socket disconnected:', reason);
+      log('Socket disconnected:', reason);
     });
     cleanupFunctions.push(disconnectCleanup);
 
     // 1.1. Socket Reconnect Event (Connection Restored)
-    const reconnectCleanup = onEvent("reconnect", async () => {
-      log("🔄 Socket reconnected");
+    const reconnectCleanup = onEvent('reconnect', async () => {
+      log('🔄 Socket reconnected');
       showToast("Connection restored - You'll receive new ride offers", {
-        variant: "success",
-        position: "top",
+        variant: 'success',
+        position: 'top',
       });
     });
     cleanupFunctions.push(reconnectCleanup);
@@ -168,7 +171,7 @@ export function GlobalSocketListener() {
     const newJobOfferCleanup = onEvent(
       SOCKET_EVENTS.NEW_OFFER,
       async (data: any) => {
-        log("💬 Global new job offer received:", data);
+        log('💬 Global new job offer received:', data);
 
         // Handle Sequential offers (show modal)
         if (data?.tripOffer?.type === TRIP_OFFER_TYPES.SEQUENTIAL) {
@@ -176,14 +179,14 @@ export function GlobalSocketListener() {
             // Check if driver context is still available
             if (!driver) {
               log(
-                "❌ Driver context not available, cannot process sequential offer",
+                '❌ Driver context not available, cannot process sequential offer'
               );
               return;
             }
 
             // Use the helper function to format socket data to RideOffer format
             const rideOffer = formatSocketDataToRideOffer(data, auth?.user?.id);
-            console.log("🔍 Ride offer:", JSON.stringify(rideOffer, null, 2));
+            console.log('🔍 Ride offer:', JSON.stringify(rideOffer, null, 2));
 
             // Check mute settings before speaking
             if (
@@ -196,10 +199,10 @@ export function GlobalSocketListener() {
             // Add notification to notification center with pickup/dropoff for clarity
             const notification = {
               id: `ride-offer-${rideOffer.tripOffer.tripId}-${Date.now()}`,
-              messageTitle: "Special Ride Offer",
+              messageTitle: 'Special Ride Offer',
               messageBody: `Sequential ride offer received. Fare: $${rideOffer?.tripOffer?.fare}`,
               dateTime: formatDateTimestamp(rideOffer?.timestamp),
-              messageType: "unread" as const,
+              messageType: 'unread' as const,
               notificationType:
                 NOTIFICATION_TYPES.SPECIAL_RIDE_OFFER as NotificationType,
               rideOfferData: { tripId: rideOffer.tripOffer.tripId },
@@ -214,7 +217,7 @@ export function GlobalSocketListener() {
 
             // Save temporary ride for this notification
             saveTemporaryRide(notification.id, rideOffer);
-            log("✅ Ride offer notification added to notification center");
+            log('✅ Ride offer notification added to notification center');
 
             // Set hasAnyActiveOffer to true when new offer is received
             // log("🔄 Calling setHasAnyActiveOffer(true) for new job offer");
@@ -223,10 +226,10 @@ export function GlobalSocketListener() {
             // Show the modal using global handlers
             showRideOfferModal(rideOffer);
           } catch (error) {
-            log("❌ Error processing ride offer:", error);
-            showToast("Failed to load ride offer", {
-              variant: "error",
-              position: "top",
+            log('❌ Error processing ride offer:', error);
+            showToast('Failed to load ride offer', {
+              variant: 'error',
+              position: 'top',
             });
           }
         }
@@ -237,28 +240,28 @@ export function GlobalSocketListener() {
             // Check if driver context is still available
             if (!driver) {
               log(
-                "❌ Driver context not available, cannot process broadcast offer",
+                '❌ Driver context not available, cannot process broadcast offer'
               );
               return;
             }
 
-            log("📡 Processing broadcast job offer:", data);
+            log('📡 Processing broadcast job offer:', data);
 
             // Use the helper function to format socket data to BroadcastJobOffer format
             const broadcastOffer = formatSocketDataToBroadcastOffer(
               data,
-              auth?.user?.id,
+              auth?.user?.id
             );
 
             // Add to broadcast offers context
             addBroadcastOffer(broadcastOffer);
-            log("✅ Broadcast job offer added to context:", broadcastOffer.id);
+            log('✅ Broadcast job offer added to context:', broadcastOffer.id);
 
             // Show visual notification for broadcast offer
             showVisualNotification({
               type: NOTIFICATION_TYPES.INFO,
-              title: "New Broadcast Job",
-              subtitle: "Available Now",
+              title: 'New Broadcast Job',
+              subtitle: 'Available Now',
               message: `You have a new broadcast job offer! with fare of $${broadcastOffer?.tripOffer?.fare}`,
             });
 
@@ -267,10 +270,10 @@ export function GlobalSocketListener() {
               id: `broadcast-offer-${
                 broadcastOffer.tripOffer.tripId
               }-${Date.now()}`,
-              messageTitle: "New Broadcast Job",
+              messageTitle: 'New Broadcast Job',
               messageBody: `Broadcast job offer available. Fare: $${broadcastOffer?.tripOffer?.fare}`,
               dateTime: formatDateTimestamp(broadcastOffer.timestamp),
-              messageType: "unread" as const,
+              messageType: 'unread' as const,
               notificationType: NOTIFICATION_TYPES.INFO as NotificationType,
               pickupAddress: broadcastOffer.pickupAddress,
               dropoffAddress: broadcastOffer.dropoffAddress,
@@ -280,16 +283,16 @@ export function GlobalSocketListener() {
               rideDistance: broadcastOffer.rideDistance,
             };
             await addNotification(notification);
-            log("✅ Broadcast offer notification added to notification center");
+            log('✅ Broadcast offer notification added to notification center');
           } catch (error) {
-            log("❌ Error processing broadcast offer:", error);
-            showToast("Failed to load broadcast offer", {
-              variant: "error",
-              position: "top",
+            log('❌ Error processing broadcast offer:', error);
+            showToast('Failed to load broadcast offer', {
+              variant: 'error',
+              position: 'top',
             });
           }
         }
-      },
+      }
     );
     cleanupFunctions.push(newJobOfferCleanup);
 
@@ -297,7 +300,7 @@ export function GlobalSocketListener() {
     const acceptedResponseCleanup = onEvent(
       SOCKET_EVENTS.ACCEPTED_RESPONSE,
       async (data: any) => {
-        log("💬 Global Accepted response received:", data);
+        log('💬 Global Accepted response received:', data);
 
         try {
           const { feedback, timestamp, timeout, tripId } = data;
@@ -307,15 +310,15 @@ export function GlobalSocketListener() {
             if (tripId) {
               try {
                 await setTripId(tripId);
-                log("✅ Stored tripId from accept-response:", tripId);
+                log('✅ Stored tripId from accept-response:', tripId);
               } catch (e) {
-                log("❌ Failed to store tripId from accept-response:", e);
+                log('❌ Failed to store tripId from accept-response:', e);
               }
             }
             // Close all modals first
             hideRideOfferModal();
             closeAllModals();
-            log("✅ Ride offer accepted - closing modals");
+            log('✅ Ride offer accepted - closing modals');
 
             // Set hasAnyActiveOffer to false on successful acceptance
             setHasAnyActiveOffer(false);
@@ -328,13 +331,13 @@ export function GlobalSocketListener() {
               setTimeout(() => {
                 try {
                   log(
-                    "🚀 Navigating to active-ride from ACCEPTED_RESPONSE socket event",
+                    '🚀 Navigating to active-ride from ACCEPTED_RESPONSE socket event'
                   );
-                  router.replace("/(screens)/active-ride");
+                  router.replace('/(screens)/active-ride');
                 } catch (navError) {
                   log(
-                    "❌ Failed to navigate to active-ride from ACCEPTED_RESPONSE:",
-                    navError,
+                    '❌ Failed to navigate to active-ride from ACCEPTED_RESPONSE:',
+                    navError
                   );
                 } finally {
                   navigatingToActiveRideRef.current = false;
@@ -348,7 +351,7 @@ export function GlobalSocketListener() {
             const tripIdForReject =
               tripId || currentOfferRef.current?.tripOffer?.tripId;
             showBidUnsuccessful(tripIdForReject);
-            log("❌ Ride offer rejected - showing unsuccessful sheet");
+            log('❌ Ride offer rejected - showing unsuccessful sheet');
 
             // Set hasAnyActiveOffer to false on rejection
             setHasAnyActiveOffer(false);
@@ -362,14 +365,14 @@ export function GlobalSocketListener() {
             String(currentOffer.tripOffer.tripId) === String(tripId);
           const notification = {
             id: `accepted-response-${Date.now()}`,
-            messageTitle: feedback?.success ? "Ride Accepted" : "Ride Rejected",
+            messageTitle: feedback?.success ? 'Ride Accepted' : 'Ride Rejected',
             messageBody:
               feedback?.message ||
               (feedback?.success
-                ? "Your ride offer has been accepted. Get ready to start the ride."
-                : "Your ride offer was not accepted. Keep looking for other opportunities."),
+                ? 'Your ride offer has been accepted. Get ready to start the ride.'
+                : 'Your ride offer was not accepted. Keep looking for other opportunities.'),
             dateTime: formatDateTimestamp(timestamp),
-            messageType: "unread" as const,
+            messageType: 'unread' as const,
             notificationType: feedback?.success
               ? NOTIFICATION_TYPES.SUCCESS
               : NOTIFICATION_TYPES.ERROR,
@@ -382,13 +385,13 @@ export function GlobalSocketListener() {
           };
           await addNotification(notification);
         } catch (error) {
-          log("❌ Error processing accepted response:", error);
-          showToast("Failed to load accepted response", {
-            variant: "error",
-            position: "top",
+          log('❌ Error processing accepted response:', error);
+          showToast('Failed to load accepted response', {
+            variant: 'error',
+            position: 'top',
           });
         }
-      },
+      }
     );
     cleanupFunctions.push(acceptedResponseCleanup);
 
@@ -397,12 +400,38 @@ export function GlobalSocketListener() {
       SOCKET_EVENTS.BID_RESPONSE,
       async (data: any) => {
         console.log(
-          "💬 Global Bid response received:",
-          JSON.stringify(data, null, 2),
+          '💬 Global Bid response received:',
+          JSON.stringify(data, null, 2)
         );
 
         try {
           const { response, tripId, timestamp, timeout, offerType } = data;
+
+          if (data?.reason === EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER) {
+            hideBidWaitingTimer();
+            hideETAModal();
+            await expirationService.handleOfferExpiration(
+              {
+                tripId: String(data.tripId ?? ''),
+                reason: EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER,
+                timestamp: data.timestamp,
+              },
+              {
+                markSequentialOfferAsExpired,
+                markBroadcastOfferAsExpired,
+                hideRideOfferModal,
+                setHasAnyActiveOffer,
+                closeAllModals,
+                currentOffer: currentOfferRef.current,
+                broadcastOffers: broadcastOffersRef.current,
+              }
+            );
+            if (data.tripId) {
+              removeTemporaryRidesByTripId(data.tripId);
+            }
+            speechManager?.speak(SPEECH_EXPIRED_OFFER_ASSIGNED_TO_OTHER);
+            return;
+          }
 
           // Hide waiting timer first
           hideBidWaitingTimer();
@@ -411,20 +440,20 @@ export function GlobalSocketListener() {
           const isBroadcastOffer =
             offerType === TRIP_OFFER_TYPES.BROADCAST ||
             broadcastOffersRef.current.some(
-              (o) => o.tripOffer.tripId === tripId,
+              (o) => o.tripOffer.tripId === tripId
             );
 
           const isBidExpired =
-            response === TRIP_OFFER_ACTIONS.EXPIRE || response === "expired";
+            response === TRIP_OFFER_ACTIONS.EXPIRE || response === 'expired';
 
           if (response === TRIP_OFFER_ACTIONS.ACCEPT) {
             // Store tripId on successful bid accept
             if (tripId) {
               try {
                 await setTripId(String(tripId));
-                log("✅ Stored tripId from bid-response accept:", tripId);
+                log('✅ Stored tripId from bid-response accept:', tripId);
               } catch (e) {
-                log("❌ Failed to store tripId from bid-response:", e);
+                log('❌ Failed to store tripId from bid-response:', e);
               }
             }
 
@@ -435,7 +464,7 @@ export function GlobalSocketListener() {
             setTimeout(() => {
               showBidAccepted();
             }, 1000);
-            log("✅ Bid accepted - showing accepted sheet");
+            log('✅ Bid accepted - showing accepted sheet');
 
             // Set hasAnyActiveOffer to false on bid acceptance
             setHasAnyActiveOffer(false);
@@ -443,16 +472,16 @@ export function GlobalSocketListener() {
             // Add success notification with trip details when available
             const broadcastOfferForTrip = tripId
               ? broadcastOffers.find(
-                  (o) => String(o.tripOffer.tripId) === String(tripId),
+                  (o) => String(o.tripOffer.tripId) === String(tripId)
                 )
               : null;
             const notification = {
               id: `bid-accepted-${Date.now()}`,
-              messageTitle: "Bid Accepted",
+              messageTitle: 'Bid Accepted',
               messageBody:
-                "Your bid has been accepted! Get ready to start the ride.",
+                'Your bid has been accepted! Get ready to start the ride.',
               dateTime: formatDateTimestamp(timestamp),
-              messageType: "unread" as const,
+              messageType: 'unread' as const,
               notificationType: NOTIFICATION_TYPES.SUCCESS,
               ...(tripId && { tripId: String(tripId) }),
               ...(broadcastOfferForTrip && {
@@ -466,25 +495,25 @@ export function GlobalSocketListener() {
             if (isBroadcastOffer) {
               // For broadcast offers, keep the offer bidable and show a different message
               log(
-                `❌ Broadcast bid ${response} - keeping offer bidable for rebidding`,
+                `❌ Broadcast bid ${response} - keeping offer bidable for rebidding`
               );
 
               // Set offer status to "rejected" so the UI shows "Re-bid" button
               if (tripId) {
                 // Find the offer by tripId and update it using the offer's id
                 const offerToUpdate = broadcastOffers.find(
-                  (offer) => String(offer.tripOffer.tripId) === String(tripId),
+                  (offer) => String(offer.tripOffer.tripId) === String(tripId)
                 );
                 if (offerToUpdate) {
                   updateBroadcastOffer(offerToUpdate.id, {
-                    status: "rejected" as any,
+                    status: 'rejected' as any,
                   });
                   log(
-                    `[GlobalSocketListener] Set offer ${offerToUpdate.id} (tripId: ${tripId}) status to "rejected" after bid rejection`,
+                    `[GlobalSocketListener] Set offer ${offerToUpdate.id} (tripId: ${tripId}) status to "rejected" after bid rejection`
                   );
                 } else {
                   log(
-                    `[GlobalSocketListener] Could not find broadcast offer with tripId: ${tripId}`,
+                    `[GlobalSocketListener] Could not find broadcast offer with tripId: ${tripId}`
                   );
                 }
               }
@@ -497,27 +526,27 @@ export function GlobalSocketListener() {
               showBidUnsuccessful(String(tripId));
               // Add notification with different message for broadcast offers
               const message =
-                "Your bid was not accepted this time. You can rebid on this offer until it expires.";
+                'Your bid was not accepted this time. You can rebid on this offer until it expires.';
 
               const notification = {
                 id: `bid-${response}-${Date.now()}`,
-                messageTitle: "Bid Not Accepted",
+                messageTitle: 'Bid Not Accepted',
                 messageBody: message,
                 dateTime: formatDateTimestamp(timestamp),
-                messageType: "unread" as const,
+                messageType: 'unread' as const,
                 notificationType: NOTIFICATION_TYPES.WARNING,
               };
               await addNotification(notification);
             } else {
               // For sequential offers, keep modal open and allow rebidding
               log(
-                `❌ Sequential bid ${response} - keeping modal open for rebidding`,
+                `❌ Sequential bid ${response} - keeping modal open for rebidding`
               );
 
               // Update current offer status to "rejected" so the UI shows "Re-bid" button
-              updateCurrentOfferStatus("rejected", String(tripId));
+              updateCurrentOfferStatus('rejected', String(tripId));
               log(
-                `[GlobalSocketListener] Updated sequential offer status to "rejected" for trip ${tripId}`,
+                `[GlobalSocketListener] Updated sequential offer status to "rejected" for trip ${tripId}`
               );
 
               // Hide waiting timer since bid was rejected
@@ -533,9 +562,9 @@ export function GlobalSocketListener() {
               showToast(
                 "Your bid was not accepted. You can rebid if you're still interested.",
                 {
-                  variant: "warning",
-                  position: "top",
-                },
+                  variant: 'warning',
+                  position: 'top',
+                }
               );
 
               // Add notification
@@ -544,15 +573,40 @@ export function GlobalSocketListener() {
 
               const notification = {
                 id: `bid-${response}-${Date.now()}`,
-                messageTitle: "Bid Not Accepted",
+                messageTitle: 'Bid Not Accepted',
                 messageBody: message,
                 dateTime: formatDateTimestamp(timestamp),
-                messageType: "unread" as const,
+                messageType: 'unread' as const,
                 notificationType: NOTIFICATION_TYPES.WARNING,
               };
               await addNotification(notification);
             }
           } else if (isBidExpired) {
+            if (data?.reason === EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER) {
+              hideBidWaitingTimer();
+              hideETAModal();
+              await expirationService.handleOfferExpiration(
+                {
+                  tripId: String(tripId ?? ''),
+                  reason: EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER,
+                  timestamp,
+                },
+                {
+                  markSequentialOfferAsExpired,
+                  markBroadcastOfferAsExpired,
+                  hideRideOfferModal,
+                  setHasAnyActiveOffer,
+                  closeAllModals,
+                  currentOffer: currentOfferRef.current,
+                  broadcastOffers: broadcastOffersRef.current,
+                }
+              );
+              if (tripId) {
+                removeTemporaryRidesByTripId(tripId);
+              }
+              speechManager?.speak(SPEECH_EXPIRED_OFFER_ASSIGNED_TO_OTHER);
+              return;
+            }
             if (isBroadcastOffer) {
               // For broadcast offers, keep the offer and allow re-bidding
               log(`❌ Broadcast bid ${response} - keeping offer for rebidding`);
@@ -566,12 +620,12 @@ export function GlobalSocketListener() {
                     tripId: String(tripId),
                   });
                   log(
-                    `[GlobalSocketListener] Called expire bid API for trip ${tripId}`,
+                    `[GlobalSocketListener] Called expire bid API for trip ${tripId}`
                   );
                 } catch (error) {
                   log(
                     `[GlobalSocketListener] Failed to expire bid for trip ${tripId}:`,
-                    error,
+                    error
                   );
                   // Continue with local state update even if API call fails
                 }
@@ -581,18 +635,18 @@ export function GlobalSocketListener() {
               if (tripId) {
                 // Find the offer by tripId and update it using the offer's id
                 const offerToUpdate = broadcastOffers.find(
-                  (offer) => String(offer.tripOffer.tripId) === String(tripId),
+                  (offer) => String(offer.tripOffer.tripId) === String(tripId)
                 );
                 if (offerToUpdate) {
                   updateBroadcastOffer(offerToUpdate.id, {
-                    status: "expired" as any,
+                    status: 'expired' as any,
                   });
                   log(
-                    `[GlobalSocketListener] Set offer ${offerToUpdate.id} (tripId: ${tripId}) status to "expired" after bid expiration`,
+                    `[GlobalSocketListener] Set offer ${offerToUpdate.id} (tripId: ${tripId}) status to "expired" after bid expiration`
                   );
                 } else {
                   log(
-                    `[GlobalSocketListener] Could not find broadcast offer with tripId: ${tripId}`,
+                    `[GlobalSocketListener] Could not find broadcast offer with tripId: ${tripId}`
                   );
                 }
               }
@@ -606,23 +660,23 @@ export function GlobalSocketListener() {
 
               const notification = {
                 id: `bid-${response}-${Date.now()}`,
-                messageTitle: "Bid Expired",
+                messageTitle: 'Bid Expired',
                 messageBody: message,
                 dateTime: formatDateTimestamp(timestamp),
-                messageType: "unread" as const,
+                messageType: 'unread' as const,
                 notificationType: NOTIFICATION_TYPES.WARNING,
               };
               await addNotification(notification);
             } else {
               // For sequential offers, keep modal open and allow rebidding
               log(
-                `❌ Sequential bid ${response} - keeping modal open for rebidding`,
+                `❌ Sequential bid ${response} - keeping modal open for rebidding`
               );
 
               // Update current offer status to "expired" so the UI shows "Re-bid" button
-              updateCurrentOfferStatus("expired", String(tripId));
+              updateCurrentOfferStatus('expired', String(tripId));
               log(
-                `[GlobalSocketListener] Updated sequential offer status to "expired" for trip ${tripId}`,
+                `[GlobalSocketListener] Updated sequential offer status to "expired" for trip ${tripId}`
               );
 
               // Hide waiting timer since bid expired
@@ -638,9 +692,9 @@ export function GlobalSocketListener() {
               showToast(
                 "Your bid has expired. You can rebid if you're still interested.",
                 {
-                  variant: "warning",
-                  position: "top",
-                },
+                  variant: 'warning',
+                  position: 'top',
+                }
               );
 
               // Add notification
@@ -649,23 +703,23 @@ export function GlobalSocketListener() {
 
               const notification = {
                 id: `bid-${response}-${Date.now()}`,
-                messageTitle: "Bid Expired",
+                messageTitle: 'Bid Expired',
                 messageBody: message,
                 dateTime: formatDateTimestamp(timestamp),
-                messageType: "unread" as const,
+                messageType: 'unread' as const,
                 notificationType: NOTIFICATION_TYPES.WARNING,
               };
               await addNotification(notification);
             }
           }
         } catch (error) {
-          log("❌ Error processing bid response:", error);
-          showToast("Failed to load bid response", {
-            variant: "error",
-            position: "top",
+          log('❌ Error processing bid response:', error);
+          showToast('Failed to load bid response', {
+            variant: 'error',
+            position: 'top',
           });
         }
-      },
+      }
     );
     cleanupFunctions.push(bidResponseCleanup);
 
@@ -673,8 +727,12 @@ export function GlobalSocketListener() {
     const expiredOfferCleanup = onEvent(
       SOCKET_EVENTS.EXPIRED_OFFER,
       async (data: any) => {
-        log("💬 Global Expired offer received:", data);
+        log('💬 Global Expired offer received:', data);
         try {
+          hideBidWaitingTimer();
+          if (data?.reason === EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER) {
+            hideETAModal();
+          }
           // Use the ExpirationService to handle the expiration with context data
           await expirationService.handleOfferExpiration(data, {
             markSequentialOfferAsExpired,
@@ -690,32 +748,39 @@ export function GlobalSocketListener() {
           // NEW: Remove temporary rides for expired offers
           if (data.tripId) {
             removeTemporaryRidesByTripId(data.tripId);
-            log("✅ Removed temporary rides for expired tripId:", data.tripId);
+            log('✅ Removed temporary rides for expired tripId:', data.tripId);
+          }
+
+          if (
+            data?.reason === EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER &&
+            data.tripId
+          ) {
+            speechManager?.speak(SPEECH_EXPIRED_OFFER_ASSIGNED_TO_OTHER);
           }
         } catch (error) {
-          log("❌ Error processing expired offer:", error);
-          showToast("Failed to process expired offer", {
-            variant: "error",
-            position: "top",
+          log('❌ Error processing expired offer:', error);
+          showToast('Failed to process expired offer', {
+            variant: 'error',
+            position: 'top',
           });
         }
-      },
+      }
     );
     cleanupFunctions.push(expiredOfferCleanup);
 
-    log("✅ Global socket listeners set up successfully");
+    log('✅ Global socket listeners set up successfully');
 
     // Cleanup function
     return () => {
-      log("🧹 Cleaning up global socket listeners...");
+      log('🧹 Cleaning up global socket listeners...');
       cleanupFunctions.forEach((cleanup) => {
         try {
           cleanup();
         } catch (error) {
-          log("❌ Error during listener cleanup:", error);
+          log('❌ Error during listener cleanup:', error);
         }
       });
-      log("✅ Global socket listeners cleaned up");
+      log('✅ Global socket listeners cleaned up');
     };
   }, [
     driver?.online,

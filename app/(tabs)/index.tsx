@@ -693,7 +693,7 @@ export default function HomeScreen() {
         router.push("/(tabs)/settings" as any);
       } else if (iconKey === "jump-portal") {
         const base = (driverWebAppProdUrl || "").replace(/\/$/, "");
-        const url = base ? `${base}?token=${auth?.token ?? ""}` : undefined;
+        const url = base ? `${base}/auth/auto-login?token=${auth?.token ?? ""}&driverId=${auth?.user?.id}&source=DRIVER` : undefined;
         if (url) {
           router.push({
             pathname: "/(screens)/in-app-webview",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Animated,
     KeyboardAvoidingView,
@@ -35,7 +35,7 @@ import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { clearStorage, logger } from "@/utils/helpers";
 import { disconnectSocket } from "@/utils/socket";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
 // OTP length is centralized in constants/global.ts
 
