@@ -1,26 +1,24 @@
-import { textColors } from "@/constants/colors";
-import { useOverlayInsets } from "@/context/OverlayInsetsContext";
+import { textColors } from '@/constants/colors';
+import { useOverlayInsets } from '@/context/OverlayInsetsContext';
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
   BottomSheetScrollView,
   BottomSheetView,
-} from "@gorhom/bottom-sheet";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+} from '@gorhom/bottom-sheet';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   BackHandler,
   Image,
-  Keyboard,
   Platform,
   StyleSheet,
   useWindowDimensions,
   View,
   ViewProps,
-} from "react-native";
-import { Portal } from "react-native-portalize";
-import { logger } from "../../utils/helpers";
-import { IconButton } from "../Button";
-import Typography from "../Typography";
+} from 'react-native';
+import { Portal } from 'react-native-portalize';
+import { IconButton } from '../Button';
+import Typography from '../Typography';
 
 /**
  * A strongly-typed wrapper around `@gorhom/bottom-sheet` that provides
@@ -75,20 +73,19 @@ interface CommonBottomSheetProps {
    */
   swipeToClose?: boolean;
   /**
-   * Alternate snap points used when the keyboard is visible on iOS. Helpful
-   * to keep content visible while typing.
-   * @default ["25%", "50%", "83%"]
+   * Legacy prop (kept for backwards compatibility).
+   * Keyboard-aware positioning is now handled by `@gorhom/bottom-sheet`
+   * via `keyboardBehavior` (no manual listeners in this component).
    */
   snapPointsWhenKeyboardVisible?: SnapPoint[];
   /**
-   * When true and keyboard is **hidden**, sheet uses dynamic content height
-   * (`enableDynamicSizing`) capped by {@link maxDynamicContentSizeFraction} of the window.
-   * When keyboard is **visible**, uses {@link keyboardSnapPoints} (default `["95%"]`).
+   * Controls how the sheet responds when the keyboard is shown:
+   * - `true`  => `keyboardBehavior="extend"`
+   * - `false` => `keyboardBehavior="interactive"`
    */
   expandToContentWhenKeyboardHidden?: boolean;
   /**
-   * Snap height while keyboard is visible (only with `expandToContentWhenKeyboardHidden`).
-   * @default ["95%"]
+   * Legacy prop (kept for backwards compatibility). Ignored in this version.
    */
   keyboardSnapPoints?: SnapPoint[];
   /**
@@ -134,7 +131,7 @@ export type CustomBottomSheetProps =
   | ScrollableBottomSheetProps
   | NonScrollableBottomSheetProps;
 
-const defaultSnapPoints: SnapPoint[] = ["25%", "50%", "83%"];
+const defaultSnapPoints: SnapPoint[] = ['25%', '50%', '83%'];
 
 /**
  * CustomBottomSheet
@@ -154,14 +151,14 @@ const defaultSnapPoints: SnapPoint[] = ["25%", "50%", "83%"];
 const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
   children,
   snapPoints = defaultSnapPoints,
-  initialSnapIndex = 1,
+  initialSnapIndex = 0,
   onClose,
   scrollable = false,
   backdrop = true,
   swipeToClose = false,
-  snapPointsWhenKeyboardVisible = defaultSnapPoints,
+  snapPointsWhenKeyboardVisible: _snapPointsWhenKeyboardVisible = defaultSnapPoints,
   expandToContentWhenKeyboardHidden = false,
-  keyboardSnapPoints = ["95%"],
+  keyboardSnapPoints: _keyboardSnapPoints = ['95%'],
   maxDynamicContentSizeFraction = 0.88,
   open = false,
   showHeader = true,
@@ -170,58 +167,35 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
   customBackgroundColor,
   ...props
 }) => {
-  const log = logger();
   const { overlayBottomInset } = useOverlayInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const bottomSheetRef = useRef<React.ElementRef<typeof BottomSheet>>(null);
 
-  const expandContent = expandToContentWhenKeyboardHidden;
-  const useDynamicSizing = expandContent && !isKeyboardVisible;
   const maxDynamicContentSize = useMemo(
     () => Math.round(windowHeight * maxDynamicContentSizeFraction),
-    [windowHeight, maxDynamicContentSizeFraction],
+    [windowHeight, maxDynamicContentSizeFraction]
   );
-
-  const resolvedSnapPoints = useMemo((): SnapPoint[] | undefined => {
-    if (!expandContent) {
-      return isKeyboardVisible
-        ? snapPointsWhenKeyboardVisible
-        : snapPoints;
-    }
-    if (isKeyboardVisible) {
-      return keyboardSnapPoints;
-    }
-    return undefined;
-  }, [
-    expandContent,
-    isKeyboardVisible,
-    snapPoints,
-    snapPointsWhenKeyboardVisible,
-    keyboardSnapPoints,
-  ]);
 
   // Handle Android back button: close sheet when open instead of navigating.
   // Must run unconditionally (before any early return) to satisfy Rules of Hooks.
   useEffect(() => {
-    if (Platform.OS !== "android" || !open) return;
+    if (Platform.OS !== 'android' || !open) return;
 
     const onBackPress = () => {
       if (open && !disabledClose) {
         bottomSheetRef.current?.close();
-        onClose?.();
         return true; // Prevent default (navigation)
       }
       return false;
     };
 
     const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
+      'hardwareBackPress',
       onBackPress
     );
     return () => subscription.remove();
-  }, [open, disabledClose, onClose]);
+  }, [open, disabledClose]);
 
   // Define backdrop component
   const renderBackdrop = (backdropProps: BottomSheetBackdropProps) => (
@@ -235,75 +209,6 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
     />
   );
 
-  const onChange = (val: number) => {
-    if (val == -1) {
-      onClose && onClose(); // Correctly invoke onClose
-    }
-  };
-
-  // Keyboard event listeners
-  useEffect(() => {
-    const keyboardEventName =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const keyboardHideEventName =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const keyboardDidShowListener = Keyboard.addListener(
-      keyboardEventName,
-      () => {
-        log("keyboardDidShow");
-        setIsKeyboardVisible(true);
-        setTimeout(
-          () => {
-            try {
-              if (!bottomSheetRef.current) return;
-              if (expandContent) {
-                bottomSheetRef.current.snapToIndex(0);
-                return;
-              }
-              if (
-                snapPointsWhenKeyboardVisible &&
-                snapPointsWhenKeyboardVisible.length > 0
-              ) {
-                const maxIndex = snapPointsWhenKeyboardVisible.length - 1;
-                bottomSheetRef.current.snapToIndex(maxIndex);
-              }
-            } catch (error) {
-              log("Error snapping to index:", error);
-            }
-          },
-          Platform.OS === "ios" ? (expandContent ? 220 : 100) : 48,
-        );
-      },
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      keyboardHideEventName,
-      () => {
-        log("keyboardDidHide");
-        setIsKeyboardVisible(false);
-        // Restore default snap after keyboard dismisses (dynamic vs fixed modes).
-        setTimeout(() => {
-          try {
-            bottomSheetRef.current?.snapToIndex(
-              Math.max(0, initialSnapIndex),
-            );
-          } catch (error) {
-            log("snapToIndex after keyboard hide:", error);
-          }
-        }, Platform.OS === "ios" ? 120 : 32);
-      },
-    );
-
-    return () => {
-      keyboardDidShowListener?.remove();
-      keyboardDidHideListener?.remove();
-    };
-  }, [
-    snapPointsWhenKeyboardVisible,
-    expandContent,
-    initialSnapIndex,
-  ]);
-
   // Conditionally render based on open prop
   if (!open) {
     return null;
@@ -311,7 +216,6 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
 
   const close = () => {
     bottomSheetRef.current?.close();
-    onClose && onClose();
   };
 
   const renderHeader = (title?: string, paddinHorizontal = false) => {
@@ -330,7 +234,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
           weight="semibold"
           style={styles.sheetTitle}
         >
-          {title || "Title"}
+          {title || 'Title'}
         </Typography>
         <IconButton
           style={styles.iconButton}
@@ -339,7 +243,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
           disabled={disabledClose}
           icon={
             <Image
-              source={require("@/assets/images/black-cross.png")}
+              source={require('@/assets/images/black-cross.png')}
               style={[styles.icon28, disabledClose && styles.icon28Disabled]}
             />
           }
@@ -362,23 +266,21 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
     <Portal>
       <BottomSheet
         ref={bottomSheetRef}
-        index={initialSnapIndex} // Always start at first snap point when rendered
-        onChange={onChange}
-        enableDynamicSizing={useDynamicSizing}
-        maxDynamicContentSize={
-          useDynamicSizing ? maxDynamicContentSize : undefined
-        }
-        {...(resolvedSnapPoints !== undefined
-          ? { snapPoints: resolvedSnapPoints }
-          : {})}
+        index={initialSnapIndex}
+        enableDynamicSizing={true}
+        maxDynamicContentSize={maxDynamicContentSize}
+        // snapPoints={snapPoints} // NOTE: Adjust the sheet height by the component itself based on the content and paddingBottom
         enablePanDownToClose={swipeToClose}
         enableContentPanningGesture={swipeToClose}
         enableHandlePanningGesture={swipeToClose}
         android_keyboardInputMode="adjustResize"
-        keyboardBehavior={expandContent ? "extend" : "interactive"}
+        keyboardBehavior={
+          expandToContentWhenKeyboardHidden ? 'extend' : 'interactive'
+        }
         keyboardBlurBehavior="restore"
+        bottomInset={overlayBottomInset ?? 0}
         backdropComponent={
-          typeof backdrop === "function"
+          typeof backdrop === 'function'
             ? backdrop
             : backdrop
             ? renderBackdrop
@@ -399,7 +301,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
               ]}
               contentContainerStyle={[
                 styles.scrollableContentContainer,
-                { paddingBottom: 80 + (overlayBottomInset ?? 0) },
+                // { paddingBottom: 80 + (overlayBottomInset ?? 0) },
               ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -420,7 +322,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
             <View
               style={[
                 styles.contentContainer,
-                { paddingBottom: overlayBottomInset + 10 },
+                // { paddingBottom: overlayBottomInset + 10 },
                 customBackgroundColor && {
                   backgroundColor: customBackgroundColor || textColors.white,
                 },
@@ -437,7 +339,7 @@ const CustomBottomSheet: React.FC<CustomBottomSheetProps> = ({
   );
 };
 
-CustomBottomSheet.displayName = "CustomBottomSheet";
+CustomBottomSheet.displayName = 'CustomBottomSheet';
 
 const styles = StyleSheet.create({
   contentContainer: {
@@ -456,15 +358,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 16,
     paddingBottom: 8,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
-  icon28: { width: 28, height: 28, resizeMode: "contain" },
+  icon28: { width: 28, height: 28, resizeMode: 'contain' },
   sheetTitle: { fontSize: 21, color: textColors.black },
   sheetRoot: {
     borderTopLeftRadius: 30,

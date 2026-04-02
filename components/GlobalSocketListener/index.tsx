@@ -32,6 +32,11 @@ import { usePost } from '@/hooks/usePost';
 import { expirationService } from '@/services/ExpirationService';
 import { formatDateTimestamp, logger } from '@/utils/helpers';
 import {
+  buildRideTypePrefsFromSettings,
+  carTypeToVehicleServiceClass,
+  isDriverEligibleForTripOffer,
+} from '@/utils/driverOfferEligibility';
+import {
   formatSocketDataToBroadcastOffer,
   formatSocketDataToRideOffer,
 } from '@/utils/socketDataFormatter';
@@ -115,6 +120,15 @@ export function GlobalSocketListener() {
     broadcastOffersRef.current = broadcastOffers;
   }, [broadcastOffers]);
 
+  const driverCarTypeRef = useRef(driver?.carType);
+  const rideTypesPrefsRef = useRef(settings.ridePreferences.rideTypes);
+  useEffect(() => {
+    driverCarTypeRef.current = driver?.carType;
+  }, [driver?.carType]);
+  useEffect(() => {
+    rideTypesPrefsRef.current = settings.ridePreferences.rideTypes;
+  }, [settings.ridePreferences.rideTypes]);
+
   // Guard to deduplicate redirects to the active-ride screen
   const navigatingToActiveRideRef = useRef(false);
 
@@ -188,6 +202,21 @@ export function GlobalSocketListener() {
             const rideOffer = formatSocketDataToRideOffer(data, auth?.user?.id);
             console.log('🔍 Ride offer:', JSON.stringify(rideOffer, null, 2));
 
+            {
+              const svc = rideOffer.tripOffer?.serviceType as string | undefined;
+              const vc = carTypeToVehicleServiceClass(driverCarTypeRef.current);
+              const prefs = buildRideTypePrefsFromSettings(
+                rideTypesPrefsRef.current,
+              );
+              if (!isDriverEligibleForTripOffer(svc, vc, prefs)) {
+                log(
+                  '[GlobalSocket] Skipping sequential offer (eligibility)',
+                  rideOffer.tripOffer?.tripId,
+                );
+                return;
+              }
+            }
+
             // Check mute settings before speaking
             if (
               !settings.notifications.muteJobOffers &&
@@ -252,6 +281,23 @@ export function GlobalSocketListener() {
               data,
               auth?.user?.id
             );
+
+            {
+              const svc = broadcastOffer.tripOffer?.serviceType as
+                | string
+                | undefined;
+              const vc = carTypeToVehicleServiceClass(driverCarTypeRef.current);
+              const prefs = buildRideTypePrefsFromSettings(
+                rideTypesPrefsRef.current,
+              );
+              if (!isDriverEligibleForTripOffer(svc, vc, prefs)) {
+                log(
+                  '[GlobalSocket] Skipping broadcast offer (eligibility)',
+                  broadcastOffer.tripOffer?.tripId,
+                );
+                return;
+              }
+            }
 
             // Add to broadcast offers context
             addBroadcastOffer(broadcastOffer);
@@ -729,6 +775,26 @@ export function GlobalSocketListener() {
       async (data: any) => {
         log('💬 Global Expired offer received:', data);
         try {
+          // Only process expiration for offers the driver actually saw.
+          // Ineligible offers (filtered by NEW_OFFER eligibility check) are
+          // never stored in currentOffer/broadcastOffers, so ignore them here
+          // to avoid confusing "Ride offer expired" toasts.
+          const tripIdStr = String(data?.tripId ?? '');
+          const isKnownOffer =
+            (currentOfferRef.current &&
+              String(currentOfferRef.current.tripOffer?.tripId) ===
+                tripIdStr) ||
+            broadcastOffersRef.current.some(
+              (o) => String(o.tripOffer?.tripId) === tripIdStr
+            );
+
+          if (!isKnownOffer) {
+            log(
+              `[GlobalSocket] Ignoring expiration for offer never shown to driver: ${tripIdStr}`
+            );
+            return;
+          }
+
           hideBidWaitingTimer();
           if (data?.reason === EXPIRED_OFFER_REASON_ASSIGNED_TO_OTHER) {
             hideETAModal();

@@ -34,6 +34,7 @@ import { useFetch } from "@/hooks/useFetch";
 import { useGetContent } from "@/hooks/useGetContent";
 import { usePost } from "@/hooks/usePost";
 import { clearStorage, logger } from "@/utils/helpers";
+import { deriveCarTypeFromAuthUser } from "@/utils/driverOfferEligibility";
 import { disconnectSocket } from "@/utils/socket";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
@@ -558,9 +559,11 @@ export default function VerifyOtpScreen() {
       } as any);
 
       // Set driver context with online status
+      const derivedCarType = deriveCarTypeFromAuthUser(user as Record<string, unknown>);
       await setDriver({
         ...(driver ?? {}),
         online: isOnline,
+        ...(derivedCarType ? { carType: derivedCarType } : {}),
       });
 
       log("Auth context set with user data:", {
