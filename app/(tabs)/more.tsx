@@ -1,42 +1,43 @@
-import CustomBottomSheet from "@/components/BottomSheet";
-import Button from "@/components/Button";
-import ConfirmationSheet from "@/components/ConfirmationSheet";
-import Header from "@/components/Header";
-import Logo from "@/components/Logo";
-import Typography from "@/components/Typography";
-import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
-import { textColors } from "@/constants/colors";
-import { BASE_OFFICE_ENDPOINTS, DRIVER_ENDPOINTS } from "@/constants/endpoints";
+import CustomBottomSheet from '@/components/BottomSheet';
+import Button from '@/components/Button';
+import ConfirmationSheet from '@/components/ConfirmationSheet';
+import Header from '@/components/Header';
+import Logo from '@/components/Logo';
+import Typography from '@/components/Typography';
+import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
+import { textColors } from '@/constants/colors';
+import { BASE_OFFICE_ENDPOINTS, DRIVER_ENDPOINTS } from '@/constants/endpoints';
 import {
   API_CLIENT_TYPES,
   DB_ACTION_DEFAULTS,
   DRIVER_STORAGE_KEY,
   NOTIFICATIONS_BACKUP_STORAGE_KEY,
+  SYSTEM_SETTINGS_KEYS,
   URLS,
-} from "@/constants/global";
-import { MORE_CONTENT_KEYS } from "@/content/(tabs)/more-keys";
-import { useAuth } from "@/context/AuthContext";
-import { useDriver } from "@/context/DriverContext";
-import { useRideOffer } from "@/context/RideOfferContext";
-import { SETTINGS_STORAGE_KEY } from "@/context/SettingsContext";
-import { useDelete } from "@/hooks/useDelete";
-import { useGetContent } from "@/hooks/useGetContent";
-import { usePost } from "@/hooks/usePost";
+} from '@/constants/global';
+import { MORE_CONTENT_KEYS } from '@/content/(tabs)/more-keys';
+import { useAuth } from '@/context/AuthContext';
+import { useDriver } from '@/context/DriverContext';
+import { useRideOffer } from '@/context/RideOfferContext';
+import { SETTINGS_STORAGE_KEY } from '@/context/SettingsContext';
+import { useDelete } from '@/hooks/useDelete';
+import { useGetContent } from '@/hooks/useGetContent';
+import { usePost } from '@/hooks/usePost';
 import {
   clearStorageSelectively,
   getStorageItem,
   logger,
   setStorageItem,
-} from "@/utils/helpers";
-import { performLogout } from "@/utils/logout";
-import { buildRequest } from "@/utils/requestBuilder";
-import { disconnectSocket } from "@/utils/socket";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+} from '@/utils/helpers';
+import { performLogout } from '@/utils/logout';
+import { buildRequest } from '@/utils/requestBuilder';
+import { disconnectSocket } from '@/utils/socket';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Linking,
   Platform,
   SafeAreaView,
@@ -44,7 +45,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 
 type MoreItem = {
   key: string;
@@ -89,6 +90,15 @@ export default function MoreScreen() {
     contactCallDispatcher,
     shareTitle,
     shareMessage,
+    webPortalBankDeposits,
+    webPortalChangeDepositInfo,
+    webPortalExpenses,
+    webPortalRequestCharges,
+    webPortalMyFleets,
+    webPortalRatings,
+    webPortalReportIssue,
+    webPortalMoveToWeb,
+    driverWebAppProdUrl,
   } = useMemo(() => {
     const get = getContent;
     return {
@@ -103,13 +113,13 @@ export default function MoreScreen() {
       itemLogout: get(MORE_CONTENT_KEYS.ITEM_LOGOUT),
       logoutConfirmTitle: get(MORE_CONTENT_KEYS.LOGOUT_CONFIRM_TITLE),
       logoutConfirmDescription: get(
-        MORE_CONTENT_KEYS.LOGOUT_CONFIRM_DESCRIPTION,
+        MORE_CONTENT_KEYS.LOGOUT_CONFIRM_DESCRIPTION
       ),
       logoutConfirmCancel: get(MORE_CONTENT_KEYS.LOGOUT_CONFIRM_CANCEL),
       logoutConfirmConfirm: get(MORE_CONTENT_KEYS.LOGOUT_CONFIRM_CONFIRM),
       deleteConfirmTitle: get(MORE_CONTENT_KEYS.DELETE_CONFIRM_TITLE),
       deleteConfirmDescription: get(
-        MORE_CONTENT_KEYS.DELETE_CONFIRM_DESCRIPTION,
+        MORE_CONTENT_KEYS.DELETE_CONFIRM_DESCRIPTION
       ),
       deleteConfirmCancel: get(MORE_CONTENT_KEYS.DELETE_CONFIRM_CANCEL),
       deleteConfirmConfirm: get(MORE_CONTENT_KEYS.DELETE_CONFIRM_CONFIRM),
@@ -121,49 +131,64 @@ export default function MoreScreen() {
       contactCallDispatcher: get(MORE_CONTENT_KEYS.CONTACT_CALL_DISPATCHER),
       shareTitle: get(MORE_CONTENT_KEYS.SHARE_TITLE),
       shareMessage: get(MORE_CONTENT_KEYS.SHARE_MESSAGE),
+      webPortalBankDeposits: get(MORE_CONTENT_KEYS.WEB_PORTAL_BANK_DEPOSITS),
+      webPortalChangeDepositInfo: get(
+        MORE_CONTENT_KEYS.WEB_PORTAL_CHANGE_DEPOSIT_INFO
+      ),
+      webPortalExpenses: get(MORE_CONTENT_KEYS.WEB_PORTAL_EXPENSES),
+      webPortalRequestCharges: get(
+        MORE_CONTENT_KEYS.WEB_PORTAL_REQUEST_CHARGES
+      ),
+      webPortalMyFleets: get(MORE_CONTENT_KEYS.WEB_PORTAL_MY_FLEETS),
+      webPortalRatings: get(MORE_CONTENT_KEYS.WEB_PORTAL_RATINGS),
+      webPortalReportIssue: get(MORE_CONTENT_KEYS.WEB_PORTAL_REPORT_ISSUE),
+      webPortalMoveToWeb: get(MORE_CONTENT_KEYS.WEB_PORTAL_MOVE_TO_WEB),
+      driverWebAppProdUrl: get(
+        SYSTEM_SETTINGS_KEYS.DRIVER_WEB_APP_PRODUCTION_URL
+      ),
     };
   }, [getContent]);
 
   const items: MoreItem[] = [
     {
-      key: "profile",
+      key: 'profile',
       title: itemProfile,
-      icon: require("@/assets/images/more/profile-icon.png"),
+      icon: require('@/assets/images/more/profile-icon.png'),
     },
     {
-      key: "inbox",
+      key: 'inbox',
       title: itemInbox,
-      icon: require("@/assets/images/more/inbox-icon.png"),
+      icon: require('@/assets/images/more/inbox-icon.png'),
     },
     {
-      key: "contact-base",
+      key: 'contact-base',
       title: itemContactBase,
-      icon: require("@/assets/images/more/contact-base-icon.png"),
+      icon: require('@/assets/images/more/contact-base-icon.png'),
     },
     {
-      key: "share-app",
+      key: 'share-app',
       title: itemShareApp,
-      icon: require("@/assets/images/more/share-icon.png"),
+      icon: require('@/assets/images/more/share-icon.png'),
     },
     {
-      key: "app-settings",
+      key: 'app-settings',
       title: itemAppSettings,
-      icon: require("@/assets/images/more/settings-icon.png"),
+      icon: require('@/assets/images/more/settings-icon.png'),
     },
     {
-      key: "delete-profile",
+      key: 'delete-profile',
       title: itemDeleteProfile,
-      icon: require("@/assets/images/more/delete-profile-icon.png"),
+      icon: require('@/assets/images/more/delete-profile-icon.png'),
     },
     {
-      key: "change-password",
+      key: 'change-password',
       title: itemChangePassword,
-      icon: require("@/assets/images/more/change-password-icon.png"),
+      icon: require('@/assets/images/more/change-password-icon.png'),
     },
     {
-      key: "logout",
+      key: 'logout',
       title: itemLogout,
-      icon: require("@/assets/images/more/logout-icon.png"),
+      icon: require('@/assets/images/more/logout-icon.png'),
     },
   ];
 
@@ -176,9 +201,9 @@ export default function MoreScreen() {
     useRideOffer();
   const hasActiveRide = !!(
     driver?.retrievalId != null &&
-    driver?.retrievalId !== "" &&
+    driver?.retrievalId !== '' &&
     driver?.tripId != null &&
-    driver?.tripId !== ""
+    driver?.tripId !== ''
   );
   const [logoutSheetOpen, setLogoutSheetOpen] = useState(false);
   const [isLogoutLoading, setIsLogoutLoading] = useState(false);
@@ -191,7 +216,7 @@ export default function MoreScreen() {
 
   // Offline API using shared delete hook
   const { execute: deleteOnlineLocation } = useDelete(
-    DRIVER_ENDPOINTS.markOffline(auth?.user?.id || ""),
+    DRIVER_ENDPOINTS.markOffline(auth?.user?.id || '')
   );
 
   const {
@@ -199,7 +224,7 @@ export default function MoreScreen() {
     loading: baseOfficeLoading,
   } = usePost<any>(
     BASE_OFFICE_ENDPOINTS.getContactDetails,
-    API_CLIENT_TYPES.SETTINGS,
+    API_CLIENT_TYPES.SETTINGS
   );
 
   const fetchBaseOfficeContacts = async () => {
@@ -210,29 +235,29 @@ export default function MoreScreen() {
       const user = auth?.user as Record<string, unknown> | undefined;
       const toNum = (v: unknown, d: number) => {
         if (v == null) return d;
-        const n = typeof v === "number" ? v : parseInt(String(v), 10);
+        const n = typeof v === 'number' ? v : parseInt(String(v), 10);
         return Number.isFinite(n) ? n : d;
       };
-      const actionCode = "CMN.S.BASE_OFFICE_CONTACT_DETAILS";
+      const actionCode = 'CMN.S.BASE_OFFICE_CONTACT_DETAILS';
       const requestBody = await buildRequest(
         actionCode,
         {
           P_ACTION_CODE: actionCode,
           P_AFFILIATE_NUM: toNum(
             user?.affiliate_num ?? user?.affiliateNum,
-            DB_ACTION_DEFAULTS.AFFILIATE_NUM,
+            DB_ACTION_DEFAULTS.AFFILIATE_NUM
           ),
           P_APP_NAME: DB_ACTION_DEFAULTS.APP_NAME,
           P_COMPANY_ID: toNum(
             user?.company_id ?? user?.companyId,
-            DB_ACTION_DEFAULTS.COMPANY_ID,
+            DB_ACTION_DEFAULTS.COMPANY_ID
           ),
         },
         {
-          source: "NativeApp",
+          source: 'NativeApp',
           includeGPS: false,
           includeActionCode: true,
-        },
+        }
       );
 
       const dbResponse = await fetchBaseOfficeContactDetailsApi(requestBody);
@@ -249,14 +274,14 @@ export default function MoreScreen() {
           candidate.driver_relations_phone_number);
 
       if (!hasAnyValue) {
-        setBaseOfficeError("No base contacts founds");
+        setBaseOfficeError('No base contacts founds');
         setBaseOfficeContactDetails(null);
         return;
       }
 
       setBaseOfficeContactDetails(candidate as BaseOfficeContactDetails);
     } catch {
-      setBaseOfficeError("No base contacts founds");
+      setBaseOfficeError('No base contacts founds');
       setBaseOfficeContactDetails(null);
     }
   };
@@ -289,11 +314,11 @@ export default function MoreScreen() {
     // Call offline API if driver is online
     if (driver?.online) {
       try {
-        log("[MoreScreen] Marking driver as offline via API");
+        log('[MoreScreen] Marking driver as offline via API');
         await deleteOnlineLocation();
-        log("[MoreScreen] Driver successfully marked as offline");
+        log('[MoreScreen] Driver successfully marked as offline');
       } catch (error) {
-        log("[MoreScreen] Error marking driver offline:", error);
+        log('[MoreScreen] Error marking driver offline:', error);
         // Continue with logout/delete even if API call fails
       }
     }
@@ -301,27 +326,27 @@ export default function MoreScreen() {
     // Remove retrieval ID from context and AsyncStorage
     try {
       await removeRetrievalId();
-      log("[MoreScreen] Retrieval ID removed successfully");
+      log('[MoreScreen] Retrieval ID removed successfully');
     } catch (error) {
-      log("[MoreScreen] Error removing retrieval ID:", error);
+      log('[MoreScreen] Error removing retrieval ID:', error);
       // Continue with logout/delete even if retrieval ID removal fails
     }
 
     // Remove trip ID from context and AsyncStorage
     try {
       await removeTripId();
-      log("[MoreScreen] Trip ID removed successfully");
+      log('[MoreScreen] Trip ID removed successfully');
     } catch (error) {
-      log("[MoreScreen] Error removing trip ID:", error);
+      log('[MoreScreen] Error removing trip ID:', error);
       // Continue with logout/delete even if trip ID removal fails
     }
 
     // Disconnect socket
     try {
       disconnectSocket();
-      log("[MoreScreen] Socket disconnected successfully");
+      log('[MoreScreen] Socket disconnected successfully');
     } catch (error) {
-      log("[MoreScreen] Error disconnecting socket:", error);
+      log('[MoreScreen] Error disconnecting socket:', error);
       // Continue with logout/delete even if socket disconnect fails
     }
 
@@ -337,25 +362,25 @@ export default function MoreScreen() {
           };
           await setStorageItem(
             NOTIFICATIONS_BACKUP_STORAGE_KEY,
-            JSON.stringify(notificationsBackup),
+            JSON.stringify(notificationsBackup)
           );
           log(
-            "[MoreScreen] Notifications backed up successfully:",
+            '[MoreScreen] Notifications backed up successfully:',
             notificationsBackup.notifications.length,
-            "notifications",
+            'notifications'
           );
         } catch (parseError) {
           log(
-            "[MoreScreen] Error parsing driver data for notifications backup:",
-            parseError,
+            '[MoreScreen] Error parsing driver data for notifications backup:',
+            parseError
           );
           // Continue without backup if parsing fails
         }
       } else {
-        log("[MoreScreen] No driver data found, skipping notifications backup");
+        log('[MoreScreen] No driver data found, skipping notifications backup');
       }
     } catch (error) {
-      log("[MoreScreen] Error backing up notifications:", error);
+      log('[MoreScreen] Error backing up notifications:', error);
       // Continue with logout even if backup fails
     }
 
@@ -366,10 +391,10 @@ export default function MoreScreen() {
         NOTIFICATIONS_BACKUP_STORAGE_KEY,
       ]);
       log(
-        "[MoreScreen] Storage cleared selectively, settings and notifications preserved",
+        '[MoreScreen] Storage cleared selectively, settings and notifications preserved'
       );
     } catch (error) {
-      log("[MoreScreen] Error clearing storage selectively:", error);
+      log('[MoreScreen] Error clearing storage selectively:', error);
       // Continue with logout even if storage clearing fails
     }
 
@@ -381,7 +406,7 @@ export default function MoreScreen() {
 
   const handleShareApp = async () => {
     try {
-      const isIOS = Platform.OS === "ios";
+      const isIOS = Platform.OS === 'ios';
       const storeUrl = isIOS ? URLS.appStore : URLS.playStore;
       const message = `${shareMessage} ${storeUrl}`;
       await Share.share({ message, url: storeUrl, title: shareTitle });
@@ -390,23 +415,105 @@ export default function MoreScreen() {
     }
   };
 
+  /**
+   * `page` values match driver-web routes (see `apps/driver-web/src/App.tsx`)
+   * and the auto-login redirect contract used on Profile (`page=...`).
+   */
+  const webPortalQuickLinks = useMemo(
+    () => [
+      {
+        key: 'wp-bank-deposits',
+        title: webPortalBankDeposits,
+        icon: require('../../assets/images/more/web-portal-icons/bank-deposit.svg'),
+        page: 'bank-deposits',
+      },
+      {
+        key: 'wp-change-bank-info',
+        title: webPortalChangeDepositInfo,
+        icon: require('../../assets/images/more/web-portal-icons/change-bank-info.svg'),
+        page: 'change-bank-info',
+      },
+      {
+        key: 'wp-expenses',
+        title: webPortalExpenses,
+        icon: require('../../assets/images/more/web-portal-icons/expenses.svg'),
+        page: 'expenses',
+      },
+      {
+        key: 'wp-request-charges',
+        title: webPortalRequestCharges,
+        icon: require('../../assets/images/more/web-portal-icons/request-changes.svg'),
+        page: 'request-charges',
+      },
+      {
+        key: 'wp-my-vehicles',
+        title: webPortalMyFleets,
+        icon: require('../../assets/images/more/web-portal-icons/my-vehicles.svg'),
+        page: 'my-vehicles',
+      },
+      {
+        key: 'wp-ratings',
+        title: webPortalRatings,
+        icon: require('../../assets/images/more/web-portal-icons/rating.svg'),
+        page: 'ratings',
+      },
+      {
+        key: 'wp-customer-feedback',
+        title: webPortalReportIssue,
+        icon: require('../../assets/images/more/web-portal-icons/report-an-issue.svg'),
+        page: 'customer-feedback',
+      },
+      {
+        key: 'wp-more',
+        title: webPortalMoveToWeb,
+        icon: require('../../assets/images/home/jump-portal-icon.png'),
+        page: 'home',
+      },
+    ],
+    [
+      webPortalBankDeposits,
+      webPortalChangeDepositInfo,
+      webPortalExpenses,
+      webPortalRequestCharges,
+      webPortalMyFleets,
+      webPortalRatings,
+      webPortalReportIssue,
+      webPortalMoveToWeb,
+    ]
+  );
+
+  const openWebPortalPage = (page: string, title: string) => {
+    const base = (driverWebAppProdUrl || '').replace(/\/$/, '');
+    const user = auth?.user as Record<string, unknown> | undefined;
+    const url = base
+      ? `${base}/auth/auto-login?token=${auth?.token ?? ''}&driverId=${
+          user?.id
+        }&source=DRIVER&page=${encodeURIComponent(page)}`
+      : undefined;
+    if (!url) return;
+    router.push({
+      pathname: '/(screens)/in-app-webview',
+      params: { url, title },
+    });
+  };
+
   const data: MoreItem[] = items.map((item) => {
-    if (item.key === "profile") {
+    if (item.key === 'profile') {
       return {
         ...item,
-        onClick: () => router.push("/(screens)/profile"),
+        onClick: () => router.push('/(screens)/profile'),
       };
     }
-    if (item.key === "change-password") {
+    if (item.key === 'change-password') {
       return {
         ...item,
         onClick: hasActiveRide
           ? undefined
-          : () => router.push("/(screens)/more/update-password"),
+          : () => router.push('/(screens)/more/update-password'),
         disabled: hasActiveRide,
       };
     }
-    if (item.key === "delete-profile") {
+    if (item.key === 'delete-profile') {
       return {
         ...item,
         onClick: hasActiveRide
@@ -417,7 +524,7 @@ export default function MoreScreen() {
         disabled: hasActiveRide,
       };
     }
-    if (item.key === "logout") {
+    if (item.key === 'logout') {
       return {
         ...item,
         onClick: hasActiveRide
@@ -428,28 +535,28 @@ export default function MoreScreen() {
         disabled: hasActiveRide,
       };
     }
-    if (item.key === "contact-base") {
+    if (item.key === 'contact-base') {
       return {
         ...item,
         onClick: () => setContactBaseSheetOpen(true),
       };
     }
-    if (item.key === "share-app") {
+    if (item.key === 'share-app') {
       return {
         ...item,
         onClick: handleShareApp,
       };
     }
-    if (item.key === "app-settings") {
+    if (item.key === 'app-settings') {
       return {
         ...item,
-        onClick: () => router.push("/(screens)/more/app-settings"),
+        onClick: () => router.push('/(screens)/more/app-settings'),
       };
     }
-    if (item.key === "inbox") {
+    if (item.key === 'inbox') {
       return {
         ...item,
-        onClick: () => router.push("/(tabs)/notifications"),
+        onClick: () => router.push('/(tabs)/notifications'),
       };
     }
     return item;
@@ -464,7 +571,7 @@ export default function MoreScreen() {
         onPress={item.onClick}
         disabled={isDisabled}
       >
-        <Image source={item.icon} style={styles.icon} />
+        <Image source={item.icon} style={styles.icon} contentFit="contain" />
         <Typography
           type="bodyLarge"
           weight="bold"
@@ -496,6 +603,34 @@ export default function MoreScreen() {
               <Logo size="Large" />
             </View>
           }
+          ListFooterComponent={
+            <View style={styles.webPortalSection}>
+              <View style={styles.sectionDivider} />
+              <View style={styles.webPortalGrid}>
+                {webPortalQuickLinks.map((link) => (
+                  <TouchableOpacity
+                    key={link.key}
+                    activeOpacity={0.8}
+                    style={styles.card}
+                    onPress={() => openWebPortalPage(link.page, link.title)}
+                  >
+                    <Image
+                      source={link.icon}
+                      style={styles.icon}
+                      contentFit="contain"
+                    />
+                    <Typography
+                      type="bodyLarge"
+                      weight="bold"
+                      style={styles.cardTitle}
+                    >
+                      {link.title}
+                    </Typography>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          }
         />
       </View>
       <ConfirmationSheet
@@ -513,7 +648,7 @@ export default function MoreScreen() {
           if (isLogoutLoading) return;
           await handleLogout();
           setLogoutSheetOpen(false);
-          router.replace("/(screens)/auth/login");
+          router.replace('/(screens)/auth/login');
         }}
       />
 
@@ -527,14 +662,14 @@ export default function MoreScreen() {
         onCancel={() => setDeleteProfileSheetOpen(false)}
         onConfirm={() => {
           setDeleteProfileSheetOpen(false);
-          router.push("/(screens)/auth/verify-otp?context=delete-profile");
+          router.push('/(screens)/auth/verify-otp?context=delete-profile');
         }}
       />
 
       {/* Contact Base */}
       <CustomBottomSheet
         open={contactBaseSheetOpen}
-        snapPoints={["38%"]}
+        snapPoints={['38%']}
         initialSnapIndex={0}
         showHeader={true}
         headerTitle={contactSheetTitle}
@@ -562,8 +697,9 @@ export default function MoreScreen() {
             {!!baseOfficeContactDetails.full_address && (
               <View style={styles.addressRow}>
                 <Image
-                  source={require("@/assets/images/contact-base-location-icon.png")}
+                  source={require('@/assets/images/contact-base-location-icon.png')}
                   style={styles.addressIcon}
+                  contentFit="contain"
                 />
                 <Typography
                   type="bodyMedium"
@@ -610,7 +746,7 @@ export default function MoreScreen() {
                       weight="regular"
                       style={styles.contactNumber}
                     >
-                      {item.phone || "-"}
+                      {item.phone || '-'}
                     </Typography>
                   </TouchableOpacity>
                 );
@@ -625,7 +761,7 @@ export default function MoreScreen() {
               }
               onPress={() =>
                 Linking.openURL(
-                  `tel:${baseOfficeContactDetails.primary_phone_number}`,
+                  `tel:${baseOfficeContactDetails.primary_phone_number}`
                 )
               }
             >
@@ -650,7 +786,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   logoRow: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: 24,
   },
   listContent: {
@@ -658,13 +794,13 @@ const styles = StyleSheet.create({
     rowGap: 12,
   },
   column: {
-    justifyContent: "space-between",
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
   card: {
-    width: "48%",
-    alignItems: "center",
-    justifyContent: "center",
+    width: '48%',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: textColors.grey200,
     borderRadius: 12,
@@ -676,7 +812,7 @@ const styles = StyleSheet.create({
   icon: {
     width: 24,
     height: 24,
-    resizeMode: "contain",
+    resizeMode: 'contain',
   },
   cardTitle: {
     color: textColors.grey800,
@@ -689,23 +825,23 @@ const styles = StyleSheet.create({
   },
 
   addressRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     marginTop: 4,
   },
   addressIcon: {
     width: 24,
     height: 24,
-    resizeMode: "contain",
+    resizeMode: 'contain',
   },
   addressText: {
     color: textColors.black,
   },
   contactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 4,
   },
   contactLabel: {
@@ -719,8 +855,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     paddingVertical: 16,
   },
@@ -729,8 +865,8 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 16,
   },
   emptyText: {
@@ -738,5 +874,20 @@ const styles = StyleSheet.create({
   },
   contactRowDisabled: {
     opacity: 0.5,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: textColors.grey200,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  webPortalSection: {
+    width: '100%',
+  },
+  webPortalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 12,
   },
 });

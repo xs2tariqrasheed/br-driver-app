@@ -302,7 +302,7 @@ export default function ProfileScreen() {
     const url = base
       ? `${base}/auth/auto-login?token=${auth?.token ?? ''}&driverId=${
           user?.id
-        }&source=DRIVER`
+        }&source=DRIVER&page=profile`
       : undefined;
     if (!url) return;
     router.push({

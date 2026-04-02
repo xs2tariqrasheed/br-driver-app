@@ -467,7 +467,7 @@ export const NETWORK_MONITORING = {
 export type NetworkQuality =
   (typeof NETWORK_MONITORING.NETWORK_QUALITY)[keyof typeof NETWORK_MONITORING.NETWORK_QUALITY];
 
-const BASE_URL = "http://192.168.100.123";
+const BASE_URL = "http://3.84.108.176";
 // Testing purpose constant for all the services
 // When IS_TESTING is true, these URLs will be used instead of environment variables
 // All URLs should include the http:// protocol prefix for local testing
@@ -494,7 +494,7 @@ export const DEFAULT_ACCESS_KEY =
 export const API_VERSION = "1.0.1";
 
 // Client Version (keep in sync with app.json expo.version)
-export const CLIENT_VERSION = "1.2.0";
+export const CLIENT_VERSION = "1.3.0";
 
 // DB Action Codes
 // Common action codes used across the app for database operations

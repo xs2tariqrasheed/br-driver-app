@@ -40,7 +40,7 @@ export default function EarningsScreen() {
     const url = base
       ? `${base}/auth/auto-login?token=${auth?.token ?? ''}&driverId=${
           auth?.user?.id
-        }&source=DRIVER`
+        }&source=DRIVER&page=earnings`
       : undefined;
     if (!url) return;
     router.push({

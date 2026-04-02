@@ -24,4 +24,13 @@ export const MORE_CONTENT_KEYS = {
   CONTACT_CALL_DISPATCHER: "driver-app-more-contact-call-dispatcher",
   SHARE_TITLE: "driver-app-more-share-title",
   SHARE_MESSAGE: "driver-app-more-share-message",
+  /** Web portal quick access (driver-web routes) */
+  WEB_PORTAL_BANK_DEPOSITS: "driver-app-more-web-portal-bank-deposits-link-label",
+  WEB_PORTAL_CHANGE_DEPOSIT_INFO: "driver-app-more-web-portal-change-deposit-info-link-label",
+  WEB_PORTAL_EXPENSES: "driver-app-more-web-portal-expenses-link-label",
+  WEB_PORTAL_REQUEST_CHARGES: "driver-app-more-web-portal-request-charges-link-label",
+  WEB_PORTAL_MY_FLEETS: "driver-app-more-web-portal-my-fleets-link-label",
+  WEB_PORTAL_RATINGS: "driver-app-more-web-portal-ratings-link-label",
+  WEB_PORTAL_REPORT_ISSUE: "driver-app-more-web-portal-report-issue-link-label",
+  WEB_PORTAL_MOVE_TO_WEB: "driver-app-more-web-portal-move-to-web-link-label",
 } as const;
